@@ -1,19 +1,44 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
-// ここを 'middleware' から 'proxy' に変更しました！
-export async function proxy(req) {
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req, res })
+export async function proxy(request) {
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  })
 
-  const { data: { session } } = await supabase.auth.getSession()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
 
-  // /staff で始まるページに未ログインでアクセスしたらログイン画面へ
-  if (req.nextUrl.pathname.startsWith('/staff') && !session) {
-    return NextResponse.redirect(new URL('/login', req.url))
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // /staff ページへのアクセス制限
+  if (request.nextUrl.pathname.startsWith('/staff') && !user) {
+    return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  return res
+  return response
 }
 
 export const config = {
