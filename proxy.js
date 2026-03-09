@@ -23,12 +23,13 @@ export async function proxy(request) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // ログイン画面そのもの（/staff/login）へのアクセスは許可する
-  const isLoginPage = request.nextUrl.pathname === '/staff/login'
+  const { pathname } = request.nextUrl
+  
+  // ログイン画面そのものへのアクセスは許可
+  if (pathname === '/staff/login') return response
 
-  // staff ページにアクセスしようとしていて、かつログインしていない場合
-  if (request.nextUrl.pathname.startsWith('/staff') && !isLoginPage && !user) {
-    // 修正ポイント：'/staff/login' へ飛ばすように変更！
+  // /staff で始まるページかつ未ログインなら、/staff/login へ飛ばす
+  if (pathname.startsWith('/staff') && !user) {
     return NextResponse.redirect(new URL('/staff/login', request.url))
   }
 
