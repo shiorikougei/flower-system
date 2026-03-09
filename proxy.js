@@ -3,9 +3,7 @@ import { NextResponse } from 'next/server'
 
 export async function proxy(request) {
   let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+    request: { headers: request.headers },
   })
 
   const supabase = createServerClient(
@@ -13,19 +11,11 @@ export async function proxy(request) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
+        getAll() { return request.cookies.getAll() },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          )
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          response = NextResponse.next({ request: { headers: request.headers } })
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
         },
       },
     }
@@ -33,9 +23,13 @@ export async function proxy(request) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // /staff ページへのアクセス制限
-  if (request.nextUrl.pathname.startsWith('/staff') && !user) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  // ログイン画面そのもの（/staff/login）へのアクセスは許可する
+  const isLoginPage = request.nextUrl.pathname === '/staff/login'
+
+  // staff ページにアクセスしようとしていて、かつログインしていない場合
+  if (request.nextUrl.pathname.startsWith('/staff') && !isLoginPage && !user) {
+    // 修正ポイント：'/staff/login' へ飛ばすように変更！
+    return NextResponse.redirect(new URL('/staff/login', request.url))
   }
 
   return response
