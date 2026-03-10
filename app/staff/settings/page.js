@@ -128,7 +128,10 @@ export default function SettingsPage() {
   };
 
   const updateShop = (id, field, value) => setShops(shops.map(s => s.id === id ? { ...s, [field]: value } : s));
-  const addShop = () => setShops([...shops, { id: Date.now(), name: '', phone: '', address: '', invoiceNumber: '', canDelivery: true, normalOpen: '11:00', normalClose: '19:00', normalDeliveryOpen: '11:00', normalDeliveryClose: '18:00', specialHours: [], enabledTatePatterns: ['p5', 'p7'] }]);
+  
+  // ★ ここで新規店舗追加時にも「zip（郵便番号）」の枠を作るようにしました！
+  const addShop = () => setShops([...shops, { id: Date.now(), name: '', phone: '', zip: '', address: '', invoiceNumber: '', canDelivery: true, normalOpen: '11:00', normalClose: '19:00', normalDeliveryOpen: '11:00', normalDeliveryClose: '18:00', specialHours: [], enabledTatePatterns: ['p5', 'p7'] }]);
+  
   const addSpecialHour = (shopId) => setShops(shops.map(s => s.id === shopId ? { ...s, specialHours: [...(s.specialHours || []), { id: Date.now(), target: 'business', settingType: 'date', date: '', recurrence: 'once', type: 'closed', open: '11:00', close: '18:00' }] } : s));
   const toggleTatePattern = (shopId, patternId) => setShops(shops.map(s => s.id === shopId ? { ...s, enabledTatePatterns: s.enabledTatePatterns.includes(patternId) ? s.enabledTatePatterns.filter(p => p !== patternId) : [...s.enabledTatePatterns, patternId] } : s));
   
@@ -278,7 +281,29 @@ export default function SettingsPage() {
                     <div className="space-y-12">
                       <div className="space-y-8">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div className="space-y-2"><label className="text-[11px] font-bold text-[#2D4B3E] ml-1">店舗名</label><input type="text" value={shop.name} onChange={(e) => updateShop(shop.id, 'name', e.target.value)} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none focus:border-[#2D4B3E]" /></div><div className="space-y-2"><label className="text-[11px] font-bold text-[#2D4B3E] ml-1">電話番号</label><input type="tel" value={shop.phone} onChange={(e) => updateShop(shop.id, 'phone', e.target.value)} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none focus:border-[#2D4B3E]" /></div></div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div className="space-y-2"><label className="text-[11px] font-bold text-[#2D4B3E] ml-1">住所</label><input type="text" value={shop.address} onChange={(e) => updateShop(shop.id, 'address', e.target.value)} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none focus:border-[#2D4B3E]" /></div><div className="space-y-2"><label className="text-[11px] font-bold text-[#2D4B3E] ml-1">インボイス番号</label><div className="flex items-center gap-2"><span className="text-[14px] font-bold text-[#555555]">T</span><input type="text" maxLength="13" value={shop.invoiceNumber} onChange={(e) => updateShop(shop.id, 'invoiceNumber', e.target.value)} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none font-mono focus:border-[#2D4B3E]" /></div></div></div>
+                        
+                        {/* ★ 郵便番号・住所・インボイス番号の3列構成に変更 ★ */}
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+                          <div className="md:col-span-3 space-y-2">
+                            <label className="text-[11px] font-bold text-[#2D4B3E] ml-1">郵便番号</label>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[14px] font-bold text-[#555555]">〒</span>
+                              <input type="text" maxLength="8" placeholder="000-0000" value={shop.zip || ''} onChange={(e) => updateShop(shop.id, 'zip', e.target.value)} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none font-mono focus:border-[#2D4B3E]" />
+                            </div>
+                          </div>
+                          <div className="md:col-span-6 space-y-2">
+                            <label className="text-[11px] font-bold text-[#2D4B3E] ml-1">住所</label>
+                            <input type="text" value={shop.address} onChange={(e) => updateShop(shop.id, 'address', e.target.value)} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none focus:border-[#2D4B3E]" />
+                          </div>
+                          <div className="md:col-span-3 space-y-2">
+                            <label className="text-[11px] font-bold text-[#2D4B3E] ml-1">インボイス番号</label>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[14px] font-bold text-[#555555]">T</span>
+                              <input type="text" maxLength="13" value={shop.invoiceNumber} onChange={(e) => updateShop(shop.id, 'invoiceNumber', e.target.value)} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none font-mono focus:border-[#2D4B3E]" />
+                            </div>
+                          </div>
+                        </div>
+
                       </div>
                       <div className="pt-10 border-t border-[#FBFAF9] flex items-center justify-between"><p className="text-[14px] font-bold text-[#2D4B3E]">自社配達サービスの提供</p><button onClick={() => updateShop(shop.id, 'canDelivery', !shop.canDelivery)} className={`w-14 h-8 rounded-full transition-all relative ${shop.canDelivery ? 'bg-[#2D4B3E]' : 'bg-[#EAEAEA]'}`}><div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${shop.canDelivery ? 'left-7' : 'left-1'}`}></div></button></div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

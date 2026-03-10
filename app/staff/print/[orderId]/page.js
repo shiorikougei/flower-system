@@ -54,8 +54,8 @@ export default function PrintSlipPage() {
       style={{ flex: 1, backgroundColor: bgColor }}
     >
       
-      {/* ★スライダーで設定した透過度(bgOpacity)を反映 */}
-      {bgImgUrl ? (
+      {/* ★画像が設定されている時のみ背景を表示（未設定時の文字は削除） */}
+      {bgImgUrl && (
         <div 
           className="absolute inset-0 z-0 grayscale-[30%] pointer-events-none" 
           style={{ 
@@ -67,10 +67,6 @@ export default function PrintSlipPage() {
             opacity: bgOpacity 
           }} 
         />
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none overflow-hidden z-0">
-          <span className="font-serif text-[120px] font-black transform -rotate-12">{shopData?.name || 'FLORIX'}</span>
-        </div>
       )}
 
       <div className="relative z-10">
@@ -187,7 +183,8 @@ export default function PrintSlipPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8 print-reset">
+    // ★ bg-gray-100 を bg-white に変更して、プレビュー画面も印刷設定と同じ真っ白に統一！
+    <div className="min-h-screen bg-white py-8 print-reset">
       {/* 画面表示用のヘッダー（印刷時は消える） */}
       <div className="w-[210mm] mx-auto bg-white p-4 rounded-xl shadow-lg flex justify-between items-center mb-6 print-hidden">
         <div className="text-sm font-bold text-gray-700">🖨️ 伝票印刷プレビュー</div>
@@ -224,6 +221,13 @@ export default function PrintSlipPage() {
 
       {/* ★ JSXを捨てて、システムを貫通する「生CSS」を注入！ ★ */}
       <style dangerouslySetInnerHTML={{ __html: `
+        /* ★ ブラウザのインク節約を無視して、背景画像や色を100%そのまま出力する！ */
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
+        }
+
         .print-page {
           width: 210mm;
           height: 297mm;
@@ -232,7 +236,7 @@ export default function PrintSlipPage() {
         }
 
         @media print {
-          /* ① Chromeのお節介な余白を強制的にゼロにする（これが突破口！） */
+          /* ① Chromeのお節介な余白を強制的にゼロにする */
           @page { 
             size: A4 portrait !important; 
             margin: 0mm !important; 
@@ -244,7 +248,13 @@ export default function PrintSlipPage() {
             margin: 0 !important;
             padding: 0 !important;
             height: 100% !important;
+            min-height: 0 !important;
             overflow: visible !important;
+          }
+
+          /* 最外殻のmin-h-screen設定を殺す */
+          .min-h-screen {
+            min-height: 0 !important;
           }
 
           .print-reset {
@@ -264,11 +274,11 @@ export default function PrintSlipPage() {
             padding: 0 !important;
           }
 
-          /* ③ ページ本体をA4に絶対固定 */
+          /* ③ ページ本体をA4に絶対固定（少しだけ短くして安全マージン確保） */
           .print-page {
             width: 210mm !important;
-            height: 297mm !important;
-            max-height: 297mm !important;
+            height: 296mm !important;
+            max-height: 296mm !important;
             margin: 0 !important;
             padding: 8mm !important;
             box-shadow: none !important;
