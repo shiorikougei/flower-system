@@ -68,7 +68,6 @@ export default function PrintSlipPage() {
 
     return (
       <div 
-        // ★ p-6 から p-4 に減らして、はみ出しを防止！
         className="slip-container relative w-full border-2 border-gray-400 p-4 flex flex-col justify-between overflow-hidden" 
         style={{ flex: 1, backgroundColor: bgImgUrl ? bgColor : '#ffffff' }}
       >
@@ -158,23 +157,19 @@ export default function PrintSlipPage() {
                     <td className="p-1.5 text-center align-top">1</td>
                     {showPrice && <td className="p-1.5 text-right align-top">¥{itemPrice.toLocaleString()}</td>}
                   </tr>
-                  {showPrice && shippingFee > 0 && (
-                    <tr className="border-b">
-                      <td className="p-1.5 text-[10px] text-gray-600">配送料・箱代等</td>
-                      <td className="p-1.5 text-center align-top">1</td>
-                      <td className="p-1.5 text-right align-top">¥{shippingFee.toLocaleString()}</td>
-                    </tr>
-                  )}
+                  {/* アイテム一覧から送料の行を削除し、下の合計表にまとめました */}
                 </tbody>
               </table>
             </div>
 
+            {/* ★ 金額明細表を「商品代」「送料」「消費税」「合計」の4段構成に変更！ */}
             {showPrice && (
               <div className="flex justify-end mb-2">
-                <table className="w-48 text-xs border bg-white/95">
+                <table className="w-48 text-xs border border-gray-300 bg-white/95">
                   <tbody>
-                    <tr className="border-b"><td className="p-1 bg-gray-50 font-bold">小計</td><td className="p-1 text-right">¥{subTotal.toLocaleString()}</td></tr>
-                    <tr className="border-b"><td className="p-1 bg-gray-50 font-bold">消費税(10%)</td><td className="p-1 text-right">¥{tax.toLocaleString()}</td></tr>
+                    <tr className="border-b border-gray-200"><td className="p-1 bg-gray-50 font-bold text-gray-600">商品代</td><td className="p-1 text-right">¥{itemPrice.toLocaleString()}</td></tr>
+                    <tr className="border-b border-gray-200"><td className="p-1 bg-gray-50 font-bold text-gray-600">送料・箱代等</td><td className="p-1 text-right">¥{shippingFee.toLocaleString()}</td></tr>
+                    <tr className="border-b border-gray-200"><td className="p-1 bg-gray-50 font-bold text-gray-600">消費税(10%)</td><td className="p-1 text-right">¥{tax.toLocaleString()}</td></tr>
                     <tr><td className="p-1 bg-gray-100 font-bold text-sm" style={{ color: colorCode }}>合計</td><td className="p-1 text-right font-bold text-sm">¥{total.toLocaleString()}</td></tr>
                   </tbody>
                 </table>
@@ -182,10 +177,8 @@ export default function PrintSlipPage() {
             )}
           </div>
 
-          {/* 余白を埋めて下部に押しやるためのスペーサー */}
           <div className="flex-grow"></div>
 
-          {/* ★ 受領書のサイン欄（はみ出さないように高さを調整） */}
           {showSignature && (
             <div className="border border-gray-400 bg-white/95 p-2 mb-2 flex items-center justify-between">
               <span className="text-[10px] font-bold text-gray-800">上記の商品を確かに受領いたしました。</span>
@@ -208,13 +201,12 @@ export default function PrintSlipPage() {
               </div>
             </div>
             
-            {/* ★ スタッフ確認欄（四角い名前記載欄に変更！） */}
             <div className="flex gap-2">
               {staffArray.map((staff, i) => (
                  <div key={i} className="flex flex-col items-center">
                    <span className="text-[8px] text-gray-500 mb-0.5">{staff.label}</span>
-                   {/* 丸い印をやめて、手書きもできる四角い枠に */}
-                   <div className="w-14 h-8 border border-gray-400 bg-white flex items-center justify-center">
+                   {/* ★ 角丸(rounded-md) と 太線(border-2) を適用して記載欄っぽく変更！ */}
+                   <div className="w-14 h-8 border-2 border-gray-400 rounded-md bg-white flex items-center justify-center shadow-sm">
                      {staff.name && (
                        <span className="text-gray-800 font-bold text-[10px]">{staff.name}</span>
                      )}
