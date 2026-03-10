@@ -7,7 +7,7 @@ import Link from 'next/link';
 export default function StaffNewOrderPage() {
   const router = useRouter();
   const [appSettings, setAppSettings] = useState(null);
-  const [portfolioImages, setPortfolioImages] = useState([]); // ★追加：ギャラリー画像
+  const [portfolioImages, setPortfolioImages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -32,7 +32,7 @@ export default function StaffNewOrderPage() {
   const [flowerVibe, setFlowerVibe] = useState('');
   const [otherPurpose, setOtherPurpose] = useState('');
   const [otherVibe, setOtherVibe] = useState('');
-  const [selectedImage, setSelectedImage] = useState(null); // ★追加：選択した画像
+  const [selectedImage, setSelectedImage] = useState(null);
   
   // 立札・メッセージ関連
   const [cardType, setCardType] = useState('なし');
@@ -45,7 +45,7 @@ export default function StaffNewOrderPage() {
   const [tateInput3a, setTateInput3a] = useState(''); 
   const [tateInput3b, setTateInput3b] = useState(''); 
 
-  // お客様・お届け先情報 (★ email を追加)
+  // お客様・お届け先情報
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', email: '', zip: '', address1: '', address2: '' });
   const [isRecipientDifferent, setIsRecipientDifferent] = useState(false);
   const [recipientInfo, setRecipientInfo] = useState({ name: '', phone: '', zip: '', address1: '', address2: '' });
@@ -70,7 +70,6 @@ export default function StaffNewOrderPage() {
           }
         }
 
-        // ★ ギャラリーデータの取得を追加
         const { data: gallery } = await supabase.from('app_settings').select('settings_data').eq('id', 'gallery').single();
         if (gallery && gallery.settings_data?.images) {
           setPortfolioImages(gallery.settings_data.images);
@@ -90,7 +89,6 @@ export default function StaffNewOrderPage() {
   const staffConfig = appSettings?.staffOrderConfig || {};
   const selectedItemSettings = useMemo(() => appSettings?.flowerItems?.find(i => i.name === flowerType) || {}, [flowerType, appSettings]);
 
-  // ★ 画像自動抽出ロジックの移植
   const matchingImages = useMemo(() => {
     if (!portfolioImages || portfolioImages.length === 0) return [];
     return portfolioImages.filter(img => {
@@ -102,7 +100,6 @@ export default function StaffNewOrderPage() {
     });
   }, [portfolioImages, flowerPurpose, flowerColor, flowerVibe]);
 
-  // ★ 画像選択時の自動入力処理の移植
   const handleSelectImage = (img) => {
     if (selectedImage?.id === img.id) {
       setSelectedImage(null);
@@ -225,6 +222,13 @@ export default function StaffNewOrderPage() {
     } catch (error) { console.error("住所検索エラー"); }
   };
 
+  // ★ 合計金額のリアルタイム計算ロジック
+  const parsedItemPrice = Number(itemPrice) || 0;
+  const parsedFee = calculatedFee || 0;
+  const subTotal = parsedItemPrice + parsedFee;
+  const tax = Math.floor(subTotal * 0.1);
+  const totalAmount = subTotal + tax;
+
   const handleSubmitStaffOrder = async () => {
     if (!shopId || !staffName || !customerInfo.name || !selectedDate || !itemPrice) {
       alert('受付店舗、担当スタッフ、お客様名、お届け日、金額は必須項目です。');
@@ -233,17 +237,16 @@ export default function StaffNewOrderPage() {
     
     setIsSubmitting(true);
     try {
-      // ★伝票側で必要な情報をセット
       const orderPayload = {
         receptionType, staffName, shopId, flowerType, isBring, receiveMethod, selectedShop,
-        selectedDate, receiveDate: selectedDate, // 伝票で「希望日」として引き込む用
+        selectedDate, receiveDate: selectedDate,
         selectedTime, itemPrice, calculatedFee,
         flowerPurpose, flowerColor, flowerVibe, otherPurpose, otherVibe,
         cardType, cardMessage, tatePattern,
         tateInput1, tateInput2, tateInput3, tateInput3a, tateInput3b,
         customerInfo, isRecipientDifferent, recipientInfo, note,
         paymentMethod, sendAutoReply,
-        referenceImage: selectedImage ? selectedImage.url : null, // ギャラリー画像
+        referenceImage: selectedImage ? selectedImage.url : null,
         status: 'new',
         isStaffEntered: true 
       };
@@ -266,7 +269,6 @@ export default function StaffNewOrderPage() {
   return (
     <div className="min-h-screen bg-[#FBFAF9] flex flex-col md:flex-row text-[#111111] font-sans">
       
-      {/* サイドバー */}
       <aside className="w-full md:w-64 bg-white border-r border-[#EAEAEA] md:fixed h-full z-20 overflow-y-auto pb-10">
         <div className="p-8 flex flex-col gap-1 border-b border-[#EAEAEA]">
           {logoUrl ? (
@@ -292,7 +294,6 @@ export default function StaffNewOrderPage() {
         </nav>
       </aside>
 
-      {/* メインコンテンツ */}
       <main className="flex-1 md:ml-64 flex flex-col min-w-0 pb-32">
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-[#EAEAEA] flex items-center justify-between px-8 sticky top-0 z-10">
           <h1 className="text-[18px] font-bold tracking-tight text-[#2D4B3E] flex items-center gap-3">
@@ -303,7 +304,6 @@ export default function StaffNewOrderPage() {
 
         <div className="max-w-[700px] mx-auto w-full p-8 space-y-8">
           
-          {/* STEP 1: 受付情報と商品 */}
           <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-6">
             <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3 tracking-widest">1. 受付情報と商品</h2>
             
@@ -371,14 +371,13 @@ export default function StaffNewOrderPage() {
             )}
           </div>
 
-          {/* STEP 2: お花の詳細と金額 (★ギャラリーサジェスト搭載) */}
           <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-6 overflow-hidden">
             
-            {/* ▼ お客様用UIから移植：画像自動提案エリア ▼ */}
+            {/* ★ 変更：文言を「制作例からオーダー内容を自動入力」に変更！ */}
             {matchingImages.length > 0 && (
               <div className="bg-[#2D4B3E]/5 -mx-8 -mt-8 p-6 pb-8 mb-6 border-b border-[#EAEAEA] space-y-4">
                  <p className="text-[11px] font-bold text-[#2D4B3E] tracking-widest flex items-center gap-2">
-                   ✨ お客様アプリの掲載スタイルから自動入力
+                   ✨ 制作例からオーダー内容を自動入力
                  </p>
                  <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar">
                    {matchingImages.map(img => (
@@ -442,7 +441,6 @@ export default function StaffNewOrderPage() {
                 <select value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} className={`w-full h-14 border rounded-xl px-4 font-bold text-[16px] outline-none transition-all ${selectedImage ? 'border-[#2D4B3E] text-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#EAEAEA] bg-[#FBFAF9] focus:border-[#2D4B3E]'}`}>
                   <option value="">選択...</option>
                   {getPriceOptions().map(price => (<option key={price} value={price}>¥{price.toLocaleString()}</option>))}
-                  {/* ★ お客様用UIから移植：選択した画像の金額がリストにない場合の特別表示 */}
                   {selectedImage && itemPrice && !getPriceOptions().includes(Number(itemPrice)) && (
                     <option value={itemPrice}>¥{Number(itemPrice).toLocaleString()}</option>
                   )}
@@ -451,7 +449,6 @@ export default function StaffNewOrderPage() {
             </div>
           </div>
 
-          {/* STEP 3: メッセージ・立札 */}
           <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-6">
             <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3 tracking-widest">3. メッセージ・立札</h2>
             <div className="flex gap-2 p-1 bg-[#FBFAF9] rounded-2xl border border-[#EAEAEA]">
@@ -510,7 +507,6 @@ export default function StaffNewOrderPage() {
             )}
           </div>
 
-          {/* STEP 4: お客様と日程・お届け先 */}
           <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-6">
             <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3 tracking-widest">4. スケジュール・情報</h2>
             <div className="grid grid-cols-2 gap-4">
@@ -532,7 +528,6 @@ export default function StaffNewOrderPage() {
               <input type="text" placeholder="お名前（必須）" value={customerInfo.name} onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none" />
               <input type="tel" placeholder="電話番号" value={customerInfo.phone} onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
               
-              {/* ★ 新規追加：メールアドレス入力欄 */}
               <input type="email" placeholder="メールアドレス (任意)" value={customerInfo.email} onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
               
               {receiveMethod !== 'pickup' && (
@@ -542,16 +537,6 @@ export default function StaffNewOrderPage() {
                   </div>
                   <input type="text" placeholder="都道府県・市区町村 (自動入力)" value={customerInfo.address1} className="w-full h-12 bg-[#EAEAEA]/30 border border-[#EAEAEA] rounded-xl px-4 text-[13px] text-[#555555] outline-none" readOnly />
                   <input type="text" placeholder="番地・建物名" value={customerInfo.address2} onChange={(e) => setCustomerInfo({...customerInfo, address2: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
-                  
-                  {calculatedFee !== null ? (
-                    <div className="h-12 flex items-center justify-between px-4 bg-[#2D4B3E]/5 rounded-xl border border-[#2D4B3E]/20 text-[12px] font-bold text-[#2D4B3E] mt-2">
-                      <span>自動計算された送料:</span><span>¥{calculatedFee.toLocaleString()}</span>
-                    </div>
-                  ) : areaError ? (
-                    <div className="h-12 flex items-center justify-between px-4 bg-red-50 rounded-xl border border-red-200 text-[11px] font-bold text-red-500 mt-2">
-                      <span>{areaError}</span>
-                    </div>
-                  ) : null}
                 </>
               )}
             </div>
@@ -577,7 +562,6 @@ export default function StaffNewOrderPage() {
             )}
           </div>
 
-          {/* STEP 5: 社内メモと支払い */}
           <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-6">
             <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3 tracking-widest">5. 決済ステータス・社内メモ</h2>
             <div className="space-y-4">
@@ -596,7 +580,20 @@ export default function StaffNewOrderPage() {
             </div>
           </div>
 
-          {/* 送信ボタン */}
+          {/* ★ 新規追加：合計金額のリアルタイム計算表示パネル */}
+          <div className="bg-white p-8 rounded-[32px] border-2 border-[#2D4B3E]/30 shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="space-y-1 text-center md:text-left">
+              <p className="text-[11px] font-bold text-[#999999] tracking-widest">お支払い合計額 (税込)</p>
+              <div className="text-[11px] text-[#555555] font-medium flex gap-3 justify-center md:justify-start">
+                <span>商品代: ¥{parsedItemPrice.toLocaleString()}</span>
+                <span>送料等: ¥{parsedFee.toLocaleString()}</span>
+              </div>
+            </div>
+            <div className="text-[32px] font-bold text-[#2D4B3E] font-sans">
+              ¥{totalAmount.toLocaleString()}
+            </div>
+          </div>
+
           <button 
             disabled={isSubmitting} 
             onClick={handleSubmitStaffOrder} 
@@ -611,7 +608,6 @@ export default function StaffNewOrderPage() {
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap'); 
         .font-serif { font-family: 'Noto Serif JP', serif; }
-        /* スクロールバー非表示（横スクロール用） */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
