@@ -49,6 +49,12 @@ export default function PrintSlipPage() {
   const bgImgUrl = generalConfig?.slipBgUrl || '';
   const bgOpacity = generalConfig?.slipBgOpacity !== undefined ? generalConfig.slipBgOpacity / 100 : 0.5;
 
+  // ★ 追加：英語の受取方法を日本語に変換する魔法の辞書
+  const getMethodText = (method) => {
+    const map = { pickup: '店頭受取', delivery: '自社配達', sagawa: '業者配送' };
+    return map[method] || method || '未指定';
+  };
+
   const SlipTemplate = ({ title, colorCode, bgColor, slipType = 'store' }) => {
     const showPrice = slipType === 'store' || slipType === 'customer';
     const showSignature = slipType === 'receipt';
@@ -69,7 +75,6 @@ export default function PrintSlipPage() {
 
     return (
       <div 
-        // ★ p-4 から p-3 に圧縮し、無駄な余白をカット
         className="slip-container relative w-full border-2 border-gray-400 p-3 flex flex-col justify-between overflow-hidden" 
         style={{ flex: 1, backgroundColor: bgImgUrl ? bgColor : '#ffffff' }}
       >
@@ -89,12 +94,12 @@ export default function PrintSlipPage() {
 
         <div className="relative z-10 flex flex-col h-full">
           <div>
-            {/* ★ 情報を1行にまとめて高さを節約 */}
             <div className="flex justify-between items-start border-b pb-1 mb-1.5" style={{ borderColor: colorCode }}>
               <h1 className="text-lg font-bold tracking-widest" style={{ color: colorCode }}>{title}</h1>
               <div className="text-right text-[9px] space-y-0.5">
                 <p>伝票：{orderId.slice(0, 8).toUpperCase()}　受付：{new Date().toLocaleDateString('ja-JP')}</p>
-                <p>お渡し：<span className="font-bold">{o.receiveMethod || o.deliveryType || '未指定'}</span>　希望日：<span className="font-bold">{o.receiveDate || o.deliveryDate || o.pickupDate || '未指定'}</span></p>
+                {/* ★ 翻訳辞書を通すように変更！ */}
+                <p>お渡し：<span className="font-bold">{getMethodText(o.receiveMethod || o.deliveryType)}</span>　希望日：<span className="font-bold">{o.receiveDate || o.deliveryDate || o.pickupDate || '未指定'}</span></p>
                 <p>入金状況：<span className="font-bold border border-gray-400 bg-white px-1 rounded inline-block">{o.paymentStatus || o.paymentMethod || '未定'}</span></p>
               </div>
             </div>
@@ -201,7 +206,6 @@ export default function PrintSlipPage() {
               {staffArray.map((staff, i) => (
                  <div key={i} className="flex flex-col items-center">
                    <span className="text-[7px] text-gray-500 mb-0.5">{staff.label}</span>
-                   {/* ★ サイズを微調整しつつ角丸と太線を維持 */}
                    <div className="w-12 h-6 border-2 border-gray-400 rounded-md bg-white flex items-center justify-center shadow-sm">
                      {staff.name && (
                        <span className="text-gray-800 font-bold text-[9px]">{staff.name}</span>
