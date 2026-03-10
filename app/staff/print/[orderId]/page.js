@@ -103,21 +103,21 @@ export default function PrintSlipPage() {
           <div className="flex gap-4 mb-3">
             <div className="flex-1 border p-2 bg-white/95 text-xs">
               <span className="text-[9px] text-gray-500 font-bold block mb-1">【ご依頼主様 (ご注文者)】</span>
-              <p className="font-bold text-base mb-1">{o.customerInfo.name} <span className="text-xs font-normal">様</span></p>
-              <p>〒{o.customerInfo.zip}</p>
-              <p>{o.customerInfo.address1} {o.customerInfo.address2}</p>
-              <p>TEL: {o.customerInfo.phone}</p>
-              {o.customerInfo.email && <p className="text-[10px] mt-0.5 text-gray-600">Email: {o.customerInfo.email}</p>}
+              <p className="font-bold text-base mb-1">{o.customerInfo?.name} <span className="text-xs font-normal">様</span></p>
+              <p>〒{o.customerInfo?.zip}</p>
+              <p>{o.customerInfo?.address1} {o.customerInfo?.address2}</p>
+              <p>TEL: {o.customerInfo?.phone}</p>
+              {o.customerInfo?.email && <p className="text-[10px] mt-0.5 text-gray-600">Email: {o.customerInfo.email}</p>}
             </div>
             
             <div className="flex-1 border p-2 bg-white/95 text-xs">
               <span className="text-[9px] text-gray-500 font-bold block mb-1">【お届け先様】</span>
               {isDifferent ? (
                 <>
-                  <p className="font-bold text-base mb-1">{o.recipientInfo.name} <span className="text-xs font-normal">様</span></p>
-                  <p>〒{o.recipientInfo.zip}</p>
-                  <p>{o.recipientInfo.address1} {o.recipientInfo.address2}</p>
-                  <p>TEL: {o.recipientInfo.phone}</p>
+                  <p className="font-bold text-base mb-1">{o.recipientInfo?.name} <span className="text-xs font-normal">様</span></p>
+                  <p>〒{o.recipientInfo?.zip}</p>
+                  <p>{o.recipientInfo?.address1} {o.recipientInfo?.address2}</p>
+                  <p>TEL: {o.recipientInfo?.phone}</p>
                 </>
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400 font-bold tracking-widest">
@@ -212,7 +212,6 @@ export default function PrintSlipPage() {
                <div key={i} className="flex flex-col items-center">
                  <span className="text-[8px] text-gray-500 mb-0.5">{staff.label}</span>
                  <div className="w-10 h-10 rounded-full border border-red-500 flex items-center justify-center opacity-80" style={{ backgroundImage: 'radial-gradient(circle, transparent 60%, rgba(255,0,0,0.1) 100%)' }}>
-                   {/* スタッフ名がない場合は空欄（ハンコを押すスペース）にする */}
                    {staff.name ? (
                      <span className="text-red-600 font-serif font-bold text-[10px] transform -rotate-12">{staff.name.slice(0,2)}</span>
                    ) : (
@@ -246,19 +245,13 @@ export default function PrintSlipPage() {
           <SlipTemplate title="お 客 様 控" colorCode="#1565c0" bgColor="#e3f2fd" slipType="customer" />
         </div>
 
-        {/* 2枚目：受領書 または 納品書 */}
+        {/* 2枚目：納品書 ＆ 受領書 */}
         <div className="print-page bg-white shadow-xl flex flex-col relative">
-          {isDifferent ? (
-            <SlipTemplate title="受 領 書" colorCode="#c62828" bgColor="#ffebee" slipType="receipt" />
-          ) : (
-            <SlipTemplate title="納 品 書" colorCode="#f57f17" bgColor="#fffde7" slipType="delivery" />
-          )}
+          <SlipTemplate title="納 品 書" colorCode="#f57f17" bgColor="#fffde7" slipType="delivery" />
           <div className="border-t border-dashed border-gray-400 w-full relative my-1 z-20 shrink-0">
             <span className="absolute -top-2.5 left-1/2 transform -translate-x-1/2 bg-white px-4 text-[10px] text-gray-400">✂ 切り取り線</span>
           </div>
-          <div className="flex-1 border-2 border-gray-200 p-6 text-gray-400 text-sm flex items-center justify-center bg-gray-50 mt-2 mb-2 rounded-lg shrink-0">
-            店舗用メモ・作業スペース
-          </div>
+          <SlipTemplate title="受 領 書" colorCode="#c62828" bgColor="#ffebee" slipType="receipt" />
         </div>
       </div>
 
