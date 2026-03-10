@@ -45,16 +45,15 @@ export default function PrintSlipPage() {
   const total = subTotal + tax;
 
   const bgImgUrl = generalConfig?.slipBgUrl || '';
-  // ★設定画面の透過度（0〜100）を読み込んで 0.0〜1.0 の値に変換（初期値は0.5）
   const bgOpacity = generalConfig?.slipBgOpacity !== undefined ? generalConfig.slipBgOpacity / 100 : 0.5;
 
   const SlipTemplate = ({ title, colorCode, bgColor, isCustomerCopy = false, isReceipt = false, isDelivery = false }) => (
     <div 
       className="slip-container relative w-full border-2 border-gray-400 p-6 flex flex-col justify-between overflow-hidden" 
-      style={{ flex: 1, backgroundColor: bgColor }}
+      // ★ 画像がない場合は bgColor（緑や青）を無視して真っ白（#ffffff）にする設定！
+      style={{ flex: 1, backgroundColor: bgImgUrl ? bgColor : '#ffffff' }}
     >
       
-      {/* ★画像が設定されている時のみ背景を表示（未設定時の文字は削除） */}
       {bgImgUrl && (
         <div 
           className="absolute inset-0 z-0 grayscale-[30%] pointer-events-none" 
@@ -161,11 +160,18 @@ export default function PrintSlipPage() {
         )}
       </div>
 
+      {/* ★ 店舗情報セクションにロゴを追加するレイアウト調整 ★ */}
       <div className="relative z-10 flex justify-between items-end pt-2 mt-auto border-t border-gray-300">
-        <div className="text-[10px] text-gray-700">
-          <p className="font-bold text-base tracking-widest mb-1">{shopData?.name || 'FLORIX'}</p>
-          <p>〒{shopData?.zip || '---'} {shopData?.address}</p>
-          <p>TEL: {shopData?.phone} {shopData?.invoiceNumber && `(適格請求書発行事業者登録番号: T${shopData.invoiceNumber})`}</p>
+        <div className="flex items-end gap-3">
+          {/* ロゴが存在する場合のみ表示 */}
+          {generalConfig?.logoUrl && (
+            <img src={generalConfig.logoUrl} alt="Logo" className="h-10 object-contain object-left mb-0.5" />
+          )}
+          <div className="text-[10px] text-gray-700">
+            <p className="font-bold text-base tracking-widest mb-1">{shopData?.name || 'FLORIX'}</p>
+            <p>〒{shopData?.zip || '---'} {shopData?.address}</p>
+            <p>TEL: {shopData?.phone} {shopData?.invoiceNumber && `(適格請求書発行事業者登録番号: T${shopData.invoiceNumber})`}</p>
+          </div>
         </div>
         
         <div className="flex gap-2">
@@ -183,9 +189,7 @@ export default function PrintSlipPage() {
   );
 
   return (
-    // ★ bg-gray-100 を bg-white に変更して、プレビュー画面も印刷設定と同じ真っ白に統一！
     <div className="min-h-screen bg-white py-8 print-reset">
-      {/* 画面表示用のヘッダー（印刷時は消える） */}
       <div className="w-[210mm] mx-auto bg-white p-4 rounded-xl shadow-lg flex justify-between items-center mb-6 print-hidden">
         <div className="text-sm font-bold text-gray-700">🖨️ 伝票印刷プレビュー</div>
         <button onClick={() => window.print()} className="px-6 py-2 bg-[#2D4B3E] text-white font-bold rounded-lg shadow-md hover:bg-[#1f352b] transition-all">
@@ -194,7 +198,6 @@ export default function PrintSlipPage() {
       </div>
 
       <div className="print-container flex flex-col items-center gap-8">
-        {/* 1枚目 */}
         <div className="print-page bg-white shadow-xl flex flex-col relative">
           <SlipTemplate title="受 注 書 控" colorCode="#2e7d32" bgColor="#f1f8e9" />
           <div className="border-t border-dashed border-gray-400 w-full relative my-1 z-20 shrink-0">
@@ -203,7 +206,6 @@ export default function PrintSlipPage() {
           <SlipTemplate title="お 客 様 控" colorCode="#1565c0" bgColor="#e3f2fd" isCustomerCopy={true} />
         </div>
 
-        {/* 2枚目 */}
         <div className="print-page bg-white shadow-xl flex flex-col relative">
           {isDifferent ? (
             <SlipTemplate title="受 領 書" colorCode="#c62828" bgColor="#ffebee" isReceipt={true} />
@@ -219,9 +221,7 @@ export default function PrintSlipPage() {
         </div>
       </div>
 
-      {/* ★ JSXを捨てて、システムを貫通する「生CSS」を注入！ ★ */}
       <style dangerouslySetInnerHTML={{ __html: `
-        /* ★ ブラウザのインク節約を無視して、背景画像や色を100%そのまま出力する！ */
         * {
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
@@ -236,13 +236,11 @@ export default function PrintSlipPage() {
         }
 
         @media print {
-          /* ① Chromeのお節介な余白を強制的にゼロにする */
           @page { 
             size: A4 portrait !important; 
             margin: 0mm !important; 
           }
           
-          /* ② Next.jsの見えないゴミを全消去 */
           html, body {
             background: white !important;
             margin: 0 !important;
@@ -252,7 +250,6 @@ export default function PrintSlipPage() {
             overflow: visible !important;
           }
 
-          /* 最外殻のmin-h-screen設定を殺す */
           .min-h-screen {
             min-height: 0 !important;
           }
@@ -274,7 +271,6 @@ export default function PrintSlipPage() {
             padding: 0 !important;
           }
 
-          /* ③ ページ本体をA4に絶対固定（少しだけ短くして安全マージン確保） */
           .print-page {
             width: 210mm !important;
             height: 296mm !important;
@@ -287,7 +283,6 @@ export default function PrintSlipPage() {
             overflow: hidden !important;
           }
 
-          /* ④ 2枚目の後は【絶対に】改ページしない */
           .print-page:last-child {
             page-break-after: avoid !important;
           }
