@@ -187,62 +187,102 @@ export default function PrintSlipPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8 print:p-0 print:bg-white flex flex-col items-center font-sans">
-      
-      <div className="w-[210mm] bg-white p-4 rounded-xl shadow-lg flex justify-between items-center print:hidden mb-6">
-        <div className="text-sm font-bold text-gray-700">🖨️ 伝票印刷プレビュー (A4サイズ・100%倍率推奨)</div>
+    <div className="min-h-screen bg-gray-100 py-8 print-reset">
+      {/* 画面表示用のヘッダー（印刷時は消える） */}
+      <div className="w-[210mm] mx-auto bg-white p-4 rounded-xl shadow-lg flex justify-between items-center mb-6 print-hidden">
+        <div className="text-sm font-bold text-gray-700">🖨️ 伝票印刷プレビュー</div>
         <button onClick={() => window.print()} className="px-6 py-2 bg-[#2D4B3E] text-white font-bold rounded-lg shadow-md hover:bg-[#1f352b] transition-all">
           PDFに保存 / 印刷する
         </button>
       </div>
 
-      <div className="page-a4 bg-white shadow-xl print:shadow-none relative">
-        <SlipTemplate title="受 注 書 控" colorCode="#2e7d32" bgColor="#f1f8e9" />
-        <div className="border-t border-dashed border-gray-400 w-full relative my-1 z-20">
-          <span className="absolute -top-2.5 left-1/2 transform -translate-x-1/2 bg-white px-4 text-[10px] text-gray-400 print:text-gray-300">✂ 切り取り線</span>
+      <div className="print-container flex flex-col items-center gap-8">
+        {/* 1枚目 */}
+        <div className="print-page bg-white shadow-xl flex flex-col relative">
+          <SlipTemplate title="受 注 書 控" colorCode="#2e7d32" bgColor="#f1f8e9" />
+          <div className="border-t border-dashed border-gray-400 w-full relative my-1 z-20 shrink-0">
+            <span className="absolute -top-2.5 left-1/2 transform -translate-x-1/2 bg-white px-4 text-[10px] text-gray-400">✂ 切り取り線</span>
+          </div>
+          <SlipTemplate title="お 客 様 控" colorCode="#1565c0" bgColor="#e3f2fd" isCustomerCopy={true} />
         </div>
-        <SlipTemplate title="お 客 様 控" colorCode="#1565c0" bgColor="#e3f2fd" isCustomerCopy={true} />
+
+        {/* 2枚目 */}
+        <div className="print-page bg-white shadow-xl flex flex-col relative">
+          {isDifferent ? (
+            <SlipTemplate title="受 領 書" colorCode="#c62828" bgColor="#ffebee" isReceipt={true} />
+          ) : (
+            <SlipTemplate title="納 品 書" colorCode="#f57f17" bgColor="#fffde7" isDelivery={true} />
+          )}
+          <div className="border-t border-dashed border-gray-400 w-full relative my-1 z-20 shrink-0">
+            <span className="absolute -top-2.5 left-1/2 transform -translate-x-1/2 bg-white px-4 text-[10px] text-gray-400">✂ 切り取り線</span>
+          </div>
+          <div className="flex-1 border-2 border-gray-200 p-6 text-gray-400 text-sm flex items-center justify-center bg-gray-50 mt-2 mb-2 rounded-lg shrink-0">
+            店舗用メモ・作業スペース
+          </div>
+        </div>
       </div>
 
-      <div className="page-a4 bg-white shadow-xl print:shadow-none break-before-page mt-8 print:mt-0 relative">
-        {isDifferent ? (
-          <SlipTemplate title="受 領 書" colorCode="#c62828" bgColor="#ffebee" isReceipt={true} />
-        ) : (
-          <SlipTemplate title="納 品 書" colorCode="#f57f17" bgColor="#fffde7" isDelivery={true} />
-        )}
-        <div className="border-t border-dashed border-gray-400 w-full relative my-1 z-20">
-           <span className="absolute -top-2.5 left-1/2 transform -translate-x-1/2 bg-white px-4 text-[10px] text-gray-400 print:text-gray-300">✂ 切り取り線</span>
-        </div>
-        <div className="flex-1 border-2 border-gray-200 p-6 text-gray-400 text-sm flex items-center justify-center bg-gray-50 m-6 mb-0 rounded-lg relative z-10" style={{ height: 'calc(50% - 1.5rem)' }}>
-          店舗用メモ・作業スペース
-        </div>
-      </div>
-
-      <style jsx global>{`
-        @media print {
-          @page { size: A4 portrait; margin: 0; }
-          body { background: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          .page-a4 {
-            width: 210mm;
-            height: 297mm;
-            margin: 0;
-            padding: 8mm; 
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            page-break-after: always;
-            page-break-inside: avoid;
-          }
-        }
-        .page-a4 { 
-          width: 210mm; 
-          height: 297mm; 
+      {/* ★ JSXを捨てて、システムを貫通する「生CSS」を注入！ ★ */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .print-page {
+          width: 210mm;
+          height: 297mm;
           padding: 8mm;
           box-sizing: border-box;
-          display: flex;
-          flex-direction: column;
         }
-      `}</style>
+
+        @media print {
+          /* ① Chromeのお節介な余白を強制的にゼロにする（これが突破口！） */
+          @page { 
+            size: A4 portrait !important; 
+            margin: 0mm !important; 
+          }
+          
+          /* ② Next.jsの見えないゴミを全消去 */
+          html, body {
+            background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            height: 100% !important;
+            overflow: visible !important;
+          }
+
+          .print-reset {
+            background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+
+          .print-hidden { 
+            display: none !important; 
+          }
+          
+          .print-container {
+            display: block !important;
+            gap: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          /* ③ ページ本体をA4に絶対固定 */
+          .print-page {
+            width: 210mm !important;
+            height: 297mm !important;
+            max-height: 297mm !important;
+            margin: 0 !important;
+            padding: 8mm !important;
+            box-shadow: none !important;
+            page-break-after: always !important;
+            page-break-inside: avoid !important;
+            overflow: hidden !important;
+          }
+
+          /* ④ 2枚目の後は【絶対に】改ページしない */
+          .print-page:last-child {
+            page-break-after: avoid !important;
+          }
+        }
+      `}} />
     </div>
   );
 }
