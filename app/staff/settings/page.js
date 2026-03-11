@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 import { 
   Settings as SettingsIcon, ListChecks, Store, Tag, Truck, User, Mail, 
-  Trash2, Plus, Clock, ShieldCheck, RotateCcw, Image, Ruler, Percent, 
+  Trash2, Plus, Clock, ShieldCheck, RotateCcw, Image as ImageIcon, Ruler, Percent, 
   ChevronRight, Calendar as CalendarIcon, Box, MapPin, Search, CheckCircle, X
 } from 'lucide-react';
 
@@ -24,10 +24,10 @@ export default function SettingsPage() {
   // --- 3. 店舗管理 ---
   const [shops, setShops] = useState([]); 
 
-  // --- 4. 商品管理 ---
+  // --- 4. 商品管理 (箱サイズ defaultBoxSize 追加) ---
   const [flowerItems, setFlowerItems] = useState([]);
 
-  // --- 5. 配送・送料 (サイズ削除機能追加) ---
+  // --- 5. 配送・送料 ---
   const [deliveryAreas, setDeliveryAreas] = useState([]);
   const [shippingSizes, setShippingSizes] = useState(['80', '100', '120']);
   const [shippingRates, setShippingRates] = useState([]); 
@@ -104,7 +104,7 @@ export default function SettingsPage() {
 
   const renderGeneralTab = () => (
     <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 animate-in fade-in">
-      <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Image size={20}/> 基本情報・ロゴ調整</h2>
+      <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><ImageIcon size={20}/> 基本情報・ロゴ調整</h2>
       <div className="space-y-6">
         <div className="space-y-1"><label className="text-[11px] font-bold text-[#999999]">アプリ名</label><input type="text" value={generalConfig.appName} onChange={(e)=>setGeneralConfig({...generalConfig, appName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 font-bold outline-none"/></div>
         <div className="space-y-4">
@@ -199,8 +199,21 @@ export default function SettingsPage() {
       {flowerItems.map(item => (
         <div key={item.id} className="bg-white rounded-[32px] border p-8 shadow-sm relative space-y-6 text-left">
           <button onClick={()=>setFlowerItems(flowerItems.filter(i=>i.id!==item.id))} className="absolute top-8 right-8 text-red-300"><Trash2 size={20}/></button>
-          <input type="text" value={item.name} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, name:e.target.value}:i))} className="w-full h-12 bg-transparent border-b-2 text-[20px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="商品名" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="text" value={item.name} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, name:e.target.value}:i))} className="w-full h-12 bg-transparent border-b-2 text-[20px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="商品名" />
+            
+            {/* --- 新規追加: 箱サイズの設定 --- */}
+            <div className="flex items-center gap-2 justify-end">
+              <span className="text-[11px] font-bold text-[#999999]">配送サイズ (箱):</span>
+              <select value={item.defaultBoxSize || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, defaultBoxSize:e.target.value}:i))} className="h-10 bg-[#FBFAF9] border rounded-xl px-3 font-bold text-[13px] outline-none">
+                <option value="">未設定</option>
+                {shippingSizes.map(s => <option key={s} value={s}>{s}サイズ</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-[#FBFAF9] pt-6">
             <div className="space-y-4">
               <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={16}/> 納期設定</p>
               <div className="space-y-2"><label className="text-[9px] font-bold text-[#999999]">通常納期 (日後)</label><input type="number" value={item.normalLeadDays} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, normalLeadDays:Number(e.target.value)}:i))} className="w-full bg-[#FBFAF9] border rounded-lg h-10 px-3 font-bold outline-none"/></div>
@@ -270,11 +283,11 @@ export default function SettingsPage() {
           <div className="font-bold text-[#2D4B3E] text-[14px] flex items-center gap-2"><RotateCcw size={18}/> 器回収/返却時の加算送料</div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">計算タイプ</label><select value={boxFeeConfig.returnFeeType} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, returnFeeType:e.target.value})} className="w-full h-10 bg-white border rounded-xl px-3 text-xs font-bold"><option value="flat">固定金額 (¥)</option><option value="percent">基本送料の○%</option></select></div>
-            <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">加算数値</label><input type="number" value={boxFeeConfig.returnFeeValue} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, returnFeeValue:Number(e.target.value)})} className="w-full h-10 bg-white border rounded-xl px-3 text-xs font-bold text-right"/></div>
+            <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">{boxFeeConfig.returnFeeType === 'flat' ? '加算金額 (¥)' : '加算率 (%)'}</label><input type="number" value={boxFeeConfig.returnFeeValue} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, returnFeeValue:Number(e.target.value)})} className="w-full h-10 bg-white border rounded-xl px-3 text-xs font-bold text-right"/></div>
           </div>
         </div>
 
-        {/* 業者配送送料マスタ (サイズ削除機能追加) */}
+        {/* 業者配送送料マスタ */}
         <div className="space-y-6 pt-4 border-t">
           <div className="flex justify-between items-center"><label className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Ruler size={16}/> 業者配送 サイズ・地方別マスタ</label>
             <div className="flex gap-2">
