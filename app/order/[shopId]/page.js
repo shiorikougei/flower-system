@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../utils/supabase';
+import { Calendar, Package, ChevronRight } from 'lucide-react';
 
 export default function OrderPage() {
   const params = useParams();
@@ -22,6 +23,9 @@ export default function OrderPage() {
   const [methodAgreed, setMethodAgreed] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
+  
+  // ★ 新規追加：発送予定日
+  const [shippingDate, setShippingDate] = useState('');
   
   // デザイン詳細
   const [itemPrice, setItemPrice] = useState('');
@@ -138,7 +142,6 @@ export default function OrderPage() {
     return options;
   };
 
-  // ★ 納期計算ロジック
   const minDateLimit = useMemo(() => {
     const base = new Date();
     let lead = 0;
@@ -166,21 +169,22 @@ export default function OrderPage() {
     return res;
   };
 
-  // ★ 送料・箱代・クール・回収費用の自動計算
+  // ★ 送料・箱代・クール・回収費用・発送日の自動計算
   useEffect(() => {
     if (!receiveMethod || receiveMethod === 'pickup' || !itemPrice) { 
-      setCalculatedFee(null); setPickupFee(0); setAreaError(''); return; 
+      setCalculatedFee(null); setPickupFee(0); setAreaError(''); setShippingDate(''); return; 
     }
     
     const targetInfo = isRecipientDifferent ? recipientInfo : customerInfo;
     const rawAddress = ((targetInfo.address1 || '') + (targetInfo.address2 || '')).replace(/[\s　]+/g, '');
     if (!rawAddress) { 
-      setCalculatedFee(null); setPickupFee(0); setAreaError(''); return; 
+      setCalculatedFee(null); setPickupFee(0); setAreaError(''); setShippingDate(''); return; 
     }
 
     let baseFee = 0, boxFee = 0, coolFee = 0, pickupFeeAmt = 0;
 
     if (receiveMethod === 'delivery') {
+      setShippingDate(''); // 配達の場合は発送日は空
       const normalizedAddress = normalizeAddressText(rawAddress);
       const northPatterns = ["23", "24", "25", "26", "27"]; const westPatterns = ["3", "4", "5"];
       let isFreeArea = false;
@@ -215,7 +219,7 @@ export default function OrderPage() {
       }
     } else if (receiveMethod === 'sagawa') {
       const prefMatch = rawAddress.match(/^(北海道|東京都|(?:京都|大阪)府|.{2,3}県)/);
-      if (!prefMatch) { setCalculatedFee(null); setAreaError('都道府県が判別できません。'); return; }
+      if (!prefMatch) { setCalculatedFee(null); setAreaError('都道府県が判別できません。'); setShippingDate(''); return; }
       const targetPref = prefMatch[1].replace(/(都|府|県)$/, ''); 
       const searchPref = targetPref === '北海' ? '北海道' : targetPref;
       
@@ -223,6 +227,16 @@ export default function OrderPage() {
       if (!rateData) rateData = appSettings?.shippingRates?.find(r => r.region && r.region.includes(searchPref));
 
       if (rateData) { 
+        // ★ 発送日の逆算（地域ごとの設定値があればそれ、なければデフォルト1日）
+        const lead = Number(rateData.leadDays) || 1;
+        if (selectedDate) {
+          const dDate = new Date(selectedDate);
+          dDate.setDate(dDate.getDate() - lead);
+          setShippingDate(dDate.toISOString().split('T')[0]);
+        } else {
+          setShippingDate('');
+        }
+
         let size = selectedItemSettings?.defaultBoxSize;
         if (!size) {
           size = appSettings?.shippingSizes?.[0] || '80';
@@ -252,7 +266,7 @@ export default function OrderPage() {
 
         setCalculatedFee(baseFee + boxFee + coolFee); setPickupFee(0); setAreaError(''); 
       } else {
-        setCalculatedFee(null); setAreaError('該当する地域の送料設定が見つかりません。');
+        setCalculatedFee(null); setShippingDate(''); setAreaError('該当する地域の送料設定が見つかりません。');
       }
     }
   }, [customerInfo.address1, customerInfo.address2, recipientInfo.address1, recipientInfo.address2, isRecipientDifferent, receiveMethod, flowerType, itemPrice, selectedDate, appSettings, selectedItemSettings]);
@@ -298,7 +312,6 @@ export default function OrderPage() {
     if (step === 4) {
       if (!customerInfo.name || !customerInfo.phone || !selectedDate || !selectedTime || !methodAgreed) return true;
       if ((receiveMethod === 'delivery' || receiveMethod === 'sagawa') && areaError) return true;
-      // ★ 変更: delivery（自社配達）の時だけチェック
       if (receiveMethod === 'delivery' && absenceAction === '置き配' && !absenceNote) return true;
     }
     return false;
@@ -309,7 +322,8 @@ export default function OrderPage() {
     try {
       const orderPayload = {
         shopId, flowerType, isBring, receiveMethod, selectedShop,
-        selectedDate, selectedTime, itemPrice, calculatedFee, pickupFee,
+        selectedDate, selectedTime, shippingDate, // ★ 発送日を保存
+        itemPrice, calculatedFee, pickupFee,
         absenceAction, absenceNote,
         flowerPurpose, flowerColor, flowerVibe, otherPurpose, otherVibe,
         cardType, cardMessage, tatePattern,
@@ -524,7 +538,7 @@ export default function OrderPage() {
                       
                       <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4">仕上がりプレビュー</p>
                       <div className={`relative mx-auto border border-[#EAEAEA] shadow-lg bg-white flex flex-col items-center font-serif ${selectedTateOpt?.layout === 'horizontal' ? 'aspect-[1.414/1] w-full justify-center p-6' : 'aspect-[1/1.414] h-[300px] pt-6 px-4'}`}>
-                         <div className={`font-bold ${isOsonae ? 'text-gray-500' : 'text-red-600'} ${selectedTateOpt?.layout === 'horizontal' ? 'text-[28px] mb-4' : 'text-[40px] mb-6 leading-none'}`}>
+                         <div className={`font-black ${isOsonae ? 'text-gray-500' : 'text-red-600'} ${selectedTateOpt?.layout === 'horizontal' ? 'text-[28px] mb-4' : 'text-[40px] mb-6 leading-none'}`}>
                            {topPrefixText}
                          </div>
                          <div className={`flex w-full font-bold text-gray-900 ${selectedTateOpt?.layout === 'horizontal' ? 'flex-col items-center gap-2 text-[16px]' : 'flex-row-reverse justify-center gap-6 text-[18px]'}`}>
@@ -568,6 +582,19 @@ export default function OrderPage() {
                 </div>
               </div>
 
+              {/* ★ お客様用画面にも「発送日」の案内を出す */}
+              {receiveMethod === 'sagawa' && selectedDate && shippingDate && (
+                <div className="mt-2 p-4 bg-green-50 border border-green-200 rounded-xl flex flex-col sm:flex-row sm:items-center gap-3 animate-in fade-in shadow-sm">
+                  <div className="flex items-center gap-2 text-green-800 font-bold text-[12px]">
+                     <Calendar size={16}/> お届け指定: {selectedDate}
+                  </div>
+                  <ChevronRight size={14} className="hidden sm:block text-green-600"/>
+                  <div className="flex items-center gap-2 text-green-900 font-black text-[14px]">
+                     <Package size={18}/> 発送予定日: {shippingDate}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-4 bg-white p-8 rounded-[28px] border border-[#EAEAEA] shadow-sm">
                 <div className="space-y-4">
                   <label className="text-[11px] font-bold text-[#999999] tracking-widest">注文者情報</label>
@@ -603,7 +630,7 @@ export default function OrderPage() {
                 </div>
               )}
 
-              {/* ★ 変更: 置き配設定（自社配達の時だけ表示） */}
+              {/* 置き配設定（自社配達の時のみ） */}
               {receiveMethod === 'delivery' && (
                 <div className="p-8 bg-white rounded-[28px] border border-[#EAEAEA] shadow-sm space-y-4 animate-in fade-in">
                   <div className="space-y-2">
