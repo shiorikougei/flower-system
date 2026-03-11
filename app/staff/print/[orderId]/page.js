@@ -35,8 +35,8 @@ export default function PrintSlipPage() {
     fetchData();
   }, [orderId]);
 
-  if (isLoading) return <div className="p-10 font-bold">伝票データを生成中...</div>;
-  if (!orderData) return <div className="p-10 text-red-500">データが見つかりません。</div>;
+  if (isLoading) return <div className="p-10 font-bold text-[#2D4B3E] animate-pulse">伝票データを生成中...</div>;
+  if (!orderData) return <div className="p-10 text-red-500 font-bold">データが見つかりません。</div>;
 
   const o = orderData;
   const isDifferent = o.isRecipientDifferent;
@@ -46,15 +46,20 @@ export default function PrintSlipPage() {
   const tax = Math.floor(subTotal * 0.1);
   const total = subTotal + tax;
 
+  // 背景画像とロゴの設定を抽出
   const bgImgUrl = generalConfig?.slipBgUrl || '';
   const bgOpacity = generalConfig?.slipBgOpacity !== undefined ? generalConfig.slipBgOpacity / 100 : 0.5;
+  const logoSize = generalConfig?.logoSize || 100;
+  const logoTransparent = generalConfig?.logoTransparent || false;
 
-  // ★ 追加：英語の受取方法を日本語に変換する魔法の辞書
   const getMethodText = (method) => {
     const map = { pickup: '店頭受取', delivery: '自社配達', sagawa: '業者配送' };
     return map[method] || method || '未指定';
   };
 
+  // ==========================================
+  // ① 伝票テンプレート (4面印刷用)
+  // ==========================================
   const SlipTemplate = ({ title, colorCode, bgColor, slipType = 'store' }) => {
     const showPrice = slipType === 'store' || slipType === 'customer';
     const showSignature = slipType === 'receipt';
@@ -98,8 +103,7 @@ export default function PrintSlipPage() {
               <h1 className="text-lg font-bold tracking-widest" style={{ color: colorCode }}>{title}</h1>
               <div className="text-right text-[9px] space-y-0.5">
                 <p>伝票：{orderId.slice(0, 8).toUpperCase()}　受付：{new Date().toLocaleDateString('ja-JP')}</p>
-                {/* ★ 翻訳辞書を通すように変更！ */}
-                <p>お渡し：<span className="font-bold">{getMethodText(o.receiveMethod || o.deliveryType)}</span>　希望日：<span className="font-bold">{o.receiveDate || o.deliveryDate || o.pickupDate || '未指定'}</span></p>
+                <p>お渡し：<span className="font-bold">{getMethodText(o.receiveMethod || o.deliveryType)}</span>　希望日：<span className="font-bold">{o.receiveDate || o.selectedDate || '未指定'}</span></p>
                 <p>入金状況：<span className="font-bold border border-gray-400 bg-white px-1 rounded inline-block">{o.paymentStatus || o.paymentMethod || '未定'}</span></p>
               </div>
             </div>
@@ -171,7 +175,7 @@ export default function PrintSlipPage() {
                     <tr className="border-b border-gray-200"><td className="p-0.5 bg-gray-50 font-bold text-gray-600">商品代</td><td className="p-0.5 text-right">¥{itemPrice.toLocaleString()}</td></tr>
                     <tr className="border-b border-gray-200"><td className="p-0.5 bg-gray-50 font-bold text-gray-600">送料・箱代等</td><td className="p-0.5 text-right">¥{shippingFee.toLocaleString()}</td></tr>
                     <tr className="border-b border-gray-200"><td className="p-0.5 bg-gray-50 font-bold text-gray-600">消費税(10%)</td><td className="p-0.5 text-right">¥{tax.toLocaleString()}</td></tr>
-                    <tr><td className="p-0.5 bg-gray-100 font-bold text-xs" style={{ color: colorCode }}>合計</td><td className="p-0.5 text-right font-bold text-xs">¥{total.toLocaleString()}</td></tr>
+                    <tr><td className="p-0.5 bg-gray-100 font-bold text-xs" style={{ color: colorCode }}>合計(税込)</td><td className="p-0.5 text-right font-bold text-xs">¥{total.toLocaleString()}</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -192,8 +196,17 @@ export default function PrintSlipPage() {
 
           <div className="flex justify-between items-end pt-1.5 border-t border-gray-300">
             <div className="flex items-end gap-2">
+              {/* ★ ロゴのサイズ・透過設定を反映 */}
               {generalConfig?.logoUrl && (
-                <img src={generalConfig.logoUrl} alt="Logo" className="h-6 object-contain object-left" />
+                <img 
+                  src={generalConfig.logoUrl} 
+                  alt="Logo" 
+                  style={{ 
+                    height: `${(logoSize / 100) * 24}px`, 
+                    mixBlendMode: logoTransparent ? 'multiply' : 'normal' 
+                  }} 
+                  className="object-contain object-left" 
+                />
               )}
               <div className="text-[8px] text-gray-700 leading-tight">
                 <p className="font-bold text-[11px] tracking-widest mb-0.5">{shopData?.name || 'FLORIX'}</p>
@@ -220,45 +233,114 @@ export default function PrintSlipPage() {
     );
   };
 
-  return (
-    <div className="min-h-screen bg-white py-8 print-reset">
+  // ==========================================
+  // ② 新規追加：本番用 立札・カードテンプレート (A4フルサイズ)
+  // ==========================================
+  const CardTemplate = () => {
+    if (!o.cardType || o.cardType === 'なし') {
+      return <div className="p-20 text-center font-bold text-gray-400 border-2 border-dashed m-10">立札・メッセージカードの指定はありません。</div>;
+    }
+
+    if (o.cardType === 'メッセージカード') {
+      return (
+        <div className="print-page bg-white shadow-xl flex items-center justify-center" style={{ height: '296mm' }}>
+          <div className="w-full h-full border-4 border-gray-100 p-20 flex items-center justify-center">
+             <div className="text-center font-serif text-[32px] text-gray-800 leading-loose whitespace-pre-wrap">
+               {o.cardMessage}
+             </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (o.cardType === '立札') {
+      const isOsonae = o.flowerPurpose === 'お供え';
+      const tateOptions = isOsonae ? [
+        { id: 'p1_k_yoko_bg', layout: 'horizontal', color: 'gray' },
+        { id: 'p3_k_tate_simple', layout: 'vertical', color: 'gray' },
+        { id: 'p4_k_tate_company', layout: 'vertical', color: 'gray' }
+      ] : [
+        { id: 'p5_c_yoko_line', layout: 'horizontal', color: 'red' },
+        { id: 'p6_c_yoko_sama', layout: 'horizontal', color: 'red' },
+        { id: 'p7_c_tate_2col', layout: 'vertical', color: 'red' },
+        { id: 'p8_c_tate_3col', layout: 'vertical', color: 'red' }
+      ];
       
-      <div className="w-[210mm] mx-auto bg-white p-5 rounded-xl shadow-lg mb-6 print-hidden border border-gray-200">
+      const selectedTateOpt = tateOptions.find(opt => opt.id === o.tatePattern) || tateOptions[0];
+      const topPrefixText = isOsonae ? '御供' : '祝'; // 基本の頭書き
+
+      return (
+        <div className="print-page bg-white shadow-xl flex items-center justify-center p-8" style={{ height: '296mm' }}>
+          <div className={`relative w-full h-full border-4 ${isOsonae ? 'border-gray-200' : 'border-red-100'} flex flex-col items-center p-8`}>
+             
+             {/* 余白調整：縦型なら上部余白を多めに、横型なら中央揃え */}
+             <div className={`w-full h-full flex flex-col items-center ${selectedTateOpt?.layout === 'horizontal' ? 'justify-center' : 'pt-24'}`}>
+               
+               <div className={`font-serif font-bold ${isOsonae ? 'text-gray-500' : 'text-red-600'} ${selectedTateOpt?.layout === 'horizontal' ? 'text-[70px] mb-12' : 'text-[100px] mb-20 leading-none'}`}>
+                 {topPrefixText}
+               </div>
+
+               <div className={`flex w-full font-serif font-bold text-gray-900 ${selectedTateOpt?.layout === 'horizontal' ? 'flex-col items-center gap-10 text-[45px]' : 'flex-row-reverse justify-center gap-24 text-[60px]'}`}>
+                 {o.tatePattern?.includes('p6') || o.tatePattern?.includes('p8') ? (
+                   <>
+                     <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{o.tateInput2}様</div>
+                     <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{o.tateInput1}</div>
+                     <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{o.tateInput3}</div>
+                   </>
+                 ) : o.tatePattern?.includes('p4') ? (
+                   <>
+                     <div className={`tracking-[0.3em] ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{o.tateInput3a}</div>
+                     <div className={`tracking-[0.3em] font-normal ${selectedTateOpt?.layout === 'horizontal' ? 'mt-8 text-[30px]' : 'mt-16 text-[35px] [writing-mode:vertical-rl]'}`}>{o.tateInput3b}</div>
+                   </>
+                 ) : (
+                   <>
+                     <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{o.tateInput1}</div>
+                     <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{o.tateInput3}</div>
+                   </>
+                 )}
+               </div>
+
+             </div>
+          </div>
+        </div>
+      );
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#F0F2F5] py-8 print-reset">
+      
+      {/* 印刷コントローラー（画面上部） */}
+      <div className="max-w-[1000px] mx-auto bg-white p-5 rounded-xl shadow-lg mb-8 print-hidden border border-gray-200 sticky top-4 z-50">
         <div className="flex justify-between items-center mb-4">
           <div className="text-sm font-bold text-gray-700 flex items-center gap-2">
-            🖨️ 伝票プレビュー ＆ 出力
-            <span className="bg-gray-100 text-gray-500 text-[10px] px-2 py-1 rounded-md">
-              A4サイズ / 100%倍率推奨
-            </span>
+            🖨️ 伝票・立札 印刷センター
+            <span className="bg-gray-100 text-gray-500 text-[10px] px-2 py-1 rounded-md">A4サイズ / 100%倍率推奨</span>
           </div>
-          <button onClick={() => window.print()} className="px-6 py-2.5 bg-[#2D4B3E] text-white font-bold rounded-lg shadow-md hover:bg-[#1f352b] transition-all flex items-center gap-2">
-            PDFに保存 / 印刷する
+          <button onClick={() => window.print()} className="px-6 py-3 bg-[#2D4B3E] text-white font-bold rounded-lg shadow-md hover:bg-[#1f352b] transition-all flex items-center gap-2 active:scale-95">
+            PDF保存 / プリンターで印刷する
           </button>
         </div>
         
-        <div className="flex gap-3 bg-gray-50 p-2 rounded-lg border border-gray-200">
-          <button 
-            onClick={() => setPrintMode('all')} 
-            className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${printMode === 'all' ? 'bg-white shadow-sm border border-gray-300 text-[#2D4B3E]' : 'text-gray-500 hover:bg-gray-200'}`}
-          >
-            📋 フルセット (4面印刷)
+        {/* モード切替ボタン */}
+        <div className="flex flex-wrap gap-3 bg-gray-50 p-2 rounded-lg border border-gray-200">
+          <button onClick={() => setPrintMode('all')} className={`flex-1 py-2.5 text-xs font-bold rounded-md transition-all ${printMode === 'all' ? 'bg-white shadow-sm border border-gray-300 text-[#2D4B3E]' : 'text-gray-500 hover:bg-gray-200'}`}>
+            📋 伝票フルセット (4面印刷)
           </button>
-          <button 
-            onClick={() => setPrintMode('customer')} 
-            className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${printMode === 'customer' ? 'bg-white shadow-sm border border-gray-300 text-[#1565c0]' : 'text-gray-500 hover:bg-gray-200'}`}
-          >
-            📧 お客様控え のみ (データ送付用)
+          <button onClick={() => setPrintMode('customer')} className={`flex-1 py-2.5 text-xs font-bold rounded-md transition-all ${printMode === 'customer' ? 'bg-white shadow-sm border border-gray-300 text-[#1565c0]' : 'text-gray-500 hover:bg-gray-200'}`}>
+            📧 お客様控え のみ
           </button>
-          <button 
-            onClick={() => setPrintMode('delivery')} 
-            className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${printMode === 'delivery' ? 'bg-white shadow-sm border border-gray-300 text-[#f57f17]' : 'text-gray-500 hover:bg-gray-200'}`}
-          >
-            🚚 納品・受領書 のみ (現場配達用)
+          <button onClick={() => setPrintMode('delivery')} className={`flex-1 py-2.5 text-xs font-bold rounded-md transition-all ${printMode === 'delivery' ? 'bg-white shadow-sm border border-gray-300 text-[#f57f17]' : 'text-gray-500 hover:bg-gray-200'}`}>
+            🚚 納品・受領書 のみ
+          </button>
+          <button onClick={() => setPrintMode('card')} className={`flex-1 py-2.5 text-xs font-bold rounded-md transition-all ${printMode === 'card' ? 'bg-white shadow-sm border border-[#c62828] text-[#c62828]' : 'text-[#c62828] hover:bg-red-50 border border-transparent'}`}>
+            🏷️ 本番用 立札・カード印刷
           </button>
         </div>
       </div>
 
-      <div className="print-container flex flex-col items-center gap-8">
+      {/* 印刷プレビュー領域 */}
+      <div className="print-container flex flex-col items-center gap-8 pb-20">
         
         {(printMode === 'all' || printMode === 'customer') && (
           <div className="print-page bg-white shadow-xl flex flex-col relative" style={{ height: printMode === 'customer' ? '148.5mm' : '296mm' }}>
@@ -282,6 +364,11 @@ export default function PrintSlipPage() {
             </div>
             <SlipTemplate title="受 領 書" colorCode="#c62828" bgColor="#ffebee" slipType="receipt" />
           </div>
+        )}
+
+        {/* 新規追加：立札・メッセージカードのA4印刷 */}
+        {printMode === 'card' && (
+          <CardTemplate />
         )}
 
       </div>
@@ -316,6 +403,7 @@ export default function PrintSlipPage() {
 
           .min-h-screen {
             min-height: 0 !important;
+            background: white !important;
           }
 
           .print-reset {

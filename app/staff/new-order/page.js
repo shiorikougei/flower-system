@@ -34,6 +34,10 @@ export default function StaffNewOrderPage() {
   const [otherVibe, setOtherVibe] = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
   
+  // ★ 新規追加: 不在時の対応（置き配）
+  const [absenceAction, setAbsenceAction] = useState('持ち戻り'); 
+  const [absenceNote, setAbsenceNote] = useState(''); 
+
   // 立札・メッセージ関連
   const [cardType, setCardType] = useState('なし');
   const [cardMessage, setCardMessage] = useState('');
@@ -50,6 +54,10 @@ export default function StaffNewOrderPage() {
   const [isRecipientDifferent, setIsRecipientDifferent] = useState(false);
   const [recipientInfo, setRecipientInfo] = useState({ name: '', phone: '', zip: '', address1: '', address2: '' });
   const [calculatedFee, setCalculatedFee] = useState(null);
+  
+  // ★ 新規追加: 回収料金
+  const [pickupFee, setPickupFee] = useState(0); 
+
   const [areaError, setAreaError] = useState('');
   const [note, setNote] = useState('');
 
@@ -172,10 +180,22 @@ export default function StaffNewOrderPage() {
   };
 
   useEffect(() => {
-    if (!receiveMethod || receiveMethod === 'pickup' || !itemPrice) { setCalculatedFee(null); setAreaError(''); return; }
+    // リセット処理
+    if (!receiveMethod || receiveMethod === 'pickup' || !itemPrice) { 
+      setCalculatedFee(null); 
+      setPickupFee(0);
+      setAreaError(''); 
+      return; 
+    }
+    
     const targetInfo = isRecipientDifferent ? recipientInfo : customerInfo;
     const rawAddress = ((targetInfo.address1 || '') + (targetInfo.address2 || '')).replace(/[\s　]+/g, '');
-    if (!rawAddress) { setCalculatedFee(null); setAreaError(''); return; }
+    if (!rawAddress) { 
+      setCalculatedFee(null); 
+      setPickupFee(0);
+      setAreaError(''); 
+      return; 
+    }
 
     if (receiveMethod === 'delivery') {
       const normalizedAddress = normalizeAddressText(rawAddress);
@@ -183,6 +203,7 @@ export default function StaffNewOrderPage() {
       let isFreeArea = false;
       for (const n of northPatterns) { for (const w of westPatterns) { if (normalizedAddress.includes(`北${n}条西${w}`)) { isFreeArea = true; break; } } if (isFreeArea) break; }
       let baseFee = null;
+      
       if (isFreeArea) baseFee = 0; 
       else if (appSettings?.deliveryAreas?.length > 0) {
         for (const area of appSettings.deliveryAreas) {
@@ -194,9 +215,20 @@ export default function StaffNewOrderPage() {
         else if (normalizedAddress.includes("白石区") || normalizedAddress.includes("豊平区") || normalizedAddress.includes("手稲区") || normalizedAddress.includes("石狩市")) baseFee = 800;
         else if (normalizedAddress.includes("北区") || normalizedAddress.includes("中央区") || normalizedAddress.includes("東区") || normalizedAddress.includes("西区")) baseFee = 500;
       }
-      if (baseFee !== null) { setCalculatedFee(flowerType.includes('スタンド') ? baseFee * 1.5 : baseFee); setAreaError(''); } 
-      else { setCalculatedFee(null); setAreaError('自社配達エリア外です。手動で送料を加算してください。'); }
+
+      if (baseFee !== null) { 
+        setCalculatedFee(baseFee);
+        // ★ 回収料金の自動計算（スタンド等が含まれる場合）
+        setPickupFee(flowerType.includes('スタンド') ? 1000 : 0);
+        setAreaError(''); 
+      } 
+      else { 
+        setCalculatedFee(null); 
+        setPickupFee(0);
+        setAreaError('自社配達エリア外です。手動で送料を加算してください。'); 
+      }
     } else if (receiveMethod === 'sagawa') {
+      setPickupFee(0); // 配送は回収なし
       const prefMatch = rawAddress.match(/^(北海道|東京都|(?:京都|大阪)府|.{2,3}県)/);
       if (prefMatch) {
         const targetPref = prefMatch[1].replace(/(都|府|県)$/, ''); const searchPref = targetPref === '北海' ? '北海道' : targetPref;
@@ -222,10 +254,11 @@ export default function StaffNewOrderPage() {
     } catch (error) { console.error("住所検索エラー"); }
   };
 
-  // ★ 合計金額のリアルタイム計算ロジック
+  // ★ 合計金額のリアルタイム計算ロジック（回収料金を含める）
   const parsedItemPrice = Number(itemPrice) || 0;
   const parsedFee = calculatedFee || 0;
-  const subTotal = parsedItemPrice + parsedFee;
+  const parsedPickupFee = pickupFee || 0;
+  const subTotal = parsedItemPrice + parsedFee + parsedPickupFee;
   const tax = Math.floor(subTotal * 0.1);
   const totalAmount = subTotal + tax;
 
@@ -234,13 +267,18 @@ export default function StaffNewOrderPage() {
       alert('受付店舗、担当スタッフ、お客様名、お届け日、金額は必須項目です。');
       return;
     }
+    if ((receiveMethod === 'delivery' || receiveMethod === 'sagawa') && absenceAction === '置き配' && !absenceNote) {
+      alert('置き配を希望される場合は、具体的な場所をご入力ください。');
+      return;
+    }
     
     setIsSubmitting(true);
     try {
       const orderPayload = {
         receptionType, staffName, shopId, flowerType, isBring, receiveMethod, selectedShop,
         selectedDate, receiveDate: selectedDate,
-        selectedTime, itemPrice, calculatedFee,
+        selectedTime, itemPrice, calculatedFee, pickupFee, // 回収料金を保存
+        absenceAction, absenceNote, // 置き配情報を保存
         flowerPurpose, flowerColor, flowerVibe, otherPurpose, otherVibe,
         cardType, cardMessage, tatePattern,
         tateInput1, tateInput2, tateInput3, tateInput3a, tateInput3b,
@@ -287,6 +325,9 @@ export default function StaffNewOrderPage() {
           </Link>
           <Link href="/staff/calendar" className="block w-full text-left px-6 py-4 rounded-xl text-[#555555] hover:bg-[#F7F7F7] transition-all">
             <span className="text-[13px] font-bold tracking-wider block">カレンダー</span>
+          </Link>
+          <Link href="/staff/deliveries" className="block w-full text-left px-6 py-4 rounded-xl text-[#555555] hover:bg-[#F7F7F7] transition-all">
+            <span className="text-[13px] font-bold tracking-wider block">配達・ルート管理</span>
           </Link>
           <Link href="/staff/settings" className="block w-full text-left px-6 py-4 rounded-xl text-[#555555] hover:bg-[#F7F7F7] transition-all mt-4 border-t border-[#EAEAEA] pt-4">
             <span className="text-[13px] font-bold tracking-wider block">各種設定</span>
@@ -373,7 +414,6 @@ export default function StaffNewOrderPage() {
 
           <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-6 overflow-hidden">
             
-            {/* ★ 変更：文言を「制作例からオーダー内容を自動入力」に変更！ */}
             {matchingImages.length > 0 && (
               <div className="bg-[#2D4B3E]/5 -mx-8 -mt-8 p-6 pb-8 mb-6 border-b border-[#EAEAEA] space-y-4">
                  <p className="text-[11px] font-bold text-[#2D4B3E] tracking-widest flex items-center gap-2">
@@ -478,27 +518,27 @@ export default function StaffNewOrderPage() {
                     
                     <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4">仕上がりプレビュー</p>
                     <div className={`relative mx-auto border border-[#EAEAEA] shadow-lg bg-white flex flex-col items-center ${selectedTateOpt?.layout === 'horizontal' ? 'aspect-[1.414/1] w-full justify-center p-6' : 'aspect-[1/1.414] h-[300px] pt-6 px-4'}`}>
-                       <div className={`font-serif font-bold text-red-600 ${selectedTateOpt?.layout === 'horizontal' ? 'text-[24px] mb-4' : 'text-[32px] mb-6 leading-none'}`}>
-                          {topPrefixText}
+                       <div className={`font-serif font-bold ${isOsonae ? 'text-gray-500' : 'text-red-600'} ${selectedTateOpt?.layout === 'horizontal' ? 'text-[28px] mb-4' : 'text-[40px] mb-6 leading-none'}`}>
+                         {topPrefixText}
                        </div>
-                       <div className={`flex w-full font-serif font-bold text-gray-800 ${selectedTateOpt?.layout === 'horizontal' ? 'flex-col items-center gap-2 text-[16px]' : 'flex-row-reverse justify-center gap-6 text-[16px]'}`}>
-                          {tatePattern.includes('p6') || tatePattern.includes('p8') ? (
-                             <>
-                                <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput2 || '宛名'}様</div>
-                                <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput1 || '内容'}</div>
-                                <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3 || '贈り主'}</div>
-                             </>
-                          ) : tatePattern.includes('p4') ? (
-                             <>
-                                <div className={`tracking-[0.3em] ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3a || '会社名'}</div>
-                                <div className={`tracking-[0.3em] font-normal ${selectedTateOpt?.layout === 'horizontal' ? 'mt-4 text-[13px]' : 'mt-4 text-[14px] [writing-mode:vertical-rl]'}`}>{tateInput3b || '役職・氏名'}</div>
-                             </>
-                          ) : (
-                             <>
-                                <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput1 || '内容'}</div>
-                                <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3 || '贈り主'}</div>
-                             </>
-                          )}
+                       <div className={`flex w-full font-serif font-bold text-gray-900 ${selectedTateOpt?.layout === 'horizontal' ? 'flex-col items-center gap-2 text-[16px]' : 'flex-row-reverse justify-center gap-6 text-[18px]'}`}>
+                         {tatePattern.includes('p6') || tatePattern.includes('p8') ? (
+                            <>
+                               <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput2 || '宛名'}様</div>
+                               <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput1 || '内容'}</div>
+                               <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3 || '贈り主'}</div>
+                            </>
+                         ) : tatePattern.includes('p4') ? (
+                            <>
+                               <div className={`tracking-[0.3em] ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3a || '会社名'}</div>
+                               <div className={`tracking-[0.3em] font-normal ${selectedTateOpt?.layout === 'horizontal' ? 'mt-4 text-[14px]' : 'mt-6 text-[14px] [writing-mode:vertical-rl]'}`}>{tateInput3b || '役職・氏名'}</div>
+                            </>
+                         ) : (
+                            <>
+                               <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput1 || '内容'}</div>
+                               <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3 || '贈り主'}</div>
+                            </>
+                         )}
                        </div>
                     </div>
                   </div>
@@ -560,6 +600,34 @@ export default function StaffNewOrderPage() {
                 <input type="text" placeholder="番地・建物名" value={recipientInfo.address2} onChange={(e) => setRecipientInfo({...recipientInfo, address2: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
               </div>
             )}
+
+            {/* ★ 新規追加: 置き配設定（配達・配送の時だけ表示） */}
+            {(receiveMethod === 'delivery' || receiveMethod === 'sagawa') && (
+              <div className="pt-6 border-t border-[#FBFAF9] space-y-4 animate-in fade-in">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-[#2D4B3E] tracking-widest flex items-center justify-between">
+                    ご不在時の対応 (置き配)
+                    <span className="bg-[#2D4B3E] text-white px-2 py-0.5 rounded text-[9px]">必須</span>
+                  </label>
+                  <p className="text-[11px] text-[#999999] mb-2">生花のため、ご不在時は原則として置き配または宅配ボックスへのお届けとなります。</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button onClick={() => setAbsenceAction('持ち戻り')} className={`py-3 text-[12px] font-bold rounded-xl border transition-all ${absenceAction === '持ち戻り' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] shadow-md' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>持ち戻り (再配達)</button>
+                    <button onClick={() => setAbsenceAction('置き配')} className={`py-3 text-[12px] font-bold rounded-xl border transition-all ${absenceAction === '置き配' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] shadow-md' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>置き配を希望する</button>
+                  </div>
+                </div>
+                {absenceAction === '置き配' && (
+                  <div className="space-y-2 animate-in fade-in">
+                    <input 
+                      type="text" 
+                      placeholder="例：玄関のドア前、宅配ボックス、ガスメーターの中 など" 
+                      value={absenceNote} 
+                      onChange={(e) => setAbsenceNote(e.target.value)} 
+                      className="w-full h-12 px-4 bg-white border-2 border-[#2D4B3E]/30 rounded-xl outline-none font-bold text-[13px] focus:border-[#2D4B3E] shadow-inner" 
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-6">
@@ -580,17 +648,44 @@ export default function StaffNewOrderPage() {
             </div>
           </div>
 
-          {/* ★ 新規追加：合計金額のリアルタイム計算表示パネル */}
-          <div className="bg-white p-8 rounded-[32px] border-2 border-[#2D4B3E]/30 shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="space-y-1 text-center md:text-left">
-              <p className="text-[11px] font-bold text-[#999999] tracking-widest">お支払い合計額 (税込)</p>
-              <div className="text-[11px] text-[#555555] font-medium flex gap-3 justify-center md:justify-start">
-                <span>商品代: ¥{parsedItemPrice.toLocaleString()}</span>
-                <span>送料等: ¥{parsedFee.toLocaleString()}</span>
+          {/* ★ 改修：合計金額パネル（回収料金追加） */}
+          <div className="bg-white p-8 rounded-[32px] border-2 border-[#2D4B3E]/30 shadow-md">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              
+              <div className="space-y-2 w-full md:w-auto">
+                <p className="text-[11px] font-bold text-[#999999] tracking-widest text-center md:text-left">お支払い内訳</p>
+                <div className="bg-[#FBFAF9] p-4 rounded-xl space-y-2 text-[13px] text-[#555555] font-medium w-full md:w-64">
+                  <div className="flex justify-between">
+                    <span>商品代 (税抜):</span>
+                    <span className="font-bold text-[#111111]">¥{parsedItemPrice.toLocaleString()}</span>
+                  </div>
+                  {parsedFee > 0 && (
+                    <div className="flex justify-between">
+                      <span>配達・送料:</span>
+                      <span className="font-bold text-[#111111]">¥{parsedFee.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {/* 回収料金の表示 */}
+                  {parsedPickupFee > 0 && (
+                    <div className="flex justify-between text-orange-600">
+                      <span>後日回収費:</span>
+                      <span className="font-bold text-orange-600">¥{parsedPickupFee.toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between border-t border-[#EAEAEA] pt-2 mt-2">
+                    <span className="text-[#2D4B3E]">消費税 (10%):</span>
+                    <span className="font-bold text-[#2D4B3E]">¥{tax.toLocaleString()}</span>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="text-[32px] font-bold text-[#2D4B3E] font-sans">
-              ¥{totalAmount.toLocaleString()}
+
+              <div className="text-center md:text-right flex-shrink-0">
+                <p className="text-[11px] font-bold text-[#2D4B3E] tracking-widest mb-1">合計金額 (税込)</p>
+                <div className="text-[40px] font-bold text-[#2D4B3E] font-sans leading-none">
+                  ¥{totalAmount.toLocaleString()}
+                </div>
+              </div>
+
             </div>
           </div>
 

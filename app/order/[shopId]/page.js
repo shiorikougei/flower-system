@@ -9,7 +9,7 @@ export default function OrderPage() {
   const shopId = params?.shopId || 'default';
 
   const [appSettings, setAppSettings] = useState(null);
-  const [portfolioImages, setPortfolioImages] = useState([]); // ★追加：ギャラリー画像
+  const [portfolioImages, setPortfolioImages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // --- 状態管理 ---
@@ -30,7 +30,11 @@ export default function OrderPage() {
   const [flowerVibe, setFlowerVibe] = useState('');
   const [otherPurpose, setOtherPurpose] = useState('');
   const [otherVibe, setOtherVibe] = useState('');
-  const [selectedImage, setSelectedImage] = useState(null); // ★追加：お客様が選んだ画像
+  const [selectedImage, setSelectedImage] = useState(null); 
+
+  // ★ 新規追加: 不在時の対応（置き配）
+  const [absenceAction, setAbsenceAction] = useState('持ち戻り'); 
+  const [absenceNote, setAbsenceNote] = useState(''); 
 
   // 立札・メッセージ
   const [cardType, setCardType] = useState('なし');
@@ -48,6 +52,10 @@ export default function OrderPage() {
   const [isRecipientDifferent, setIsRecipientDifferent] = useState(false);
   const [recipientInfo, setRecipientInfo] = useState({ name: '', phone: '', zip: '', address1: '', address2: '' });
   const [calculatedFee, setCalculatedFee] = useState(null);
+  
+  // ★ 新規追加: 回収料金
+  const [pickupFee, setPickupFee] = useState(0); 
+
   const [areaError, setAreaError] = useState('');
   const [note, setNote] = useState('');
 
@@ -56,12 +64,10 @@ export default function OrderPage() {
   useEffect(() => {
     async function fetchSettings() {
       try {
-        // 1. 基本設定の取得
         const { data, error } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
         if (error) throw error;
         if (data && data.settings_data) setAppSettings(data.settings_data);
 
-        // 2. ★ギャラリー（作品）データの取得
         const { data: gallery } = await supabase.from('app_settings').select('settings_data').eq('id', 'gallery').single();
         if (gallery && gallery.settings_data?.images) {
           setPortfolioImages(gallery.settings_data.images);
@@ -83,12 +89,10 @@ export default function OrderPage() {
     return appSettings?.flowerItems?.find(i => i.name === flowerType) || {};
   }, [flowerType, appSettings]);
 
-  // ★画像自動抽出ロジック（選んだ条件に近いものをフィルタリング）
   const matchingImages = useMemo(() => {
     if (!portfolioImages || portfolioImages.length === 0) return [];
     return portfolioImages.filter(img => {
       let match = true;
-      // 何か条件が選ばれていて、かつ画像側のデータと一致しない場合は除外
       if (flowerPurpose && flowerPurpose !== 'その他' && img.purpose && img.purpose !== flowerPurpose) match = false;
       if (flowerColor && flowerColor !== 'おまかせ' && img.color && img.color !== flowerColor) match = false;
       if (flowerVibe && flowerVibe !== 'その他' && flowerVibe !== 'おまかせ' && img.vibe && img.vibe !== flowerVibe) match = false;
@@ -96,13 +100,11 @@ export default function OrderPage() {
     });
   }, [portfolioImages, flowerPurpose, flowerColor, flowerVibe]);
 
-  // ★「このイメージで作る」を押した時の自動入力魔法
   const handleSelectImage = (img) => {
     if (selectedImage?.id === img.id) {
-      setSelectedImage(null); // 解除
+      setSelectedImage(null); 
     } else {
       setSelectedImage(img);
-      // 画像に設定されている情報をフォームに自動上書き！
       if (img.price > 0) setItemPrice(String(img.price));
       if (img.purpose) setFlowerPurpose(img.purpose);
       if (img.color) setFlowerColor(img.color);
@@ -160,10 +162,21 @@ export default function OrderPage() {
   };
 
   useEffect(() => {
-    if (!receiveMethod || receiveMethod === 'pickup' || !itemPrice) { setCalculatedFee(null); setAreaError(''); return; }
+    if (!receiveMethod || receiveMethod === 'pickup' || !itemPrice) { 
+      setCalculatedFee(null); 
+      setPickupFee(0);
+      setAreaError(''); 
+      return; 
+    }
+    
     const targetInfo = isRecipientDifferent ? recipientInfo : customerInfo;
     const rawAddress = ((targetInfo.address1 || '') + (targetInfo.address2 || '')).replace(/[\s　]+/g, '');
-    if (!rawAddress) { setCalculatedFee(null); setAreaError(''); return; }
+    if (!rawAddress) { 
+      setCalculatedFee(null); 
+      setPickupFee(0);
+      setAreaError(''); 
+      return; 
+    }
 
     if (receiveMethod === 'delivery') {
       const normalizedAddress = normalizeAddressText(rawAddress);
@@ -183,9 +196,19 @@ export default function OrderPage() {
         else if (normalizedAddress.includes("北区") || normalizedAddress.includes("中央区") || normalizedAddress.includes("東区") || normalizedAddress.includes("西区")) baseFee = 500;
       }
 
-      if (baseFee !== null) { setCalculatedFee(flowerType.includes('スタンド') ? baseFee * 1.5 : baseFee); setAreaError(''); } 
-      else { setCalculatedFee(null); setAreaError('入力された住所は自社配達エリア外です。'); }
+      if (baseFee !== null) { 
+        setCalculatedFee(baseFee);
+        // ★ 回収料金の自動計算
+        setPickupFee(flowerType.includes('スタンド') ? 1000 : 0);
+        setAreaError(''); 
+      } 
+      else { 
+        setCalculatedFee(null); 
+        setPickupFee(0);
+        setAreaError('入力された住所は自社配達エリア外です。'); 
+      }
     } else if (receiveMethod === 'sagawa') {
+      setPickupFee(0);
       const prefMatch = rawAddress.match(/^(北海道|東京都|(?:京都|大阪)府|.{2,3}県)/);
       if (!prefMatch) { setCalculatedFee(null); setAreaError('都道府県が判別できません。'); return; }
       const targetPref = prefMatch[1].replace(/(都|府|県)$/, ''); const searchPref = targetPref === '北海' ? '北海道' : targetPref;
@@ -231,6 +254,8 @@ export default function OrderPage() {
     if (step === 4) {
       if (!customerInfo.name || !customerInfo.phone || !selectedDate || !selectedTime || !methodAgreed) return true;
       if ((receiveMethod === 'delivery' || receiveMethod === 'sagawa') && areaError) return true;
+      // ★ 置き配指定必須チェック
+      if ((receiveMethod === 'delivery' || receiveMethod === 'sagawa') && absenceAction === '置き配' && !absenceNote) return true;
     }
     return false;
   };
@@ -240,12 +265,13 @@ export default function OrderPage() {
     try {
       const orderPayload = {
         shopId, flowerType, isBring, receiveMethod, selectedShop,
-        selectedDate, selectedTime, itemPrice, calculatedFee,
+        selectedDate, selectedTime, itemPrice, calculatedFee, pickupFee,
+        absenceAction, absenceNote,
         flowerPurpose, flowerColor, flowerVibe, otherPurpose, otherVibe,
         cardType, cardMessage, tatePattern,
         tateInput1, tateInput2, tateInput3, tateInput3a, tateInput3b,
         customerInfo, isRecipientDifferent, recipientInfo, note,
-        referenceImage: selectedImage ? selectedImage.url : null, // ★スタッフが確認できるように保存
+        referenceImage: selectedImage ? selectedImage.url : null,
         status: 'new' 
       };
 
@@ -455,10 +481,28 @@ export default function OrderPage() {
                       
                       <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4">仕上がりプレビュー</p>
                       <div className={`relative mx-auto border border-[#EAEAEA] shadow-lg bg-white flex flex-col items-center ${selectedTateOpt?.layout === 'horizontal' ? 'aspect-[1.414/1] w-full justify-center p-6' : 'aspect-[1/1.414] h-[300px] pt-6 px-4'}`}>
-                         <div className={`font-bold ${selectedTateOpt?.color === 'red' ? 'text-red-600' : 'text-gray-800'} ${selectedTateOpt?.layout === 'horizontal' ? 'text-[28px] mb-4' : 'text-[40px] mb-6 leading-none'}`}>{topPrefixText}</div>
-                         <div className={`flex w-full font-bold text-gray-900 ${selectedTateOpt?.layout === 'horizontal' ? 'flex-col items-center gap-2 text-[16px]' : 'flex-row-reverse justify-center gap-6 text-[18px]'}`}>
-                            {tatePattern.includes('p6') || tatePattern.includes('p8') ? (<><div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput2 || '宛名'}様</div><div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput1 || '内容'}</div><div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3 || '贈り主'}</div></>) : tatePattern.includes('p4') ? (<><div className={`tracking-[0.3em] ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3a || '会社名'}</div><div className={`tracking-[0.3em] font-normal ${selectedTateOpt?.layout === 'horizontal' ? 'mt-4 text-[14px]' : 'mt-6 text-[14px] [writing-mode:vertical-rl]'}`}>{tateInput3b || '役職・氏名'}</div></>) : (<><div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput1 || '内容'}</div><div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3 || '贈り主'}</div></>)}
-                         </div>
+                        <div className={`font-serif font-bold ${isOsonae ? 'text-gray-500' : 'text-red-600'} ${selectedTateOpt?.layout === 'horizontal' ? 'text-[28px] mb-4' : 'text-[40px] mb-6 leading-none'}`}>
+                          {topPrefixText}
+                        </div>
+                        <div className={`flex w-full font-serif font-bold text-gray-900 ${selectedTateOpt?.layout === 'horizontal' ? 'flex-col items-center gap-2 text-[16px]' : 'flex-row-reverse justify-center gap-6 text-[18px]'}`}>
+                          {tatePattern.includes('p6') || tatePattern.includes('p8') ? (
+                            <>
+                              <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput2 || '宛名'}様</div>
+                              <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput1 || '内容'}</div>
+                              <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3 || '贈り主'}</div>
+                            </>
+                          ) : tatePattern.includes('p4') ? (
+                            <>
+                              <div className={`tracking-[0.3em] ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3a || '会社名'}</div>
+                              <div className={`tracking-[0.3em] font-normal ${selectedTateOpt?.layout === 'horizontal' ? 'mt-4 text-[14px]' : 'mt-6 text-[14px] [writing-mode:vertical-rl]'}`}>{tateInput3b || '役職・氏名'}</div>
+                            </>
+                          ) : (
+                            <>
+                              <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput1 || '内容'}</div>
+                              <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3 || '贈り主'}</div>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -511,6 +555,14 @@ export default function OrderPage() {
                     <span className="text-[18px] text-[#2D4B3E]">{calculatedFee === 0 ? '無料' : `¥${calculatedFee.toLocaleString()}`}</span>
                   </div>
                 )}
+                {/* ★ お客様用画面にも回収料金の表示を追加 */}
+                {pickupFee > 0 && (
+                  <div className="pt-2 flex justify-between items-center font-bold text-orange-600 animate-in fade-in">
+                    <span className="text-[12px]">後日回収費 (スタンド等):</span>
+                    <span className="text-[16px]">¥{pickupFee.toLocaleString()}</span>
+                  </div>
+                )}
+                
                 {areaError && <p className="text-red-500 text-[11px] font-bold mt-2">{areaError}</p>}
               </div>
 
@@ -534,6 +586,35 @@ export default function OrderPage() {
                 </div>
               )}
 
+              {/* ★ 新規追加: 置き配設定（お客様用・配達・配送の時だけ表示） */}
+              {(receiveMethod === 'delivery' || receiveMethod === 'sagawa') && (
+                <div className="p-8 bg-white rounded-[28px] border border-[#EAEAEA] shadow-sm space-y-4 animate-in fade-in">
+                  <div className="space-y-2">
+                    <label className="text-[12px] font-bold text-[#111111] flex items-center justify-between">
+                      ご不在時の対応 (置き配)
+                      <span className="bg-[#2D4B3E] text-white px-2 py-0.5 rounded text-[9px] font-bold tracking-widest">必須</span>
+                    </label>
+                    <p className="text-[11px] text-[#555555] mb-2 leading-relaxed">生花のため、ご不在時は原則として置き配または宅配ボックスへのお届けとなります。ご希望の対応をお選びください。</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button onClick={() => setAbsenceAction('持ち戻り')} className={`py-4 text-[13px] font-bold rounded-xl border transition-all ${absenceAction === '持ち戻り' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] shadow-md' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>持ち戻り (再配達)</button>
+                      <button onClick={() => setAbsenceAction('置き配')} className={`py-4 text-[13px] font-bold rounded-xl border transition-all ${absenceAction === '置き配' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] shadow-md' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>置き配を希望する</button>
+                    </div>
+                  </div>
+                  {absenceAction === '置き配' && (
+                    <div className="space-y-2 pt-2 animate-in fade-in">
+                      <p className="text-[11px] font-bold text-[#2D4B3E]">置き配の場所</p>
+                      <input 
+                        type="text" 
+                        placeholder="例：玄関のドア前、宅配ボックス、ガスメーターの中 など" 
+                        value={absenceNote} 
+                        onChange={(e) => setAbsenceNote(e.target.value)} 
+                        className="w-full h-14 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none text-[13px] focus:bg-white focus:border-[#2D4B3E] transition-all shadow-inner" 
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] font-sans space-y-4 mt-6">
                 <p className="text-[11px] font-bold text-[#111111] tracking-widest border-b border-[#EAEAEA] pb-2">
                   {receiveMethod === 'pickup' ? '店頭受取に関する注意事項' : receiveMethod === 'delivery' ? '自社配達に関する注意事項' : '配送に関する注意事項'}
@@ -543,7 +624,8 @@ export default function OrderPage() {
                   {receiveMethod === 'delivery' && (
                     <>
                       <p>・配達可能エリア外への配達をご希望の場合は、お電話にて直接お問い合わせください。</p>
-                      {flowerType.includes('スタンド') && calculatedFee > 0 && <p className="font-bold text-[#2D4B3E]">※スタンド花をご注文の場合、後日回収が必要となるため配達料が通常の1.5倍となります。</p>}
+                      {/* ★ 注意書きの表現を少し変更 */}
+                      {flowerType.includes('スタンド') && pickupFee > 0 && <p className="font-bold text-orange-600">※スタンド花をご注文の場合、後日回収が必要となるため回収料金(¥{pickupFee.toLocaleString()})が自動で加算されます。</p>}
                     </>
                   )}
                   {receiveMethod === 'sagawa' && (

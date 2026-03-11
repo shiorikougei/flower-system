@@ -11,7 +11,8 @@ export default function SettingsPage() {
   const [adminPassword, setAdminPassword] = useState('');
 
   // --- 状態管理 ---
-  const [generalConfig, setGeneralConfig] = useState({ appName: 'FLORIX', logoUrl: '', slipBgUrl: '', slipBgOpacity: 50 });
+  // ★ 変更: generalConfigに logoSize（サイズ調整）と logoTransparent（透過オンオフ）を追加
+  const [generalConfig, setGeneralConfig] = useState({ appName: 'FLORIX', logoUrl: '', logoSize: 100, logoTransparent: false, slipBgUrl: '', slipBgOpacity: 50 });
   const [shops, setShops] = useState([]); 
   const [flowerItems, setFlowerItems] = useState([]);
   const [staffList, setStaffList] = useState([]);
@@ -48,7 +49,7 @@ export default function SettingsPage() {
 
   const tabs = [
     { id: 'general', label: '基本設定', sub: 'アプリ名・ロゴ・伝票柄' },
-    { id: 'shop', label: '店舗管理', sub: '店舗・営業時間' },
+    { id: 'shop', label: '店舗管理', sub: '店舗・営業時間・決済' }, // ★ ラベル変更
     { id: 'items', label: '商品管理', sub: 'アイテム・納期' },
     { id: 'shipping', label: '配送・送料', sub: '自社配達・業者配送' },
     { id: 'rules', label: '立札デザイン', sub: 'テンプレート' },
@@ -81,11 +82,13 @@ export default function SettingsPage() {
           const s = data.settings_data;
           const today = new Date().toISOString().split('T')[0];
 
-          if (s.generalConfig) setGeneralConfig({ ...{ slipBgUrl: '', slipBgOpacity: 50 }, ...s.generalConfig });
+          if (s.generalConfig) setGeneralConfig({ ...{ slipBgUrl: '', slipBgOpacity: 50, logoSize: 100, logoTransparent: false }, ...s.generalConfig });
           
           if (s.shops) {
             setShops(s.shops.map(shop => ({
               ...shop,
+              bankInfo: shop.bankInfo || '', // ★ 後方互換
+              paymentUrl: shop.paymentUrl || '', // ★ 後方互換
               specialHours: (shop.specialHours || []).filter(sh => {
                 if (sh.recurrence === 'once' && sh.settingType === 'date' && sh.date < today) return false;
                 return true;
@@ -129,8 +132,8 @@ export default function SettingsPage() {
 
   const updateShop = (id, field, value) => setShops(shops.map(s => s.id === id ? { ...s, [field]: value } : s));
   
-  // ★ ここで新規店舗追加時にも「zip（郵便番号）」の枠を作るようにしました！
-  const addShop = () => setShops([...shops, { id: Date.now(), name: '', phone: '', zip: '', address: '', invoiceNumber: '', canDelivery: true, normalOpen: '11:00', normalClose: '19:00', normalDeliveryOpen: '11:00', normalDeliveryClose: '18:00', specialHours: [], enabledTatePatterns: ['p5', 'p7'] }]);
+  // ★ 変更: 新規店舗追加時に bankInfo と paymentUrl の枠も作る
+  const addShop = () => setShops([...shops, { id: Date.now(), name: '', phone: '', zip: '', address: '', invoiceNumber: '', bankInfo: '', paymentUrl: '', canDelivery: true, normalOpen: '11:00', normalClose: '19:00', normalDeliveryOpen: '11:00', normalDeliveryClose: '18:00', specialHours: [], enabledTatePatterns: ['p5', 'p7'] }]);
   
   const addSpecialHour = (shopId) => setShops(shops.map(s => s.id === shopId ? { ...s, specialHours: [...(s.specialHours || []), { id: Date.now(), target: 'business', settingType: 'date', date: '', recurrence: 'once', type: 'closed', open: '11:00', close: '18:00' }] } : s));
   const toggleTatePattern = (shopId, patternId) => setShops(shops.map(s => s.id === shopId ? { ...s, enabledTatePatterns: s.enabledTatePatterns.includes(patternId) ? s.enabledTatePatterns.filter(p => p !== patternId) : [...s.enabledTatePatterns, patternId] } : s));
@@ -166,8 +169,9 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-[#FBFAF9] flex flex-col md:flex-row text-[#111111] font-sans">
       <aside className="w-full md:w-64 bg-white border-r border-[#EAEAEA] md:fixed h-full z-20 overflow-y-auto pb-10">
         <div className="p-8 flex flex-col gap-1 border-b border-[#EAEAEA]">
+          {/* ★ 変更: サイドバーのロゴプレビューにも透過とサイズを反映 */}
           {generalConfig.logoUrl ? (
-             <img src={generalConfig.logoUrl} alt={generalConfig.appName} className="h-8 object-contain object-left mb-1" />
+             <img src={generalConfig.logoUrl} alt={generalConfig.appName} style={{ width: `${generalConfig.logoSize}%`, mixBlendMode: generalConfig.logoTransparent ? 'multiply' : 'normal' }} className="h-8 object-contain object-left mb-1 transition-all" />
           ) : (
              <span className="font-serif italic text-[24px] tracking-tight text-[#2D4B3E]">{generalConfig.appName}</span>
           )}
@@ -213,7 +217,7 @@ export default function SettingsPage() {
 
         <div className={`max-w-[840px] mx-auto w-full py-12 md:py-20 px-6 transition-all duration-500 ${!isAdmin ? 'pointer-events-none opacity-60 grayscale-[30%]' : ''}`}>
           
-          {/* 【1】基本設定 */}
+          {/* 【1】基本設定 (ロゴ調整改修) */}
           {activeTab === 'general' && (
             <div className="space-y-16 animate-in fade-in">
               <header className="px-2 border-l-4 border-[#2D4B3E] mb-10"><h2 className="text-[24px] font-bold text-[#2D4B3E]">基本設定</h2></header>
@@ -222,20 +226,68 @@ export default function SettingsPage() {
                   <label className="text-[12px] font-bold text-[#555555]">アプリの表示名 (ブランド名)</label>
                   <input type="text" value={generalConfig.appName} onChange={(e) => setGeneralConfig({...generalConfig, appName: e.target.value})} className="w-full h-14 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-5 font-bold focus:border-[#2D4B3E] outline-none" />
                 </div>
-                <div className="space-y-2 text-left">
+                
+                {/* ★ 変更: ロゴ設定エリアの大幅改修 */}
+                <div className="space-y-4 text-left pt-6 border-t border-[#FBFAF9]">
                   <label className="text-[12px] font-bold text-[#555555]">店舗ロゴ・アイコン (任意)</label>
-                  <div className="flex items-center gap-6 p-5 bg-[#FBFAF9] rounded-2xl border border-[#EAEAEA]">
-                    <div className="relative w-20 h-20 rounded-xl border border-[#EAEAEA] bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
-                      {generalConfig.logoUrl ? (
-                        <><img src={generalConfig.logoUrl} alt="Logo" className="w-full h-full object-contain p-1" /><button onClick={() => setGeneralConfig({...generalConfig, logoUrl: ''})} className="absolute top-1 right-1 w-5 h-5 bg-white/90 rounded-full text-red-500 font-bold text-[10px] hover:scale-110">×</button></>
-                      ) : (<span className="text-[10px] font-bold text-[#999999] text-center leading-tight">No<br/>Logo</span>)}
+                  
+                  <div className="flex flex-col lg:flex-row gap-8 items-start">
+                    {/* 左側: アップロードとスライダー */}
+                    <div className="flex-1 w-full space-y-6 p-6 bg-[#FBFAF9] rounded-2xl border border-[#EAEAEA]">
+                      <div className="space-y-2">
+                        <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'logoUrl')} className="block w-full text-sm text-[#555555] file:mr-4 file:py-2.5 file:px-5 file:rounded-full file:border-0 file:text-[12px] file:font-bold file:bg-[#2D4B3E] file:text-white hover:file:bg-[#1f352b] cursor-pointer transition-all" />
+                        <p className="text-[10px] text-[#999999]">※2MB以下の画像（PNG/JPG）を直接選択してください。</p>
+                      </div>
+
+                      {generalConfig.logoUrl && (
+                        <div className="space-y-6 pt-4 border-t border-[#EAEAEA] animate-in fade-in">
+                          {/* スライダー */}
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <label className="text-[11px] font-bold text-[#2D4B3E]">ロゴの表示サイズ</label>
+                              <span className="text-[11px] font-bold text-[#2D4B3E] bg-white px-2 py-0.5 rounded-md border border-[#EAEAEA]">{generalConfig.logoSize}%</span>
+                            </div>
+                            <input type="range" min="30" max="150" value={generalConfig.logoSize} onChange={(e) => setGeneralConfig({...generalConfig, logoSize: Number(e.target.value)})} className="w-full accent-[#2D4B3E]" />
+                          </div>
+                          
+                          {/* 透過スイッチ */}
+                          <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-[#EAEAEA]">
+                            <div className="space-y-1">
+                              <span className="text-[12px] font-bold text-[#2D4B3E] block">白背景を透明にする</span>
+                              <span className="text-[9px] text-[#999999] block">※白い部分が透けて見えます（JPGに便利）</span>
+                            </div>
+                            <button onClick={() => setGeneralConfig({...generalConfig, logoTransparent: !generalConfig.logoTransparent})} className={`w-12 h-7 rounded-full relative transition-all ${generalConfig.logoTransparent ? 'bg-[#2D4B3E]' : 'bg-[#D1D1D1]'}`}>
+                              <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all ${generalConfig.logoTransparent ? 'left-6' : 'left-1'}`}></div>
+                            </button>
+                          </div>
+
+                          <button onClick={() => setGeneralConfig({...generalConfig, logoUrl: '', logoSize: 100, logoTransparent: false})} className="text-[10px] text-red-500 font-bold hover:underline transition-all">ロゴを削除する</button>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex-1 space-y-2">
-                      <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'logoUrl')} className="block w-full text-sm text-[#555555] file:mr-4 file:py-2.5 file:px-5 file:rounded-full file:border-0 file:text-[12px] file:font-bold file:bg-[#2D4B3E] file:text-white hover:file:bg-[#1f352b] cursor-pointer transition-all" />
-                      <p className="text-[10px] text-[#999999]">※2MB以下の画像（PNG/JPG）を直接選択してください。</p>
+
+                    {/* 右側: プレビュー */}
+                    <div className="w-full lg:w-48 shrink-0 space-y-2">
+                      <label className="text-[11px] font-bold text-[#999999] tracking-widest text-center block">プレビュー</label>
+                      <div className="relative w-full aspect-square bg-[#EAEAEA]/30 border border-[#EAEAEA] rounded-2xl flex items-center justify-center overflow-hidden">
+                        {generalConfig.logoUrl ? (
+                          <img 
+                            src={generalConfig.logoUrl} 
+                            alt="Logo Preview" 
+                            style={{ 
+                              width: `${generalConfig.logoSize}%`, 
+                              mixBlendMode: generalConfig.logoTransparent ? 'multiply' : 'normal' 
+                            }} 
+                            className="object-contain transition-all duration-200" 
+                          />
+                        ) : (
+                          <span className="text-[10px] font-bold text-[#999999] text-center">No Logo</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
+
                 <div className="space-y-4 text-left pt-6 border-t border-[#FBFAF9]">
                   <div className="flex flex-col lg:flex-row gap-8">
                     <div className="flex-1 space-y-4">
@@ -269,7 +321,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* 【2】店舗管理 (復元) */}
+          {/* 【2】店舗管理 (決済基盤改修) */}
           {activeTab === 'shop' && (
             <div className="space-y-16 animate-in fade-in duration-700">
               <header className="px-2 border-l-4 border-[#2D4B3E] mb-10"><h2 className="text-[24px] font-bold text-[#2D4B3E]">店舗管理</h2></header>
@@ -282,7 +334,6 @@ export default function SettingsPage() {
                       <div className="space-y-8">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8"><div className="space-y-2"><label className="text-[11px] font-bold text-[#2D4B3E] ml-1">店舗名</label><input type="text" value={shop.name} onChange={(e) => updateShop(shop.id, 'name', e.target.value)} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none focus:border-[#2D4B3E]" /></div><div className="space-y-2"><label className="text-[11px] font-bold text-[#2D4B3E] ml-1">電話番号</label><input type="tel" value={shop.phone} onChange={(e) => updateShop(shop.id, 'phone', e.target.value)} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none focus:border-[#2D4B3E]" /></div></div>
                         
-                        {/* ★ 郵便番号・住所・インボイス番号の3列構成に変更 ★ */}
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
                           <div className="md:col-span-3 space-y-2">
                             <label className="text-[11px] font-bold text-[#2D4B3E] ml-1">郵便番号</label>
@@ -300,6 +351,33 @@ export default function SettingsPage() {
                             <div className="flex items-center gap-2">
                               <span className="text-[14px] font-bold text-[#555555]">T</span>
                               <input type="text" maxLength="13" value={shop.invoiceNumber} onChange={(e) => updateShop(shop.id, 'invoiceNumber', e.target.value)} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none font-mono focus:border-[#2D4B3E]" />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* ★ 変更: 決済・振込先情報の追加パネル */}
+                        <div className="pt-6 border-t border-[#FBFAF9] space-y-6">
+                          <p className="text-[13px] font-bold text-[#2D4B3E]">決済・振込先情報 <span className="text-[10px] text-[#999999] font-normal ml-2">※請求書やメールに引用されます</span></p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-[#2D4B3E]/5 p-6 rounded-2xl border border-[#2D4B3E]/20">
+                            <div className="space-y-2">
+                              <label className="text-[11px] font-bold text-[#2D4B3E] ml-1">振込先口座情報</label>
+                              <textarea 
+                                placeholder="例：北洋銀行 本店営業部 普通 1234567 カ）ハナヤ" 
+                                value={shop.bankInfo || ''} 
+                                onChange={(e) => updateShop(shop.id, 'bankInfo', e.target.value)} 
+                                className="w-full h-24 p-4 bg-white border border-[#EAEAEA] rounded-xl outline-none text-[12px] resize-none focus:border-[#2D4B3E] shadow-sm"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[11px] font-bold text-[#2D4B3E] ml-1">オンライン決済URL (Stripe/Square等)</label>
+                              <input 
+                                type="url" 
+                                placeholder="https://buy.stripe.com/..." 
+                                value={shop.paymentUrl || ''} 
+                                onChange={(e) => updateShop(shop.id, 'paymentUrl', e.target.value)} 
+                                className="w-full h-12 px-4 bg-white border border-[#EAEAEA] rounded-xl outline-none text-[12px] focus:border-[#2D4B3E] shadow-sm" 
+                              />
+                              <p className="text-[9px] text-[#999999] leading-tight">※リンク決済用のURLを設定しておくと、お客様にオンライン決済を案内できます。</p>
                             </div>
                           </div>
                         </div>
@@ -322,7 +400,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* 【3】商品管理 (復元) */}
+          {/* 【3】商品管理 (変更なし) */}
           {activeTab === 'items' && (
             <div className="space-y-12 animate-in fade-in duration-700">
               <header className="px-2 border-l-4 border-[#2D4B3E] mb-10"><h2 className="text-[24px] font-bold text-[#2D4B3E]">商品管理</h2></header>
@@ -358,7 +436,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* 【4】配送・送料 (復元) */}
+          {/* 【4】配送・送料 (変更なし) */}
           {activeTab === 'shipping' && (
             <div className="space-y-12 animate-in fade-in duration-700">
                <header className="px-2 border-l-4 border-[#2D4B3E] mb-10"><h2 className="text-[24px] font-bold text-[#2D4B3E]">配送・送料管理</h2></header>
@@ -436,7 +514,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* 【5】立札設定 (実装済み最新版) */}
+          {/* 【5】立札設定 (変更なし) */}
           {activeTab === 'rules' && (
             <div className="space-y-12 animate-in fade-in duration-700">
                <header className="px-2 border-l-4 border-[#2D4B3E] mb-10"><h2 className="text-[24px] font-bold text-[#2D4B3E]">立札デザイン</h2></header>
@@ -474,7 +552,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* 【6】店舗注文受付（代理入力ルール）(復元) */}
+          {/* 【6】店舗注文受付（代理入力ルール）(変更なし) */}
           {activeTab === 'staff_order' && (
             <div className="space-y-12 animate-in fade-in duration-700">
                <header className="px-2 border-l-4 border-[#2D4B3E] mb-10">
@@ -506,7 +584,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* 【7】スタッフ管理 (実装済み最新版) */}
+          {/* 【7】スタッフ管理 (変更なし) */}
           {activeTab === 'staff' && (
             <div className="space-y-12 animate-in fade-in px-2 text-left">
                <header className="px-2 border-l-4 border-[#2D4B3E] mb-10"><h2 className="text-[24px] font-bold text-[#2D4B3E]">スタッフ管理</h2></header>
@@ -537,7 +615,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* 【8】通知メール設定 (復元) */}
+          {/* 【8】通知メール設定 (変更なし) */}
           {activeTab === 'message' && (
             <div className="space-y-12 animate-in fade-in duration-700">
                <header className="px-2 border-l-4 border-[#2D4B3E] mb-10">

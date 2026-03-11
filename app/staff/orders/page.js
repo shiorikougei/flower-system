@@ -137,9 +137,9 @@ export default function OrdersPage() {
                   <th className="p-4 text-[11px] font-bold text-[#999999] tracking-widest">注文日時</th>
                   <th className="p-4 text-[11px] font-bold text-[#999999] tracking-widest">お渡し日</th>
                   <th className="p-4 text-[11px] font-bold text-[#999999] tracking-widest">注文者様</th>
-                  <th className="p-4 text-[11px] font-bold text-[#999999] tracking-widest">商品</th>
+                  {/* ★ 変更: ヘッダー名を「商品 / 金額内訳」に変更 */}
+                  <th className="p-4 text-[11px] font-bold text-[#999999] tracking-widest">商品 / 金額内訳</th>
                   <th className="p-4 text-[11px] font-bold text-[#999999] tracking-widest">受取方法</th>
-                  {/* ★ 新規追加: 受領書カラム */}
                   <th className="p-4 text-[11px] font-bold text-[#999999] tracking-widest text-center">受領書</th>
                   <th className="p-4 text-[11px] font-bold text-[#999999] tracking-widest text-center">操作</th>
                 </tr>
@@ -148,19 +148,47 @@ export default function OrdersPage() {
                 {orders.map((order) => {
                   const d = order.order_data;
                   const date = new Date(order.created_at).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                  
+                  // ★ 新規追加: 金額のリアルタイム計算
+                  const itemPrice = Number(d.itemPrice) || 0;
+                  const fee = Number(d.calculatedFee) || 0;
+                  const subTotal = itemPrice + fee;
+                  const tax = Math.floor(subTotal * 0.1);
+                  const totalAmount = subTotal + tax;
+
                   return (
                     <tr key={order.id} className="hover:bg-[#FBFAF9] transition-all">
                       <td className="p-4 text-[#555555] font-mono">{date}</td>
                       <td className="p-4 font-bold text-[#2D4B3E]">{d.selectedDate} {d.selectedTime && <span className="text-[10px] text-[#999999] block">{d.selectedTime}</span>}</td>
                       <td className="p-4 font-bold">{d.customerInfo?.name}</td>
-                      <td className="p-4">{d.flowerType} <span className="text-[#999999] text-[11px]">/ ¥{Number(d.itemPrice).toLocaleString()}</span></td>
+                      
+                      {/* ★ 変更: 商品名の下に内訳ミニパネルを表示 */}
+                      <td className="p-4">
+                        <div className="font-bold">{d.flowerType}</div>
+                        <div className="mt-1.5 p-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[10px] text-[#555555] w-fit min-w-[140px]">
+                          <div className="flex justify-between gap-4">
+                            <span>商品代:</span><span>¥{itemPrice.toLocaleString()}</span>
+                          </div>
+                          {fee > 0 && (
+                            <div className="flex justify-between gap-4">
+                              <span>送料等:</span><span>¥{fee.toLocaleString()}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between gap-4 text-[#2D4B3E]">
+                            <span>消費税:</span><span>¥{tax.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between gap-4 mt-1 pt-1 border-t border-[#EAEAEA] font-bold text-[#2D4B3E]">
+                            <span>合計(税込):</span><span>¥{totalAmount.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </td>
+
                       <td className="p-4">
                         <span className={`px-2 py-1 text-[10px] font-bold rounded-md ${d.receiveMethod === 'pickup' ? 'bg-blue-50 text-blue-600' : d.receiveMethod === 'delivery' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'}`}>
                           {d.receiveMethod === 'pickup' ? '店頭受取' : d.receiveMethod === 'delivery' ? '自社配達' : '配送'}
                         </span>
                       </td>
                       
-                      {/* ★ 新規追加: 受領書アップロードUI */}
                       <td className="p-4 text-center">
                         {uploadingId === order.id ? (
                           <span className="text-[10px] font-bold text-[#999999] animate-pulse">保存中...</span>
@@ -171,7 +199,6 @@ export default function OrdersPage() {
                             </button>
                             <label className="text-[9px] text-gray-400 underline cursor-pointer hover:text-[#2D4B3E]">
                               再UP
-                              {/* capture="environment" でスマホの背面カメラを直接起動！ */}
                               <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleUploadReceipt(order, e)} />
                             </label>
                           </div>
