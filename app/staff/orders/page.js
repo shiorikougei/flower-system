@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/utils/supabase';
-import { Search, Printer, Clock, Camera, CheckCircle, ChevronRight, X, Calendar, User, MapPin, Tag, FileText, Smartphone, Archive } from 'lucide-react';
+import { Search, Printer, Clock, Camera, CheckCircle, ChevronRight, X, Calendar, User, MapPin, Tag, FileText, Smartphone, Archive, RotateCcw, Inbox } from 'lucide-react';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -11,6 +11,7 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [uploadingId, setUploadingId] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
+  const [viewMode, setViewMode] = useState('active'); // 'active' or 'archived'
 
   useEffect(() => {
     fetchData();
@@ -29,17 +30,16 @@ export default function OrdersPage() {
     }
   }
 
-  // ★ 完了ステータスに更新する関数
-  const handleCompleteOrder = async (orderId) => {
-    if (!confirm('この注文を「完了」としてアーカイブしますか？\n（受注一覧からは消えますが、カレンダーや顧客データには残ります）')) return;
+  // ステータス更新（アーカイブ・戻す）
+  const updateOrderStatus = async (orderId, newStatus) => {
+    const actionText = newStatus === 'completed' ? '完了' : '未完了に戻す';
+    if (!confirm(`この注文を「${actionText}」にしますか？`)) return;
     
     try {
       const targetOrder = orders.find(o => o.id === orderId);
-      const updatedData = { ...targetOrder.order_data, status: 'completed' };
-      
+      const updatedData = { ...targetOrder.order_data, status: newStatus };
       const { error } = await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId);
       if (error) throw error;
-      
       setOrders(orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o));
       setSelectedOrder(null);
     } catch (err) {
@@ -47,12 +47,26 @@ export default function OrdersPage() {
     }
   };
 
+  // 受領書アップロード
+  const handleUploadReceipt = async (order, e) => {
+    e.stopPropagation();
+    const file = e.target.files[0]; if (!file) return;
+    setUploadingId(order.id);
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = async (ev) => {
+      const updatedData = { ...order.order_data, receiptImage: ev.target.result };
+      await supabase.from('orders').update({ order_data: updatedData }).eq('id', order.id);
+      setOrders(orders.map(o => o.id === order.id ? { ...o, order_data: updatedData } : o));
+      setUploadingId(null);
+    };
+  };
+
   const getMethodLabel = (method) => {
     const map = { pickup: '店頭受取', delivery: '自社配達', sagawa: '佐川急便' };
     return map[method] || method;
   };
 
-  // 1. 並び替えロジック
   const sortedOrders = useMemo(() => {
     return [...orders].sort((a, b) => {
       let valA, valB;
@@ -69,23 +83,31 @@ export default function OrdersPage() {
     });
   }, [orders, sortConfig]);
 
-  // 2. 検索 & ★未完了のみ表示フィルタリング
   const filteredOrders = useMemo(() => {
     return sortedOrders.filter(order => {
       const d = order.order_data || {};
-      
-      // ステータスが「completed」のものは一覧から除外
-      if (d.status === 'completed') return false;
-
+      const isArchived = d.status === 'completed';
+      if (viewMode === 'active' && isArchived) return false;
+      if (viewMode === 'archived' && !isArchived) return false;
       const searchStr = `${d.customerInfo?.name || ''} ${d.recipientInfo?.name || ''} ${d.flowerType || ''} ${d.selectedDate || ''}`;
       return searchStr.toLowerCase().includes(searchTerm.toLowerCase());
     });
-  }, [sortedOrders, searchTerm]);
+  }, [sortedOrders, searchTerm, viewMode]);
+
+  if (isLoading) return <div className="p-20 text-center font-bold text-[#2D4B3E] animate-pulse">データを読み込み中...</div>;
 
   return (
     <main className="pb-32 font-sans">
       <header className="h-20 bg-white/80 backdrop-blur-md border-b border-[#EAEAEA] flex items-center justify-between px-8 sticky top-0 z-10">
-        <h1 className="text-[18px] font-bold tracking-tight text-[#2D4B3E]">受注一覧 (未完了)</h1>
+        <div className="flex items-center gap-6">
+          <h1 className="text-[18px] font-bold tracking-tight text-[#2D4B3E]">
+            {viewMode === 'active' ? '受注一覧' : '完了済みアーカイブ'}
+          </h1>
+          <div className="flex bg-[#F7F7F7] p-1 rounded-xl border border-[#EAEAEA]">
+            <button onClick={() => setViewMode('active')} className={`flex items-center gap-2 px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${viewMode === 'active' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}><Inbox size={14} /> 未完了</button>
+            <button onClick={() => setViewMode('archived')} className={`flex items-center gap-2 px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${viewMode === 'archived' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}><Archive size={14} /> 完了済み</button>
+          </div>
+        </div>
         <div className="flex items-center gap-4">
           <div className="flex bg-[#F7F7F7] p-1 rounded-xl border border-[#EAEAEA]">
             <button onClick={() => setSortConfig({key:'selectedDate', direction:'asc'})} className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${sortConfig.key === 'selectedDate' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}>お届け日順</button>
@@ -107,7 +129,7 @@ export default function OrdersPage() {
                 <th className="px-6 py-5 text-[11px] font-bold text-[#999999] tracking-widest uppercase">注文内容 / 金額</th>
                 <th className="px-6 py-5 text-[11px] font-bold text-[#999999] tracking-widest uppercase">顧客情報</th>
                 <th className="px-6 py-5 text-[11px] font-bold text-[#999999] tracking-widest text-center">受領書</th>
-                <th className="px-6 py-5 text-[11px] font-bold text-[#999999] tracking-widest text-center">伝票</th>
+                <th className="px-6 py-5 text-[11px] font-bold text-[#999999] tracking-widest text-center">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F7F7F7]">
@@ -117,10 +139,10 @@ export default function OrdersPage() {
                 const tax = Math.floor(total * 0.1);
 
                 return (
-                  <tr key={order.id} onClick={() => setSelectedOrder(order)} className="hover:bg-[#FBFAF9]/30 transition-colors group cursor-pointer">
+                  <tr key={order.id} onClick={() => setSelectedOrder(order)} className={`hover:bg-[#FBFAF9]/30 transition-colors group cursor-pointer ${viewMode === 'archived' ? 'opacity-70' : ''}`}>
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-3">
-                        <div className="flex flex-col items-center justify-center w-14 h-14 bg-[#2D4B3E]/5 rounded-2xl border border-[#2D4B3E]/10 text-[#2D4B3E]">
+                        <div className={`flex flex-col items-center justify-center w-14 h-14 rounded-2xl border ${viewMode === 'archived' ? 'bg-gray-100 border-gray-200' : 'bg-[#2D4B3E]/5 border-[#2D4B3E]/10 text-[#2D4B3E]'}`}>
                           <span className="text-[10px] font-bold opacity-60 leading-none mb-1">{d.selectedDate?.split('-')[1] || '--'}月</span>
                           <span className="text-[20px] font-black leading-none tracking-tighter">{d.selectedDate?.split('-')[2] || '--'}</span>
                         </div>
@@ -137,19 +159,20 @@ export default function OrdersPage() {
                       </div>
                       <div className="text-[14px] font-black text-[#2D4B3E]">¥{(total + tax).toLocaleString()}</div>
                     </td>
-                    <td className="px-6 py-6">
-                      <p className="text-[13px] font-bold text-[#111111]">{d.customerInfo?.name} 様</p>
-                      {d.isRecipientDifferent && <p className="text-[10px] text-[#999999] mt-1 flex items-center gap-1"><ChevronRight size={10} /> {d.recipientInfo?.name} 様 宛</p>}
-                    </td>
+                    <td className="px-6 py-6 font-bold text-[13px]">{d.customerInfo?.name} 様</td>
                     <td className="px-6 py-6 text-center" onClick={(e)=>e.stopPropagation()}>
-                        {d.receiptImage ? (
+                        {uploadingId === order.id ? <div className="w-8 h-8 border-2 border-[#2D4B3E] border-t-transparent animate-spin mx-auto rounded-full" /> : d.receiptImage ? (
                           <button onClick={() => setPreviewImage(d.receiptImage)} className="w-10 h-10 rounded-full bg-white border border-[#EAEAEA] text-[#2D4B3E] flex items-center justify-center mx-auto shadow-sm"><CheckCircle size={20} /></button>
                         ) : (
-                          <div className="text-[10px] text-[#CCCCCC] font-bold italic">No Data</div>
+                          <label className="cursor-pointer w-10 h-10 rounded-full bg-[#FBFAF9] border border-[#EAEAEA] text-[#999999] flex items-center justify-center mx-auto hover:bg-[#2D4B3E]/5 transition-all"><Camera size={18} /><input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleUploadReceipt(order, e)} /></label>
                         )}
                     </td>
                     <td className="px-6 py-6 text-center" onClick={(e)=>e.stopPropagation()}>
-                      <button onClick={() => window.open(`/staff/print/${order.id}`, '_blank')} className="w-10 h-10 bg-white border border-[#EAEAEA] text-[#555555] rounded-2xl flex items-center justify-center mx-auto hover:border-[#2D4B3E] transition-all shadow-sm"><Printer size={18} /></button>
+                      {viewMode === 'archived' ? (
+                        <button onClick={() => updateOrderStatus(order.id, 'active')} className="flex items-center gap-1 px-3 py-2 bg-white border border-[#EAEAEA] text-[#555555] text-[11px] font-bold rounded-xl hover:border-[#2D4B3E] transition-all shadow-sm"><RotateCcw size={14} /> 戻す</button>
+                      ) : (
+                        <button onClick={() => window.open(`/staff/print/${order.id}`, '_blank')} className="w-10 h-10 bg-white border border-[#EAEAEA] text-[#555555] rounded-2xl flex items-center justify-center mx-auto hover:border-[#2D4B3E] transition-all shadow-sm"><Printer size={18} /></button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -159,26 +182,21 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      {/* --- 詳細モーダル --- */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#111111]/40 backdrop-blur-sm p-4" onClick={() => setSelectedOrder(null)}>
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#111111]/40 backdrop-blur-sm p-4 animate-in fade-in" onClick={() => setSelectedOrder(null)}>
           <div className="bg-[#FBFAF9] rounded-[32px] w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] p-6 flex items-center justify-between z-10">
               <h2 className="text-[18px] font-bold text-[#2D4B3E]">注文詳細</h2>
               <div className="flex items-center gap-3">
-                {/* ★ アーカイブボタン */}
-                <button 
-                  onClick={() => handleCompleteOrder(selectedOrder.id)}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-xl hover:bg-[#1f352b] transition-all shadow-sm"
-                >
-                  <Archive size={16} /> 完了してアーカイブ
-                </button>
+                {selectedOrder.order_data?.status === 'completed' ? (
+                  <button onClick={() => updateOrderStatus(selectedOrder.id, 'active')} className="flex items-center gap-2 px-4 py-2 bg-white border border-[#2D4B3E] text-[#2D4B3E] text-[12px] font-bold rounded-xl hover:bg-[#2D4B3E]/5 transition-all shadow-sm"><RotateCcw size={16} /> 未完了に戻す</button>
+                ) : (
+                  <button onClick={() => updateOrderStatus(selectedOrder.id, 'completed')} className="flex items-center gap-2 px-4 py-2 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-xl hover:bg-[#1f352b] transition-all shadow-sm"><Archive size={16} /> 完了してアーカイブ</button>
+                )}
                 <button onClick={() => setSelectedOrder(null)} className="w-10 h-10 bg-[#FBFAF9] border border-[#EAEAEA] rounded-full flex items-center justify-center text-[#555555] font-bold hover:bg-[#EAEAEA]">✕</button>
               </div>
             </div>
-            
             <div className="p-8 space-y-8 text-left">
-              {/* 商品情報・顧客情報などはこれまでのUIを維持 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-2">
                   <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest flex items-center gap-2"><Calendar size={12}/> お届け・受取情報</p>
@@ -191,30 +209,26 @@ export default function OrdersPage() {
                   <p className="text-[12px] text-[#555555] flex items-center gap-1"><Smartphone size={12}/> {selectedOrder.order_data.customerInfo?.phone}</p>
                 </div>
               </div>
-              
+              {selectedOrder.order_data.isRecipientDifferent && (
+                <div className="space-y-3 animate-in fade-in">
+                  <h3 className="text-[11px] font-bold text-red-500 uppercase tracking-widest flex items-center gap-2"><MapPin size={12}/> お届け先様（別住所）</h3>
+                  <div className="bg-white p-5 rounded-2xl border border-red-100 shadow-sm space-y-2 text-[13px]">
+                    <p className="font-bold text-[15px] text-red-700">{selectedOrder.order_data.recipientInfo?.name} 様</p>
+                    <p className="text-[#555555]">📞 {selectedOrder.order_data.recipientInfo?.phone}</p>
+                    <p className="text-[12px] text-red-600/70 leading-tight">〒{selectedOrder.order_data.recipientInfo?.zip}<br/>{selectedOrder.order_data.recipientInfo?.address1}{selectedOrder.order_data.recipientInfo?.address2}</p>
+                  </div>
+                </div>
+              )}
               <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] shadow-sm">
-                <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest mb-4 flex items-center gap-2"><Tag size={12}/> 商品・金額詳細</p>
+                <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest mb-4 flex items-center gap-2"><Tag size={12}/> 商品詳細</p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-[13px] font-bold mb-6">
                   <div><span className="text-[10px] block text-[#999999]">種類</span>{selectedOrder.order_data.flowerType}</div>
-                  <div><span className="text-[10px] block text-[#999999]">用途</span>{selectedOrder.flowerPurpose || selectedOrder.order_data.flowerPurpose}</div>
+                  <div><span className="text-[10px] block text-[#999999]">用途</span>{selectedOrder.order_data.flowerPurpose}</div>
                   <div><span className="text-[10px] block text-[#999999]">カラー</span>{selectedOrder.order_data.flowerColor}</div>
                   <div><span className="text-[10px] block text-[#999999]">イメージ</span>{selectedOrder.order_data.flowerVibe}</div>
                 </div>
-                <div className="border-t border-[#FBFAF9] pt-4 space-y-1.5 text-[13px]">
-                   <div className="flex justify-between"><span>合計金額 (税込)</span><span className="font-black text-[#2D4B3E] text-[16px]">¥{Math.floor(((Number(selectedOrder.order_data.itemPrice) + Number(selectedOrder.order_data.calculatedFee || 0) + Number(selectedOrder.order_data.pickupFee || 0)) * 1.1)).toLocaleString()}</span></div>
-                </div>
-              </div>
-
-              {/* 立札や備考もこれまで通り表示 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm">
-                  <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest flex items-center gap-2 mb-3"><FileText size={12}/> 立札・メッセージ</p>
-                  <span className="inline-block px-3 py-1 bg-[#2D4B3E] text-white text-[10px] font-bold rounded-md mb-2">{selectedOrder.order_data.cardType}</span>
-                  <p className="text-[13px] font-bold whitespace-pre-wrap">{selectedOrder.order_data.cardType === '立札' ? `${selectedOrder.order_data.tateInput1} / ${selectedOrder.order_data.tateInput2} / ${selectedOrder.order_data.tateInput3}` : selectedOrder.order_data.cardMessage}</p>
-                </div>
-                <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm">
-                   <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest flex items-center gap-2 mb-3"><FileText size={12}/> 備考・要望</p>
-                   <p className="text-[13px] font-bold whitespace-pre-wrap">{selectedOrder.order_data.note || '特になし'}</p>
+                <div className="border-t border-[#FBFAF9] pt-4 text-[13px]">
+                   <div className="flex justify-between items-center"><span className="text-[#999999] font-bold text-[11px]">合計金額 (税込)</span><span className="font-black text-[#2D4B3E] text-[18px] font-mono">¥{Math.floor(((Number(selectedOrder.order_data.itemPrice) + Number(selectedOrder.order_data.calculatedFee || 0) + Number(selectedOrder.order_data.pickupFee || 0)) * 1.1)).toLocaleString()}</span></div>
                 </div>
               </div>
             </div>
@@ -222,7 +236,6 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {/* 受領書プレビュー */}
       {previewImage && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 p-6" onClick={() => setPreviewImage(null)}>
           <img src={previewImage} className="max-w-full max-h-[85vh] rounded-xl border-4 border-white shadow-2xl" />
