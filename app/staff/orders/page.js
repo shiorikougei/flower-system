@@ -43,7 +43,7 @@ export default function OrdersPage() {
   const updateOrderStatus = async (id, newStatus) => {
     try {
       const targetOrder = orders.find(o => o.id === id);
-      const updatedData = { ...targetOrder.order_data, status: newStatus };
+      const updatedData = { ...(targetOrder.order_data || {}), status: newStatus };
       
       const { error } = await supabase.from('orders').update({ order_data: updatedData }).eq('id', id);
       if (error) throw error;
@@ -77,7 +77,7 @@ export default function OrdersPage() {
     }
   };
 
-  // Googleマップ用URL生成
+  // Googleマップ用URL生成 (修正済み)
   const getGoogleMapsUrl = (info) => {
     if (!info) return '';
     const address = `${info.address1 || ''} ${info.address2 || ''}`.trim();
@@ -87,6 +87,7 @@ export default function OrdersPage() {
 
   // 料金計算ロジック
   const getTotals = (orderData) => {
+    if (!orderData) return { item: 0, fee: 0, pickup: 0, subTotal: 0, tax: 0, total: 0 };
     const item = Number(orderData.itemPrice) || 0;
     const fee = Number(orderData.calculatedFee) || 0;
     const pickup = Number(orderData.pickupFee) || 0;
@@ -95,9 +96,13 @@ export default function OrdersPage() {
     return { item, fee, pickup, subTotal, tax, total: subTotal + tax };
   };
 
+  // モーダル用の安全なデータ取得
+  const modalData = selectedOrder?.order_data || {};
+  const modalTargetInfo = modalData.isRecipientDifferent ? modalData.recipientInfo : modalData.customerInfo;
+
   return (
     <div className="min-h-screen bg-[#FBFAF9] font-sans pb-32">
-      {/* --- ヘッダー領域 (被りを修正) --- */}
+      {/* --- ヘッダー領域 --- */}
       <div className="bg-white border-b border-[#EAEAEA] sticky top-0 z-30 px-6 py-4 shadow-sm">
         <div className="max-w-[1000px] mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h1 className="text-[20px] font-black text-[#2D4B3E] tracking-widest">受注一覧</h1>
@@ -130,16 +135,15 @@ export default function OrdersPage() {
           <div className="grid grid-cols-1 gap-4">
             {filteredOrders.map(order => {
               const d = order.order_data || {};
-              const targetInfo = d.isRecipientDifferent ? d.recipientInfo : d.customerInfo;
               return (
                 <div 
                   key={order.id} 
                   onClick={() => setSelectedOrder(order)}
-                  className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] shadow-sm hover:shadow-md hover:border-[#2D4B3E]/30 cursor-pointer transition-all flex flex-col md:flex-row md:items-center gap-4"
+                  className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] shadow-sm hover:shadow-md hover:border-[#2D4B3E]/30 cursor-pointer transition-all flex flex-col md:flex-row md:items-center gap-4 group"
                 >
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[11px] font-bold text-white bg-[#2D4B3E] px-2 py-1 rounded-md tracking-wider">
+                      <span className="text-[11px] font-bold text-white bg-[#2D4B3E] px-2 py-1 rounded-md tracking-wider shadow-sm">
                         {new Date(order.created_at).toLocaleDateString('ja-JP')} 受付
                       </span>
                       {getReceiveMethodBadge(d.receiveMethod)}
@@ -147,18 +151,18 @@ export default function OrdersPage() {
                         {d.status === 'new' ? '未対応' : d.status}
                       </span>
                     </div>
-                    <div className="text-[16px] font-black text-[#111111] pt-1">
-                      {d.customerInfo?.name} 様 <span className="text-[12px] text-[#999999] font-medium ml-2">({d.flowerType})</span>
+                    <div className="text-[16px] font-black text-[#111111] pt-1 group-hover:text-[#2D4B3E] transition-colors">
+                      {d.customerInfo?.name || 'お名前未設定'} 様 <span className="text-[12px] text-[#999999] font-medium ml-2">({d.flowerType || '商品未設定'})</span>
                     </div>
                     <div className="text-[12px] font-bold text-[#D97C8F] flex items-center gap-1">
-                      <Calendar size={14} /> 納品日: {d.selectedDate} {d.selectedTime && `(${d.selectedTime})`}
+                      <Calendar size={14} /> 納品日: {d.selectedDate || '未指定'} {d.selectedTime && `(${d.selectedTime})`}
                     </div>
                   </div>
                   
                   <div className="flex flex-col md:items-end justify-between border-t md:border-t-0 md:border-l border-[#EAEAEA] pt-4 md:pt-0 md:pl-6">
                     <p className="text-[11px] text-[#999999] font-bold mb-1">合計金額(税込)</p>
-                    <p className="text-[20px] font-black text-[#2D4B3E]">¥{getTotals(d).total.toLocaleString()}</p>
-                    <div className="flex items-center gap-1 text-[10px] font-bold text-blue-500 mt-2 bg-blue-50 px-2 py-1 rounded-md">
+                    <p className="text-[22px] font-black text-[#2D4B3E]">¥{getTotals(d).total.toLocaleString()}</p>
+                    <div className="flex items-center gap-1 text-[10px] font-bold text-blue-500 mt-2 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 group-hover:bg-blue-500 group-hover:text-white transition-all">
                       詳細を見る <ChevronRight size={12}/>
                     </div>
                   </div>
@@ -171,7 +175,7 @@ export default function OrdersPage() {
 
       {/* --- 詳細モーダル --- */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
           <div className="absolute inset-0 bg-[#111111]/40 backdrop-blur-sm" onClick={() => setSelectedOrder(null)}></div>
           
           <div className="bg-[#FBFAF9] w-full max-w-[800px] max-h-[90vh] rounded-[32px] shadow-2xl relative flex flex-col overflow-hidden">
@@ -181,7 +185,7 @@ export default function OrdersPage() {
                 <h2 className="text-[20px] font-black text-[#2D4B3E]">注文詳細</h2>
                 <p className="text-[11px] text-[#999999] font-bold mt-1">受付日: {new Date(selectedOrder.created_at).toLocaleString('ja-JP')}</p>
               </div>
-              <button onClick={() => setSelectedOrder(null)} className="w-10 h-10 bg-[#FBFAF9] rounded-full flex items-center justify-center text-[#999999] hover:text-[#111111] transition-colors">
+              <button onClick={() => setSelectedOrder(null)} className="w-10 h-10 bg-[#FBFAF9] rounded-full flex items-center justify-center text-[#999999] hover:text-[#111111] transition-colors hover:bg-[#EAEAEA]">
                 <X size={20} />
               </button>
             </div>
@@ -190,12 +194,12 @@ export default function OrdersPage() {
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
               
               {/* ステータス変更 */}
-              <div className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <span className="text-[13px] font-bold text-[#555555]">現在のステータス</span>
+              <div className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <span className="text-[13px] font-bold text-[#555555] flex items-center gap-2"><ListChecks size={16}/> 現在のステータス</span>
                 <select 
-                  value={selectedOrder.order_data.status || 'new'} 
+                  value={modalData.status || 'new'} 
                   onChange={(e) => updateOrderStatus(selectedOrder.id, e.target.value)}
-                  className="h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold text-[#2D4B3E] outline-none focus:border-[#2D4B3E] min-w-[200px]"
+                  className="h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold text-[#2D4B3E] outline-none focus:border-[#2D4B3E] min-w-[200px] shadow-inner"
                 >
                   <option value="new">未対応 (新規)</option>
                   {(appSettings?.statusConfig?.customLabels || ['制作中', '制作完了', '配達中']).map(l => <option key={l} value={l}>{l}</option>)}
@@ -206,118 +210,125 @@ export default function OrdersPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* 注文者情報 */}
-                <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] space-y-4">
-                  <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b pb-2 flex items-center gap-2"><User size={16}/> 注文者情報</h3>
-                  <div className="space-y-2 text-[13px]">
-                    <p><span className="text-[#999999] text-[10px] block">お名前</span><span className="font-bold">{selectedOrder.order_data.customerInfo?.name} 様</span></p>
-                    <p><span className="text-[#999999] text-[10px] block">電話番号</span><span className="font-bold">{selectedOrder.order_data.customerInfo?.phone}</span></p>
-                    {selectedOrder.order_data.customerInfo?.email && <p><span className="text-[#999999] text-[10px] block">メール</span><span className="font-bold">{selectedOrder.order_data.customerInfo?.email}</span></p>}
+                <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
+                  <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><User size={16}/> 注文者情報</h3>
+                  <div className="space-y-3 text-[13px] bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]">
+                    <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">お名前</span><span className="font-black text-[15px]">{modalData.customerInfo?.name || '未設定'} 様</span></p>
+                    <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">電話番号</span><span className="font-bold">{modalData.customerInfo?.phone || '未設定'}</span></p>
+                    {modalData.customerInfo?.email && <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">メール</span><span className="font-bold">{modalData.customerInfo?.email}</span></p>}
                   </div>
                 </div>
 
                 {/* お届け先情報 ＆ Googleマップ */}
-                <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] space-y-4">
-                  <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b pb-2 flex items-center gap-2"><MapPin size={16}/> お届け先情報</h3>
-                  <div className="space-y-2 text-[13px]">
-                    <div className="flex gap-2 items-center mb-3">
-                      {getReceiveMethodBadge(selectedOrder.order_data.receiveMethod)}
-                      <span className="text-[12px] font-bold text-[#D97C8F]">
-                        {selectedOrder.order_data.selectedDate} {selectedOrder.order_data.selectedTime}
+                <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
+                  <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><MapPin size={16}/> お届け先情報</h3>
+                  <div className="space-y-3 text-[13px]">
+                    <div className="flex gap-2 items-center mb-3 bg-[#FBFAF9] p-2 rounded-lg border border-[#EAEAEA]">
+                      {getReceiveMethodBadge(modalData.receiveMethod)}
+                      <span className="text-[12px] font-bold text-[#D97C8F] flex items-center gap-1">
+                        <Clock size={14}/> {modalData.selectedDate || '未指定'} {modalData.selectedTime || ''}
                       </span>
                     </div>
                     
-                    {selectedOrder.order_data.receiveMethod === 'pickup' ? (
-                      <p><span className="text-[#999999] text-[10px] block">受取店舗</span><span className="font-bold text-[14px]">{selectedOrder.order_data.selectedShop || '未指定'}</span></p>
+                    {modalData.receiveMethod === 'pickup' ? (
+                      <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]">
+                        <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">受取店舗</span><span className="font-black text-[15px] text-[#2D4B3E]">{modalData.selectedShop || '未指定'}</span></p>
+                      </div>
                     ) : (
-                      <>
-                        <p><span className="text-[#999999] text-[10px] block">宛名</span><span className="font-bold">{selectedOrder.order_data.isRecipientDifferent ? selectedOrder.order_data.recipientInfo?.name : selectedOrder.order_data.customerInfo?.name} 様</span></p>
-                        <p><span className="text-[#999999] text-[10px] block">お届け先住所</span><span className="font-bold block leading-relaxed">〒{selectedOrder.order_data.isRecipientDifferent ? selectedOrder.order_data.recipientInfo?.zip : selectedOrder.order_data.customerInfo?.zip}<br/>{selectedOrder.order_data.isRecipientDifferent ? selectedOrder.order_data.recipientInfo?.address1 : selectedOrder.order_data.customerInfo?.address1} {selectedOrder.order_data.isRecipientDifferent ? selectedOrder.order_data.recipientInfo?.address2 : selectedOrder.order_data.customerInfo?.address2}</span></p>
+                      <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA] space-y-3">
+                        <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">宛名</span><span className="font-black text-[15px]">{modalTargetInfo?.name || '未設定'} 様</span></p>
+                        <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">お届け先住所</span><span className="font-bold block leading-relaxed">〒{modalTargetInfo?.zip}<br/>{modalTargetInfo?.address1} {modalTargetInfo?.address2}</span></p>
                         
                         {/* 📍 Googleマップボタン */}
                         <a 
-                          href={getGoogleMapsUrl(selectedOrder.order_data.isRecipientDifferent ? selectedOrder.order_data.recipientInfo : selectedOrder.order_data.customerInfo)}
+                          href={getGoogleMapsUrl(modalTargetInfo)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 mt-2 text-[11px] font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                          className="inline-flex items-center gap-1 mt-2 text-[11px] font-bold text-blue-600 bg-white px-3 py-2 rounded-lg border border-blue-200 hover:bg-blue-500 hover:text-white hover:border-blue-500 transition-all shadow-sm"
                         >
                           <MapPin size={14} /> Googleマップで場所を確認
                         </a>
-                      </>
+                      </div>
                     )}
                   </div>
                 </div>
               </div>
 
               {/* 置き配設定 */}
-              {(selectedOrder.order_data.receiveMethod === 'delivery' || selectedOrder.order_data.receiveMethod === 'sagawa') && (
-                <div className="bg-orange-50 p-5 rounded-[24px] border border-orange-200 space-y-2">
+              {(modalData.receiveMethod === 'delivery' || modalData.receiveMethod === 'sagawa') && (
+                <div className="bg-orange-50 p-6 rounded-[24px] border border-orange-200 shadow-sm space-y-2">
                   <h3 className="text-[12px] font-bold text-orange-800 flex items-center gap-2"><AlertCircle size={16}/> ご不在時の対応</h3>
-                  <p className="text-[14px] font-black text-orange-900">
-                    {selectedOrder.order_data.absenceAction === '置き配' ? `置き配希望: ${selectedOrder.order_data.absenceNote}` : '持ち戻り (再配達)'}
+                  <p className="text-[15px] font-black text-orange-900">
+                    {modalData.absenceAction === '置き配' ? `置き配希望: ${modalData.absenceNote}` : '持ち戻り (再配達)'}
                   </p>
                 </div>
               )}
 
               {/* 商品とデザイン詳細 */}
-              <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] space-y-4">
-                <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b pb-2 flex items-center gap-2"><Tag size={16}/> オーダー内容</h3>
+              <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
+                <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><Tag size={16}/> オーダー内容</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-[13px]">
-                  <div className="bg-[#FBFAF9] p-3 rounded-xl"><span className="text-[#999999] text-[10px] block">お花の種類</span><span className="font-bold">{selectedOrder.order_data.flowerType}</span></div>
-                  <div className="bg-[#FBFAF9] p-3 rounded-xl"><span className="text-[#999999] text-[10px] block">用途</span><span className="font-bold">{selectedOrder.order_data.flowerPurpose} {selectedOrder.order_data.otherPurpose && `(${selectedOrder.order_data.otherPurpose})`}</span></div>
-                  <div className="bg-[#FBFAF9] p-3 rounded-xl"><span className="text-[#999999] text-[10px] block">カラー</span><span className="font-bold">{selectedOrder.order_data.flowerColor}</span></div>
-                  <div className="bg-[#FBFAF9] p-3 rounded-xl"><span className="text-[#999999] text-[10px] block">イメージ</span><span className="font-bold">{selectedOrder.order_data.flowerVibe} {selectedOrder.order_data.otherVibe && `(${selectedOrder.order_data.otherVibe})`}</span></div>
+                  <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block tracking-widest mb-1">お花の種類</span><span className="font-black text-[#2D4B3E]">{modalData.flowerType || '未設定'}</span></div>
+                  <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block tracking-widest mb-1">用途</span><span className="font-bold">{modalData.flowerPurpose} {modalData.otherPurpose && `(${modalData.otherPurpose})`}</span></div>
+                  <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block tracking-widest mb-1">カラー</span><span className="font-bold">{modalData.flowerColor}</span></div>
+                  <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block tracking-widest mb-1">イメージ</span><span className="font-bold">{modalData.flowerVibe} {modalData.otherVibe && `(${modalData.otherVibe})`}</span></div>
                 </div>
 
-                {selectedOrder.order_data.referenceImage && (
+                {modalData.referenceImage && (
                   <div className="pt-4">
-                    <span className="text-[#999999] text-[10px] font-bold block mb-2">お客様が選択した参考イメージ</span>
-                    <img src={selectedOrder.order_data.referenceImage} alt="参考画像" className="w-32 h-32 object-cover rounded-xl shadow-sm border border-[#EAEAEA]" />
+                    <span className="text-[#999999] text-[10px] font-bold block mb-2 tracking-widest">お客様が選択した参考イメージ</span>
+                    <img src={modalData.referenceImage} alt="参考画像" className="w-32 h-32 object-cover rounded-2xl shadow-sm border border-[#EAEAEA]" />
                   </div>
                 )}
               </div>
 
               {/* メッセージ・立札 */}
-              <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] space-y-4">
-                <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b pb-2 flex items-center gap-2"><MessageSquare size={16}/> メッセージ・立札: {selectedOrder.order_data.cardType}</h3>
-                {selectedOrder.order_data.cardType === 'メッセージカード' && (
-                  <div className="bg-[#FBFAF9] p-4 rounded-xl text-[13px] font-bold whitespace-pre-wrap border border-[#EAEAEA]">{selectedOrder.order_data.cardMessage}</div>
+              <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
+                <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><MessageSquare size={16}/> 添付物: {modalData.cardType || 'なし'}</h3>
+                {modalData.cardType === 'メッセージカード' && (
+                  <div className="bg-[#FBFAF9] p-5 rounded-2xl text-[14px] font-bold whitespace-pre-wrap border border-[#EAEAEA] text-[#333333] leading-relaxed">
+                    {modalData.cardMessage}
+                  </div>
                 )}
-                {selectedOrder.order_data.cardType === '立札' && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[13px] bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]">
-                    {selectedOrder.order_data.tateInput1 && <p><span className="text-[#999999] text-[10px] block">① 内容</span><span className="font-bold">{selectedOrder.order_data.tateInput1}</span></p>}
-                    {selectedOrder.order_data.tateInput2 && <p><span className="text-[#999999] text-[10px] block">② 宛名</span><span className="font-bold">{selectedOrder.order_data.tateInput2} 様</span></p>}
-                    {selectedOrder.order_data.tateInput3 && <p><span className="text-[#999999] text-[10px] block">③ 贈り主</span><span className="font-bold">{selectedOrder.order_data.tateInput3}</span></p>}
-                    {selectedOrder.order_data.tateInput3a && <p><span className="text-[#999999] text-[10px] block">③-1 会社名</span><span className="font-bold">{selectedOrder.order_data.tateInput3a}</span></p>}
-                    {selectedOrder.order_data.tateInput3b && <p><span className="text-[#999999] text-[10px] block">③-2 役職・氏名</span><span className="font-bold">{selectedOrder.order_data.tateInput3b}</span></p>}
+                {modalData.cardType === '立札' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[13px] bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA]">
+                    {modalData.tateInput1 && <p><span className="text-[#999999] text-[10px] block tracking-widest mb-0.5">① 内容</span><span className="font-black text-[14px]">{modalData.tateInput1}</span></p>}
+                    {modalData.tateInput2 && <p><span className="text-[#999999] text-[10px] block tracking-widest mb-0.5">② 宛名</span><span className="font-black text-[14px]">{modalData.tateInput2} 様</span></p>}
+                    {modalData.tateInput3 && <p><span className="text-[#999999] text-[10px] block tracking-widest mb-0.5">③ 贈り主</span><span className="font-black text-[14px]">{modalData.tateInput3}</span></p>}
+                    {modalData.tateInput3a && <p><span className="text-[#999999] text-[10px] block tracking-widest mb-0.5">③-1 会社名</span><span className="font-black text-[14px]">{modalData.tateInput3a}</span></p>}
+                    {modalData.tateInput3b && <p><span className="text-[#999999] text-[10px] block tracking-widest mb-0.5">③-2 役職・氏名</span><span className="font-black text-[14px]">{modalData.tateInput3b}</span></p>}
                   </div>
                 )}
               </div>
 
               {/* お支払い内訳 */}
-              <div className="bg-white p-6 rounded-[24px] border-2 border-[#2D4B3E]/20 space-y-4">
-                <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b pb-2 flex items-center gap-2"><CreditCard size={16}/> お支払い内訳</h3>
-                <div className="space-y-2 text-[13px] font-medium text-[#555555]">
-                  <div className="flex justify-between"><span>商品代 (税抜):</span><span className="font-bold text-[#111111]">¥{getTotals(selectedOrder.order_data).item.toLocaleString()}</span></div>
-                  {getTotals(selectedOrder.order_data).fee > 0 && <div className="flex justify-between text-blue-600"><span>配送料:</span><span className="font-bold">¥{getTotals(selectedOrder.order_data).fee.toLocaleString()}</span></div>}
-                  {getTotals(selectedOrder.order_data).pickup > 0 && <div className="flex justify-between text-orange-600"><span>器回収費:</span><span className="font-bold">¥{getTotals(selectedOrder.order_data).pickup.toLocaleString()}</span></div>}
-                  <div className="flex justify-between border-t pt-2 text-[#2D4B3E]"><span>消費税 (10%):</span><span className="font-bold">¥{getTotals(selectedOrder.order_data).tax.toLocaleString()}</span></div>
-                  <div className="flex justify-between border-t-2 border-[#2D4B3E]/20 pt-3 mt-2 items-end">
-                    <span className="text-[12px] font-bold text-[#2D4B3E]">合計金額 (税込):</span>
-                    <span className="text-[28px] font-black text-[#2D4B3E] leading-none">¥{getTotals(selectedOrder.order_data).total.toLocaleString()}</span>
+              <div className="bg-white p-8 rounded-[32px] border-2 border-[#2D4B3E]/20 shadow-md space-y-4">
+                <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2 flex items-center gap-2"><CreditCard size={16}/> お支払い内訳</h3>
+                <div className="space-y-3 text-[14px] font-medium text-[#555555]">
+                  <div className="flex justify-between"><span>商品代 (税抜):</span><span className="font-black text-[#111111]">¥{getTotals(modalData).item.toLocaleString()}</span></div>
+                  {getTotals(modalData).fee > 0 && <div className="flex justify-between text-blue-600"><span>配送料 (箱・クール含):</span><span className="font-bold">¥{getTotals(modalData).fee.toLocaleString()}</span></div>}
+                  {getTotals(modalData).pickup > 0 && <div className="flex justify-between text-orange-600"><span>器回収・返却費:</span><span className="font-bold">¥{getTotals(modalData).pickup.toLocaleString()}</span></div>}
+                  <div className="flex justify-between border-t border-[#EAEAEA] pt-3 text-[#2D4B3E]"><span>消費税 (10%):</span><span className="font-bold">¥{getTotals(modalData).tax.toLocaleString()}</span></div>
+                  
+                  <div className="flex justify-between border-t-2 border-[#2D4B3E]/20 pt-4 mt-2 items-end">
+                    <span className="text-[12px] font-bold text-[#2D4B3E] tracking-widest mb-1">合計金額 (税込)</span>
+                    <span className="text-[32px] font-black text-[#2D4B3E] leading-none">¥{getTotals(modalData).total.toLocaleString()}</span>
                   </div>
                 </div>
-                {selectedOrder.order_data.paymentMethod && (
-                  <div className="pt-2">
-                    <span className="inline-block bg-[#2D4B3E] text-white px-3 py-1 rounded-full text-[10px] font-bold">支払方法: {selectedOrder.order_data.paymentMethod}</span>
+                {modalData.paymentMethod && (
+                  <div className="pt-4 flex justify-end">
+                    <span className="inline-block bg-[#2D4B3E]/10 text-[#2D4B3E] border border-[#2D4B3E]/20 px-4 py-1.5 rounded-lg text-[12px] font-bold">
+                      支払方法: {modalData.paymentMethod}
+                    </span>
                   </div>
                 )}
               </div>
 
               {/* メモ */}
-              {selectedOrder.order_data.note && (
-                <div className="bg-yellow-50 p-6 rounded-[24px] border border-yellow-200">
-                  <h3 className="text-[12px] font-bold text-yellow-800 mb-2">社内メモ / お客様要望</h3>
-                  <p className="text-[13px] font-bold text-yellow-900 whitespace-pre-wrap">{selectedOrder.order_data.note}</p>
+              {modalData.note && (
+                <div className="bg-yellow-50 p-6 rounded-[24px] border border-yellow-200 shadow-sm">
+                  <h3 className="text-[12px] font-bold text-yellow-800 mb-2 tracking-widest">社内メモ / お客様要望</h3>
+                  <p className="text-[14px] font-bold text-yellow-900 whitespace-pre-wrap leading-relaxed">{modalData.note}</p>
                 </div>
               )}
 
