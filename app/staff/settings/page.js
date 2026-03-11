@@ -3,8 +3,9 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 import { 
   Settings as SettingsIcon, ListChecks, Store, Tag, Truck, User, Mail, 
-  Trash2, Plus, Clock, ShieldCheck, RotateCcw, Image as ImageIcon, Ruler, Percent, 
-  ChevronRight, Calendar as CalendarIcon, Box, MapPin, Search, CheckCircle, X
+  Trash2, Plus, Clock, ShieldCheck, RotateCcw, Image, Ruler, Percent, 
+  ChevronRight, Calendar as CalendarIcon, Box, MapPin, Search, CheckCircle, X,
+  LayoutTemplate
 } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -24,7 +25,7 @@ export default function SettingsPage() {
   // --- 3. 店舗管理 ---
   const [shops, setShops] = useState([]); 
 
-  // --- 4. 商品管理 (箱サイズ defaultBoxSize 追加) ---
+  // --- 4. 商品管理 ---
   const [flowerItems, setFlowerItems] = useState([]);
 
   // --- 5. 配送・送料 ---
@@ -32,11 +33,24 @@ export default function SettingsPage() {
   const [shippingSizes, setShippingSizes] = useState(['80', '100', '120']);
   const [shippingRates, setShippingRates] = useState([]); 
   const [boxFeeConfig, setBoxFeeConfig] = useState({ 
+    type: 'flat', flatFee: 500, priceTiers: [{ minPrice: 0, fee: 300 }, { minPrice: 10000, fee: 0 }], itemFees: {},
     returnFeeType: 'flat', returnFeeValue: 1000, coolBinEnabled: true, coolBinPeriods: [],
     freeShippingThresholdEnabled: false, freeShippingThreshold: 15000, isBundleDiscount: true
   });
 
-  // --- 6. その他 ---
+  // --- 6. 立札デザインマスター ---
+  const tateMaster = [
+    { id: 'p1', label: '御供｜横型 (背景あり)', layout: 'horizontal', color: 'gray' }, 
+    { id: 'p3', label: '御供｜縦型 (シンプル)', layout: 'vertical', color: 'gray' }, 
+    { id: 'p4', label: '御供｜縦型 (会社名入)', layout: 'vertical', color: 'gray' },
+    { id: 'p5', label: '祝｜横型 (スタンダード)', layout: 'horizontal', color: 'red' }, 
+    { id: 'p6', label: '祝｜横型 (様へ構成)', layout: 'horizontal', color: 'red' }, 
+    { id: 'p7', label: '祝｜縦型 (二列構成)', layout: 'vertical', color: 'red' }, 
+    { id: 'p8', label: '祝｜縦型 (三列完成版)', layout: 'vertical', color: 'red' },
+  ];
+  const [selectedPreviewTate, setSelectedPreviewTate] = useState(tateMaster[3]);
+
+  // --- 7. その他 ---
   const [staffList, setStaffList] = useState([]);
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffStore, setNewStaffStore] = useState('all');
@@ -46,10 +60,11 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'general', label: '基本設定', icon: SettingsIcon },
     { id: 'status', label: 'ステータス', icon: ListChecks },
-    { id: 'shop', label: '店舗・営業日', icon: Store }, 
+    { id: 'shop', label: '店舗・決済', icon: Store }, 
     { id: 'items', label: '商品・納期', icon: Tag },
     { id: 'shipping', label: '配送・送料', icon: Truck },
-    { id: 'staff_order', label: '店舗注文受付', icon: Clock },
+    { id: 'rules', label: '立札デザイン', icon: LayoutTemplate },
+    { id: 'staff_order', label: '店舗受付', icon: Clock },
     { id: 'staff', label: 'スタッフ', icon: User },
     { id: 'message', label: '通知メール', icon: Mail },
   ];
@@ -60,7 +75,7 @@ export default function SettingsPage() {
         const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
         if (data?.settings_data) {
           const s = data.settings_data;
-          if (s.generalConfig) setGeneralConfig(s.generalConfig);
+          if (s.generalConfig) setGeneralConfig({...generalConfig, ...s.generalConfig});
           if (s.statusConfig) setStatusConfig(s.statusConfig);
           if (s.shops) setShops(s.shops);
           if (s.flowerItems) setFlowerItems(s.flowerItems);
@@ -68,7 +83,7 @@ export default function SettingsPage() {
           if (s.deliveryAreas) setDeliveryAreas(s.deliveryAreas);
           if (s.shippingSizes) setShippingSizes(s.shippingSizes);
           if (s.shippingRates) setShippingRates(s.shippingRates);
-          if (s.boxFeeConfig) setBoxFeeConfig(s.boxFeeConfig);
+          if (s.boxFeeConfig) setBoxFeeConfig({...boxFeeConfig, ...s.boxFeeConfig});
           if (s.staffOrderConfig) setStaffOrderConfig(s.staffOrderConfig);
           if (s.autoReply) setAutoReply(s.autoReply);
         }
@@ -100,14 +115,15 @@ export default function SettingsPage() {
     r.readAsDataURL(file);
   };
 
-  // --- 各タブのレンダリングコンポーネント ---
+  // --- タブのレンダリングコンポーネント ---
 
   const renderGeneralTab = () => (
     <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 animate-in fade-in">
-      <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><ImageIcon size={20}/> 基本情報・ロゴ調整</h2>
+      <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Image size={20}/> 基本情報・ロゴ・伝票</h2>
       <div className="space-y-6">
         <div className="space-y-1"><label className="text-[11px] font-bold text-[#999999]">アプリ名</label><input type="text" value={generalConfig.appName} onChange={(e)=>setGeneralConfig({...generalConfig, appName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 font-bold outline-none"/></div>
-        <div className="space-y-4">
+        
+        <div className="space-y-4 pt-4 border-t">
           <label className="text-[11px] font-bold text-[#999999]">ロゴ画像</label>
           <input type="file" accept="image/*" onChange={(e)=>handleImg(e, 'logoUrl')} className="block w-full text-xs" />
           {generalConfig.logoUrl && (
@@ -118,6 +134,18 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
+
+        <div className="space-y-4 pt-4 border-t">
+          <label className="text-[11px] font-bold text-[#999999]">伝票用 背景（透かし柄）画像</label>
+          <input type="file" accept="image/*" onChange={(e)=>handleImg(e, 'slipBgUrl')} className="block w-full text-xs" />
+          {generalConfig.slipBgUrl && (
+            <div className="p-6 bg-[#FBFAF9] rounded-2xl border space-y-6">
+              <div className="flex items-center justify-between"><span className="text-[12px] font-bold">画像の濃さ（透過度）: {generalConfig.slipBgOpacity}%</span><input type="range" min="0" max="100" value={generalConfig.slipBgOpacity} onChange={(e)=>setGeneralConfig({...generalConfig, slipBgOpacity: Number(e.target.value)})} className="w-40 accent-[#2D4B3E]"/></div>
+              <div className="flex justify-center border-t pt-4"><div className="relative w-48 h-32 bg-white border shadow-sm overflow-hidden flex flex-col justify-between p-2"><div className="absolute inset-0 z-0 grayscale-[30%] pointer-events-none" style={{ backgroundImage: `url(${generalConfig.slipBgUrl})`, backgroundSize: 'cover', opacity: generalConfig.slipBgOpacity / 100 }} /><span className="relative z-10 text-[10px] font-bold text-green-700">受 注 書</span></div></div>
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );
@@ -155,7 +183,17 @@ export default function SettingsPage() {
             <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">電話番号</label><input type="text" value={shop.phone} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, phone:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/></div>
             <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">郵便番号</label><input type="text" value={shop.zip} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, zip:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="000-0000"/></div>
             <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">住所</label><input type="text" value={shop.address} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, address:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/></div>
+            <div className="space-y-1 md:col-span-2"><label className="text-[10px] font-bold text-[#999999]">インボイス番号</label><input type="text" value={shop.invoiceNumber || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, invoiceNumber:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="T12345..."/></div>
           </div>
+          
+          <div className="pt-4 border-t border-[#FBFAF9] space-y-4">
+            <h3 className="text-[14px] font-bold text-[#2D4B3E]">決済・振込先情報</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">振込先口座情報</label><textarea value={shop.bankInfo || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, bankInfo:e.target.value}:s))} className="w-full h-24 bg-[#FBFAF9] border rounded-xl p-3 text-[12px] outline-none resize-none" placeholder="銀行名 支店名..."/></div>
+              <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">オンライン決済URL</label><input type="url" value={shop.paymentUrl || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, paymentUrl:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[12px] outline-none" placeholder="https://..."/></div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-[#FBFAF9]">
             <div className="space-y-4">
               <label className="text-[12px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={14}/> 店舗 営業時間・特別日</label>
@@ -190,7 +228,7 @@ export default function SettingsPage() {
           </div>
         </div>
       ))}
-      <button onClick={()=>setShops([...shops, {id:Date.now(), name:'', isActive:true, openTime:'10:00', closeTime:'19:00', deliveryOpenTime:'11:00', deliveryCloseTime:'18:00', specialHours:[], deliverySpecialHours:[]}])} className="w-full py-10 border-2 border-dashed border-[#EAEAEA] rounded-[32px] text-[#999999] font-bold hover:border-[#2D4B3E] transition-all">+ 店舗を新規追加</button>
+      <button onClick={()=>setShops([...shops, {id:Date.now(), name:'', isActive:true, openTime:'10:00', closeTime:'19:00', deliveryOpenTime:'11:00', deliveryCloseTime:'18:00', specialHours:[], deliverySpecialHours:[], enabledTatePatterns: ['p5', 'p7']}])} className="w-full py-10 border-2 border-dashed border-[#EAEAEA] rounded-[32px] text-[#999999] font-bold hover:border-[#2D4B3E] transition-all">+ 店舗を新規追加</button>
     </div>
   );
 
@@ -202,8 +240,6 @@ export default function SettingsPage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input type="text" value={item.name} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, name:e.target.value}:i))} className="w-full h-12 bg-transparent border-b-2 text-[20px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="商品名" />
-            
-            {/* --- 新規追加: 箱サイズの設定 --- */}
             <div className="flex items-center gap-2 justify-end">
               <span className="text-[11px] font-bold text-[#999999]">配送サイズ (箱):</span>
               <select value={item.defaultBoxSize || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, defaultBoxSize:e.target.value}:i))} className="h-10 bg-[#FBFAF9] border rounded-xl px-3 font-bold text-[13px] outline-none">
@@ -245,9 +281,8 @@ export default function SettingsPage() {
   const renderShippingTab = () => (
     <div className="space-y-8 animate-in fade-in text-left">
       <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-10">
-        <h2 className="text-[18px] font-bold text-[#2D4B3E] border-b pb-4 flex items-center gap-2"><Truck size={20}/> 配送・送料・返却詳細</h2>
+        <h2 className="text-[18px] font-bold text-[#2D4B3E] border-b pb-4 flex items-center gap-2"><Truck size={20}/> 配送・送料・箱代</h2>
         
-        {/* 自社配達 */}
         <div className="space-y-4">
           <label className="text-[14px] font-bold text-[#2D4B3E]">自社配達エリアと料金</label>
           <div className="space-y-2">
@@ -262,7 +297,29 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* クール時期 */}
+        {/* 箱代の計算ロジック復元 */}
+        <div className="pt-6 space-y-4 border-t">
+          <label className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Box size={16}/> 梱包（箱代）の計算ロジック</label>
+          <div className="flex gap-2 bg-[#FBFAF9] p-1 rounded-xl w-fit">
+            {[{id:'flat',l:'一律'},{id:'price_based',l:'商品代ベース'}].map(t=><button key={t.id} onClick={()=>setBoxFeeConfig({...boxFeeConfig, type:t.id})} className={`px-4 py-2 rounded-lg text-xs font-bold ${boxFeeConfig.type===t.id?'bg-white shadow text-[#2D4B3E]':'text-[#999999]'}`}>{t.l}</button>)}
+          </div>
+          {boxFeeConfig.type === 'flat' && (
+            <div className="flex items-center gap-2 bg-[#FBFAF9] p-4 rounded-xl border w-fit">
+              <span className="text-[12px] font-bold">一律加算:</span><input type="number" value={boxFeeConfig.flatFee} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, flatFee:Number(e.target.value)})} className="w-20 h-8 rounded border px-2 text-right font-bold"/>円
+            </div>
+          )}
+          {boxFeeConfig.type === 'price_based' && (
+            <div className="space-y-2 bg-[#FBFAF9] p-4 rounded-xl border">
+              {boxFeeConfig.priceTiers.map((tier, i) => (
+                <div key={i} className="flex items-center gap-2 text-[12px] font-bold">
+                  <input type="number" value={tier.minPrice} onChange={(e)=>{const n=[...boxFeeConfig.priceTiers];n[i].minPrice=Number(e.target.value);setBoxFeeConfig({...boxFeeConfig,priceTiers:n})}} className="w-24 h-8 rounded border px-2"/>円以上なら 箱代<input type="number" value={tier.fee} onChange={(e)=>{const n=[...boxFeeConfig.priceTiers];n[i].fee=Number(e.target.value);setBoxFeeConfig({...boxFeeConfig,priceTiers:n})}} className="w-20 h-8 rounded border px-2 text-right"/>円
+                </div>
+              ))}
+              <button onClick={()=>setBoxFeeConfig({...boxFeeConfig, priceTiers:[...boxFeeConfig.priceTiers, {minPrice:0,fee:0}]})} className="text-[10px] text-[#2D4B3E] font-bold">+ 条件追加</button>
+            </div>
+          )}
+        </div>
+
         <div className="space-y-4 border-t pt-8">
           <div className="flex justify-between items-center"><label className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><CalendarIcon size={16}/> クール便 適用期間設定</label><button onClick={()=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: [...boxFeeConfig.coolBinPeriods, {id:Date.now(), start:'06-01', end:'09-30', note:''}]})} className="text-[10px] bg-[#2D4B3E] text-white px-3 py-1.5 rounded-full font-bold shadow-sm">+ 期間を追加</button></div>
           <div className="grid grid-cols-1 gap-3">
@@ -278,7 +335,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* 器返却送料 */}
         <div className="bg-[#2D4B3E]/5 p-6 rounded-[24px] border border-[#2D4B3E]/10 space-y-4">
           <div className="font-bold text-[#2D4B3E] text-[14px] flex items-center gap-2"><RotateCcw size={18}/> 器回収/返却時の加算送料</div>
           <div className="grid grid-cols-2 gap-4">
@@ -287,7 +343,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* 業者配送送料マスタ */}
         <div className="space-y-6 pt-4 border-t">
           <div className="flex justify-between items-center"><label className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Ruler size={16}/> 業者配送 サイズ・地方別マスタ</label>
             <div className="flex gap-2">
@@ -297,7 +352,7 @@ export default function SettingsPage() {
           </div>
           
           <div className="flex flex-wrap gap-2 mb-4 bg-[#FBFAF9] p-4 rounded-2xl border">
-            <span className="text-[11px] font-bold text-[#999999] w-full mb-1">現在の登録サイズ (×で削除可):</span>
+            <span className="text-[11px] font-bold text-[#999999] w-full mb-1">登録サイズ (×で削除可):</span>
             {shippingSizes.map((s, i) => (
               <div key={i} className="flex items-center gap-2 bg-white border rounded-full pl-3 pr-1 py-1 shadow-sm transition-all hover:border-red-200">
                 <span className="text-[11px] font-black text-[#2D4B3E]">{s}サイズ</span>
@@ -333,6 +388,54 @@ export default function SettingsPage() {
     </div>
   );
 
+  const renderRulesTab = () => (
+    <div className="space-y-8 animate-in fade-in">
+      <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 text-left">
+        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><LayoutTemplate size={20}/> 立札デザイン・店舗紐付け</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+          <div className="space-y-4">
+            <label className="text-[12px] font-bold text-[#999999]">店舗ごとの使用テンプレート選択</label>
+            {shops.length === 0 ? <p className="text-sm text-[#999999]">店舗を登録してください</p> : shops.map(shop => (
+              <div key={shop.id} className="bg-[#FBFAF9] p-4 rounded-2xl border space-y-2">
+                <span className="font-bold text-[13px] text-[#2D4B3E]">{shop.name}</span>
+                <div className="flex flex-col gap-1">
+                  {tateMaster.map(tate => (
+                    <label key={tate.id} className="flex items-center gap-2 cursor-pointer bg-white p-2 rounded-lg border hover:border-[#2D4B3E] transition-all">
+                      <input type="checkbox" checked={(shop.enabledTatePatterns || []).includes(tate.id)} onChange={(e)=>{
+                        const current = shop.enabledTatePatterns || [];
+                        const next = e.target.checked ? [...current, tate.id] : current.filter(p=>p!==tate.id);
+                        setShops(shops.map(s=>s.id===shop.id?{...s, enabledTatePatterns:next}:s));
+                      }} className="accent-[#2D4B3E]"/>
+                      <span className="text-[11px] font-bold flex-1">{tate.label}</span>
+                      <button onClick={(e)=>{e.preventDefault(); setSelectedPreviewTate(tate)}} className="text-[9px] bg-[#F7F7F7] px-2 py-1 rounded text-[#555555]">プレビュー</button>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="sticky top-24 h-fit bg-[#FBFAF9] p-8 rounded-[32px] border shadow-inner text-center space-y-4">
+            <span className="text-[10px] font-bold text-[#999999] tracking-widest block">プレビュー ({selectedPreviewTate.label})</span>
+            <div className={`relative bg-white shadow-xl mx-auto border overflow-hidden flex flex-col items-center ${selectedPreviewTate.layout==='horizontal'?'aspect-[1.414/1] h-[200px] justify-center p-6':'aspect-[9/16] h-[340px] pt-8 px-4'}`}>
+              <div className={`font-bold ${selectedPreviewTate.color==='red'?'text-red-600':'text-gray-800'} ${selectedPreviewTate.layout==='horizontal'?'text-[24px] mb-3':'text-[32px] mb-6'}`}>
+                {['p1', 'p3', 'p4'].includes(selectedPreviewTate.id) ? (selectedPreviewTate.id==='p1'?'御供':'供') : '祝'}
+              </div>
+              <div className={`flex w-full font-bold text-gray-900 ${selectedPreviewTate.layout==='horizontal'?'flex-col items-center gap-1 text-[14px]':'flex-row-reverse justify-center gap-4 text-[16px]'}`}>
+                {selectedPreviewTate.id.includes('p6') || selectedPreviewTate.id.includes('p8') ? (
+                  <><div className={`${selectedPreviewTate.layout==='vertical'?'[writing-mode:vertical-rl]':''}`}>株式会社〇〇様</div><div className={`${selectedPreviewTate.layout==='vertical'?'[writing-mode:vertical-rl]':''}`}>御開店</div><div className={`${selectedPreviewTate.layout==='vertical'?'[writing-mode:vertical-rl]':''}`}>代表 山田太郎</div></>
+                ) : selectedPreviewTate.id.includes('p4') ? (
+                  <><div className={`tracking-widest ${selectedPreviewTate.layout==='vertical'?'[writing-mode:vertical-rl]':''}`}>株式会社〇〇</div><div className={`text-[12px] font-normal ${selectedPreviewTate.layout==='horizontal'?'mt-2':'mt-4 [writing-mode:vertical-rl]'}`}>代表 山田太郎</div></>
+                ) : (
+                  <><div className={`${selectedPreviewTate.layout==='vertical'?'[writing-mode:vertical-rl]':''}`}>御開店</div><div className={`${selectedPreviewTate.layout==='vertical'?'[writing-mode:vertical-rl]':''}`}>代表 山田太郎</div></>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderStaffOrderTab = () => (
     <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 animate-in fade-in text-left">
       <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={20}/> 代理入力（店舗受付）の特別ルール</h2>
@@ -350,7 +453,7 @@ export default function SettingsPage() {
           <div><span className="font-bold block text-[14px] group-hover:text-[#2D4B3E]">お客様への自動返信メールを送らない</span><span className="text-[10px] text-[#999999] font-bold">代理入力時は、送信完了後の自動メールを停止します</span></div>
           <input type="checkbox" checked={!staffOrderConfig.sendAutoReply} onChange={(e)=>setStaffOrderConfig({...staffOrderConfig, sendAutoReply:!e.target.checked})} className="w-6 h-6 accent-[#2D4B3E]"/>
         </label>
-        <div className="pt-4 space-y-1"><label className="text-[11px] font-bold text-[#999999]">スタッフ専用 支払い方法リスト（カンマ区切り）</label><input type="text" value={staffOrderConfig.paymentMethods.join(', ')} onChange={(e)=>setStaffOrderConfig({...staffOrderConfig, paymentMethods:e.target.value.split(',').map(s=>s.trim()).filter(Boolean)})} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/></div>
+        <div className="pt-4 space-y-1"><label className="text-[11px] font-bold text-[#999999]">スタッフ専用 支払い方法リスト（カンマ区切り）</label><input type="text" value={(staffOrderConfig.paymentMethods||[]).join(', ')} onChange={(e)=>setStaffOrderConfig({...staffOrderConfig, paymentMethods:e.target.value.split(',').map(s=>s.trim()).filter(Boolean)})} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/></div>
       </div>
     </div>
   );
@@ -417,6 +520,7 @@ export default function SettingsPage() {
         {activeTab === 'shop' && renderShopTab()}
         {activeTab === 'items' && renderItemsTab()}
         {activeTab === 'shipping' && renderShippingTab()}
+        {activeTab === 'rules' && renderRulesTab()}
         {activeTab === 'staff_order' && renderStaffOrderTab()}
         {activeTab === 'staff' && renderStaffTab()}
         {activeTab === 'message' && renderMessageTab()}
