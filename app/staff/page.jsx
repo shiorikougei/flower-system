@@ -12,6 +12,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [stats, setStats] = useState({ todayOrders: 0, uncompletedOrders: 0 });
   const [recentOrders, setRecentOrders] = useState([]);
+  const [orders, setOrders] = useState([]); // ★ エラーの原因だった「データ記憶」を追加！
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -21,19 +22,21 @@ export default function DashboardPage() {
         const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
         if (error) throw error;
 
-        const orders = data || [];
+        const fetchedOrders = data || [];
+        setOrders(fetchedOrders); // 全件データを保存
+
         let todayCount = 0;
         let uncompletedCount = 0;
         const recent = [];
 
-        orders.forEach(order => {
+        fetchedOrders.forEach(order => {
           const d = order.order_data || {};
           
           if (d.status !== '完了' && d.status !== 'キャンセル' && d.status !== 'completed') {
             uncompletedCount++;
           }
 
-          // ★ 変更：業者配送なら「発送日」、それ以外は「納品日」を今日のタスク基準にする
+          // 業者配送なら「発送日」、それ以外は「納品日」を今日のタスク基準にする
           const targetDate = d.receiveMethod === 'sagawa' ? (d.shippingDate || d.selectedDate) : d.selectedDate;
 
           if (targetDate === todayStr && d.status !== 'キャンセル') {
@@ -67,7 +70,7 @@ export default function DashboardPage() {
 
   // 本日の受取方法別の内訳（配送は発送日基準）
   const todayStr = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
-  const todayOrdersList = (orders || []).filter(o => {
+  const todayOrdersList = orders.filter(o => {
     const d = o.order_data || {};
     const tDate = d.receiveMethod === 'sagawa' ? (d.shippingDate || d.selectedDate) : d.selectedDate;
     return tDate === todayStr && d.status !== 'キャンセル';
@@ -141,7 +144,6 @@ export default function DashboardPage() {
 
         </div>
 
-        {/* クイックアクションと最近の注文（変更なしのため省略せず記述） */}
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-6 duration-700">
           <h3 className="text-[14px] font-bold text-[#2D4B3E] border-l-4 border-[#2D4B3E] pl-3">クイックメニュー</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
