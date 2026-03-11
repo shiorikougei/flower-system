@@ -13,7 +13,6 @@ export default function OrderPage() {
   const [portfolioImages, setPortfolioImages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // --- 状態管理 ---
   const [step, setStep] = useState(1);
   const [flowerType, setFlowerType] = useState('');
   const [isBring, setIsBring] = useState('shop');
@@ -24,10 +23,8 @@ export default function OrderPage() {
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   
-  // ★ 新規追加：発送予定日
   const [shippingDate, setShippingDate] = useState('');
   
-  // デザイン詳細
   const [itemPrice, setItemPrice] = useState('');
   const [flowerPurpose, setFlowerPurpose] = useState('');
   const [flowerColor, setFlowerColor] = useState('');
@@ -39,7 +36,6 @@ export default function OrderPage() {
   const [absenceAction, setAbsenceAction] = useState('持ち戻り'); 
   const [absenceNote, setAbsenceNote] = useState(''); 
 
-  // 立札・メッセージ
   const [cardType, setCardType] = useState('なし');
   const [cardMessage, setCardMessage] = useState('');
   const [prefixFormat, setPrefixFormat] = useState('kanji'); 
@@ -50,7 +46,6 @@ export default function OrderPage() {
   const [tateInput3a, setTateInput3a] = useState(''); 
   const [tateInput3b, setTateInput3b] = useState(''); 
 
-  // お客様・お届け先情報
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', zip: '', address1: '', address2: '' });
   const [isRecipientDifferent, setIsRecipientDifferent] = useState(false);
   const [recipientInfo, setRecipientInfo] = useState({ name: '', phone: '', zip: '', address1: '', address2: '' });
@@ -142,18 +137,25 @@ export default function OrderPage() {
     return options;
   };
 
+  // ★ カレンダーの納期バグ修正（Number変換による数値計算の徹底）
   const minDateLimit = useMemo(() => {
     const base = new Date();
     let lead = 0;
-    if (receiveMethod === 'sagawa') lead = selectedItemSettings?.shippingLeadDays || 0;
-    else lead = selectedItemSettings?.normalLeadDays || 0;
+    if (receiveMethod === 'sagawa') {
+      lead = Number(selectedItemSettings?.shippingLeadDays) || 0;
+    } else {
+      lead = Number(selectedItemSettings?.normalLeadDays) || 0;
+    }
 
     if (isBring === 'bring') {
-      if (selectedItemSettings?.canBringFlowers && selectedItemSettings?.canBringFlowersLeadDays > lead) lead = selectedItemSettings.canBringFlowersLeadDays;
-      if (selectedItemSettings?.canBringVase && selectedItemSettings?.canBringVaseLeadDays > lead) lead = selectedItemSettings.canBringVaseLeadDays;
+      const fLead = Number(selectedItemSettings?.canBringFlowersLeadDays) || 0;
+      const vLead = Number(selectedItemSettings?.canBringVaseLeadDays) || 0;
+      if (selectedItemSettings?.canBringFlowers && fLead > lead) lead = fLead;
+      if (selectedItemSettings?.canBringVase && vLead > lead) lead = vLead;
     }
+    
     const d = new Date(base);
-    d.setDate(base.getDate() + lead);
+    d.setDate(d.getDate() + lead);
     return d.toISOString().split('T')[0];
   }, [flowerType, isBring, receiveMethod, selectedItemSettings]);
 
@@ -169,7 +171,7 @@ export default function OrderPage() {
     return res;
   };
 
-  // ★ 送料・箱代・クール・回収費用・発送日の自動計算
+  // 送料・発送日の自動計算
   useEffect(() => {
     if (!receiveMethod || receiveMethod === 'pickup' || !itemPrice) { 
       setCalculatedFee(null); setPickupFee(0); setAreaError(''); setShippingDate(''); return; 
@@ -184,7 +186,7 @@ export default function OrderPage() {
     let baseFee = 0, boxFee = 0, coolFee = 0, pickupFeeAmt = 0;
 
     if (receiveMethod === 'delivery') {
-      setShippingDate(''); // 配達の場合は発送日は空
+      setShippingDate(''); 
       const normalizedAddress = normalizeAddressText(rawAddress);
       const northPatterns = ["23", "24", "25", "26", "27"]; const westPatterns = ["3", "4", "5"];
       let isFreeArea = false;
@@ -227,7 +229,7 @@ export default function OrderPage() {
       if (!rateData) rateData = appSettings?.shippingRates?.find(r => r.region && r.region.includes(searchPref));
 
       if (rateData) { 
-        // ★ 発送日の逆算（地域ごとの設定値があればそれ、なければデフォルト1日）
+        // 発送日の逆算
         const lead = Number(rateData.leadDays) || 1;
         if (selectedDate) {
           const dDate = new Date(selectedDate);
@@ -322,7 +324,7 @@ export default function OrderPage() {
     try {
       const orderPayload = {
         shopId, flowerType, isBring, receiveMethod, selectedShop,
-        selectedDate, selectedTime, shippingDate, // ★ 発送日を保存
+        selectedDate, selectedTime, shippingDate,
         itemPrice, calculatedFee, pickupFee,
         absenceAction, absenceNote,
         flowerPurpose, flowerColor, flowerVibe, otherPurpose, otherVibe,
@@ -390,9 +392,10 @@ export default function OrderPage() {
                 <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] space-y-4 animate-in fade-in">
                   <p className="text-[11px] font-bold text-[#111111] tracking-widest border-b border-[#EAEAEA] pb-2">納期に関する注意事項</p>
                   <div className="space-y-2 text-[12px] text-[#555555] font-medium">
+                    {/* ★ 案内表示部分も念のためNumber変換 */}
                     {selectedItemSettings.normalLeadDays && <div className="flex justify-between"><span>通常納期 (店頭/配達)</span><span className="font-bold">{selectedItemSettings.normalLeadDays}日後以降</span></div>}
                     {selectedItemSettings.shippingLeadDays && <div className="flex justify-between"><span>配送 (佐川急便) 納期</span><span className="font-bold">{selectedItemSettings.shippingLeadDays}日後以降</span></div>}
-                    {isBring === 'bring' && (selectedItemSettings.canBringFlowersLeadDays || selectedItemSettings.canBringVaseLeadDays) && <div className="flex justify-between text-[#2D4B3E] pt-1"><span>お持ち込み時 (通常より延長)</span><span className="font-bold">{Math.max(selectedItemSettings.canBringFlowersLeadDays||0, selectedItemSettings.canBringVaseLeadDays||0)}日後以降</span></div>}
+                    {isBring === 'bring' && (selectedItemSettings.canBringFlowersLeadDays || selectedItemSettings.canBringVaseLeadDays) && <div className="flex justify-between text-[#2D4B3E] pt-1"><span>お持ち込み時 (通常より延長)</span><span className="font-bold">{Math.max(Number(selectedItemSettings.canBringFlowersLeadDays)||0, Number(selectedItemSettings.canBringVaseLeadDays)||0)}日後以降</span></div>}
                   </div>
                   <label className="flex items-center gap-3 pt-4 cursor-pointer border-t border-[#EAEAEA]">
                     <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="w-5 h-5 accent-[#2D4B3E] rounded-md cursor-pointer" />
@@ -442,7 +445,6 @@ export default function OrderPage() {
 
             <div className="space-y-8 bg-white p-8 rounded-[28px] border border-[#EAEAEA] shadow-sm transition-all duration-500">
               
-              {/* ▼ 画像自動提案エリア ▼ */}
               {matchingImages.length > 0 && (
                 <div className="bg-[#2D4B3E]/5 -mx-8 -mt-8 p-6 pb-8 mb-4 rounded-t-[28px] border-b border-[#EAEAEA] space-y-4">
                    <p className="text-[11px] font-bold text-[#2D4B3E] tracking-widest flex items-center gap-2">
@@ -582,7 +584,6 @@ export default function OrderPage() {
                 </div>
               </div>
 
-              {/* ★ お客様用画面にも「発送日」の案内を出す */}
               {receiveMethod === 'sagawa' && selectedDate && shippingDate && (
                 <div className="mt-2 p-4 bg-green-50 border border-green-200 rounded-xl flex flex-col sm:flex-row sm:items-center gap-3 animate-in fade-in shadow-sm">
                   <div className="flex items-center gap-2 text-green-800 font-bold text-[12px]">
@@ -630,7 +631,6 @@ export default function OrderPage() {
                 </div>
               )}
 
-              {/* 置き配設定（自社配達の時のみ） */}
               {receiveMethod === 'delivery' && (
                 <div className="p-8 bg-white rounded-[28px] border border-[#EAEAEA] shadow-sm space-y-4 animate-in fade-in">
                   <div className="space-y-2">
@@ -659,7 +659,6 @@ export default function OrderPage() {
                 </div>
               )}
 
-              {/* 料金内訳パネル */}
               <div className="bg-white p-8 rounded-[32px] border-2 border-[#2D4B3E]/30 shadow-md mt-8">
                 <div className="flex flex-col items-center justify-center gap-6">
                   <div className="w-full">

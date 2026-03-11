@@ -24,7 +24,6 @@ export default function StaffNewOrderPage() {
   const [selectedShop, setSelectedShop] = useState(null); 
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
-  // ★ 発送日のステートを追加
   const [shippingDate, setShippingDate] = useState('');
 
   const [itemPrice, setItemPrice] = useState('');
@@ -127,19 +126,24 @@ export default function StaffNewOrderPage() {
   const tateNeeds = selectedTateOpt?.needs || [];
   const topPrefixText = isOsonae ? (prefixFormat === 'hiragana' ? 'お供え' : '御供') : (prefixFormat === 'hiragana' ? 'お祝い' : '祝');
 
+  // ★ カレンダーの納期バグ修正
   const properMinDate = useMemo(() => {
     if (!flowerType) return '';
     const base = new Date();
     let lead = 0;
-    if (receiveMethod === 'sagawa') lead = selectedItemSettings.shippingLeadDays || 0;
-    else lead = selectedItemSettings.normalLeadDays || 0;
+    if (receiveMethod === 'sagawa') {
+      lead = Number(selectedItemSettings?.shippingLeadDays) || 0;
+    } else {
+      lead = Number(selectedItemSettings?.normalLeadDays) || 0;
+    }
 
     if (isBring === 'bring') {
-      const fLead = selectedItemSettings.canBringFlowersLeadDays || 0;
-      const vLead = selectedItemSettings.canBringVaseLeadDays || 0;
-      if (selectedItemSettings.canBringFlowers && fLead > lead) lead = fLead;
-      if (selectedItemSettings.canBringVase && vLead > lead) lead = vLead;
+      const fLead = Number(selectedItemSettings?.canBringFlowersLeadDays) || 0;
+      const vLead = Number(selectedItemSettings?.canBringVaseLeadDays) || 0;
+      if (selectedItemSettings?.canBringFlowers && fLead > lead) lead = fLead;
+      if (selectedItemSettings?.canBringVase && vLead > lead) lead = vLead;
     }
+    
     const d = new Date(base);
     d.setDate(d.getDate() + lead);
     return d.toISOString().split('T')[0];
@@ -185,7 +189,6 @@ export default function StaffNewOrderPage() {
     return res;
   };
 
-  // ★ 送料・発送日の自動計算
   useEffect(() => {
     if (!receiveMethod || receiveMethod === 'pickup' || !itemPrice) { 
       setCalculatedFee(null); setPickupFee(0); setAreaError(''); setShippingDate(''); return; 
@@ -197,13 +200,10 @@ export default function StaffNewOrderPage() {
       setCalculatedFee(null); setPickupFee(0); setAreaError(''); setShippingDate(''); return; 
     }
 
-    let baseFee = 0;
-    let boxFee = 0;
-    let coolFee = 0;
-    let pickupFeeAmt = 0;
+    let baseFee = 0, boxFee = 0, coolFee = 0, pickupFeeAmt = 0;
 
     if (receiveMethod === 'delivery') {
-      setShippingDate(''); // 配達の場合は発送日は空
+      setShippingDate(''); 
       const normalizedAddress = normalizeAddressText(rawAddress);
       const northPatterns = ["23", "24", "25", "26", "27"]; const westPatterns = ["3", "4", "5"];
       let isFreeArea = false;
@@ -247,7 +247,6 @@ export default function StaffNewOrderPage() {
       if (!rateData) rateData = appSettings?.shippingRates?.find(r => r.region && r.region.includes(searchPref));
 
       if (rateData) { 
-        // ★ 発送日の逆算（設定値があればそれ、なければ1日）
         const lead = Number(rateData.leadDays) || 1;
         if (selectedDate) {
           const dDate = new Date(selectedDate);
@@ -288,8 +287,7 @@ export default function StaffNewOrderPage() {
         setPickupFee(0); 
         setAreaError(''); 
       } else {
-        setCalculatedFee(null); 
-        setShippingDate('');
+        setCalculatedFee(null); setShippingDate('');
         setAreaError('該当する地域の送料設定が見つかりません。');
       }
     }
@@ -331,14 +329,12 @@ export default function StaffNewOrderPage() {
       warnings.push('・置き配の場所');
     }
 
-    if (selectedDate && flowerType) {
-      if (selectedDate < properMinDate) {
-        warnings.push(`・納品日 (${selectedDate}) が、規定の最短納期 (${properMinDate}) よりも早く設定されています`);
-      }
+    if (selectedDate && flowerType && properMinDate && selectedDate < properMinDate) {
+      warnings.push(`・納品日 (${selectedDate}) が、規定の最短納期 (${properMinDate}) よりも早く設定されています`);
     }
 
     if (warnings.length > 0) {
-      const isConfirmed = window.confirm("⚠️ 以下の確認事項があります：\n\n" + warnings.join("\n") + "\n\nこのまま注文を強制的に登録してもよろしいですか？");
+      const isConfirmed = window.confirm("⚠️ 以下の未入力・確認事項があります：\n\n" + warnings.join("\n") + "\n\nこのまま注文を強制的に登録してもよろしいですか？");
       if (!isConfirmed) return;
     }
     
@@ -346,7 +342,7 @@ export default function StaffNewOrderPage() {
     try {
       const orderPayload = {
         receptionType, staffName, shopId, flowerType, isBring, receiveMethod, selectedShop,
-        selectedDate, receiveDate: selectedDate, shippingDate, // ★発送日を保存
+        selectedDate, receiveDate: selectedDate, shippingDate,
         selectedTime, itemPrice, calculatedFee, pickupFee, 
         absenceAction, absenceNote, 
         flowerPurpose, flowerColor, flowerVibe, otherPurpose, otherVibe,
@@ -663,6 +659,7 @@ export default function StaffNewOrderPage() {
               </div>
             )}
 
+            {/* 置き配設定（自社配達の時だけ） */}
             {receiveMethod === 'delivery' && (
               <div className="pt-6 border-t border-[#FBFAF9] space-y-4 animate-in fade-in">
                 <div className="space-y-2">
