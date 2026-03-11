@@ -11,7 +11,7 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [uploadingId, setUploadingId] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
-  const [viewMode, setViewMode] = useState('active'); // 'active' or 'archived'
+  const [viewMode, setViewMode] = useState('active');
 
   useEffect(() => {
     fetchData();
@@ -30,11 +30,9 @@ export default function OrdersPage() {
     }
   }
 
-  // ステータス更新（アーカイブ・戻す）
   const updateOrderStatus = async (orderId, newStatus) => {
     const actionText = newStatus === 'completed' ? '完了' : '未完了に戻す';
     if (!confirm(`この注文を「${actionText}」にしますか？`)) return;
-    
     try {
       const targetOrder = orders.find(o => o.id === orderId);
       const updatedData = { ...targetOrder.order_data, status: newStatus };
@@ -47,7 +45,6 @@ export default function OrdersPage() {
     }
   };
 
-  // 受領書アップロード
   const handleUploadReceipt = async (order, e) => {
     e.stopPropagation();
     const file = e.target.files[0]; if (!file) return;
@@ -196,6 +193,7 @@ export default function OrdersPage() {
                 <button onClick={() => setSelectedOrder(null)} className="w-10 h-10 bg-[#FBFAF9] border border-[#EAEAEA] rounded-full flex items-center justify-center text-[#555555] font-bold hover:bg-[#EAEAEA]">✕</button>
               </div>
             </div>
+            
             <div className="p-8 space-y-8 text-left">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-2">
@@ -209,6 +207,7 @@ export default function OrdersPage() {
                   <p className="text-[12px] text-[#555555] flex items-center gap-1"><Smartphone size={12}/> {selectedOrder.order_data.customerInfo?.phone}</p>
                 </div>
               </div>
+
               {selectedOrder.order_data.isRecipientDifferent && (
                 <div className="space-y-3 animate-in fade-in">
                   <h3 className="text-[11px] font-bold text-red-500 uppercase tracking-widest flex items-center gap-2"><MapPin size={12}/> お届け先様（別住所）</h3>
@@ -219,6 +218,7 @@ export default function OrdersPage() {
                   </div>
                 </div>
               )}
+
               <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] shadow-sm">
                 <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest mb-4 flex items-center gap-2"><Tag size={12}/> 商品詳細</p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-[13px] font-bold mb-6">
@@ -227,8 +227,34 @@ export default function OrdersPage() {
                   <div><span className="text-[10px] block text-[#999999]">カラー</span>{selectedOrder.order_data.flowerColor}</div>
                   <div><span className="text-[10px] block text-[#999999]">イメージ</span>{selectedOrder.order_data.flowerVibe}</div>
                 </div>
-                <div className="border-t border-[#FBFAF9] pt-4 text-[13px]">
-                   <div className="flex justify-between items-center"><span className="text-[#999999] font-bold text-[11px]">合計金額 (税込)</span><span className="font-black text-[#2D4B3E] text-[18px] font-mono">¥{Math.floor(((Number(selectedOrder.order_data.itemPrice) + Number(selectedOrder.order_data.calculatedFee || 0) + Number(selectedOrder.order_data.pickupFee || 0)) * 1.1)).toLocaleString()}</span></div>
+                <div className="border-t border-[#FBFAF9] pt-4 space-y-1.5 text-[13px]">
+                  <div className="flex justify-between"><span>商品代金 (税抜)</span><span className="font-bold">¥{Number(selectedOrder.order_data.itemPrice).toLocaleString()}</span></div>
+                  {Number(selectedOrder.order_data.calculatedFee) > 0 && <div className="flex justify-between"><span>配達・送料</span><span className="font-bold">¥{Number(selectedOrder.order_data.calculatedFee).toLocaleString()}</span></div>}
+                  {Number(selectedOrder.order_data.pickupFee) > 0 && <div className="flex justify-between text-orange-600"><span>回収料</span><span className="font-bold">¥{Number(selectedOrder.order_data.pickupFee).toLocaleString()}</span></div>}
+                  <div className="flex justify-between text-[16px] mt-2 pt-2 border-t border-[#FBFAF9] font-black text-[#2D4B3E]"><span>合計金額 (税込)</span><span>¥{Math.floor(((Number(selectedOrder.order_data.itemPrice) + Number(selectedOrder.order_data.calculatedFee || 0) + Number(selectedOrder.order_data.pickupFee || 0)) * 1.1)).toLocaleString()}</span></div>
+                </div>
+              </div>
+
+              {/* ★ 立札・備考セクション復活！ */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-4">
+                <div className="space-y-3">
+                  <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest flex items-center gap-2"><FileText size={12}/> 立札・メッセージ</p>
+                  <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm min-h-[120px]">
+                    <span className="inline-block px-3 py-1 bg-[#2D4B3E] text-white text-[10px] font-bold rounded-md mb-3">{selectedOrder.order_data.cardType}</span>
+                    {selectedOrder.order_data.cardType === '立札' ? (
+                      <div className="space-y-1 text-[12px] font-bold">
+                        <p className="text-[#999999] font-normal">①内容: {selectedOrder.order_data.tateInput1}</p>
+                        <p className="text-[#999999] font-normal">②宛名: {selectedOrder.order_data.tateInput2}</p>
+                        <p className="text-[#999999] font-normal">③贈り主: {selectedOrder.order_data.tateInput3}</p>
+                      </div>
+                    ) : <p className="text-[13px] whitespace-pre-wrap leading-relaxed font-bold">{selectedOrder.order_data.cardMessage || 'メッセージなし'}</p>}
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest flex items-center gap-2"><FileText size={12}/> 備考・要望</p>
+                  <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm min-h-[120px]">
+                    <p className="text-[13px] whitespace-pre-wrap text-[#111111] font-bold leading-relaxed">{selectedOrder.order_data.note || '特になし'}</p>
+                  </div>
                 </div>
               </div>
             </div>
