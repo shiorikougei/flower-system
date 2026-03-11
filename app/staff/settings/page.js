@@ -13,7 +13,7 @@ export default function SettingsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
 
-  // --- 状態管理 (失われた全マニアック設定を復元) ---
+  // --- 状態管理 (失われた全設定を完全復元) ---
   const [generalConfig, setGeneralConfig] = useState({ 
     appName: 'FLORIX', logoUrl: '', logoSize: 100, logoTransparent: false, slipBgUrl: '', slipBgOpacity: 50 
   });
@@ -23,18 +23,29 @@ export default function SettingsPage() {
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffStore, setNewStaffStore] = useState('all');
   const [deliveryAreas, setDeliveryAreas] = useState([]);
-  const [shippingRates, setShippingRates] = useState([]); // 地方×サイズ別の送料
+  const [shippingRates, setShippingRates] = useState([]); 
   const [boxFeeConfig, setBoxFeeConfig] = useState({ 
     type: 'flat', flatFee: 500, priceTiers: [], itemFees: {}, 
     freeShippingThresholdEnabled: false, freeShippingThreshold: 15000, 
     isBundleDiscount: true, coolBinEnabled: true, coolBinPeriods: [],
-    returnFeeType: 'flat', returnFeeValue: 1000 // 返却送料設定
+    returnFeeType: 'flat', returnFeeValue: 1000 
   });
   const [autoReply, setAutoReply] = useState({ subject: '', body: '' });
   const [staffOrderConfig, setStaffOrderConfig] = useState({ 
     ignoreLeadTime: true, allowCustomPrice: true, paymentMethods: [], sendAutoReply: false 
   });
   const [statusConfig, setStatusConfig] = useState({ type: 'template', customLabels: [] });
+
+  const tabs = [
+    { id: 'general', label: '基本設定', icon: SettingsIcon },
+    { id: 'status', label: 'ステータス', icon: ListChecks },
+    { id: 'shop', label: '店舗・営業日', icon: Store }, 
+    { id: 'items', label: '商品・納期', icon: Tag },
+    { id: 'shipping', label: '配送・送料', icon: Truck },
+    { id: 'staff_order', label: '店舗注文受付', icon: Clock },
+    { id: 'staff', label: 'スタッフ', icon: User },
+    { id: 'message', label: '自動返信', icon: Mail },
+  ];
 
   useEffect(() => {
     async function loadSettings() {
@@ -81,28 +92,28 @@ export default function SettingsPage() {
     reader.readAsDataURL(file);
   };
 
-  // --- タブ別レンダリング (全項目・詳細ロジック復元) ---
+  // --- タブ別レンダリング ---
 
   const renderGeneralTab = () => (
     <div className="space-y-8 animate-in fade-in">
       <div className="bg-white rounded-[32px] border border-[#EAEAEA] p-8 shadow-sm space-y-8">
         <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><ImageIcon size={20}/> ロゴ・基本設定</h2>
         <div className="space-y-6">
-          <div className="space-y-2">
+          <div className="space-y-2 text-left">
             <label className="text-[12px] font-bold text-[#999999]">アプリ名</label>
             <input type="text" value={generalConfig.appName} onChange={(e) => setGeneralConfig({...generalConfig, appName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none" />
           </div>
-          <div className="space-y-4">
+          <div className="space-y-4 text-left">
             <label className="text-[12px] font-bold text-[#999999]">店舗ロゴ</label>
             <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'logoUrl')} className="block w-full text-xs" />
             {generalConfig.logoUrl && (
               <div className="p-6 bg-[#FBFAF9] rounded-2xl border border-[#EAEAEA] space-y-6">
                 <div className="flex items-center justify-between">
-                  <span className="text-[12px] font-bold">サイズ調整: {generalConfig.logoSize}%</span>
+                  <span className="text-[12px] font-bold">サイズ: {generalConfig.logoSize}%</span>
                   <input type="range" min="30" max="150" value={generalConfig.logoSize} onChange={(e) => setGeneralConfig({...generalConfig, logoSize: Number(e.target.value)})} className="w-48 accent-[#2D4B3E]" />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[12px] font-bold">白背景を透過する</span>
+                  <span className="text-[12px] font-bold">白背景を透過</span>
                   <button onClick={() => setGeneralConfig({...generalConfig, logoTransparent: !generalConfig.logoTransparent})} className={`w-12 h-6 rounded-full transition-all ${generalConfig.logoTransparent ? 'bg-[#2D4B3E]' : 'bg-gray-300'}`}>
                     <div className={`w-4 h-4 bg-white rounded-full mx-1 transition-all ${generalConfig.logoTransparent ? 'translate-x-6' : ''}`} />
                   </button>
@@ -118,9 +129,9 @@ export default function SettingsPage() {
 
   const renderStatusTab = () => (
     <div className="space-y-8 animate-in fade-in">
-      <div className="bg-white rounded-[32px] border border-[#EAEAEA] p-8 shadow-sm space-y-6">
-        <h2 className="text-[18px] font-bold text-[#2D4B3E]">ステータス設定</h2>
-        <div className="flex gap-2 p-1 bg-[#F7F7F7] rounded-xl">
+      <div className="bg-white rounded-[32px] border border-[#EAEAEA] p-8 shadow-sm space-y-6 text-left">
+        <h2 className="text-[18px] font-bold text-[#2D4B3E]">受注ステータス設定</h2>
+        <div className="flex gap-2 p-1 bg-[#F7F7F7] rounded-xl mb-4">
           {['template', 'custom'].map(t => (
             <button key={t} onClick={() => setStatusConfig({...statusConfig, type: t})} className={`flex-1 py-3 rounded-lg font-bold text-[12px] ${statusConfig.type === t ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}>{t === 'template' ? '標準' : 'カスタム'}</button>
           ))}
@@ -130,7 +141,7 @@ export default function SettingsPage() {
             {statusConfig.customLabels.map((l, i) => (
               <div key={i} className="flex gap-2"><input type="text" value={l} onChange={(e) => { const n = [...statusConfig.customLabels]; n[i] = e.target.value; setStatusConfig({...statusConfig, customLabels: n}); }} className="flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none" /><button onClick={() => setStatusConfig({...statusConfig, customLabels: statusConfig.customLabels.filter((_, idx) => idx !== i)})} className="text-red-300 p-2"><Trash2 size={18}/></button></div>
             ))}
-            <button onClick={() => setStatusConfig({...statusConfig, customLabels: [...statusConfig.customLabels, '新状態']})} className="w-full py-3 border-2 border-dashed border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#999999]">+ 追加</button>
+            <button onClick={() => setStatusConfig({...statusConfig, customLabels: [...statusConfig.customLabels, '新状態']})} className="w-full py-3 border-2 border-dashed border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#999999]">+ 項目を追加</button>
           </div>
         )}
       </div>
@@ -150,12 +161,12 @@ export default function SettingsPage() {
             <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">住所</label><input type="text" value={shop.address} onChange={(e) => setShops(shops.map(s => s.id === shop.id ? {...s, address: e.target.value} : s))} className="w-full h-11 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none" /></div>
           </div>
           <div className="pt-4 border-t border-[#FBFAF9] space-y-4">
-            <div className="flex justify-between items-center"><label className="text-[12px] font-bold text-[#2D4B3E]">特別スケジュール（休業・臨時営業）</label><button onClick={() => setShops(shops.map(s => s.id === shop.id ? {...s, specialHours: [...(s.specialHours || []), {id:Date.now(), date:'', type:'closed', note:''}]} : s))} className="text-[10px] bg-[#2D4B3E] text-white px-3 py-1 rounded-full">+ 追加</button></div>
+            <div className="flex justify-between items-center"><label className="text-[12px] font-bold text-[#2D4B3E]">特別営業日・休業設定</label><button onClick={() => setShops(shops.map(s => s.id === shop.id ? {...s, specialHours: [...(s.specialHours || []), {id:Date.now(), date:'', type:'closed', note:''}]} : s))} className="text-[10px] bg-[#2D4B3E] text-white px-3 py-1 rounded-full">+ 追加</button></div>
             {(shop.specialHours || []).map(sh => (
-              <div key={sh.id} className="flex gap-2 items-center bg-[#FBFAF9] p-3 rounded-xl border border-[#EAEAEA]">
+              <div key={sh.id} className="flex flex-wrap gap-2 items-center bg-[#FBFAF9] p-3 rounded-xl border border-[#EAEAEA]">
                 <input type="date" value={sh.date} onChange={(e) => setShops(shops.map(s => s.id === shop.id ? {...s, specialHours: s.specialHours.map(h => h.id === sh.id ? {...h, date:e.target.value} : h)} : s))} className="h-9 px-2 rounded border border-[#EAEAEA] text-[11px] font-bold" />
                 <select value={sh.type} onChange={(e) => setShops(shops.map(s => s.id === shop.id ? {...s, specialHours: s.specialHours.map(h => h.id === sh.id ? {...h, type:e.target.value} : h)} : s))} className="h-9 px-2 rounded border border-[#EAEAEA] text-[11px] font-bold"><option value="closed">終日休業</option><option value="open">臨時営業</option></select>
-                <input type="text" placeholder="理由" value={sh.note} onChange={(e) => setShops(shops.map(s => s.id === shop.id ? {...s, specialHours: s.specialHours.map(h => h.id === sh.id ? {...h, note:e.target.value} : h)} : s))} className="flex-1 h-9 px-3 rounded border border-[#EAEAEA] text-[11px]" />
+                <input type="text" placeholder="理由メモ" value={sh.note} onChange={(e) => setShops(shops.map(s => s.id === shop.id ? {...s, specialHours: s.specialHours.map(h => h.id === sh.id ? {...h, note:e.target.value} : h)} : s))} className="flex-1 h-9 px-3 rounded border border-[#EAEAEA] text-[11px]" />
                 <button onClick={() => setShops(shops.map(s => s.id === shop.id ? {...s, specialHours: s.specialHours.filter(h => h.id !== sh.id)} : s))} className="text-red-400">×</button>
               </div>
             ))}
@@ -183,7 +194,7 @@ export default function SettingsPage() {
             </div>
             
             <div className="space-y-4">
-              <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2"><ShieldCheck size={16}/> 持ち込み特別ルール</p>
+              <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2"><ShieldCheck size={16}/> 持ち込み・返却</p>
               <div className="space-y-3">
                 {['canBringFlowers', 'canBringVase'].map(key => (
                   <div key={key} className="bg-[#FBFAF9] p-4 rounded-2xl space-y-3 border border-transparent hover:border-[#EAEAEA] transition-all">
@@ -208,23 +219,23 @@ export default function SettingsPage() {
   const renderShippingTab = () => (
     <div className="space-y-8 animate-in fade-in">
       <div className="bg-white rounded-[32px] border border-[#EAEAEA] p-8 shadow-sm space-y-8 text-left">
-        <h2 className="text-[18px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-4">配送・送料・返却</h2>
+        <h2 className="text-[18px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-4">配送・送料設定</h2>
         
         {/* 返却送料設定 */}
         <div className="bg-[#2D4B3E]/5 p-6 rounded-[24px] border border-[#2D4B3E]/10 space-y-4">
-          <div className="flex items-center gap-2 font-bold text-[#2D4B3E]"><RotateCcw size={18}/> 器返却時の送料設定</div>
+          <div className="flex items-center gap-2 font-bold text-[#2D4B3E]"><RotateCcw size={18}/> 器返却時の送料加算</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">計算タイプ</label><select value={boxFeeConfig.returnFeeType} onChange={(e) => setBoxFeeConfig({...boxFeeConfig, returnFeeType: e.target.value})} className="w-full h-11 bg-white border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none"><option value="flat">固定金額を加算</option><option value="percent">送料の○%を加算</option></select></div>
-            <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">{boxFeeConfig.returnFeeType === 'flat' ? '加算金額 (¥)' : '加算率 (%)'}</label><input type="number" value={boxFeeConfig.returnFeeValue} onChange={(e) => setBoxFeeConfig({...boxFeeConfig, returnFeeValue: Number(e.target.value)})} className="w-full h-11 bg-white border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none" /></div>
+            <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">{boxFeeConfig.returnFeeType === 'flat' ? '金額 (¥)' : '率 (%)'}</label><input type="number" value={boxFeeConfig.returnFeeValue} onChange={(e) => setBoxFeeConfig({...boxFeeConfig, returnFeeValue: Number(e.target.value)})} className="w-full h-11 bg-white border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none" /></div>
           </div>
         </div>
 
-        {/* 地方別・サイズ別送料マスタ */}
+        {/* 地方別・サイズ別送料テーブル */}
         <div className="pt-6 space-y-4">
-          <div className="flex justify-between items-center"><p className="text-[14px] font-bold text-[#2D4B3E]">地方別・サイズ別送料マスタ</p></div>
+          <p className="text-[14px] font-bold text-[#2D4B3E]">サイズ別・地方別送料マスタ</p>
           <div className="overflow-x-auto border border-[#EAEAEA] rounded-2xl">
             <table className="w-full text-left text-[11px] min-w-[600px]">
-              <thead className="bg-[#FBFAF9] border-b text-[#999999]"><tr><th className="p-3">地方名</th><th className="p-3">80サイズ</th><th className="p-3">100サイズ</th><th className="p-3">120サイズ</th><th className="p-3">クール加算</th></tr></thead>
+              <thead className="bg-[#FBFAF9] border-b text-[#999999]"><tr><th className="p-3">地方</th><th className="p-3">80サイズ</th><th className="p-3">100サイズ</th><th className="p-3">120サイズ</th><th className="p-3">クール便</th></tr></thead>
               <tbody className="divide-y divide-[#FBFAF9]">
                 {shippingRates.map((r, i) => (
                   <tr key={i} className="hover:bg-gray-50/50">
@@ -243,10 +254,24 @@ export default function SettingsPage() {
     </div>
   );
 
+  const renderStaffOrderTab = () => (
+    <div className="space-y-8 animate-in fade-in">
+      <div className="bg-white rounded-[32px] border border-[#EAEAEA] p-8 shadow-sm space-y-6 text-left">
+        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={20}/> 代理入力（店舗受付）ルール</h2>
+        <div className="space-y-4">
+          <label className="flex items-center justify-between bg-[#FBFAF9] p-5 rounded-[24px] cursor-pointer group">
+            <div><span className="text-[14px] font-bold block group-hover:text-[#2D4B3E] transition-colors">納期制限を完全に無視する</span><span className="text-[10px] text-[#999999] font-bold">当日・翌日の注文をシステムで強制許可します</span></div>
+            <input type="checkbox" checked={staffOrderConfig.ignoreLeadTime} onChange={(e) => setStaffOrderConfig({...staffOrderConfig, ignoreLeadTime: e.target.checked})} className="accent-[#2D4B3E] w-5 h-5" />
+          </label>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderStaffTab = () => (
     <div className="space-y-8 animate-in fade-in">
       <div className="bg-white rounded-[32px] border border-[#EAEAEA] p-8 shadow-sm space-y-6 text-left">
-        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><User size={20}/> スタッフ管理</h2>
+        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><User size={20}/> スタッフ所属設定</h2>
         <div className="space-y-3">
           {staffList.map((s, i) => (
             <div key={i} className="flex justify-between items-center bg-[#FBFAF9] p-4 rounded-2xl border border-[#EAEAEA]">
@@ -270,31 +295,13 @@ export default function SettingsPage() {
     </div>
   );
 
-  const renderStaffOrderTab = () => (
-    <div className="space-y-8 animate-in fade-in">
-      <div className="bg-white rounded-[32px] border border-[#EAEAEA] p-8 shadow-sm space-y-6 text-left">
-        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={20}/> 代理入力（店舗受付）ルール</h2>
-        <div className="space-y-4">
-          <label className="flex items-center justify-between bg-[#FBFAF9] p-5 rounded-[24px] cursor-pointer group">
-            <div><span className="text-[14px] font-bold block group-hover:text-[#2D4B3E] transition-colors">納期制限を完全に無視する</span><span className="text-[10px] text-[#999999] font-bold">当日・翌日の注文をシステムで強制許可します</span></div>
-            <input type="checkbox" checked={staffOrderConfig.ignoreLeadTime} onChange={(e) => setStaffOrderConfig({...staffOrderConfig, ignoreLeadTime: e.target.checked})} className="accent-[#2D4B3E] w-5 h-5" />
-          </label>
-          <label className="flex items-center justify-between bg-[#FBFAF9] p-5 rounded-[24px] cursor-pointer group">
-            <div><span className="text-[14px] font-bold block group-hover:text-[#2D4B3E] transition-colors">注文金額の自由入力を許可</span><span className="text-[10px] text-[#999999] font-bold">プルダウン以外の任意の金額を入力可能にします</span></div>
-            <input type="checkbox" checked={staffOrderConfig.allowCustomPrice} onChange={(e) => setStaffOrderConfig({...staffOrderConfig, allowCustomPrice: e.target.checked})} className="accent-[#2D4B3E] w-5 h-5" />
-          </label>
-        </div>
-      </div>
-    </div>
-  );
-
   const renderMessageTab = () => (
-    <div className="space-y-8 animate-in fade-in">
-      <div className="bg-white rounded-[32px] border border-[#EAEAEA] p-8 shadow-sm space-y-6 text-left">
-        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Mail size={20}/> 自動返信メール</h2>
+    <div className="space-y-8 animate-in fade-in text-left">
+      <div className="bg-white rounded-[32px] border border-[#EAEAEA] p-8 shadow-sm space-y-6">
+        <h2 className="text-[18px] font-bold text-[#2D4B3E]">自動返信メール</h2>
         <div className="space-y-4">
-          <div className="space-y-1"><label className="text-[11px] font-bold text-[#999999]">件名テンプレート</label><input type="text" value={autoReply.subject} onChange={(e) => setAutoReply({...autoReply, subject: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none" /></div>
-          <div className="space-y-1"><label className="text-[11px] font-bold text-[#999999]">本文テンプレート</label><textarea value={autoReply.body} onChange={(e) => setAutoReply({...autoReply, body: e.target.value})} className="w-full h-64 bg-[#FBFAF9] border border-[#EAEAEA] rounded-[24px] p-4 text-[13px] font-bold outline-none resize-none leading-relaxed" /></div>
+          <input type="text" placeholder="件名" value={autoReply.subject} onChange={(e) => setAutoReply({...autoReply, subject: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none" />
+          <textarea value={autoReply.body} onChange={(e) => setAutoReply({...autoReply, body: e.target.value})} className="w-full h-64 bg-[#FBFAF9] border border-[#EAEAEA] rounded-[24px] p-4 text-[13px] font-bold outline-none resize-none leading-relaxed" />
         </div>
       </div>
     </div>
@@ -312,7 +319,7 @@ export default function SettingsPage() {
         <div className="flex items-center gap-4 shrink-0">
           {!isAdmin ? (
             <div className="flex items-center gap-2 bg-white px-2 py-1.5 rounded-xl border border-[#EAEAEA] shadow-sm">
-              <input type="password" placeholder="Pass" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} className="w-16 h-8 px-2 bg-[#FBFAF9] text-[11px] font-bold outline-none rounded-lg" />
+              <input type="password" placeholder="7777" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} className="w-16 h-8 px-2 bg-[#FBFAF9] text-[11px] font-bold outline-none rounded-lg border border-[#EAEAEA]" />
               <button onClick={handleLogin} className="px-3 h-8 bg-[#2D4B3E] text-white text-[11px] font-bold rounded-lg">解除</button>
             </div>
           ) : (
