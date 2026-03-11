@@ -55,6 +55,14 @@ export default function StaffNewOrderPage() {
   const [areaError, setAreaError] = useState('');
   const [note, setNote] = useState('');
 
+  // ★ デフォルトの時間枠
+  const defaultTimeSlots = {
+    pickup: ['10:00-12:00', '12:00-15:00', '15:00-18:00'],
+    delivery: ['9:00-12:00', '12:00-15:00', '15:00-18:00', '18:00-21:00'],
+    shipping: ['午前中', '14:00-16:00', '16:00-18:00', '18:00-20:00', '19:00-21:00']
+  };
+  const [timeSlots, setTimeSlots] = useState(defaultTimeSlots);
+
   useEffect(() => {
     async function fetchSettings() {
       try {
@@ -62,6 +70,11 @@ export default function StaffNewOrderPage() {
         if (error) throw error;
         if (data && data.settings_data) {
           setAppSettings(data.settings_data);
+          
+          if (data.settings_data.timeSlots) {
+            setTimeSlots(data.settings_data.timeSlots);
+          }
+
           if (data.settings_data.staffOrderConfig?.sendAutoReply) setSendAutoReply(true);
           if (data.settings_data.staffOrderConfig?.paymentMethods?.length > 0) {
             setPaymentMethod(data.settings_data.staffOrderConfig.paymentMethods[0]);
@@ -126,28 +139,45 @@ export default function StaffNewOrderPage() {
   const tateNeeds = selectedTateOpt?.needs || [];
   const topPrefixText = isOsonae ? (prefixFormat === 'hiragana' ? 'お供え' : '御供') : (prefixFormat === 'hiragana' ? 'お祝い' : '祝');
 
-  // ★ カレンダーの納期バグ修正
+  // ★ 新規：入力された住所から「配送日数（リードタイム）」を自動判定
+  const transitDays = useMemo(() => {
+    if (receiveMethod !== 'sagawa') return 0;
+    const targetInfo = isRecipientDifferent ? recipientInfo : customerInfo;
+    const rawAddress = ((targetInfo.address1 || '') + (targetInfo.address2 || '')).replace(/[\s　]+/g, '');
+    const prefMatch = rawAddress.match(/^(北海道|東京都|(?:京都|大阪)府|.{2,3}県)/);
+    
+    if (prefMatch && appSettings?.shippingRates) {
+      const targetPref = prefMatch[1].replace(/(都|府|県)$/, ''); 
+      const searchPref = targetPref === '北海' ? '北海道' : targetPref;
+      let rateData = appSettings.shippingRates.find(r => r.prefs && r.prefs.includes(searchPref));
+      if (!rateData) rateData = appSettings.shippingRates.find(r => r.region && r.region.includes(searchPref));
+      
+      if (rateData) return Number(rateData.leadDays) || 1;
+    }
+    return 1; // デフォルト1日
+  }, [receiveMethod, customerInfo.address1, recipientInfo.address1, isRecipientDifferent, appSettings]);
+
+  // ★ 納期バグ修正
   const properMinDate = useMemo(() => {
     if (!flowerType) return '';
     const base = new Date();
-    let lead = 0;
+    let prepDays = 0;
     if (receiveMethod === 'sagawa') {
-      lead = Number(selectedItemSettings?.shippingLeadDays) || 0;
+      prepDays = Number(selectedItemSettings?.shippingLeadDays) || 0;
     } else {
-      lead = Number(selectedItemSettings?.normalLeadDays) || 0;
+      prepDays = Number(selectedItemSettings?.normalLeadDays) || 0;
     }
 
     if (isBring === 'bring') {
-      const fLead = Number(selectedItemSettings?.canBringFlowersLeadDays) || 0;
-      const vLead = Number(selectedItemSettings?.canBringVaseLeadDays) || 0;
-      if (selectedItemSettings?.canBringFlowers && fLead > lead) lead = fLead;
-      if (selectedItemSettings?.canBringVase && vLead > lead) lead = vLead;
+      const fLead = Number(selectedItemSettings.canBringFlowersLeadDays) || 0;
+      const vLead = Number(selectedItemSettings.canBringVaseLeadDays) || 0;
+      if (selectedItemSettings.canBringFlowers && fLead > prepDays) prepDays = fLead;
+      if (selectedItemSettings.canBringVase && vLead > prepDays) prepDays = vLead;
     }
-    
     const d = new Date(base);
-    d.setDate(d.getDate() + lead);
+    d.setDate(d.getDate() + prepDays + transitDays);
     return d.toISOString().split('T')[0];
-  }, [flowerType, isBring, receiveMethod, selectedItemSettings]);
+  }, [flowerType, isBring, receiveMethod, selectedItemSettings, transitDays]);
 
   const minDateLimit = useMemo(() => {
     if (staffConfig.ignoreLeadTime) return new Date().toISOString().split('T')[0]; 
@@ -165,15 +195,12 @@ export default function StaffNewOrderPage() {
     return options;
   };
 
+  // ★ 時間枠のプルダウン（設定連動）
   const getTimeOptions = () => {
     if (!selectedDate) return [];
-    if (receiveMethod === 'delivery') return ["9:00-12:00", "12:00-15:00", "15:00-18:00", "18:00-21:00"];
-    if (receiveMethod === 'sagawa') return ["午前中", "12:00-14:00", "14:00-16:00", "16:00-18:00", "18:00-20:00", "19:00-21:00"];
-    if (receiveMethod === 'pickup' && selectedShop) {
-      const shopObj = appSettings?.shops?.find(s => s.name === selectedShop);
-      if (shopObj) return [`${shopObj.openTime || '10:00'}-${shopObj.closeTime || '19:00'}`];
-      return ["11:00-18:00"];
-    }
+    if (receiveMethod === 'pickup') return timeSlots.pickup;
+    if (receiveMethod === 'delivery') return timeSlots.delivery;
+    if (receiveMethod === 'sagawa') return timeSlots.shipping;
     return [];
   };
 
@@ -200,7 +227,10 @@ export default function StaffNewOrderPage() {
       setCalculatedFee(null); setPickupFee(0); setAreaError(''); setShippingDate(''); return; 
     }
 
-    let baseFee = 0, boxFee = 0, coolFee = 0, pickupFeeAmt = 0;
+    let baseFee = 0;
+    let boxFee = 0;
+    let coolFee = 0;
+    let pickupFeeAmt = 0;
 
     if (receiveMethod === 'delivery') {
       setShippingDate(''); 
@@ -247,10 +277,9 @@ export default function StaffNewOrderPage() {
       if (!rateData) rateData = appSettings?.shippingRates?.find(r => r.region && r.region.includes(searchPref));
 
       if (rateData) { 
-        const lead = Number(rateData.leadDays) || 1;
         if (selectedDate) {
           const dDate = new Date(selectedDate);
-          dDate.setDate(dDate.getDate() - lead);
+          dDate.setDate(dDate.getDate() - transitDays); // 配送日数分マイナス
           setShippingDate(dDate.toISOString().split('T')[0]);
         } else {
           setShippingDate('');
@@ -291,7 +320,7 @@ export default function StaffNewOrderPage() {
         setAreaError('該当する地域の送料設定が見つかりません。');
       }
     }
-  }, [customerInfo.address1, customerInfo.address2, recipientInfo.address1, recipientInfo.address2, isRecipientDifferent, receiveMethod, flowerType, itemPrice, selectedDate, appSettings, selectedItemSettings]);
+  }, [customerInfo.address1, customerInfo.address2, recipientInfo.address1, recipientInfo.address2, isRecipientDifferent, receiveMethod, flowerType, itemPrice, selectedDate, appSettings, selectedItemSettings, transitDays]);
 
   const fetchAddress = async (zip, target) => {
     if (zip.length !== 7) return;
@@ -520,12 +549,6 @@ export default function StaffNewOrderPage() {
                     <span className="font-bold text-[18px]">¥</span>
                     <input type="number" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} className="w-full h-14 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 font-bold text-[#2D4B3E] text-[18px] focus:border-[#2D4B3E] outline-none" placeholder="例: 3500" />
                   </div>
-                  {itemPrice && (
-                    <div className="bg-orange-50 text-orange-700 px-4 py-2.5 rounded-xl text-[11px] font-bold flex items-start gap-2 border border-orange-200 mt-2">
-                      <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                      <span className="leading-relaxed">注意：金額自由入力モードで入力されています。<br/>送料や箱代の計算基準（〇〇円以上なら無料など）が意図通りか確認してください。</span>
-                    </div>
-                  )}
                 </div>
               ) : (
                 <select value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} className={`w-full h-14 border rounded-xl px-4 font-bold text-[16px] outline-none transition-all ${selectedImage ? 'border-[#2D4B3E] text-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#EAEAEA] bg-[#FBFAF9] focus:border-[#2D4B3E]'}`}>
@@ -589,7 +612,46 @@ export default function StaffNewOrderPage() {
 
           <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-6">
             <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3 tracking-widest">4. スケジュール・情報</h2>
-            <div className="grid grid-cols-2 gap-4">
+            
+            <div className="space-y-3 pb-4 border-b border-[#FBFAF9]">
+              <label className="text-[11px] font-bold text-[#999999] tracking-widest">注文者情報</label>
+              <input type="text" placeholder="お名前（必須）" value={customerInfo.name} onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none" />
+              <input type="tel" placeholder="電話番号" value={customerInfo.phone} onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
+              {/* スタッフ用はメール任意 */}
+              <input type="email" placeholder="メールアドレス (任意)" value={customerInfo.email} onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
+              
+              {receiveMethod !== 'pickup' && (
+                <>
+                  <div className="flex gap-2">
+                    <input type="text" placeholder="郵便番号 (7桁)" value={customerInfo.zip} onChange={(e) => { setCustomerInfo({...customerInfo, zip: e.target.value}); if(e.target.value.length === 7) fetchAddress(e.target.value, 'customer'); }} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
+                  </div>
+                  <input type="text" placeholder="都道府県・市区町村 (自動入力)" value={customerInfo.address1} className="w-full h-12 bg-[#EAEAEA]/30 border border-[#EAEAEA] rounded-xl px-4 text-[13px] text-[#555555] outline-none" readOnly />
+                  <input type="text" placeholder="番地・建物名" value={customerInfo.address2} onChange={(e) => setCustomerInfo({...customerInfo, address2: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
+                </>
+              )}
+            </div>
+
+            {receiveMethod !== 'pickup' && (
+              <div className="py-2">
+                <label className="flex items-center gap-3 cursor-pointer p-4 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA]">
+                  <input type="checkbox" checked={isRecipientDifferent} onChange={(e) => setIsRecipientDifferent(e.target.checked)} className="w-5 h-5 accent-[#2D4B3E] rounded" />
+                  <span className="text-[13px] font-bold text-[#111111]">お届け先が注文者と異なる</span>
+                </label>
+              </div>
+            )}
+
+            {isRecipientDifferent && receiveMethod !== 'pickup' && (
+              <div className="space-y-3 p-6 bg-white border border-[#EAEAEA] shadow-sm rounded-2xl animate-in fade-in zoom-in-95">
+                <label className="text-[11px] font-bold text-[#2D4B3E] tracking-widest">お届け先情報</label>
+                <input type="text" placeholder="お届け先 お名前" value={recipientInfo.name} onChange={(e) => setRecipientInfo({...recipientInfo, name: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none" />
+                <input type="tel" placeholder="お届け先 電話番号" value={recipientInfo.phone} onChange={(e) => setRecipientInfo({...recipientInfo, phone: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
+                <input type="text" placeholder="郵便番号 (7桁)" value={recipientInfo.zip} onChange={(e) => { setRecipientInfo({...recipientInfo, zip: e.target.value}); if(e.target.value.length === 7) fetchAddress(e.target.value, 'recipient'); }} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
+                <input type="text" placeholder="都道府県・市区町村 (自動入力)" value={recipientInfo.address1} className="w-full h-12 bg-[#EAEAEA]/30 border border-[#EAEAEA] rounded-xl px-4 text-[13px] text-[#555555] outline-none" readOnly />
+                <input type="text" placeholder="番地・建物名" value={recipientInfo.address2} onChange={(e) => setRecipientInfo({...recipientInfo, address2: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4 pt-4">
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">納品希望日</label>
                 <input type="date" min={minDateLimit} value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none" />
@@ -619,43 +681,6 @@ export default function StaffNewOrderPage() {
                 <div className="flex items-center gap-2 text-green-900 font-black text-[14px]">
                    <Package size={18}/> 発送予定日: {shippingDate}
                 </div>
-              </div>
-            )}
-            
-            <div className="space-y-3 pt-4 border-t border-[#FBFAF9]">
-              <label className="text-[11px] font-bold text-[#999999] tracking-widest">注文者情報</label>
-              <input type="text" placeholder="お名前（必須）" value={customerInfo.name} onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none" />
-              <input type="tel" placeholder="電話番号" value={customerInfo.phone} onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
-              <input type="email" placeholder="メールアドレス (任意)" value={customerInfo.email} onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
-              
-              {receiveMethod !== 'pickup' && (
-                <>
-                  <div className="flex gap-2">
-                    <input type="text" placeholder="郵便番号 (7桁)" value={customerInfo.zip} onChange={(e) => { setCustomerInfo({...customerInfo, zip: e.target.value}); if(e.target.value.length === 7) fetchAddress(e.target.value, 'customer'); }} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
-                  </div>
-                  <input type="text" placeholder="都道府県・市区町村 (自動入力)" value={customerInfo.address1} className="w-full h-12 bg-[#EAEAEA]/30 border border-[#EAEAEA] rounded-xl px-4 text-[13px] text-[#555555] outline-none" readOnly />
-                  <input type="text" placeholder="番地・建物名" value={customerInfo.address2} onChange={(e) => setCustomerInfo({...customerInfo, address2: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
-                </>
-              )}
-            </div>
-
-            {receiveMethod !== 'pickup' && (
-              <div className="pt-4">
-                <label className="flex items-center gap-3 cursor-pointer p-4 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA]">
-                  <input type="checkbox" checked={isRecipientDifferent} onChange={(e) => setIsRecipientDifferent(e.target.checked)} className="w-5 h-5 accent-[#2D4B3E] rounded" />
-                  <span className="text-[13px] font-bold text-[#111111]">お届け先が注文者と異なる</span>
-                </label>
-              </div>
-            )}
-
-            {isRecipientDifferent && receiveMethod !== 'pickup' && (
-              <div className="space-y-3 p-6 bg-white border border-[#EAEAEA] shadow-sm rounded-2xl animate-in fade-in zoom-in-95">
-                <label className="text-[11px] font-bold text-[#2D4B3E] tracking-widest">お届け先情報</label>
-                <input type="text" placeholder="お届け先 お名前" value={recipientInfo.name} onChange={(e) => setRecipientInfo({...recipientInfo, name: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none" />
-                <input type="tel" placeholder="お届け先 電話番号" value={recipientInfo.phone} onChange={(e) => setRecipientInfo({...recipientInfo, phone: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
-                <input type="text" placeholder="郵便番号 (7桁)" value={recipientInfo.zip} onChange={(e) => { setRecipientInfo({...recipientInfo, zip: e.target.value}); if(e.target.value.length === 7) fetchAddress(e.target.value, 'recipient'); }} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
-                <input type="text" placeholder="都道府県・市区町村 (自動入力)" value={recipientInfo.address1} className="w-full h-12 bg-[#EAEAEA]/30 border border-[#EAEAEA] rounded-xl px-4 text-[13px] text-[#555555] outline-none" readOnly />
-                <input type="text" placeholder="番地・建物名" value={recipientInfo.address2} onChange={(e) => setRecipientInfo({...recipientInfo, address2: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
               </div>
             )}
 

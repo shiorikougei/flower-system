@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../utils/supabase';
-import { Calendar, Package, ChevronRight } from 'lucide-react';
+import { Calendar, Package, ChevronRight, Store, Truck } from 'lucide-react';
 
 export default function OrderPage() {
   const params = useParams();
@@ -13,6 +13,7 @@ export default function OrderPage() {
   const [portfolioImages, setPortfolioImages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // --- 状態管理 ---
   const [step, setStep] = useState(1);
   const [flowerType, setFlowerType] = useState('');
   const [isBring, setIsBring] = useState('shop');
@@ -22,9 +23,9 @@ export default function OrderPage() {
   const [methodAgreed, setMethodAgreed] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
-  
   const [shippingDate, setShippingDate] = useState('');
   
+  // デザイン詳細
   const [itemPrice, setItemPrice] = useState('');
   const [flowerPurpose, setFlowerPurpose] = useState('');
   const [flowerColor, setFlowerColor] = useState('');
@@ -36,6 +37,7 @@ export default function OrderPage() {
   const [absenceAction, setAbsenceAction] = useState('持ち戻り'); 
   const [absenceNote, setAbsenceNote] = useState(''); 
 
+  // 立札・メッセージ
   const [cardType, setCardType] = useState('なし');
   const [cardMessage, setCardMessage] = useState('');
   const [prefixFormat, setPrefixFormat] = useState('kanji'); 
@@ -46,7 +48,8 @@ export default function OrderPage() {
   const [tateInput3a, setTateInput3a] = useState(''); 
   const [tateInput3b, setTateInput3b] = useState(''); 
 
-  const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', zip: '', address1: '', address2: '' });
+  // お客様・お届け先情報
+  const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', email: '', zip: '', address1: '', address2: '' });
   const [isRecipientDifferent, setIsRecipientDifferent] = useState(false);
   const [recipientInfo, setRecipientInfo] = useState({ name: '', phone: '', zip: '', address1: '', address2: '' });
   const [calculatedFee, setCalculatedFee] = useState(null);
@@ -57,12 +60,26 @@ export default function OrderPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // ★ デフォルトの時間枠
+  const defaultTimeSlots = {
+    pickup: ['10:00-12:00', '12:00-15:00', '15:00-18:00'],
+    delivery: ['9:00-12:00', '12:00-15:00', '15:00-18:00', '18:00-21:00'],
+    shipping: ['午前中', '14:00-16:00', '16:00-18:00', '18:00-20:00', '19:00-21:00']
+  };
+  const [timeSlots, setTimeSlots] = useState(defaultTimeSlots);
+
   useEffect(() => {
     async function fetchSettings() {
       try {
         const { data, error } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
         if (error) throw error;
-        if (data && data.settings_data) setAppSettings(data.settings_data);
+        if (data && data.settings_data) {
+          setAppSettings(data.settings_data);
+          // 時間枠の設定があれば上書き
+          if (data.settings_data.timeSlots) {
+            setTimeSlots(data.settings_data.timeSlots);
+          }
+        }
 
         const { data: gallery } = await supabase.from('app_settings').select('settings_data').eq('id', 'gallery').single();
         if (gallery && gallery.settings_data?.images) {
@@ -137,27 +154,47 @@ export default function OrderPage() {
     return options;
   };
 
-  // ★ カレンダーの納期バグ修正（Number変換による数値計算の徹底）
+  // ★ 新規：入力された住所から「配送日数（リードタイム）」を自動判定
+  const transitDays = useMemo(() => {
+    if (receiveMethod !== 'sagawa') return 0;
+    const targetInfo = isRecipientDifferent ? recipientInfo : customerInfo;
+    const rawAddress = ((targetInfo.address1 || '') + (targetInfo.address2 || '')).replace(/[\s　]+/g, '');
+    const prefMatch = rawAddress.match(/^(北海道|東京都|(?:京都|大阪)府|.{2,3}県)/);
+    
+    if (prefMatch && appSettings?.shippingRates) {
+      const targetPref = prefMatch[1].replace(/(都|府|県)$/, ''); 
+      const searchPref = targetPref === '北海' ? '北海道' : targetPref;
+      let rateData = appSettings.shippingRates.find(r => r.prefs && r.prefs.includes(searchPref));
+      if (!rateData) rateData = appSettings.shippingRates.find(r => r.region && r.region.includes(searchPref));
+      
+      if (rateData) return Number(rateData.leadDays) || 1;
+    }
+    return 1; // 住所が未入力の場合は最低1日とする
+  }, [receiveMethod, customerInfo.address1, recipientInfo.address1, isRecipientDifferent, appSettings]);
+
+  // ★ 最短納期の計算（準備日数 ＋ 配送日数）
   const minDateLimit = useMemo(() => {
     const base = new Date();
-    let lead = 0;
+    let prepDays = 0;
+    
     if (receiveMethod === 'sagawa') {
-      lead = Number(selectedItemSettings?.shippingLeadDays) || 0;
+      prepDays = Number(selectedItemSettings?.shippingLeadDays) || 0;
     } else {
-      lead = Number(selectedItemSettings?.normalLeadDays) || 0;
+      prepDays = Number(selectedItemSettings?.normalLeadDays) || 0;
     }
 
     if (isBring === 'bring') {
       const fLead = Number(selectedItemSettings?.canBringFlowersLeadDays) || 0;
       const vLead = Number(selectedItemSettings?.canBringVaseLeadDays) || 0;
-      if (selectedItemSettings?.canBringFlowers && fLead > lead) lead = fLead;
-      if (selectedItemSettings?.canBringVase && vLead > lead) lead = vLead;
+      if (selectedItemSettings?.canBringFlowers && fLead > prepDays) prepDays = fLead;
+      if (selectedItemSettings?.canBringVase && vLead > prepDays) prepDays = vLead;
     }
     
     const d = new Date(base);
-    d.setDate(d.getDate() + lead);
+    // 準備日数 ＋ 配送にかかる日数を足して最短日を算出
+    d.setDate(d.getDate() + prepDays + transitDays);
     return d.toISOString().split('T')[0];
-  }, [flowerType, isBring, receiveMethod, selectedItemSettings]);
+  }, [flowerType, isBring, receiveMethod, selectedItemSettings, transitDays]);
 
   const normalizeAddressText = (text) => {
     if (!text) return '';
@@ -171,7 +208,7 @@ export default function OrderPage() {
     return res;
   };
 
-  // 送料・発送日の自動計算
+  // 送料と発送日の自動計算
   useEffect(() => {
     if (!receiveMethod || receiveMethod === 'pickup' || !itemPrice) { 
       setCalculatedFee(null); setPickupFee(0); setAreaError(''); setShippingDate(''); return; 
@@ -229,11 +266,10 @@ export default function OrderPage() {
       if (!rateData) rateData = appSettings?.shippingRates?.find(r => r.region && r.region.includes(searchPref));
 
       if (rateData) { 
-        // 発送日の逆算
-        const lead = Number(rateData.leadDays) || 1;
+        // 発送日の逆算（お届け日 - 配送日数）
         if (selectedDate) {
           const dDate = new Date(selectedDate);
-          dDate.setDate(dDate.getDate() - lead);
+          dDate.setDate(dDate.getDate() - transitDays);
           setShippingDate(dDate.toISOString().split('T')[0]);
         } else {
           setShippingDate('');
@@ -271,7 +307,7 @@ export default function OrderPage() {
         setCalculatedFee(null); setShippingDate(''); setAreaError('該当する地域の送料設定が見つかりません。');
       }
     }
-  }, [customerInfo.address1, customerInfo.address2, recipientInfo.address1, recipientInfo.address2, isRecipientDifferent, receiveMethod, flowerType, itemPrice, selectedDate, appSettings, selectedItemSettings]);
+  }, [customerInfo.address1, customerInfo.address2, recipientInfo.address1, recipientInfo.address2, isRecipientDifferent, receiveMethod, flowerType, itemPrice, selectedDate, appSettings, selectedItemSettings, transitDays]);
 
   const fetchAddress = async (zip, target) => {
     if (zip.length !== 7) return;
@@ -286,15 +322,12 @@ export default function OrderPage() {
     } catch (error) { console.error("住所検索エラー"); }
   };
 
+  // ★ 時間枠のプルダウン（設定連動）
   const getTimeOptions = () => {
     if (!selectedDate) return [];
-    if (receiveMethod === 'delivery') return ["9:00-12:00", "12:00-15:00", "15:00-18:00", "18:00-21:00"];
-    if (receiveMethod === 'sagawa') return ["午前中", "12:00-14:00", "14:00-16:00", "16:00-18:00", "18:00-20:00", "19:00-21:00"];
-    if (receiveMethod === 'pickup' && selectedShop) {
-      const shopObj = appSettings?.shops?.find(s => s.name === selectedShop);
-      if (shopObj) return [`${shopObj.openTime || '10:00'}-${shopObj.closeTime || '19:00'}`];
-      return ["11:00-18:00"];
-    }
+    if (receiveMethod === 'pickup') return timeSlots.pickup;
+    if (receiveMethod === 'delivery') return timeSlots.delivery;
+    if (receiveMethod === 'sagawa') return timeSlots.shipping;
     return [];
   };
 
@@ -312,7 +345,12 @@ export default function OrderPage() {
       if (cardType === '立札' && !tatePattern) return true;
     }
     if (step === 4) {
-      if (!customerInfo.name || !customerInfo.phone || !selectedDate || !selectedTime || !methodAgreed) return true;
+      // ★ お客様用はメールアドレス(email)を必須化
+      if (!customerInfo.name || !customerInfo.phone || !customerInfo.email || !selectedDate || !selectedTime || !methodAgreed) return true;
+      
+      // 住所変更などで日付が最短納期を下回ってしまった場合はエラーアウト
+      if (selectedDate && selectedDate < minDateLimit) return true;
+
       if ((receiveMethod === 'delivery' || receiveMethod === 'sagawa') && areaError) return true;
       if (receiveMethod === 'delivery' && absenceAction === '置き配' && !absenceNote) return true;
     }
@@ -392,9 +430,9 @@ export default function OrderPage() {
                 <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] space-y-4 animate-in fade-in">
                   <p className="text-[11px] font-bold text-[#111111] tracking-widest border-b border-[#EAEAEA] pb-2">納期に関する注意事項</p>
                   <div className="space-y-2 text-[12px] text-[#555555] font-medium">
-                    {/* ★ 案内表示部分も念のためNumber変換 */}
                     {selectedItemSettings.normalLeadDays && <div className="flex justify-between"><span>通常納期 (店頭/配達)</span><span className="font-bold">{selectedItemSettings.normalLeadDays}日後以降</span></div>}
-                    {selectedItemSettings.shippingLeadDays && <div className="flex justify-between"><span>配送 (佐川急便) 納期</span><span className="font-bold">{selectedItemSettings.shippingLeadDays}日後以降</span></div>}
+                    {/* ★「佐川急便」ではなく「業者配送」に変更＆表現を調整 */}
+                    {selectedItemSettings.shippingLeadDays && <div className="flex justify-between"><span>業者配送 納期</span><span className="font-bold">発送まで{selectedItemSettings.shippingLeadDays}日 + 配送日数</span></div>}
                     {isBring === 'bring' && (selectedItemSettings.canBringFlowersLeadDays || selectedItemSettings.canBringVaseLeadDays) && <div className="flex justify-between text-[#2D4B3E] pt-1"><span>お持ち込み時 (通常より延長)</span><span className="font-bold">{Math.max(Number(selectedItemSettings.canBringFlowersLeadDays)||0, Number(selectedItemSettings.canBringVaseLeadDays)||0)}日後以降</span></div>}
                   </div>
                   <label className="flex items-center gap-3 pt-4 cursor-pointer border-t border-[#EAEAEA]">
@@ -423,13 +461,13 @@ export default function OrderPage() {
                 appSettings.shops.map(shop => (
                   <button key={shop.id} onClick={() => { setReceiveMethod('pickup'); setSelectedShop(shop.name); setStep(3); }} className="w-full p-8 rounded-[24px] bg-white border border-[#EAEAEA] shadow-sm hover:border-[#2D4B3E] transition-all text-left group">
                     <span className="block font-bold text-[16px] mb-1 group-hover:text-[#2D4B3E]">{shop.name}で受取</span>
-                    <span className="block text-[12px] text-[#999999]">{shop.address} ({shop.openTime || '10:00'}-{shop.closeTime || '19:00'})</span>
+                    <span className="block text-[12px] text-[#999999]">{shop.address}</span>
                   </button>
                 ))
               ) : null}
               <div className="grid grid-cols-2 gap-4 mt-8">
                 {selectedItemSettings.canDelivery !== false && (<button onClick={() => { setReceiveMethod('delivery'); setStep(3); }} className="p-6 rounded-[24px] bg-[#FBFAF9] border border-[#EAEAEA] font-bold text-[14px] hover:bg-white hover:border-[#2D4B3E] transition-all text-[#555555] hover:text-[#2D4B3E]">自社配達</button>)}
-                {selectedItemSettings.canShipping !== false && (<button onClick={() => { setReceiveMethod('sagawa'); setStep(3); }} className="p-6 rounded-[24px] bg-[#FBFAF9] border border-[#EAEAEA] font-bold text-[14px] hover:bg-white hover:border-[#2D4B3E] transition-all text-[#555555] hover:text-[#2D4B3E]">配送(佐川急便)</button>)}
+                {selectedItemSettings.canShipping !== false && (<button onClick={() => { setReceiveMethod('sagawa'); setStep(3); }} className="p-6 rounded-[24px] bg-[#FBFAF9] border border-[#EAEAEA] font-bold text-[14px] hover:bg-white hover:border-[#2D4B3E] transition-all text-[#555555] hover:text-[#2D4B3E]">業者配送</button>)}
               </div>
             </div>
           </div>
@@ -570,37 +608,15 @@ export default function OrderPage() {
             </div>
 
             <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-[#999999] tracking-widest">お届け希望日</label>
-                  <input type="date" min={minDateLimit} value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full h-14 px-4 bg-white border border-[#EAEAEA] rounded-[16px] outline-none font-bold text-[#555555] focus:border-[#2D4B3E]" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-[#999999] tracking-widest">希望時間</label>
-                  <select value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)} className="w-full h-14 px-4 bg-white border border-[#EAEAEA] rounded-[16px] outline-none font-bold text-[#555555] focus:border-[#2D4B3E]">
-                    <option value="">選択...</option>
-                    {getTimeOptions().map(t => (<option key={t} value={t}>{t}</option>))}
-                  </select>
-                </div>
-              </div>
-
-              {receiveMethod === 'sagawa' && selectedDate && shippingDate && (
-                <div className="mt-2 p-4 bg-green-50 border border-green-200 rounded-xl flex flex-col sm:flex-row sm:items-center gap-3 animate-in fade-in shadow-sm">
-                  <div className="flex items-center gap-2 text-green-800 font-bold text-[12px]">
-                     <Calendar size={16}/> お届け指定: {selectedDate}
-                  </div>
-                  <ChevronRight size={14} className="hidden sm:block text-green-600"/>
-                  <div className="flex items-center gap-2 text-green-900 font-black text-[14px]">
-                     <Package size={18}/> 発送予定日: {shippingDate}
-                  </div>
-                </div>
-              )}
-
+              
               <div className="space-y-4 bg-white p-8 rounded-[28px] border border-[#EAEAEA] shadow-sm">
                 <div className="space-y-4">
                   <label className="text-[11px] font-bold text-[#999999] tracking-widest">注文者情報</label>
                   <input type="text" placeholder="お名前" value={customerInfo.name} onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]" />
                   <input type="tel" placeholder="電話番号" value={customerInfo.phone} onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]" />
+                  {/* ★ お客様はメールアドレス必須化 */}
+                  <input type="email" placeholder="メールアドレス (必須)" value={customerInfo.email} onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]" />
+                  
                   {receiveMethod !== 'pickup' && (
                     <>
                       <input type="text" placeholder="郵便番号 (7桁・ハイフンなし)" value={customerInfo.zip} onChange={(e) => { setCustomerInfo({...customerInfo, zip: e.target.value}); if(e.target.value.length === 7) fetchAddress(e.target.value, 'customer'); }} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]" />
@@ -631,8 +647,40 @@ export default function OrderPage() {
                 </div>
               )}
 
+              {/* ★ カレンダーと時間枠（住所入力後に正確な日数が反映されるため下に配置） */}
+              <div className="grid grid-cols-2 gap-4 mt-6">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-[#999999] tracking-widest">お届け・受取希望日</label>
+                  <input type="date" min={minDateLimit} value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full h-14 px-4 bg-white border border-[#EAEAEA] rounded-[16px] outline-none font-bold text-[#555555] focus:border-[#2D4B3E] shadow-sm" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-[#999999] tracking-widest">希望時間</label>
+                  <select value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)} className="w-full h-14 px-4 bg-white border border-[#EAEAEA] rounded-[16px] outline-none font-bold text-[#555555] focus:border-[#2D4B3E] shadow-sm">
+                    <option value="">選択...</option>
+                    {getTimeOptions().map(t => (<option key={t} value={t}>{t}</option>))}
+                  </select>
+                </div>
+              </div>
+
+              {/* ★ 発送予定日の自動表示（住所と日付入力後に出現） */}
+              {receiveMethod === 'sagawa' && selectedDate && shippingDate && (
+                <div className="mt-4 p-5 bg-green-50 border border-green-200 rounded-2xl flex flex-col gap-3 animate-in fade-in shadow-sm">
+                  <p className="text-[11px] font-bold text-green-700 tracking-widest">配送スケジュール</p>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <div className="flex items-center gap-2 text-green-900 font-black text-[15px] bg-white px-3 py-2 rounded-lg shadow-sm border border-green-100">
+                       <Package size={18}/> 発送日: {shippingDate}
+                    </div>
+                    <ChevronRight size={18} className="hidden sm:block text-green-400"/>
+                    <div className="flex items-center gap-2 text-green-800 font-bold text-[13px]">
+                       <Calendar size={16}/> お届け: {selectedDate}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 置き配設定（自社配達の時のみ） */}
               {receiveMethod === 'delivery' && (
-                <div className="p-8 bg-white rounded-[28px] border border-[#EAEAEA] shadow-sm space-y-4 animate-in fade-in">
+                <div className="p-8 bg-white rounded-[28px] border border-[#EAEAEA] shadow-sm space-y-4 animate-in fade-in mt-6">
                   <div className="space-y-2">
                     <label className="text-[12px] font-bold text-[#111111] flex items-center justify-between">
                       ご不在時の対応 (置き配)
@@ -659,6 +707,7 @@ export default function OrderPage() {
                 </div>
               )}
 
+              {/* 料金内訳パネル */}
               <div className="bg-white p-8 rounded-[32px] border-2 border-[#2D4B3E]/30 shadow-md mt-8">
                 <div className="flex flex-col items-center justify-center gap-6">
                   <div className="w-full">
@@ -710,7 +759,7 @@ export default function OrderPage() {
                   )}
                   {receiveMethod === 'sagawa' && (
                     <>
-                      <div className="space-y-1"><p className="font-bold text-[#111111]">■ 配送時の事故について</p><p>配送中の事故につきましては、当店では補償いたしかねます。商品到着時に不具合等が確認された場合は、直接配送業者へご連絡くださいますようお願いいたします。</p></div>
+                      <div className="space-y-1"><p className="font-bold text-[#111111]">■ 配送時の事故について</p><p>配送中の事故につきましては、当店では補償いたしかねます。商品到着時に不具合等が確認された場合は、直接業者へご連絡くださいますようお願いいたします。</p></div>
                       <div className="space-y-1 pt-2"><p className="font-bold text-[#111111]">■ 日付・時間指定について</p><p>天候や離島への配送などの事情により、ご希望の日時に到着しない場合がございます。到着日指定の際は、日数に余裕をもってご注文ください。</p></div>
                     </>
                   )}
