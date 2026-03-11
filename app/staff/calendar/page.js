@@ -90,7 +90,6 @@ export default function CalendarPage() {
     if (!day) return <div key={`empty-${index}`} className="min-h-[120px] bg-[#FBFAF9]/50 border-r border-b border-[#EAEAEA]"></div>;
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     
-    // ★ 修正: カレンダーには完了済みの注文も「全て表示する」（記録を残す）
     const dayOrders = ordersByDate[dateStr] || []; 
     const isToday = new Date().toISOString().split('T')[0] === dateStr;
 
@@ -100,9 +99,8 @@ export default function CalendarPage() {
         <div className="space-y-1">
           {dayOrders.map(order => {
              const d = order.order_data;
-             const isCompleted = d.status === 'completed'; // 完了済み判定
+             const isCompleted = d.status === 'completed'; 
 
-             // ★ 修正: 元のカラフルな色分けを完全復元
              let badgeColor = 'bg-gray-100 text-gray-700 hover:border-gray-400'; 
              if(d.receiveMethod === 'delivery') badgeColor = 'bg-[#D97C8F]/10 text-[#D97C8F] hover:border-[#D97C8F]';
              if(d.receiveMethod === 'sagawa') badgeColor = 'bg-blue-50 text-blue-600 hover:border-blue-400';
@@ -111,7 +109,6 @@ export default function CalendarPage() {
                <div 
                  key={order.id} 
                  onClick={() => setSelectedOrder(order)} 
-                 // ★ 完了済みのものは少し透明にして、終わったことがわかるようにしました
                  className={`text-[10px] p-1.5 rounded cursor-pointer truncate transition-all border border-transparent ${badgeColor} ${isCompleted ? 'opacity-40 line-through' : ''}`}
                >
                  <span className="font-bold">{d.selectedTime?.split('-')[0] || ''}</span> {d.customerInfo?.name}
@@ -156,7 +153,7 @@ export default function CalendarPage() {
         )}
       </div>
 
-      {/* --- 詳細モーダル (受注一覧と完全に同じ・全項目表示) --- */}
+      {/* --- 詳細モーダル (受注一覧と完全に同じ・全項目表示・消費税あり) --- */}
       {selectedOrder && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#111111]/40 backdrop-blur-sm p-4 animate-in fade-in" onClick={() => setSelectedOrder(null)}>
           <div className="bg-[#FBFAF9] rounded-[32px] w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
@@ -198,8 +195,8 @@ export default function CalendarPage() {
               </div>
 
               {selectedOrder.order_data.isRecipientDifferent && (
-                <div className="space-y-3 animate-in fade-in">
-                  <h3 className="text-[11px] font-bold text-red-500 uppercase tracking-widest flex items-center gap-2"><MapPin size={12}/> お届け先様（別住所）</h3>
+                <div className="animate-in fade-in">
+                  <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest flex items-center gap-2 mb-2"><MapPin size={12}/> お届け先様（別住所）</p>
                   <div className="bg-white p-5 rounded-2xl border border-red-100 shadow-sm space-y-2 text-[13px]">
                     <p className="font-bold text-[15px] text-red-700">{selectedOrder.order_data.recipientInfo?.name} 様</p>
                     <p className="text-[#555555]">📞 {selectedOrder.order_data.recipientInfo?.phone}</p>
@@ -208,8 +205,9 @@ export default function CalendarPage() {
                 </div>
               )}
 
+              {/* ★ 商品詳細・消費税入り */}
               <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] shadow-sm">
-                <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest mb-4 flex items-center gap-2"><Tag size={12}/> 商品・金額詳細</p>
+                <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest mb-4 flex items-center gap-2"><Tag size={12}/> 商品詳細</p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-[13px] font-bold mb-6">
                   <div><span className="text-[10px] block text-[#999999]">種類</span>{selectedOrder.order_data.flowerType}</div>
                   <div><span className="text-[10px] block text-[#999999]">用途</span>{selectedOrder.order_data.flowerPurpose}</div>
@@ -220,10 +218,18 @@ export default function CalendarPage() {
                   <div className="flex justify-between text-[#555555]"><span>商品代金 (税抜)</span><span className="font-bold">¥{Number(selectedOrder.order_data.itemPrice).toLocaleString()}</span></div>
                   {Number(selectedOrder.order_data.calculatedFee) > 0 && <div className="flex justify-between text-[#555555]"><span>配達・送料</span><span className="font-bold">¥{Number(selectedOrder.order_data.calculatedFee).toLocaleString()}</span></div>}
                   {Number(selectedOrder.order_data.pickupFee) > 0 && <div className="flex justify-between text-orange-600"><span>回収料</span><span className="font-bold">¥{Number(selectedOrder.order_data.pickupFee).toLocaleString()}</span></div>}
+                  
+                  {/* 消費税表示 */}
+                  <div className="flex justify-between text-[#2D4B3E]">
+                    <span>消費税 (10%)</span>
+                    <span className="font-bold">¥{Math.floor((Number(selectedOrder.order_data.itemPrice) + Number(selectedOrder.order_data.calculatedFee || 0) + Number(selectedOrder.order_data.pickupFee || 0)) * 0.1).toLocaleString()}</span>
+                  </div>
+                  
                   <div className="flex justify-between text-[16px] mt-2 pt-2 border-t border-[#FBFAF9] font-black text-[#2D4B3E]"><span>合計金額 (税込)</span><span>¥{Math.floor(((Number(selectedOrder.order_data.itemPrice) + Number(selectedOrder.order_data.calculatedFee || 0) + Number(selectedOrder.order_data.pickupFee || 0)) * 1.1)).toLocaleString()}</span></div>
                 </div>
               </div>
 
+              {/* 立札・備考 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-4">
                 <div className="space-y-3">
                   <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest flex items-center gap-2"><FileText size={12}/> 立札・メッセージ</p>

@@ -194,7 +194,7 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      {/* --- 詳細モーダル (全項目復活) --- */}
+      {/* --- 詳細モーダル --- */}
       {selectedOrder && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#111111]/40 backdrop-blur-sm p-4 animate-in fade-in" onClick={() => setSelectedOrder(null)}>
           <div className="bg-[#FBFAF9] rounded-[32px] w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
@@ -208,14 +208,15 @@ export default function OrdersPage() {
               <div className="flex items-center gap-3">
                 <button onClick={() => updateArchiveStatus(selectedOrder.id, selectedOrder.order_data?.status !== 'completed')} className={`flex items-center gap-2 px-4 py-2 text-[12px] font-bold rounded-xl transition-all shadow-sm ${selectedOrder.order_data?.status === 'completed' ? 'bg-white border border-[#EAEAEA] text-[#555555]' : 'bg-[#2D4B3E] text-white'}`}>
                   {selectedOrder.order_data?.status === 'completed' ? <RotateCcw size={16}/> : <Archive size={16}/>}
-                  {selectedOrder.order_data?.status === 'completed' ? '未完了に戻す' : '完了としてアーカイブ'}
+                  {selectedOrder.order_data?.status === 'completed' ? '未完了に戻す' : '完了してアーカイブ'}
                 </button>
-                <button onClick={() => setSelectedOrder(null)} className="w-10 h-10 bg-[#FBFAF9] border border-[#EAEAEA] rounded-full flex items-center justify-center text-[#555555] font-bold hover:bg-[#EAEAEA]">✕</button>
+                <button onClick={() => setSelectedOrder(null)} className="w-10 h-10 bg-[#FBFAF9] border border-[#EAEAEA] rounded-full flex items-center justify-center text-[#555555] font-bold hover:bg-[#EAEAEA]">
+                  <X size={18} />
+                </button>
               </div>
             </div>
             
             <div className="p-8 space-y-8 text-left">
-              {/* 【1】お届け・注文者情報 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-2">
                   <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest flex items-center gap-2"><Calendar size={12}/> お届け・受取情報</p>
@@ -230,7 +231,6 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              {/* 【2】別住所へお届けの場合 */}
               {selectedOrder.order_data.isRecipientDifferent && (
                 <div className="animate-in fade-in">
                   <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest flex items-center gap-2 mb-2"><MapPin size={12}/> お届け先様（別住所）</p>
@@ -242,7 +242,7 @@ export default function OrdersPage() {
                 </div>
               )}
 
-              {/* 【3】商品・金額内訳 */}
+              {/* ★ 商品詳細・消費税入り */}
               <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] shadow-sm">
                 <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest mb-4 flex items-center gap-2"><Tag size={12}/> 商品詳細</p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-[13px] font-bold mb-6">
@@ -252,14 +252,21 @@ export default function OrdersPage() {
                   <div><span className="text-[10px] block text-[#999999]">イメージ</span>{selectedOrder.order_data.flowerVibe}</div>
                 </div>
                 <div className="border-t border-[#FBFAF9] pt-4 space-y-1.5 text-[13px]">
-                  <div className="flex justify-between"><span>商品代金 (税抜)</span><span className="font-bold">¥{Number(selectedOrder.order_data.itemPrice).toLocaleString()}</span></div>
-                  {Number(selectedOrder.order_data.calculatedFee) > 0 && <div className="flex justify-between"><span>配達・送料</span><span className="font-bold">¥{Number(selectedOrder.order_data.calculatedFee).toLocaleString()}</span></div>}
+                  <div className="flex justify-between text-[#555555]"><span>商品代金 (税抜)</span><span className="font-bold">¥{Number(selectedOrder.order_data.itemPrice).toLocaleString()}</span></div>
+                  {Number(selectedOrder.order_data.calculatedFee) > 0 && <div className="flex justify-between text-[#555555]"><span>配達・送料</span><span className="font-bold">¥{Number(selectedOrder.order_data.calculatedFee).toLocaleString()}</span></div>}
                   {Number(selectedOrder.order_data.pickupFee) > 0 && <div className="flex justify-between text-orange-600"><span>回収料</span><span className="font-bold">¥{Number(selectedOrder.order_data.pickupFee).toLocaleString()}</span></div>}
+                  
+                  {/* 消費税表示 */}
+                  <div className="flex justify-between text-[#2D4B3E]">
+                    <span>消費税 (10%)</span>
+                    <span className="font-bold">¥{Math.floor((Number(selectedOrder.order_data.itemPrice) + Number(selectedOrder.order_data.calculatedFee || 0) + Number(selectedOrder.order_data.pickupFee || 0)) * 0.1).toLocaleString()}</span>
+                  </div>
+                  
                   <div className="flex justify-between text-[16px] mt-2 pt-2 border-t border-[#FBFAF9] font-black text-[#2D4B3E]"><span>合計金額 (税込)</span><span>¥{Math.floor(((Number(selectedOrder.order_data.itemPrice) + Number(selectedOrder.order_data.calculatedFee || 0) + Number(selectedOrder.order_data.pickupFee || 0)) * 1.1)).toLocaleString()}</span></div>
                 </div>
               </div>
 
-              {/* 【4】立札・メッセージ・備考 */}
+              {/* 立札・備考 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-4">
                 <div className="space-y-3">
                   <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest flex items-center gap-2"><FileText size={12}/> 立札・メッセージ</p>
