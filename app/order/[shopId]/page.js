@@ -298,7 +298,8 @@ export default function OrderPage() {
     if (step === 4) {
       if (!customerInfo.name || !customerInfo.phone || !selectedDate || !selectedTime || !methodAgreed) return true;
       if ((receiveMethod === 'delivery' || receiveMethod === 'sagawa') && areaError) return true;
-      if ((receiveMethod === 'delivery' || receiveMethod === 'sagawa') && absenceAction === '置き配' && !absenceNote) return true;
+      // ★ 変更: delivery（自社配達）の時だけチェック
+      if (receiveMethod === 'delivery' && absenceAction === '置き配' && !absenceNote) return true;
     }
     return false;
   };
@@ -523,7 +524,7 @@ export default function OrderPage() {
                       
                       <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4">仕上がりプレビュー</p>
                       <div className={`relative mx-auto border border-[#EAEAEA] shadow-lg bg-white flex flex-col items-center font-serif ${selectedTateOpt?.layout === 'horizontal' ? 'aspect-[1.414/1] w-full justify-center p-6' : 'aspect-[1/1.414] h-[300px] pt-6 px-4'}`}>
-                         <div className={`font-black ${isOsonae ? 'text-gray-500' : 'text-red-600'} ${selectedTateOpt?.layout === 'horizontal' ? 'text-[28px] mb-4' : 'text-[40px] mb-6 leading-none'}`}>
+                         <div className={`font-bold ${isOsonae ? 'text-gray-500' : 'text-red-600'} ${selectedTateOpt?.layout === 'horizontal' ? 'text-[28px] mb-4' : 'text-[40px] mb-6 leading-none'}`}>
                            {topPrefixText}
                          </div>
                          <div className={`flex w-full font-bold text-gray-900 ${selectedTateOpt?.layout === 'horizontal' ? 'flex-col items-center gap-2 text-[16px]' : 'flex-row-reverse justify-center gap-6 text-[18px]'}`}>
@@ -602,8 +603,8 @@ export default function OrderPage() {
                 </div>
               )}
 
-              {/* 置き配設定 */}
-              {(receiveMethod === 'delivery' || receiveMethod === 'sagawa') && (
+              {/* ★ 変更: 置き配設定（自社配達の時だけ表示） */}
+              {receiveMethod === 'delivery' && (
                 <div className="p-8 bg-white rounded-[28px] border border-[#EAEAEA] shadow-sm space-y-4 animate-in fade-in">
                   <div className="space-y-2">
                     <label className="text-[12px] font-bold text-[#111111] flex items-center justify-between">
