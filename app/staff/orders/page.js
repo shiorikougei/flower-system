@@ -1,309 +1,330 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
-import { Search, Printer, Clock, Camera, CheckCircle, ChevronRight, X, Calendar, User, MapPin, Tag, FileText, Smartphone, Archive, RotateCcw, Inbox } from 'lucide-react';
+import { MapPin, Search, Calendar, ChevronRight, X, Clock, Truck, Store, Package, CreditCard, MessageSquare, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
-  const [appSettings, setAppSettings] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState({ key: 'selectedDate', direction: 'asc' });
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [uploadingId, setUploadingId] = useState(null);
-  const [previewImage, setPreviewImage] = useState(null);
-  const [viewMode, setViewMode] = useState('active');
+  const [filterMode, setFilterMode] = useState('未完了'); // '未完了' or 'アーカイブ'
+  const [selectedOrder, setSelectedOrder] = useState(null); // モーダル用
+  const [appSettings, setAppSettings] = useState(null);
 
+  // データ取得
   useEffect(() => {
-    fetchData();
+    fetchOrders();
+    fetchSettings();
   }, []);
 
-  async function fetchData() {
+  const fetchOrders = async () => {
     setIsLoading(true);
     try {
-      const { data: settings } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
-      if (settings) setAppSettings(settings.settings_data);
-
-      const { data, error } = await supabase.from('orders').select('*');
+      const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       setOrders(data || []);
-    } catch (err) {
-      console.error('データ取得エラー:', err.message);
+    } catch (error) {
+      console.error('受注データの取得に失敗しました', error);
     } finally {
       setIsLoading(false);
     }
-  }
-
-  const getStatusOptions = () => {
-    const config = appSettings?.statusConfig;
-    if (config?.type === 'custom' && config?.customLabels?.length > 0) return config.customLabels;
-    return ['未対応', '制作中', '制作完了', '配達中'];
   };
 
-  const updateStatusValue = async (orderId, newStatusValue) => {
+  const fetchSettings = async () => {
     try {
-      const targetOrder = orders.find(o => o.id === orderId);
-      const updatedData = { ...targetOrder.order_data, currentStatus: newStatusValue };
-      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId);
-      setOrders(orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o));
-      if (selectedOrder?.id === orderId) setSelectedOrder({ ...selectedOrder, order_data: updatedData });
-    } catch (err) { alert('更新失敗'); }
+      const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
+      if (data) setAppSettings(data.settings_data);
+    } catch (error) {
+      console.error('設定の取得に失敗しました', error);
+    }
   };
 
-  const updateArchiveStatus = async (orderId, isArchive) => {
-    const newStatus = isArchive ? 'completed' : 'active';
-    if (!confirm(`この注文を${isArchive ? '完了' : '未完了'}にしますか？`)) return;
+  // ステータス更新処理
+  const updateOrderStatus = async (id, newStatus) => {
     try {
-      const targetOrder = orders.find(o => o.id === orderId);
+      const targetOrder = orders.find(o => o.id === id);
       const updatedData = { ...targetOrder.order_data, status: newStatus };
-      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId);
-      setOrders(orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o));
-      setSelectedOrder(null);
-    } catch (err) { alert('更新失敗'); }
-  };
+      
+      const { error } = await supabase.from('orders').update({ order_data: updatedData }).eq('id', id);
+      if (error) throw error;
 
-  const handleUploadReceipt = async (order, e) => {
-    e.stopPropagation();
-    const file = e.target.files[0]; if (!file) return;
-    setUploadingId(order.id);
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = async (ev) => {
-      const updatedData = { ...order.order_data, receiptImage: ev.target.result };
-      await supabase.from('orders').update({ order_data: updatedData }).eq('id', order.id);
-      setOrders(orders.map(o => o.id === order.id ? { ...o, order_data: updatedData } : o));
-      setUploadingId(null);
-    };
-  };
-
-  const getMethodLabel = (method) => {
-    const map = { pickup: '店頭受取', delivery: '自社配達', sagawa: '佐川急便' };
-    return map[method] || method;
-  };
-
-  const sortedOrders = useMemo(() => {
-    return [...orders].sort((a, b) => {
-      let valA, valB;
-      if (sortConfig.key === 'selectedDate') {
-        valA = a.order_data?.selectedDate || '9999-12-31';
-        valB = b.order_data?.selectedDate || '9999-12-31';
-      } else {
-        valA = a.created_at || '';
-        valB = b.created_at || '';
+      setOrders(orders.map(o => o.id === id ? { ...o, order_data: updatedData } : o));
+      if (selectedOrder && selectedOrder.id === id) {
+        setSelectedOrder({ ...selectedOrder, order_data: updatedData });
       }
-      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [orders, sortConfig]);
+    } catch (error) {
+      alert('ステータスの更新に失敗しました');
+    }
+  };
 
-  const filteredOrders = useMemo(() => {
-    return sortedOrders.filter(order => {
-      const d = order.order_data || {};
-      const isArchived = d.status === 'completed';
-      if (viewMode === 'active' && isArchived) return false;
-      if (viewMode === 'archived' && !isArchived) return false;
-      const searchStr = `${d.customerInfo?.name || ''} ${d.recipientInfo?.name || ''} ${d.flowerType || ''} ${d.selectedDate || ''}`;
-      return searchStr.toLowerCase().includes(searchTerm.toLowerCase());
-    });
-  }, [sortedOrders, searchTerm, viewMode]);
+  // 表示用のフィルタリング
+  const filteredOrders = orders.filter(order => {
+    const status = order.order_data?.status || 'new';
+    if (filterMode === '未完了') {
+      return status !== '完了' && status !== 'キャンセル';
+    } else {
+      return status === '完了' || status === 'キャンセル';
+    }
+  });
 
-  if (isLoading) return <div className="p-20 text-center font-bold text-[#2D4B3E] animate-pulse">データを読み込み中...</div>;
+  // 受取方法のデザインバッジ取得
+  const getReceiveMethodBadge = (method) => {
+    switch (method) {
+      case 'pickup': return <span className="flex items-center gap-1 bg-orange-100 text-orange-700 border border-orange-200 px-2 py-1 rounded-md text-[10px] font-bold"><Store size={12}/> 店頭受取</span>;
+      case 'delivery': return <span className="flex items-center gap-1 bg-blue-100 text-blue-700 border border-blue-200 px-2 py-1 rounded-md text-[10px] font-bold"><Truck size={12}/> 自社配達</span>;
+      case 'sagawa': return <span className="flex items-center gap-1 bg-green-100 text-green-700 border border-green-200 px-2 py-1 rounded-md text-[10px] font-bold"><Package size={12}/> 業者配送</span>;
+      default: return <span className="bg-gray-100 text-gray-700 border border-gray-200 px-2 py-1 rounded-md text-[10px] font-bold">未定</span>;
+    }
+  };
+
+  // Googleマップ用URL生成
+  const getGoogleMapsUrl = (info) => {
+    if (!info) return '';
+    const address = `${info.address1 || ''} ${info.address2 || ''}`.trim();
+    if (!address) return '';
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+  };
+
+  // 料金計算ロジック
+  const getTotals = (orderData) => {
+    const item = Number(orderData.itemPrice) || 0;
+    const fee = Number(orderData.calculatedFee) || 0;
+    const pickup = Number(orderData.pickupFee) || 0;
+    const subTotal = item + fee + pickup;
+    const tax = Math.floor(subTotal * 0.1);
+    return { item, fee, pickup, subTotal, tax, total: subTotal + tax };
+  };
 
   return (
-    <main className="pb-32 font-sans">
-      {/* レスポンシブヘッダー */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] flex flex-col md:flex-row md:items-center justify-between px-4 md:px-8 py-3 md:h-20 gap-3 sticky top-0 z-10">
-        <div className="flex items-center justify-between w-full md:w-auto">
-          <h1 className="text-[16px] md:text-[18px] font-bold tracking-tight text-[#2D4B3E]">受注一覧</h1>
-          <div className="flex bg-[#F7F7F7] p-1 rounded-xl border border-[#EAEAEA]">
-            <button onClick={() => setViewMode('active')} className={`flex items-center gap-1 md:gap-2 px-3 md:px-4 py-1.5 text-[10px] md:text-[11px] font-bold rounded-lg transition-all ${viewMode === 'active' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}><Inbox size={14} /> 未完了</button>
-            <button onClick={() => setViewMode('archived')} className={`flex items-center gap-1 md:gap-2 px-3 md:px-4 py-1.5 text-[10px] md:text-[11px] font-bold rounded-lg transition-all ${viewMode === 'archived' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}><Archive size={14} /> アーカイブ</button>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto overflow-x-auto hide-scrollbar pb-1 md:pb-0 shrink-0">
-          <div className="flex bg-[#F7F7F7] p-1 rounded-xl border border-[#EAEAEA] shrink-0">
-            <button onClick={() => setSortConfig({key:'selectedDate', direction:'asc'})} className={`px-3 md:px-4 py-1.5 text-[10px] md:text-[11px] font-bold rounded-lg transition-all ${sortConfig.key === 'selectedDate' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}>お届け日順</button>
-            <button onClick={() => setSortConfig({key:'created_at', direction:'desc'})} className={`px-3 md:px-4 py-1.5 text-[10px] md:text-[11px] font-bold rounded-lg transition-all ${sortConfig.key === 'created_at' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}>受付順</button>
-          </div>
-          <div className="relative shrink-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999999]" size={14} />
-            <input type="text" placeholder="検索..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="h-9 md:h-10 pl-9 pr-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-full text-[12px] md:text-[13px] outline-none focus:border-[#2D4B3E] w-36 md:w-48 transition-all" />
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-[1300px] mx-auto w-full p-4 md:p-8">
-        <div className="bg-white rounded-[24px] md:rounded-[32px] border border-[#EAEAEA] shadow-sm overflow-hidden">
-          {/* テーブルのスクロールラッパー */}
-          <div className="overflow-x-auto hide-scrollbar">
-            <table className="w-full text-left border-collapse min-w-[900px] md:min-w-[1000px]">
-              <thead>
-                <tr className="bg-[#FBFAF9] border-b border-[#EAEAEA]">
-                  <th className="px-6 md:px-8 py-4 md:py-5 text-[10px] md:text-[11px] font-bold text-[#999999] tracking-widest uppercase">お届け・引取</th>
-                  <th className="px-4 md:px-6 py-4 md:py-5 text-[10px] md:text-[11px] font-bold text-[#999999] tracking-widest uppercase text-center">状態</th>
-                  <th className="px-4 md:px-6 py-4 md:py-5 text-[10px] md:text-[11px] font-bold text-[#999999] tracking-widest uppercase">内容 / 金額</th>
-                  <th className="px-4 md:px-6 py-4 md:py-5 text-[10px] md:text-[11px] font-bold text-[#999999] tracking-widest uppercase">顧客名</th>
-                  <th className="px-4 md:px-6 py-4 md:py-5 text-[10px] md:text-[11px] font-bold text-[#999999] tracking-widest text-center">受領書</th>
-                  <th className="px-4 md:px-6 py-4 md:py-5 text-[10px] md:text-[11px] font-bold text-[#999999] tracking-widest text-center">操作</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#F7F7F7]">
-                {filteredOrders.map((order) => {
-                  const d = order.order_data || {};
-                  const total = (Number(d.itemPrice) || 0) + (Number(d.calculatedFee) || 0) + (Number(d.pickupFee) || 0);
-                  const tax = Math.floor(total * 0.1);
-
-                  return (
-                    <tr key={order.id} onClick={() => setSelectedOrder(order)} className={`hover:bg-[#FBFAF9]/50 transition-colors group cursor-pointer ${viewMode === 'archived' ? 'opacity-60 grayscale-[20%]' : ''}`}>
-                      <td className="px-6 md:px-8 py-4 md:py-6">
-                        <div className="flex items-center gap-3">
-                          <div className={`flex flex-col items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-xl border ${viewMode === 'archived' ? 'bg-gray-100 border-gray-200' : 'bg-[#2D4B3E]/5 border-[#2D4B3E]/10 text-[#2D4B3E]'}`}>
-                            <span className="text-[8px] md:text-[9px] font-bold opacity-60 leading-none">{d.selectedDate?.split('-')[1] || '--'}月</span>
-                            <span className="text-[16px] md:text-[18px] font-black leading-none mt-0.5">{d.selectedDate?.split('-')[2] || '--'}</span>
-                          </div>
-                          <div className="text-[11px] md:text-[12px] font-bold text-[#555555]">{d.selectedTime || '終日'}</div>
-                        </div>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 md:py-6 text-center" onClick={(e) => e.stopPropagation()}>
-                        <select value={d.currentStatus || getStatusOptions()[0]} onChange={(e) => updateStatusValue(order.id, e.target.value)} className="text-[10px] md:text-[11px] font-bold bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg px-2 py-1.5 outline-none focus:border-[#2D4B3E] cursor-pointer appearance-none text-center hover:bg-white transition-colors">
-                          {getStatusOptions().map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                        </select>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 md:py-6">
-                        <div className="flex items-center gap-2 mb-1"><span className={`px-2 py-0.5 rounded text-[9px] md:text-[10px] font-bold ${d.receiveMethod === 'pickup' ? 'bg-blue-50 text-blue-600' : 'bg-[#2D4B3E]/10 text-[#2D4B3E]'}`}>{d.flowerType}</span></div>
-                        <div className="text-[13px] md:text-[14px] font-black text-[#2D4B3E]">¥{(total + tax).toLocaleString()}</div>
-                      </td>
-                      <td className="px-4 md:px-6 py-4 md:py-6 font-bold text-[12px] md:text-[13px]">{d.customerInfo?.name} 様</td>
-                      <td className="px-4 md:px-6 py-4 md:py-6 text-center" onClick={(e)=>e.stopPropagation()}>
-                          {uploadingId === order.id ? <div className="w-6 h-6 md:w-8 md:h-8 border-2 border-[#2D4B3E] border-t-transparent animate-spin mx-auto rounded-full" /> : d.receiptImage ? (
-                            <button onClick={() => setPreviewImage(d.receiptImage)} className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white border border-[#EAEAEA] text-[#2D4B3E] flex items-center justify-center mx-auto shadow-sm hover:scale-105 transition-transform"><CheckCircle size={18} /></button>
-                          ) : (
-                            <label className="cursor-pointer w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#FBFAF9] border border-[#EAEAEA] text-[#999999] flex items-center justify-center mx-auto hover:bg-[#2D4B3E]/5 transition-all"><Camera size={16} /><input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleUploadReceipt(order, e)} /></label>
-                          )}
-                      </td>
-                      <td className="px-4 md:px-6 py-4 md:py-6 text-center" onClick={(e)=>e.stopPropagation()}>
-                        {viewMode === 'archived' ? (
-                          <button onClick={() => updateArchiveStatus(order.id, false)} className="flex items-center justify-center gap-1 px-3 py-2 bg-white border border-[#EAEAEA] text-[#555555] text-[10px] md:text-[11px] font-bold rounded-xl hover:border-[#2D4B3E] transition-all shadow-sm mx-auto"><RotateCcw size={14} /> 戻す</button>
-                        ) : (
-                          <button onClick={() => window.open(`/staff/print/${order.id}`, '_blank')} className="w-8 h-8 md:w-10 md:h-10 bg-white border border-[#EAEAEA] text-[#555555] rounded-xl md:rounded-2xl flex items-center justify-center mx-auto hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all shadow-sm"><Printer size={16} /></button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+    <div className="min-h-screen bg-[#FBFAF9] font-sans pb-32">
+      {/* --- ヘッダー領域 (被りを修正) --- */}
+      <div className="bg-white border-b border-[#EAEAEA] sticky top-0 z-30 px-6 py-4 shadow-sm">
+        <div className="max-w-[1000px] mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <h1 className="text-[20px] font-black text-[#2D4B3E] tracking-widest">受注一覧</h1>
+          
+          <div className="flex bg-[#F7F7F7] p-1 rounded-xl border border-[#EAEAEA] w-fit">
+            <button 
+              onClick={() => setFilterMode('未完了')} 
+              className={`px-6 py-2 rounded-lg text-[12px] font-bold transition-all ${filterMode === '未完了' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}
+            >
+              未完了
+            </button>
+            <button 
+              onClick={() => setFilterMode('アーカイブ')} 
+              className={`px-6 py-2 rounded-lg text-[12px] font-bold transition-all ${filterMode === 'アーカイブ' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}
+            >
+              アーカイブ
+            </button>
           </div>
         </div>
       </div>
 
-      {/* --- 詳細モーダル (レスポンシブ化) --- */}
+      <main className="max-w-[1000px] mx-auto p-6 space-y-4 pt-8">
+        {isLoading ? (
+          <div className="text-center py-20 text-[#2D4B3E] font-bold animate-pulse">読み込み中...</div>
+        ) : filteredOrders.length === 0 ? (
+          <div className="text-center py-20 bg-white rounded-[24px] border border-dashed border-[#EAEAEA] text-[#999999] font-bold">
+            表示する注文データがありません。
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4">
+            {filteredOrders.map(order => {
+              const d = order.order_data || {};
+              const targetInfo = d.isRecipientDifferent ? d.recipientInfo : d.customerInfo;
+              return (
+                <div 
+                  key={order.id} 
+                  onClick={() => setSelectedOrder(order)}
+                  className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] shadow-sm hover:shadow-md hover:border-[#2D4B3E]/30 cursor-pointer transition-all flex flex-col md:flex-row md:items-center gap-4"
+                >
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[11px] font-bold text-white bg-[#2D4B3E] px-2 py-1 rounded-md tracking-wider">
+                        {new Date(order.created_at).toLocaleDateString('ja-JP')} 受付
+                      </span>
+                      {getReceiveMethodBadge(d.receiveMethod)}
+                      <span className="text-[11px] font-bold text-[#555555] border border-[#EAEAEA] px-2 py-1 rounded-md bg-[#FBFAF9]">
+                        {d.status === 'new' ? '未対応' : d.status}
+                      </span>
+                    </div>
+                    <div className="text-[16px] font-black text-[#111111] pt-1">
+                      {d.customerInfo?.name} 様 <span className="text-[12px] text-[#999999] font-medium ml-2">({d.flowerType})</span>
+                    </div>
+                    <div className="text-[12px] font-bold text-[#D97C8F] flex items-center gap-1">
+                      <Calendar size={14} /> 納品日: {d.selectedDate} {d.selectedTime && `(${d.selectedTime})`}
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col md:items-end justify-between border-t md:border-t-0 md:border-l border-[#EAEAEA] pt-4 md:pt-0 md:pl-6">
+                    <p className="text-[11px] text-[#999999] font-bold mb-1">合計金額(税込)</p>
+                    <p className="text-[20px] font-black text-[#2D4B3E]">¥{getTotals(d).total.toLocaleString()}</p>
+                    <div className="flex items-center gap-1 text-[10px] font-bold text-blue-500 mt-2 bg-blue-50 px-2 py-1 rounded-md">
+                      詳細を見る <ChevronRight size={12}/>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </main>
+
+      {/* --- 詳細モーダル --- */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#111111]/60 backdrop-blur-sm p-3 md:p-4 animate-in fade-in" onClick={() => setSelectedOrder(null)}>
-          <div className="bg-[#FBFAF9] rounded-[24px] md:rounded-[32px] w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl relative flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] p-4 md:p-6 flex flex-wrap items-center justify-between gap-3 z-10 rounded-t-[24px] md:rounded-t-[32px]">
-              <div className="flex items-center gap-3 md:gap-4">
-                <h2 className="text-[16px] md:text-[18px] font-bold text-[#2D4B3E]">注文詳細</h2>
-                <select value={selectedOrder.order_data?.currentStatus || getStatusOptions()[0]} onChange={(e) => updateStatusValue(selectedOrder.id, e.target.value)} className="text-[11px] md:text-[12px] font-bold bg-[#2D4B3E] text-white rounded-lg px-3 py-1.5 outline-none shadow-sm cursor-pointer">
-                  {getStatusOptions().map(opt => <option key={opt} value={opt}>{opt}</option>)}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="absolute inset-0 bg-[#111111]/40 backdrop-blur-sm" onClick={() => setSelectedOrder(null)}></div>
+          
+          <div className="bg-[#FBFAF9] w-full max-w-[800px] max-h-[90vh] rounded-[32px] shadow-2xl relative flex flex-col overflow-hidden">
+            {/* モーダルヘッダー */}
+            <div className="bg-white border-b border-[#EAEAEA] p-6 flex justify-between items-center z-10">
+              <div>
+                <h2 className="text-[20px] font-black text-[#2D4B3E]">注文詳細</h2>
+                <p className="text-[11px] text-[#999999] font-bold mt-1">受付日: {new Date(selectedOrder.created_at).toLocaleString('ja-JP')}</p>
+              </div>
+              <button onClick={() => setSelectedOrder(null)} className="w-10 h-10 bg-[#FBFAF9] rounded-full flex items-center justify-center text-[#999999] hover:text-[#111111] transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* モーダルコンテンツ (スクロール) */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-8">
+              
+              {/* ステータス変更 */}
+              <div className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <span className="text-[13px] font-bold text-[#555555]">現在のステータス</span>
+                <select 
+                  value={selectedOrder.order_data.status || 'new'} 
+                  onChange={(e) => updateOrderStatus(selectedOrder.id, e.target.value)}
+                  className="h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold text-[#2D4B3E] outline-none focus:border-[#2D4B3E] min-w-[200px]"
+                >
+                  <option value="new">未対応 (新規)</option>
+                  {(appSettings?.statusConfig?.customLabels || ['制作中', '制作完了', '配達中']).map(l => <option key={l} value={l}>{l}</option>)}
+                  <option value="完了">完了</option>
+                  <option value="キャンセル">キャンセル</option>
                 </select>
               </div>
-              <div className="flex items-center gap-2 md:gap-3 ml-auto">
-                <button onClick={() => updateArchiveStatus(selectedOrder.id, selectedOrder.order_data?.status !== 'completed')} className={`flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 text-[10px] md:text-[12px] font-bold rounded-xl transition-all shadow-sm ${selectedOrder.order_data?.status === 'completed' ? 'bg-white border border-[#EAEAEA] text-[#555555]' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b]'}`}>
-                  {selectedOrder.order_data?.status === 'completed' ? <RotateCcw size={14}/> : <Archive size={14}/>}
-                  <span className="hidden sm:inline">{selectedOrder.order_data?.status === 'completed' ? '未完了に戻す' : '完了してアーカイブ'}</span>
-                  <span className="sm:hidden">{selectedOrder.order_data?.status === 'completed' ? '戻す' : '完了'}</span>
-                </button>
-                <button onClick={() => setSelectedOrder(null)} className="w-8 h-8 md:w-10 md:h-10 bg-[#FBFAF9] border border-[#EAEAEA] rounded-full flex items-center justify-center text-[#555555] font-bold hover:bg-[#EAEAEA] transition-colors">
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-            
-            <div className="p-4 md:p-8 space-y-6 md:space-y-8 text-left overflow-x-hidden">
-              {/* 以下、モーダルの中身（消費税対応済み） */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                <div className="bg-white p-4 md:p-5 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-2">
-                  <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest flex items-center gap-2"><Calendar size={12}/> お届け・受取情報</p>
-                  <p className="text-[15px] md:text-[16px] font-black text-[#2D4B3E]">{selectedOrder.order_data.selectedDate} {selectedOrder.order_data.selectedTime}</p>
-                  <p className="text-[12px] md:text-[13px] font-bold">{getMethodLabel(selectedOrder.order_data.receiveMethod)} {selectedOrder.order_data.receiveMethod === 'pickup' && `(${selectedOrder.order_data.selectedShop})`}</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* 注文者情報 */}
+                <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] space-y-4">
+                  <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b pb-2 flex items-center gap-2"><User size={16}/> 注文者情報</h3>
+                  <div className="space-y-2 text-[13px]">
+                    <p><span className="text-[#999999] text-[10px] block">お名前</span><span className="font-bold">{selectedOrder.order_data.customerInfo?.name} 様</span></p>
+                    <p><span className="text-[#999999] text-[10px] block">電話番号</span><span className="font-bold">{selectedOrder.order_data.customerInfo?.phone}</span></p>
+                    {selectedOrder.order_data.customerInfo?.email && <p><span className="text-[#999999] text-[10px] block">メール</span><span className="font-bold">{selectedOrder.order_data.customerInfo?.email}</span></p>}
+                  </div>
                 </div>
-                <div className="bg-white p-4 md:p-5 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-2">
-                  <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest flex items-center gap-2"><User size={12}/> ご注文者様</p>
-                  <p className="font-bold text-[14px] md:text-[15px]">{selectedOrder.order_data.customerInfo?.name} 様</p>
-                  <p className="text-[11px] md:text-[12px] text-[#555555] flex items-center gap-1"><Smartphone size={12}/> {selectedOrder.order_data.customerInfo?.phone}</p>
-                  {selectedOrder.order_data.receiveMethod !== 'pickup' && <p className="text-[10px] md:text-[11px] text-[#999999] leading-tight">〒{selectedOrder.order_data.customerInfo?.zip}<br/>{selectedOrder.order_data.customerInfo?.address1}{selectedOrder.order_data.customerInfo?.address2}</p>}
+
+                {/* お届け先情報 ＆ Googleマップ */}
+                <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] space-y-4">
+                  <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b pb-2 flex items-center gap-2"><MapPin size={16}/> お届け先情報</h3>
+                  <div className="space-y-2 text-[13px]">
+                    <div className="flex gap-2 items-center mb-3">
+                      {getReceiveMethodBadge(selectedOrder.order_data.receiveMethod)}
+                      <span className="text-[12px] font-bold text-[#D97C8F]">
+                        {selectedOrder.order_data.selectedDate} {selectedOrder.order_data.selectedTime}
+                      </span>
+                    </div>
+                    
+                    {selectedOrder.order_data.receiveMethod === 'pickup' ? (
+                      <p><span className="text-[#999999] text-[10px] block">受取店舗</span><span className="font-bold text-[14px]">{selectedOrder.order_data.selectedShop || '未指定'}</span></p>
+                    ) : (
+                      <>
+                        <p><span className="text-[#999999] text-[10px] block">宛名</span><span className="font-bold">{selectedOrder.order_data.isRecipientDifferent ? selectedOrder.order_data.recipientInfo?.name : selectedOrder.order_data.customerInfo?.name} 様</span></p>
+                        <p><span className="text-[#999999] text-[10px] block">お届け先住所</span><span className="font-bold block leading-relaxed">〒{selectedOrder.order_data.isRecipientDifferent ? selectedOrder.order_data.recipientInfo?.zip : selectedOrder.order_data.customerInfo?.zip}<br/>{selectedOrder.order_data.isRecipientDifferent ? selectedOrder.order_data.recipientInfo?.address1 : selectedOrder.order_data.customerInfo?.address1} {selectedOrder.order_data.isRecipientDifferent ? selectedOrder.order_data.recipientInfo?.address2 : selectedOrder.order_data.customerInfo?.address2}</span></p>
+                        
+                        {/* 📍 Googleマップボタン */}
+                        <a 
+                          href={getGoogleMapsUrl(selectedOrder.order_data.isRecipientDifferent ? selectedOrder.order_data.recipientInfo : selectedOrder.order_data.customerInfo)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 mt-2 text-[11px] font-bold text-blue-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                        >
+                          <MapPin size={14} /> Googleマップで場所を確認
+                        </a>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {selectedOrder.order_data.isRecipientDifferent && (
-                <div className="animate-in fade-in">
-                  <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest flex items-center gap-2 mb-2"><MapPin size={12}/> お届け先様（別住所）</p>
-                  <div className="bg-white p-4 md:p-5 rounded-2xl border border-red-100 shadow-sm space-y-2 text-[12px] md:text-[13px]">
-                    <p className="font-bold text-[14px] md:text-[15px] text-red-700">{selectedOrder.order_data.recipientInfo?.name} 様</p>
-                    <p className="text-[#555555]">📞 {selectedOrder.order_data.recipientInfo?.phone}</p>
-                    <p className="text-[11px] md:text-[12px] text-red-600/70 leading-tight">〒{selectedOrder.order_data.recipientInfo?.zip}<br/>{selectedOrder.order_data.recipientInfo?.address1}{selectedOrder.order_data.recipientInfo?.address2}</p>
-                  </div>
+              {/* 置き配設定 */}
+              {(selectedOrder.order_data.receiveMethod === 'delivery' || selectedOrder.order_data.receiveMethod === 'sagawa') && (
+                <div className="bg-orange-50 p-5 rounded-[24px] border border-orange-200 space-y-2">
+                  <h3 className="text-[12px] font-bold text-orange-800 flex items-center gap-2"><AlertCircle size={16}/> ご不在時の対応</h3>
+                  <p className="text-[14px] font-black text-orange-900">
+                    {selectedOrder.order_data.absenceAction === '置き配' ? `置き配希望: ${selectedOrder.order_data.absenceNote}` : '持ち戻り (再配達)'}
+                  </p>
                 </div>
               )}
 
-              <div className="bg-white p-5 md:p-6 rounded-2xl border border-[#EAEAEA] shadow-sm">
-                <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest mb-4 flex items-center gap-2"><Tag size={12}/> 商品詳細</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 text-[12px] md:text-[13px] font-bold mb-4 md:mb-6">
-                  <div><span className="text-[9px] md:text-[10px] block text-[#999999] mb-0.5">種類</span>{selectedOrder.order_data.flowerType}</div>
-                  <div><span className="text-[9px] md:text-[10px] block text-[#999999] mb-0.5">用途</span>{selectedOrder.order_data.flowerPurpose}</div>
-                  <div><span className="text-[9px] md:text-[10px] block text-[#999999] mb-0.5">カラー</span>{selectedOrder.order_data.flowerColor}</div>
-                  <div><span className="text-[9px] md:text-[10px] block text-[#999999] mb-0.5">イメージ</span>{selectedOrder.order_data.flowerVibe}</div>
+              {/* 商品とデザイン詳細 */}
+              <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] space-y-4">
+                <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b pb-2 flex items-center gap-2"><Tag size={16}/> オーダー内容</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-[13px]">
+                  <div className="bg-[#FBFAF9] p-3 rounded-xl"><span className="text-[#999999] text-[10px] block">お花の種類</span><span className="font-bold">{selectedOrder.order_data.flowerType}</span></div>
+                  <div className="bg-[#FBFAF9] p-3 rounded-xl"><span className="text-[#999999] text-[10px] block">用途</span><span className="font-bold">{selectedOrder.order_data.flowerPurpose} {selectedOrder.order_data.otherPurpose && `(${selectedOrder.order_data.otherPurpose})`}</span></div>
+                  <div className="bg-[#FBFAF9] p-3 rounded-xl"><span className="text-[#999999] text-[10px] block">カラー</span><span className="font-bold">{selectedOrder.order_data.flowerColor}</span></div>
+                  <div className="bg-[#FBFAF9] p-3 rounded-xl"><span className="text-[#999999] text-[10px] block">イメージ</span><span className="font-bold">{selectedOrder.order_data.flowerVibe} {selectedOrder.order_data.otherVibe && `(${selectedOrder.order_data.otherVibe})`}</span></div>
                 </div>
-                <div className="border-t border-[#FBFAF9] pt-4 space-y-2 text-[12px] md:text-[13px]">
-                  <div className="flex justify-between text-[#555555]"><span>商品代金 (税抜)</span><span className="font-bold font-mono">¥{Number(selectedOrder.order_data.itemPrice).toLocaleString()}</span></div>
-                  {Number(selectedOrder.order_data.calculatedFee) > 0 && <div className="flex justify-between text-[#555555]"><span>配達・送料</span><span className="font-bold font-mono">¥{Number(selectedOrder.order_data.calculatedFee).toLocaleString()}</span></div>}
-                  {Number(selectedOrder.order_data.pickupFee) > 0 && <div className="flex justify-between text-orange-600"><span>回収料</span><span className="font-bold font-mono">¥{Number(selectedOrder.order_data.pickupFee).toLocaleString()}</span></div>}
-                  
-                  <div className="flex justify-between text-[#2D4B3E]">
-                    <span>消費税 (10%)</span>
-                    <span className="font-bold font-mono">¥{Math.floor((Number(selectedOrder.order_data.itemPrice) + Number(selectedOrder.order_data.calculatedFee || 0) + Number(selectedOrder.order_data.pickupFee || 0)) * 0.1).toLocaleString()}</span>
+
+                {selectedOrder.order_data.referenceImage && (
+                  <div className="pt-4">
+                    <span className="text-[#999999] text-[10px] font-bold block mb-2">お客様が選択した参考イメージ</span>
+                    <img src={selectedOrder.order_data.referenceImage} alt="参考画像" className="w-32 h-32 object-cover rounded-xl shadow-sm border border-[#EAEAEA]" />
                   </div>
-                  
-                  <div className="flex justify-between text-[15px] md:text-[16px] mt-3 pt-3 border-t border-[#FBFAF9] font-black text-[#2D4B3E]">
-                    <span>合計金額 (税込)</span>
-                    <span className="font-mono tracking-tight">¥{Math.floor(((Number(selectedOrder.order_data.itemPrice) + Number(selectedOrder.order_data.calculatedFee || 0) + Number(selectedOrder.order_data.pickupFee || 0)) * 1.1)).toLocaleString()}</span>
-                  </div>
-                </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 pb-4">
-                <div className="space-y-3">
-                  <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest flex items-center gap-2"><FileText size={12}/> 立札・メッセージ</p>
-                  <div className="bg-white p-4 md:p-5 rounded-2xl border border-[#EAEAEA] shadow-sm min-h-[100px] md:min-h-[120px]">
-                    <span className="inline-block px-2 md:px-3 py-1 bg-[#2D4B3E] text-white text-[9px] md:text-[10px] font-bold rounded-md mb-3">{selectedOrder.order_data.cardType}</span>
-                    {selectedOrder.order_data.cardType === '立札' ? (
-                      <div className="space-y-1.5 text-[11px] md:text-[12px] font-bold">
-                        <p className="text-[#999999] font-normal text-[10px]">①内容</p><p>{selectedOrder.order_data.tateInput1}</p>
-                        <p className="text-[#999999] font-normal text-[10px] pt-1">②宛名</p><p>{selectedOrder.order_data.tateInput2}</p>
-                        <p className="text-[#999999] font-normal text-[10px] pt-1">③贈り主</p><p>{selectedOrder.order_data.tateInput3}</p>
-                      </div>
-                    ) : <p className="text-[12px] md:text-[13px] whitespace-pre-wrap leading-relaxed font-bold">{selectedOrder.order_data.cardMessage || 'メッセージなし'}</p>}
+              {/* メッセージ・立札 */}
+              <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] space-y-4">
+                <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b pb-2 flex items-center gap-2"><MessageSquare size={16}/> メッセージ・立札: {selectedOrder.order_data.cardType}</h3>
+                {selectedOrder.order_data.cardType === 'メッセージカード' && (
+                  <div className="bg-[#FBFAF9] p-4 rounded-xl text-[13px] font-bold whitespace-pre-wrap border border-[#EAEAEA]">{selectedOrder.order_data.cardMessage}</div>
+                )}
+                {selectedOrder.order_data.cardType === '立札' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[13px] bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]">
+                    {selectedOrder.order_data.tateInput1 && <p><span className="text-[#999999] text-[10px] block">① 内容</span><span className="font-bold">{selectedOrder.order_data.tateInput1}</span></p>}
+                    {selectedOrder.order_data.tateInput2 && <p><span className="text-[#999999] text-[10px] block">② 宛名</span><span className="font-bold">{selectedOrder.order_data.tateInput2} 様</span></p>}
+                    {selectedOrder.order_data.tateInput3 && <p><span className="text-[#999999] text-[10px] block">③ 贈り主</span><span className="font-bold">{selectedOrder.order_data.tateInput3}</span></p>}
+                    {selectedOrder.order_data.tateInput3a && <p><span className="text-[#999999] text-[10px] block">③-1 会社名</span><span className="font-bold">{selectedOrder.order_data.tateInput3a}</span></p>}
+                    {selectedOrder.order_data.tateInput3b && <p><span className="text-[#999999] text-[10px] block">③-2 役職・氏名</span><span className="font-bold">{selectedOrder.order_data.tateInput3b}</span></p>}
                   </div>
-                </div>
-                <div className="space-y-3">
-                  <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest flex items-center gap-2"><FileText size={12}/> 備考・要望</p>
-                  <div className="bg-white p-4 md:p-5 rounded-2xl border border-[#EAEAEA] shadow-sm min-h-[100px] md:min-h-[120px]">
-                    <p className="text-[12px] md:text-[13px] whitespace-pre-wrap text-[#111111] font-bold leading-relaxed">{selectedOrder.order_data.note || '特になし'}</p>
-                  </div>
-                </div>
+                )}
               </div>
+
+              {/* お支払い内訳 */}
+              <div className="bg-white p-6 rounded-[24px] border-2 border-[#2D4B3E]/20 space-y-4">
+                <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b pb-2 flex items-center gap-2"><CreditCard size={16}/> お支払い内訳</h3>
+                <div className="space-y-2 text-[13px] font-medium text-[#555555]">
+                  <div className="flex justify-between"><span>商品代 (税抜):</span><span className="font-bold text-[#111111]">¥{getTotals(selectedOrder.order_data).item.toLocaleString()}</span></div>
+                  {getTotals(selectedOrder.order_data).fee > 0 && <div className="flex justify-between text-blue-600"><span>配送料:</span><span className="font-bold">¥{getTotals(selectedOrder.order_data).fee.toLocaleString()}</span></div>}
+                  {getTotals(selectedOrder.order_data).pickup > 0 && <div className="flex justify-between text-orange-600"><span>器回収費:</span><span className="font-bold">¥{getTotals(selectedOrder.order_data).pickup.toLocaleString()}</span></div>}
+                  <div className="flex justify-between border-t pt-2 text-[#2D4B3E]"><span>消費税 (10%):</span><span className="font-bold">¥{getTotals(selectedOrder.order_data).tax.toLocaleString()}</span></div>
+                  <div className="flex justify-between border-t-2 border-[#2D4B3E]/20 pt-3 mt-2 items-end">
+                    <span className="text-[12px] font-bold text-[#2D4B3E]">合計金額 (税込):</span>
+                    <span className="text-[28px] font-black text-[#2D4B3E] leading-none">¥{getTotals(selectedOrder.order_data).total.toLocaleString()}</span>
+                  </div>
+                </div>
+                {selectedOrder.order_data.paymentMethod && (
+                  <div className="pt-2">
+                    <span className="inline-block bg-[#2D4B3E] text-white px-3 py-1 rounded-full text-[10px] font-bold">支払方法: {selectedOrder.order_data.paymentMethod}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* メモ */}
+              {selectedOrder.order_data.note && (
+                <div className="bg-yellow-50 p-6 rounded-[24px] border border-yellow-200">
+                  <h3 className="text-[12px] font-bold text-yellow-800 mb-2">社内メモ / お客様要望</h3>
+                  <p className="text-[13px] font-bold text-yellow-900 whitespace-pre-wrap">{selectedOrder.order_data.note}</p>
+                </div>
+              )}
+
             </div>
           </div>
         </div>
       )}
-
-      {previewImage && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 p-4 md:p-6" onClick={() => setPreviewImage(null)}>
-          <img src={previewImage} className="max-w-full max-h-[85vh] rounded-xl border-4 border-white shadow-2xl object-contain" />
-        </div>
-      )}
-    </main>
+    </div>
   );
 }
