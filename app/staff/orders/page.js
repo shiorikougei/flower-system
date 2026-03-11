@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
-import { MapPin, Calendar, ChevronRight, X, Clock, Truck, Store, Package, CreditCard, MessageSquare, AlertCircle } from 'lucide-react';
+// ★ ここでアイコンをすべて確実に読み込むように修正しました！
+import { MapPin, Calendar, ChevronRight, X, Clock, Truck, Store, Package, CreditCard, MessageSquare, AlertCircle, ListChecks, User, Tag } from 'lucide-react';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -68,7 +69,7 @@ export default function OrdersPage() {
     }
   });
 
-  // 💥 エラー回避：安全な日付フォーマット関数
+  // 安全な日付フォーマット
   const safeFormatDate = (dateString, withTime = false) => {
     try {
       if (!dateString) return '日時不明';
@@ -80,7 +81,7 @@ export default function OrdersPage() {
     }
   };
 
-  // 💥 エラー回避：安全な配列取得
+  // カスタムステータスの取得
   const getCustomLabels = () => {
     const labels = appSettings?.statusConfig?.customLabels;
     return Array.isArray(labels) ? labels : ['制作中', '制作完了', '配達中'];
@@ -96,7 +97,7 @@ export default function OrdersPage() {
     }
   };
 
-  // 📍 Googleマップ用URL生成
+  // 📍 Googleマップ用URL生成（安全かつ正確なリンクに修正）
   const getGoogleMapsUrl = (info) => {
     try {
       if (!info) return '#';
@@ -262,7 +263,7 @@ export default function OrdersPage() {
                         <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">宛名</span><span className="font-black text-[16px]">{modalTargetInfo?.name || '未設定'} 様</span></p>
                         <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">お届け先住所</span><span className="font-bold text-[14px] block leading-relaxed">〒{modalTargetInfo?.zip}<br/>{modalTargetInfo?.address1} {modalTargetInfo?.address2}</span></p>
                         
-                        {/* 📍 Googleマップボタン (安全・高デザイン) */}
+                        {/* 📍 Googleマップボタン */}
                         <a 
                           href={getGoogleMapsUrl(modalTargetInfo)}
                           target="_blank"
