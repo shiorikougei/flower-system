@@ -69,6 +69,10 @@ export default function SettingsPage() {
     loadSettings();
   }, []);
 
+  const handleLogin = () => {
+    if (adminPassword === '7777') { setIsAdmin(true); } else { alert('パスワードが違います。'); }
+  };
+
   const saveSettings = async () => {
     if (!isAdmin) return;
     setIsSaving(true);
