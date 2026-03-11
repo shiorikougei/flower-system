@@ -2,7 +2,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../utils/supabase';
-import Link from 'next/link';
 
 export default function StaffNewOrderPage() {
   const router = useRouter();
@@ -86,8 +85,6 @@ export default function StaffNewOrderPage() {
   }, []);
 
   const generalConfig = appSettings?.generalConfig || {};
-  const appName = generalConfig.appName || 'FLORIX';
-  const logoUrl = generalConfig.logoUrl || '';
   const staffConfig = appSettings?.staffOrderConfig || {};
   const selectedItemSettings = useMemo(() => appSettings?.flowerItems?.find(i => i.name === flowerType) || {}, [flowerType, appSettings]);
 
@@ -129,7 +126,7 @@ export default function StaffNewOrderPage() {
   const tateNeeds = selectedTateOpt?.needs || [];
   const topPrefixText = isOsonae ? (prefixFormat === 'hiragana' ? 'お供え' : '御供') : (prefixFormat === 'hiragana' ? 'お祝い' : '祝');
 
-  // ★ 納期計算（持込設定などのロジック完全対応）
+  // ★ 納期計算
   const minDateLimit = useMemo(() => {
     if (staffConfig.ignoreLeadTime) return new Date().toISOString().split('T')[0]; 
     const base = new Date();
@@ -181,7 +178,7 @@ export default function StaffNewOrderPage() {
     return res;
   };
 
-  // ★ 超強化：送料・箱代・クール・回収費用のフル自動計算
+  // ★ 送料・箱代・クール・回収費用のフル自動計算
   useEffect(() => {
     if (!receiveMethod || receiveMethod === 'pickup' || !itemPrice) { 
       setCalculatedFee(null); setPickupFee(0); setAreaError(''); return; 
@@ -342,37 +339,8 @@ export default function StaffNewOrderPage() {
   if (isLoading) return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-sans text-[#2D4B3E] font-bold tracking-widest animate-pulse">読み込み中...</div>;
 
   return (
-    <div className="min-h-screen bg-[#FBFAF9] flex flex-col md:flex-row text-[#111111] font-sans">
-      
-      <aside className="w-full md:w-64 bg-white border-r border-[#EAEAEA] md:fixed h-full z-20 overflow-y-auto pb-10">
-        <div className="p-8 flex flex-col gap-1 border-b border-[#EAEAEA]">
-          {logoUrl ? (
-             <img src={logoUrl} alt={appName} className="h-8 object-contain object-left mb-1" />
-          ) : (
-             <span className="font-serif italic text-[24px] tracking-tight text-[#2D4B3E]">{appName}</span>
-          )}
-          <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#999999] pt-1">管理ワークスペース</span>
-        </div>
-        <nav className="p-4 space-y-1">
-          <Link href="/staff/orders" className="block w-full text-left px-6 py-4 rounded-xl text-[#555555] hover:bg-[#F7F7F7] transition-all">
-            <span className="text-[13px] font-bold tracking-wider block">受注一覧</span>
-          </Link>
-          <Link href="/staff/new-order" className="block w-full text-left px-6 py-4 rounded-xl bg-[#2D4B3E]/5 text-[#2D4B3E] shadow-sm border border-[#2D4B3E]/10 transition-all">
-            <span className="text-[13px] font-bold tracking-wider block">店舗注文受付</span>
-          </Link>
-          <Link href="/staff/calendar" className="block w-full text-left px-6 py-4 rounded-xl text-[#555555] hover:bg-[#F7F7F7] transition-all">
-            <span className="text-[13px] font-bold tracking-wider block">カレンダー</span>
-          </Link>
-          <Link href="/staff/deliveries" className="block w-full text-left px-6 py-4 rounded-xl text-[#555555] hover:bg-[#F7F7F7] transition-all">
-            <span className="text-[13px] font-bold tracking-wider block">配達・ルート管理</span>
-          </Link>
-          <Link href="/staff/settings" className="block w-full text-left px-6 py-4 rounded-xl text-[#555555] hover:bg-[#F7F7F7] transition-all mt-4 border-t border-[#EAEAEA] pt-4">
-            <span className="text-[13px] font-bold tracking-wider block">各種設定</span>
-          </Link>
-        </nav>
-      </aside>
-
-      <main className="flex-1 md:ml-64 flex flex-col min-w-0 pb-32">
+    <div className="flex flex-col font-sans text-[#111111] pb-32">
+      <main className="flex-1 flex flex-col min-w-0">
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-[#EAEAEA] flex items-center justify-between px-8 sticky top-0 z-10">
           <h1 className="text-[18px] font-bold tracking-tight text-[#2D4B3E] flex items-center gap-3">
             店舗注文受付 (代理入力)
@@ -453,7 +421,9 @@ export default function StaffNewOrderPage() {
             
             {matchingImages.length > 0 && (
               <div className="bg-[#2D4B3E]/5 -mx-8 -mt-8 p-6 pb-8 mb-6 border-b border-[#EAEAEA] space-y-4">
-                 <p className="text-[11px] font-bold text-[#2D4B3E] tracking-widest flex items-center gap-2">✨ 制作例からオーダー内容を自動入力</p>
+                 <p className="text-[11px] font-bold text-[#2D4B3E] tracking-widest flex items-center gap-2">
+                   ✨ 制作例からオーダー内容を自動入力
+                 </p>
                  <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar">
                    {matchingImages.map(img => (
                      <div key={img.id} className="shrink-0 w-[140px] space-y-2 snap-center">
@@ -553,7 +523,7 @@ export default function StaffNewOrderPage() {
                     
                     <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4">仕上がりプレビュー</p>
                     <div className={`relative mx-auto border border-[#EAEAEA] shadow-lg bg-white flex flex-col items-center font-serif ${selectedTateOpt?.layout === 'horizontal' ? 'aspect-[1.414/1] w-full justify-center p-6' : 'aspect-[1/1.414] h-[300px] pt-6 px-4'}`}>
-                       <div className={`font-black ${isOsonae ? 'text-gray-500' : 'text-red-600'} ${selectedTateOpt?.layout === 'horizontal' ? 'text-[28px] mb-4' : 'text-[40px] mb-6 leading-none'}`}>
+                       <div className={`font-bold ${isOsonae ? 'text-gray-500' : 'text-red-600'} ${selectedTateOpt?.layout === 'horizontal' ? 'text-[28px] mb-4' : 'text-[40px] mb-6 leading-none'}`}>
                          {topPrefixText}
                        </div>
                        <div className={`flex w-full font-bold text-gray-900 ${selectedTateOpt?.layout === 'horizontal' ? 'flex-col items-center gap-2 text-[16px]' : 'flex-row-reverse justify-center gap-6 text-[18px]'}`}>
@@ -625,7 +595,7 @@ export default function StaffNewOrderPage() {
               </div>
             )}
 
-            {/* 置き配設定 */}
+            {/* ★ 新規追加: 置き配設定（配達・配送の時だけ表示） */}
             {(receiveMethod === 'delivery' || receiveMethod === 'sagawa') && (
               <div className="pt-6 border-t border-[#FBFAF9] space-y-4 animate-in fade-in">
                 <div className="space-y-2">
@@ -672,25 +642,27 @@ export default function StaffNewOrderPage() {
             </div>
           </div>
 
+          {/* ★ 改修：合計金額パネル（回収料金追加） */}
           <div className="bg-white p-8 rounded-[32px] border-2 border-[#2D4B3E]/30 shadow-md">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               
               <div className="space-y-2 w-full md:w-auto">
                 <p className="text-[11px] font-bold text-[#999999] tracking-widest text-center md:text-left">お支払い内訳</p>
-                <div className="bg-[#FBFAF9] p-4 rounded-xl space-y-2 text-[13px] text-[#555555] font-medium w-full md:w-72">
+                <div className="bg-[#FBFAF9] p-4 rounded-xl space-y-2 text-[13px] text-[#555555] font-medium w-full md:w-64">
                   <div className="flex justify-between">
                     <span>商品代 (税抜):</span>
                     <span className="font-bold text-[#111111]">¥{parsedItemPrice.toLocaleString()}</span>
                   </div>
                   {parsedFee > 0 && (
                     <div className="flex justify-between text-blue-700">
-                      <span>配送料 (箱代・クール等含):</span>
+                      <span>配達・送料:</span>
                       <span className="font-bold">¥{parsedFee.toLocaleString()}</span>
                     </div>
                   )}
+                  {/* 回収料金の表示 */}
                   {parsedPickupFee > 0 && (
                     <div className="flex justify-between text-orange-600">
-                      <span>器回収・返却費用:</span>
+                      <span>後日回収費:</span>
                       <span className="font-bold">¥{parsedPickupFee.toLocaleString()}</span>
                     </div>
                   )}
@@ -699,7 +671,6 @@ export default function StaffNewOrderPage() {
                     <span className="font-bold text-[#2D4B3E]">¥{tax.toLocaleString()}</span>
                   </div>
                 </div>
-                {areaError && <p className="text-red-500 text-[11px] font-bold mt-1">{areaError}</p>}
               </div>
 
               <div className="text-center md:text-right flex-shrink-0">
