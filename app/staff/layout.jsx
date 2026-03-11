@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { 
-  LayoutDashboard, FileText, PlusCircle, Calendar, 
-  Truck, Building2, ImageIcon, Settings, UserCheck 
+  LayoutDashboard, FileText, Calendar, PlusCircle, 
+  Truck, Building2, Users, ImageIcon, Settings, UserCheck 
 } from 'lucide-react';
 
 export default function StaffLayout({ children }) {
@@ -24,22 +24,21 @@ export default function StaffLayout({ children }) {
   const logoUrl = generalConfig.logoUrl || '';
   const appName = generalConfig.appName || 'FLORIX';
 
-  // --- メニュー構成の定義 ---
-  const menuItems = [
-    { label: '🏠 ダッシュボード', href: '/staff', icon: LayoutDashboard },
-    { label: '📋 受注一覧', href: '/staff/orders', icon: FileText },
-    { label: '📝 店舗注文受付', href: '/staff/new-order', icon: PlusCircle },
-    { label: '📅 カレンダー', href: '/staff/calendar', icon: Calendar },
-    { label: '🚚 配達・ルート管理', href: '/staff/deliveries', icon: Truck },
-    { label: '🏢 法人・イベント管理', href: '/staff/corporate', icon: Building2 },
-    { label: '📸 作品・SNS連携', href: '/staff/portfolio', icon: ImageIcon },
-    { label: '⚙️ 各種設定', href: '/staff/settings', icon: Settings },
+  // --- メニュー構成（ご指定の並び順） ---
+  const mainItems = [
+    { label: '受注一覧', href: '/staff/orders', icon: FileText },
+    { label: 'カレンダー', href: '/staff/calendar', icon: Calendar },
+    { label: '店舗注文受付', href: '/staff/new-order', icon: PlusCircle },
+    { label: '配達管理', href: '/staff/deliveries', icon: Truck },
+    { label: '法人管理', href: '/staff/corporate', icon: Building2 },
+    { label: '顧客(個人)管理', href: '/staff/customers', icon: Users },
+    { label: 'SNS・作品連携', href: '/staff/portfolio', icon: ImageIcon },
   ];
 
   return (
     <div className="min-h-screen bg-[#FBFAF9] flex flex-col md:flex-row text-[#111111] font-sans">
       
-      {/* --- 【最強の共通サイドバー】 --- */}
+      {/* --- 共通サイドバー --- */}
       <aside className="w-full md:w-64 bg-white border-r border-[#EAEAEA] md:fixed h-full z-30 overflow-y-auto pb-10 hidden md:block">
         <div className="p-8 flex flex-col gap-1 border-b border-[#EAEAEA]">
           <Link href="/staff" className="hover:opacity-70 transition-opacity">
@@ -52,42 +51,72 @@ export default function StaffLayout({ children }) {
           <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#999999] pt-1">管理ワークスペース</span>
         </div>
         
-        <nav className="p-4 space-y-1">
-          {menuItems.map((item) => {
-            const isActive = pathname === item.href;
-            const Icon = item.icon;
-            return (
-              <Link 
-                key={item.href} 
-                href={item.href}
-                className={`flex items-center gap-3 px-6 py-4 rounded-xl text-[13px] font-bold tracking-wider transition-all ${
-                  isActive 
-                  ? 'bg-[#2D4B3E]/5 text-[#2D4B3E] shadow-sm border border-[#2D4B3E]/10' 
-                  : 'text-[#555555] hover:bg-[#F7F7F7]'
-                }`}
-              >
-                <Icon size={18} className={isActive ? 'text-[#2D4B3E]' : 'text-[#999999]'} />
-                {item.label}
-              </Link>
-            );
-          })}
-          
-          {/* ドライバー管理（設定の下にぶら下げるサブメニュー） */}
+        <nav className="p-4 flex flex-col gap-0.5">
+          {/* 親：ダッシュボード */}
           <Link 
-            href="/staff/settings/drivers" 
-            className={`flex items-center gap-3 px-6 py-3 rounded-xl text-[12px] font-bold tracking-wider ml-4 border-l-2 transition-all ${
-              pathname === '/staff/settings/drivers'
-              ? 'border-[#2D4B3E] text-[#2D4B3E] bg-[#2D4B3E]/5'
-              : 'border-[#EAEAEA] text-[#999999] hover:bg-[#F7F7F7]'
+            href="/staff"
+            className={`flex items-center gap-3.5 px-6 py-4 rounded-xl text-[13px] font-bold tracking-wider transition-all ${
+              pathname === '/staff' 
+              ? 'bg-[#2D4B3E]/5 text-[#2D4B3E] shadow-sm border border-[#2D4B3E]/10' 
+              : 'text-[#555555] hover:bg-[#F7F7F7]'
             }`}
           >
-            <UserCheck size={14} />
-            ↳ ドライバー管理
+            <LayoutDashboard size={18} strokeWidth={pathname === '/staff' ? 2.5 : 2} />
+            ダッシュボード
           </Link>
+
+          {/* 子メニュー（1文字分ずらす） */}
+          <div className="ml-4 flex flex-col gap-0.5 mt-0.5">
+            {mainItems.map((item) => {
+              const isActive = pathname === item.href;
+              const Icon = item.icon;
+              return (
+                <Link 
+                  key={item.href} 
+                  href={item.href}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-[12.5px] font-bold tracking-wider transition-all ${
+                    isActive 
+                    ? 'bg-[#2D4B3E]/5 text-[#2D4B3E] shadow-sm border border-[#2D4B3E]/10' 
+                    : 'text-[#666666] hover:bg-[#F7F7F7] hover:text-[#111111]'
+                  }`}
+                >
+                  <Icon size={16} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-[#2D4B3E]' : 'text-[#999999]'} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+          
+          {/* 各種設定（一番下） */}
+          <div className="pt-4 mt-4 border-t border-[#F7F7F7]">
+            <Link 
+              href="/staff/settings" 
+              className={`flex items-center gap-3.5 px-6 py-4 rounded-xl text-[13px] font-bold tracking-wider transition-all ${
+                pathname.startsWith('/staff/settings')
+                ? 'bg-[#2D4B3E]/5 text-[#2D4B3E] shadow-sm border border-[#2D4B3E]/10'
+                : 'text-[#555555] hover:bg-[#F7F7F7]'
+              }`}
+            >
+              <Settings size={18} strokeWidth={pathname.startsWith('/staff/settings') ? 2.5 : 2} />
+              各種設定
+            </Link>
+            
+            {/* ドライバー管理（設定の中のサブ） */}
+            <Link 
+              href="/staff/settings/drivers" 
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-bold tracking-wider ml-10 mt-1 transition-all ${
+                pathname === '/staff/settings/drivers'
+                ? 'text-[#2D4B3E]'
+                : 'text-[#999999] hover:text-[#555555]'
+              }`}
+            >
+              <UserCheck size={14} />
+              ↳ ドライバー管理
+            </Link>
+          </div>
         </nav>
       </aside>
 
-      {/* --- メインコンテンツ（ここに各ページの中身が入る） --- */}
       <div className="flex-1 md:ml-64 flex flex-col min-w-0">
         {children}
       </div>

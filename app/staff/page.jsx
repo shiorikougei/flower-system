@@ -1,130 +1,94 @@
 'use client';
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { supabase } from '@/utils/supabase';
-import { 
-  LayoutDashboard, FileText, Calendar, PlusCircle, 
-  Truck, Building2, Users, ImageIcon, Settings, UserCheck 
-} from 'lucide-react';
+import Link from "next/link";
+import { supabase } from '@/utils/supabase'; 
+import { Truck, AlertCircle, Building2, UserCheck, FileText, PlusCircle, Calendar, Image as ImageIcon, Settings, LayoutDashboard } from "lucide-react";
 
-export default function StaffLayout({ children }) {
-  const pathname = usePathname();
-  const [appSettings, setAppSettings] = useState(null);
+export default function StaffDashboard() {
+  const [todoData, setTodoData] = useState({ deliveriesToday: 0, unpaidOrders: 0, corporateEvents: 0, pendingDrivers: 0 });
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchSettings() {
-      const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
-      if (data) setAppSettings(data.settings_data);
+    async function fetchDashboardData() {
+      try {
+        const { data: settingsData } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
+        const { data: ordersData } = await supabase.from('orders').select('order_data');
+        const orders = ordersData || [];
+        const drivers = settingsData?.settings_data?.drivers || [];
+        const today = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"})).toISOString().split('T')[0];
+        let deliveries = 0; let unpaid = 0; let corporate = 0;
+
+        orders.forEach(order => {
+          const d = order.order_data;
+          if (!d) return;
+          if (d.selectedDate === today && d.receiveMethod === 'delivery') deliveries++;
+          if (d.paymentMethod === '未定' || d.paymentMethod === '銀行振込(請求書)') unpaid++;
+          if (d.selectedDate >= today && (d.flowerPurpose === '開店' || d.tateInput3a || (d.customerInfo?.name || '').includes('株式会社'))) corporate++;
+        });
+
+        setTodoData({ deliveriesToday: deliveries, unpaidOrders: unpaid, corporateEvents: corporate, pendingDrivers: drivers.filter(d => d.status === 'pending').length });
+      } catch (err) { console.error(err); } finally { setIsLoading(false); }
     }
-    fetchSettings();
+    fetchDashboardData();
   }, []);
 
-  const generalConfig = appSettings?.generalConfig || {};
-  const logoUrl = generalConfig.logoUrl || '';
-  const appName = generalConfig.appName || 'FLORIX';
-
-  // --- メニュー構成（ご指定の並び順） ---
-  const mainItems = [
-    { label: '受注一覧', href: '/staff/orders', icon: FileText },
-    { label: 'カレンダー', href: '/staff/calendar', icon: Calendar },
-    { label: '店舗注文受付', href: '/staff/new-order', icon: PlusCircle },
-    { label: '配達管理', href: '/staff/deliveries', icon: Truck },
-    { label: '法人管理', href: '/staff/corporate', icon: Building2 },
-    { label: '顧客(個人)管理', href: '/staff/customers', icon: Users },
-    { label: 'SNS・作品連携', href: '/staff/portfolio', icon: ImageIcon },
-  ];
+  if (isLoading) return <div className="p-20 text-center font-bold text-[#2D4B3E] animate-pulse">データ集計中...</div>;
 
   return (
-    <div className="min-h-screen bg-[#FBFAF9] flex flex-col md:flex-row text-[#111111] font-sans">
-      
-      {/* --- 共通サイドバー --- */}
-      <aside className="w-full md:w-64 bg-white border-r border-[#EAEAEA] md:fixed h-full z-30 overflow-y-auto pb-10 hidden md:block">
-        <div className="p-8 flex flex-col gap-1 border-b border-[#EAEAEA]">
-          <Link href="/staff" className="hover:opacity-70 transition-opacity">
-            {logoUrl ? (
-               <img src={logoUrl} alt={appName} className="h-8 object-contain object-left mb-1" />
-            ) : (
-               <span className="font-serif italic text-[24px] tracking-tight text-[#2D4B3E]">{appName}</span>
-            )}
-          </Link>
-          <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#999999] pt-1">管理ワークスペース</span>
-        </div>
-        
-        <nav className="p-4 flex flex-col gap-0.5">
-          {/* 親：ダッシュボード */}
-          <Link 
-            href="/staff"
-            className={`flex items-center gap-3.5 px-6 py-4 rounded-xl text-[13px] font-bold tracking-wider transition-all ${
-              pathname === '/staff' 
-              ? 'bg-[#2D4B3E]/5 text-[#2D4B3E] shadow-sm border border-[#2D4B3E]/10' 
-              : 'text-[#555555] hover:bg-[#F7F7F7]'
-            }`}
-          >
-            <LayoutDashboard size={18} strokeWidth={pathname === '/staff' ? 2.5 : 2} />
-            ダッシュボード
-          </Link>
+    <main className="pb-32">
+      <header className="h-20 bg-white/80 backdrop-blur-md border-b border-[#EAEAEA] flex items-center px-8 sticky top-0 z-10">
+        <h1 className="text-[18px] font-bold tracking-tight text-[#2D4B3E] flex items-center gap-2"><LayoutDashboard size={20} /> ダッシュボード</h1>
+      </header>
 
-          {/* 子メニュー（1文字分ずらす） */}
-          <div className="ml-4 flex flex-col gap-0.5 mt-0.5">
-            {mainItems.map((item) => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-              return (
-                <Link 
-                  key={item.href} 
-                  href={item.href}
-                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-[12.5px] font-bold tracking-wider transition-all ${
-                    isActive 
-                    ? 'bg-[#2D4B3E]/5 text-[#2D4B3E] shadow-sm border border-[#2D4B3E]/10' 
-                    : 'text-[#666666] hover:bg-[#F7F7F7] hover:text-[#111111]'
-                  }`}
-                >
-                  <Icon size={16} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-[#2D4B3E]' : 'text-[#999999]'} />
-                  {item.label}
-                </Link>
-              );
-            })}
+      <div className="max-w-[1000px] mx-auto w-full p-4 md:p-8 space-y-10">
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <h2 className="text-[14px] font-bold text-[#111111] tracking-widest mb-6 border-l-4 border-[#2D4B3E] pl-3">今日のやることリスト</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <DashboardCard href="/staff/deliveries" label="本日お届け" count={todoData.deliveriesToday} unit="件" icon={Truck} color="#2e7d32" bgColor="#f1f8e9" />
+            <DashboardCard href="/staff/orders" label="未入金確認" count={todoData.unpaidOrders} unit="件" icon={AlertCircle} color="#c62828" bgColor="#ffebee" isAlert={todoData.unpaidOrders > 0} />
+            <DashboardCard href="/staff/corporate" label="法人・イベント予約" count={todoData.corporateEvents} unit="件" icon={Building2} color="#1565c0" bgColor="#e3f2fd" tag="B2B" />
+            <DashboardCard href="/staff/settings/drivers" label="ドライバー承認" count={todoData.pendingDrivers} unit="名" icon={UserCheck} color="#f57f17" bgColor="#fff8e1" isAlert={todoData.pendingDrivers > 0} />
           </div>
-          
-          {/* 各種設定（一番下） */}
-          <div className="pt-4 mt-4 border-t border-[#F7F7F7]">
-            <Link 
-              href="/staff/settings" 
-              className={`flex items-center gap-3.5 px-6 py-4 rounded-xl text-[13px] font-bold tracking-wider transition-all ${
-                pathname.startsWith('/staff/settings')
-                ? 'bg-[#2D4B3E]/5 text-[#2D4B3E] shadow-sm border border-[#2D4B3E]/10'
-                : 'text-[#555555] hover:bg-[#F7F7F7]'
-              }`}
-            >
-              <Settings size={18} strokeWidth={pathname.startsWith('/staff/settings') ? 2.5 : 2} />
-              各種設定
-            </Link>
-            
-            {/* ドライバー管理（設定の中のサブ） */}
-            <Link 
-              href="/staff/settings/drivers" 
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-bold tracking-wider ml-10 mt-1 transition-all ${
-                pathname === '/staff/settings/drivers'
-                ? 'text-[#2D4B3E]'
-                : 'text-[#999999] hover:text-[#555555]'
-              }`}
-            >
-              <UserCheck size={14} />
-              ↳ ドライバー管理
-            </Link>
-          </div>
-        </nav>
-      </aside>
+        </section>
 
-      <div className="flex-1 md:ml-64 flex flex-col min-w-0">
-        {children}
+        <section className="animate-in fade-in slide-in-from-bottom-6 duration-700">
+          <h2 className="text-[14px] font-bold text-[#111111] tracking-widest mb-6 border-l-4 border-[#2D4B3E] pl-3">各種メニュー</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <MenuButton href="/staff/orders" label="受注一覧" icon={FileText} />
+            <MenuButton href="/staff/new-order" label="注文作成" icon={PlusCircle} />
+            <MenuButton href="/staff/calendar" label="カレンダー" icon={Calendar} />
+            <MenuButton href="/staff/portfolio" label="SNS・作品" icon={ImageIcon} />
+            <MenuButton href="/staff/settings/drivers" label="ドライバー" icon={UserCheck} />
+            <MenuButton href="/staff/settings" label="各種設定" icon={Settings} />
+          </div>
+        </section>
       </div>
+    </main>
+  );
+}
 
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap'); 
-        .font-serif { font-family: 'Noto Serif JP', serif; }
-      `}</style>
-    </div>
+// 内部コンポーネント（カードとボタン）
+function DashboardCard({ href, label, count, unit, icon: Icon, color, bgColor, isAlert, tag }) {
+  return (
+    <Link href={href} className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm hover:shadow-md hover:border-[#2D4B3E]/30 transition-all group flex flex-col justify-between relative overflow-hidden">
+      {tag && <div className="absolute top-0 right-0 bg-[#2D4B3E] text-white text-[8px] font-bold px-2 py-0.5 rounded-bl-lg tracking-widest">{tag}</div>}
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-[11px] font-bold text-[#999999] tracking-widest">{label}</p>
+        <div className="w-10 h-10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform" style={{ backgroundColor: bgColor, color: color }}><Icon size={18} /></div>
+      </div>
+      <div className="flex items-baseline gap-1">
+        <p className={`text-[32px] font-sans font-bold leading-none ${isAlert ? '' : 'text-[#111111]'}`} style={isAlert ? {color: color} : {}}>{count}</p>
+        <span className="text-[12px] font-bold text-[#999999]">{unit}</span>
+      </div>
+    </Link>
+  );
+}
+
+function MenuButton({ href, label, icon: Icon }) {
+  return (
+    <Link href={href} className="flex flex-col items-center justify-center p-6 bg-white rounded-[24px] border border-[#EAEAEA] shadow-sm hover:shadow-md hover:border-[#2D4B3E]/30 transition-all group">
+      <Icon size={24} className="text-[#555555] mb-3 group-hover:text-[#2D4B3E] transition-colors" />
+      <span className="text-[11px] font-bold text-[#555555] tracking-widest group-hover:text-[#2D4B3E] transition-colors">{label}</span>
+    </Link>
   );
 }
