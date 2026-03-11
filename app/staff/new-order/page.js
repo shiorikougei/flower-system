@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../utils/supabase';
 import Link from 'next/link';
+import { Store } from 'lucide-react';
 
 export default function StaffNewOrderPage() {
   const router = useRouter();
@@ -69,7 +70,9 @@ export default function StaffNewOrderPage() {
             setPaymentMethod(data.settings_data.staffOrderConfig.paymentMethods[0]);
           }
           if (data.settings_data.shops?.length > 0) {
-            setShopId(data.settings_data.shops[0].id);
+            const defaultShop = data.settings_data.shops[0];
+            setShopId(defaultShop.id);
+            setSelectedShop(defaultShop.name);
           }
         }
         const { data: gallery } = await supabase.from('app_settings').select('settings_data').eq('id', 'gallery').single();
@@ -129,17 +132,17 @@ export default function StaffNewOrderPage() {
   const tateNeeds = selectedTateOpt?.needs || [];
   const topPrefixText = isOsonae ? (prefixFormat === 'hiragana' ? 'お供え' : '御供') : (prefixFormat === 'hiragana' ? 'お祝い' : '祝');
 
-  // ★ 納期計算
+  // ★ カレンダーの選択制限（代理入力設定がONなら解除）
   const minDateLimit = useMemo(() => {
     if (staffConfig.ignoreLeadTime) return new Date().toISOString().split('T')[0]; 
     const base = new Date();
     let lead = 0;
-    if (receiveMethod === 'sagawa') lead = selectedItemSettings.shippingLeadDays || 0;
-    else lead = selectedItemSettings.normalLeadDays || 0;
+    if (receiveMethod === 'sagawa') lead = selectedItemSettings?.shippingLeadDays || 0;
+    else lead = selectedItemSettings?.normalLeadDays || 0;
 
     if (isBring === 'bring') {
-      if (selectedItemSettings.canBringFlowers && selectedItemSettings.canBringFlowersLeadDays > lead) lead = selectedItemSettings.canBringFlowersLeadDays;
-      if (selectedItemSettings.canBringVase && selectedItemSettings.canBringVaseLeadDays > lead) lead = selectedItemSettings.canBringVaseLeadDays;
+      if (selectedItemSettings?.canBringFlowers && selectedItemSettings?.canBringFlowersLeadDays > lead) lead = selectedItemSettings.canBringFlowersLeadDays;
+      if (selectedItemSettings?.canBringVase && selectedItemSettings?.canBringVaseLeadDays > lead) lead = selectedItemSettings.canBringVaseLeadDays;
     }
     const d = new Date(base);
     d.setDate(base.getDate() + lead);
@@ -181,7 +184,6 @@ export default function StaffNewOrderPage() {
     return res;
   };
 
-  // ★ 送料・箱代・クール・回収費用のフル自動計算
   useEffect(() => {
     if (!receiveMethod || receiveMethod === 'pickup' || !itemPrice) { 
       setCalculatedFee(null); setPickupFee(0); setAreaError(''); return; 
@@ -299,15 +301,50 @@ export default function StaffNewOrderPage() {
   const tax = Math.floor(subTotal * 0.1);
   const totalAmount = subTotal + tax;
 
+  // ★ スタッフ専用：登録時の「ゆるい制限＆確認アナウンス」
   const handleSubmitStaffOrder = async () => {
-    if (!shopId || !staffName || !customerInfo.name || !selectedDate || !itemPrice) {
-      alert('受付店舗、担当スタッフ、お客様名、お届け日、金額は必須項目です。');
-      return;
-    }
-    // ★ ここを変更：delivery（自社配達）の時だけチェック
+    let warnings = [];
+
+    // 未入力項目のリストアップ
+    if (!receptionType) warnings.push('・受付区分');
+    if (!staffName) warnings.push('・受付スタッフ');
+    if (!shopId) warnings.push('・受付した店舗');
+    if (!flowerType) warnings.push('・お花の種類');
+    if (!receiveMethod) warnings.push('・受取方法');
+    if (receiveMethod === 'pickup' && !selectedShop) warnings.push('・受取店舗');
+    if (!itemPrice) warnings.push('・ご予算(金額)');
+    if (!selectedDate) warnings.push('・納品希望日');
+    if (!customerInfo.name) warnings.push('・注文者のお名前');
     if (receiveMethod === 'delivery' && absenceAction === '置き配' && !absenceNote) {
-      alert('置き配を希望される場合は、具体的な場所をご入力ください。');
-      return;
+      warnings.push('・置き配の場所');
+    }
+
+    // 納期が設定値より早い場合のアナウンス
+    if (selectedDate && flowerType) {
+      const base = new Date();
+      let lead = 0;
+      if (receiveMethod === 'sagawa') lead = selectedItemSettings?.shippingLeadDays || 0;
+      else lead = selectedItemSettings?.normalLeadDays || 0;
+
+      if (isBring === 'bring') {
+        const fLead = selectedItemSettings?.canBringFlowersLeadDays || 0;
+        const vLead = selectedItemSettings?.canBringVaseLeadDays || 0;
+        if (selectedItemSettings?.canBringFlowers && fLead > lead) lead = fLead;
+        if (selectedItemSettings?.canBringVase && vLead > lead) lead = vLead;
+      }
+      const d = new Date();
+      d.setDate(d.getDate() + lead);
+      const properMinDate = d.toISOString().split('T')[0];
+
+      if (selectedDate < properMinDate) {
+        warnings.push(`・納品日 (${selectedDate}) が、規定の最短納期 (${properMinDate}) よりも早く設定されています`);
+      }
+    }
+
+    // 警告が1つでもあれば確認ダイアログを出す
+    if (warnings.length > 0) {
+      const isConfirmed = window.confirm("⚠️ 以下の確認事項があります：\n\n" + warnings.join("\n") + "\n\nこのまま注文を強制的に登録してもよろしいですか？");
+      if (!isConfirmed) return; // キャンセルした場合は処理ストップ
     }
     
     setIsSubmitting(true);
@@ -378,7 +415,11 @@ export default function StaffNewOrderPage() {
 
             <div className="space-y-2 pt-2">
               <label className="text-[11px] font-bold text-[#999999] tracking-widest">受付した店舗</label>
-              <select value={shopId} onChange={(e) => setShopId(e.target.value)} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
+              <select value={shopId} onChange={(e) => {
+                setShopId(e.target.value);
+                const s = appSettings?.shops?.find(shop => String(shop.id) === String(e.target.value));
+                if (s) setSelectedShop(s.name);
+              }} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
                 <option value="">店舗を選択</option>
                 {appSettings?.shops?.map(shop => <option key={shop.id} value={shop.id}>{shop.name}</option>)}
               </select>
@@ -395,11 +436,21 @@ export default function StaffNewOrderPage() {
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">受取方法</label>
                 <div className="flex gap-2">
-                  <button onClick={() => setReceiveMethod('pickup')} className={`flex-1 py-3 text-[12px] font-bold rounded-xl border ${receiveMethod === 'pickup' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>店頭</button>
-                  <button onClick={() => setReceiveMethod('delivery')} className={`flex-1 py-3 text-[12px] font-bold rounded-xl border ${receiveMethod === 'delivery' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>配達</button>
-                  <button onClick={() => setReceiveMethod('sagawa')} className={`flex-1 py-3 text-[12px] font-bold rounded-xl border ${receiveMethod === 'sagawa' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>配送</button>
+                  <button onClick={() => setReceiveMethod('pickup')} className={`flex-1 py-3 text-[12px] font-bold rounded-xl border ${receiveMethod === 'pickup' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>店頭受取</button>
+                  <button onClick={() => setReceiveMethod('delivery')} className={`flex-1 py-3 text-[12px] font-bold rounded-xl border ${receiveMethod === 'delivery' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>自社配達</button>
+                  <button onClick={() => setReceiveMethod('sagawa')} className={`flex-1 py-3 text-[12px] font-bold rounded-xl border ${receiveMethod === 'sagawa' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>業者配送</button>
                 </div>
               </div>
+              
+              {receiveMethod === 'pickup' && (
+                <div className="md:col-span-2 bg-orange-50 p-4 rounded-xl border border-orange-200 animate-in fade-in space-y-2 mt-2">
+                  <label className="text-[12px] font-bold text-orange-800 flex items-center gap-1.5"><Store size={16}/> ご来店・受取予定の店舗</label>
+                  <select value={selectedShop || ''} onChange={(e) => setSelectedShop(e.target.value)} className="w-full h-12 bg-white border border-orange-200 rounded-xl px-4 text-[13px] font-bold text-[#2D4B3E] focus:border-orange-400 outline-none shadow-sm">
+                    <option value="">受取店舗を選択してください</option>
+                    {appSettings?.shops?.map(shop => <option key={shop.id} value={shop.name}>{shop.name}</option>)}
+                  </select>
+                </div>
+              )}
             </div>
             
             <div className="flex items-center gap-4 pt-2">
@@ -409,16 +460,6 @@ export default function StaffNewOrderPage() {
                  <label className="flex items-center gap-2 text-[13px] font-bold cursor-pointer"><input type="radio" checked={isBring === 'bring'} onChange={() => setIsBring('bring')} className="accent-[#2D4B3E]" /> あり</label>
                </div>
             </div>
-
-            {receiveMethod === 'pickup' && (
-              <div className="space-y-2 animate-in fade-in">
-                <label className="text-[11px] font-bold text-[#999999] tracking-widest">受取店舗</label>
-                <select value={selectedShop || ''} onChange={(e) => setSelectedShop(e.target.value)} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
-                  <option value="">受取店舗を選択</option>
-                  {appSettings?.shops?.map(shop => <option key={shop.id} value={shop.name}>{shop.name}</option>)}
-                </select>
-              </div>
-            )}
           </div>
 
           <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-6 overflow-hidden">
@@ -519,7 +560,7 @@ export default function StaffNewOrderPage() {
                   <div className="space-y-3">
                     {tateNeeds.includes('1') && <input type="text" placeholder="① 内容 (例: 御開店)" value={tateInput1} onChange={(e) => setTateInput1(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
                     {tateNeeds.includes('2') && <input type="text" placeholder="② 宛名 (例: 〇〇様)" value={tateInput2} onChange={(e) => setTateInput2(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
-                    {tateNeeds.includes('3') && <input type="text" placeholder="③ 贈り主" value={tateInput3} onChange={(e) => setTateInput3(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
+                    {tateNeeds.includes('3') && <input type="text" placeholder="③ 贈り主 (例: 株式会社〇〇)" value={tateInput3} onChange={(e) => setTateInput3(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
                     {tateNeeds.includes('3a') && <input type="text" placeholder="③-1 会社名" value={tateInput3a} onChange={(e) => setTateInput3a(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
                     {tateNeeds.includes('3b') && <input type="text" placeholder="③-2 役職・氏名" value={tateInput3b} onChange={(e) => setTateInput3b(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
                     
@@ -597,13 +638,11 @@ export default function StaffNewOrderPage() {
               </div>
             )}
 
-            {/* ★ 変更: 置き配設定（自社配達の時だけ表示） */}
             {receiveMethod === 'delivery' && (
               <div className="pt-6 border-t border-[#FBFAF9] space-y-4 animate-in fade-in">
                 <div className="space-y-2">
                   <label className="text-[11px] font-bold text-[#2D4B3E] tracking-widest flex items-center justify-between">
                     ご不在時の対応 (置き配)
-                    <span className="bg-[#2D4B3E] text-white px-2 py-0.5 rounded text-[9px]">必須</span>
                   </label>
                   <p className="text-[11px] text-[#999999] mb-2">生花のため、ご不在時は原則として置き配または宅配ボックスへのお届けとなります。</p>
                   <div className="grid grid-cols-2 gap-3">
