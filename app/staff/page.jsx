@@ -12,7 +12,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [stats, setStats] = useState({ todayOrders: 0, uncompletedOrders: 0 });
   const [recentOrders, setRecentOrders] = useState([]);
-  const [orders, setOrders] = useState([]); // ★ エラーの原因だった「データ記憶」を追加！
+  const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -23,7 +23,7 @@ export default function DashboardPage() {
         if (error) throw error;
 
         const fetchedOrders = data || [];
-        setOrders(fetchedOrders); // 全件データを保存
+        setOrders(fetchedOrders);
 
         let todayCount = 0;
         let uncompletedCount = 0;
@@ -97,7 +97,8 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           
-          <div onClick={() => router.push('/staff/deliveries')} className="bg-white rounded-[24px] p-6 border border-[#EAEAEA] shadow-sm flex flex-col gap-4 relative overflow-hidden group cursor-pointer hover:shadow-md hover:-translate-y-1 hover:border-[#4285F4]/40 transition-all duration-300">
+          {/* ★ 修正: クリック時の遷移先を /staff/calendar に変更しました！ */}
+          <div onClick={() => router.push('/staff/calendar')} className="bg-white rounded-[24px] p-6 border border-[#EAEAEA] shadow-sm flex flex-col gap-4 relative overflow-hidden group cursor-pointer hover:shadow-md hover:-translate-y-1 hover:border-[#4285F4]/40 transition-all duration-300">
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#2D4B3E]/5 rounded-bl-[64px] -mr-4 -mt-4 transition-transform duration-500 group-hover:scale-110"></div>
             <div className="flex items-start justify-between relative z-10">
               <div className="flex items-center gap-3">
