@@ -2,8 +2,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../utils/supabase';
-import Link from 'next/link';
-import { Store } from 'lucide-react';
+import { Store, AlertCircle } from 'lucide-react';
 
 export default function StaffNewOrderPage() {
   const router = useRouter();
@@ -88,9 +87,6 @@ export default function StaffNewOrderPage() {
     fetchSettings();
   }, []);
 
-  const generalConfig = appSettings?.generalConfig || {};
-  const appName = generalConfig.appName || 'FLORIX';
-  const logoUrl = generalConfig.logoUrl || '';
   const staffConfig = appSettings?.staffOrderConfig || {};
   const selectedItemSettings = useMemo(() => appSettings?.flowerItems?.find(i => i.name === flowerType) || {}, [flowerType, appSettings]);
 
@@ -132,22 +128,30 @@ export default function StaffNewOrderPage() {
   const tateNeeds = selectedTateOpt?.needs || [];
   const topPrefixText = isOsonae ? (prefixFormat === 'hiragana' ? 'お供え' : '御供') : (prefixFormat === 'hiragana' ? 'お祝い' : '祝');
 
-  // ★ カレンダーの選択制限（代理入力設定がONなら解除）
-  const minDateLimit = useMemo(() => {
-    if (staffConfig.ignoreLeadTime) return new Date().toISOString().split('T')[0]; 
+  // ★ 本来の「設定上の最短納期」を計算
+  const properMinDate = useMemo(() => {
+    if (!flowerType) return '';
     const base = new Date();
     let lead = 0;
-    if (receiveMethod === 'sagawa') lead = selectedItemSettings?.shippingLeadDays || 0;
-    else lead = selectedItemSettings?.normalLeadDays || 0;
+    if (receiveMethod === 'sagawa') lead = selectedItemSettings.shippingLeadDays || 0;
+    else lead = selectedItemSettings.normalLeadDays || 0;
 
     if (isBring === 'bring') {
-      if (selectedItemSettings?.canBringFlowers && selectedItemSettings?.canBringFlowersLeadDays > lead) lead = selectedItemSettings.canBringFlowersLeadDays;
-      if (selectedItemSettings?.canBringVase && selectedItemSettings?.canBringVaseLeadDays > lead) lead = selectedItemSettings.canBringVaseLeadDays;
+      const fLead = selectedItemSettings.canBringFlowersLeadDays || 0;
+      const vLead = selectedItemSettings.canBringVaseLeadDays || 0;
+      if (selectedItemSettings.canBringFlowers && fLead > lead) lead = fLead;
+      if (selectedItemSettings.canBringVase && vLead > lead) lead = vLead;
     }
     const d = new Date(base);
-    d.setDate(base.getDate() + lead);
+    d.setDate(d.getDate() + lead);
     return d.toISOString().split('T')[0];
-  }, [flowerType, isBring, receiveMethod, selectedItemSettings, staffConfig.ignoreLeadTime]);
+  }, [flowerType, isBring, receiveMethod, selectedItemSettings]);
+
+  // ★ 実際のカレンダーの制限（制限解除中は本日以降を選択可にする）
+  const minDateLimit = useMemo(() => {
+    if (staffConfig.ignoreLeadTime) return new Date().toISOString().split('T')[0]; 
+    return properMinDate;
+  }, [staffConfig.ignoreLeadTime, properMinDate]);
 
   const getPriceOptions = () => {
     if (!flowerType) return [];
@@ -184,6 +188,7 @@ export default function StaffNewOrderPage() {
     return res;
   };
 
+  // 自動計算
   useEffect(() => {
     if (!receiveMethod || receiveMethod === 'pickup' || !itemPrice) { 
       setCalculatedFee(null); setPickupFee(0); setAreaError(''); return; 
@@ -301,11 +306,10 @@ export default function StaffNewOrderPage() {
   const tax = Math.floor(subTotal * 0.1);
   const totalAmount = subTotal + tax;
 
-  // ★ スタッフ専用：登録時の「ゆるい制限＆確認アナウンス」
   const handleSubmitStaffOrder = async () => {
+    // 必須チェックのアラート（ポップアップ）は維持
     let warnings = [];
 
-    // 未入力項目のリストアップ
     if (!receptionType) warnings.push('・受付区分');
     if (!staffName) warnings.push('・受付スタッフ');
     if (!shopId) warnings.push('・受付した店舗');
@@ -319,32 +323,9 @@ export default function StaffNewOrderPage() {
       warnings.push('・置き配の場所');
     }
 
-    // 納期が設定値より早い場合のアナウンス
-    if (selectedDate && flowerType) {
-      const base = new Date();
-      let lead = 0;
-      if (receiveMethod === 'sagawa') lead = selectedItemSettings?.shippingLeadDays || 0;
-      else lead = selectedItemSettings?.normalLeadDays || 0;
-
-      if (isBring === 'bring') {
-        const fLead = selectedItemSettings?.canBringFlowersLeadDays || 0;
-        const vLead = selectedItemSettings?.canBringVaseLeadDays || 0;
-        if (selectedItemSettings?.canBringFlowers && fLead > lead) lead = fLead;
-        if (selectedItemSettings?.canBringVase && vLead > lead) lead = vLead;
-      }
-      const d = new Date();
-      d.setDate(d.getDate() + lead);
-      const properMinDate = d.toISOString().split('T')[0];
-
-      if (selectedDate < properMinDate) {
-        warnings.push(`・納品日 (${selectedDate}) が、規定の最短納期 (${properMinDate}) よりも早く設定されています`);
-      }
-    }
-
-    // 警告が1つでもあれば確認ダイアログを出す
     if (warnings.length > 0) {
-      const isConfirmed = window.confirm("⚠️ 以下の確認事項があります：\n\n" + warnings.join("\n") + "\n\nこのまま注文を強制的に登録してもよろしいですか？");
-      if (!isConfirmed) return; // キャンセルした場合は処理ストップ
+      const isConfirmed = window.confirm("⚠️ 以下の未入力・確認事項があります：\n\n" + warnings.join("\n") + "\n\nこのまま注文を強制的に登録してもよろしいですか？");
+      if (!isConfirmed) return;
     }
     
     setIsSubmitting(true);
@@ -385,7 +366,11 @@ export default function StaffNewOrderPage() {
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-[#EAEAEA] flex items-center justify-between px-8 sticky top-0 z-10">
           <h1 className="text-[18px] font-bold tracking-tight text-[#2D4B3E] flex items-center gap-3">
             店舗注文受付 (代理入力)
-            {staffConfig.ignoreLeadTime && <span className="text-[10px] bg-[#2D4B3E]/10 text-[#2D4B3E] px-2 py-1 rounded-md">納期制限解除中</span>}
+            {/* ★ ヘッダーにも制限解除中であることを明記 */}
+            <div className="flex gap-2">
+              {staffConfig.ignoreLeadTime && <span className="text-[10px] bg-orange-100 text-orange-700 border border-orange-200 px-2 py-1 rounded-md font-bold">納期制限 解除中</span>}
+              {staffConfig.allowCustomPrice && <span className="text-[10px] bg-orange-100 text-orange-700 border border-orange-200 px-2 py-1 rounded-md font-bold">金額自由入力 解除中</span>}
+            </div>
           </h1>
         </header>
 
@@ -521,9 +506,18 @@ export default function StaffNewOrderPage() {
                 )}
               </div>
               {isCustomPrice ? (
-                <div className="flex items-center gap-3">
-                  <span className="font-bold text-[18px]">¥</span>
-                  <input type="number" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} className="w-full h-14 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 font-bold text-[#2D4B3E] text-[18px] focus:border-[#2D4B3E] outline-none" placeholder="例: 3500" />
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <span className="font-bold text-[18px]">¥</span>
+                    <input type="number" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} className="w-full h-14 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 font-bold text-[#2D4B3E] text-[18px] focus:border-[#2D4B3E] outline-none" placeholder="例: 3500" />
+                  </div>
+                  {/* ★ 注意喚起：自由入力モード中 */}
+                  {itemPrice && (
+                    <div className="bg-orange-50 text-orange-700 px-4 py-2.5 rounded-xl text-[11px] font-bold flex items-start gap-2 border border-orange-200 mt-2">
+                      <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                      <span className="leading-relaxed">注意：金額自由入力モードで入力されています。<br/>送料や箱代の計算基準（〇〇円以上なら無料など）が意図通りか確認してください。</span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <select value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} className={`w-full h-14 border rounded-xl px-4 font-bold text-[16px] outline-none transition-all ${selectedImage ? 'border-[#2D4B3E] text-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#EAEAEA] bg-[#FBFAF9] focus:border-[#2D4B3E]'}`}>
@@ -591,6 +585,13 @@ export default function StaffNewOrderPage() {
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">納品希望日</label>
                 <input type="date" min={minDateLimit} value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none" />
+                {/* ★ 納期制限より早い日付を選んだ場合の注意喚起（リアルタイム表示） */}
+                {selectedDate && properMinDate && selectedDate < properMinDate && (
+                  <div className="bg-orange-50 text-orange-700 px-3 py-2.5 rounded-xl text-[11px] font-bold flex items-start gap-1.5 border border-orange-200 mt-2">
+                    <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                    <span className="leading-relaxed">注意：規定の最短納期（{new Date(properMinDate).toLocaleDateString('ja-JP')}）より早い日付が指定されています。対応可能か確認してください。</span>
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">希望時間</label>
@@ -638,6 +639,7 @@ export default function StaffNewOrderPage() {
               </div>
             )}
 
+            {/* 置き配設定（自社配達の時だけ） */}
             {receiveMethod === 'delivery' && (
               <div className="pt-6 border-t border-[#FBFAF9] space-y-4 animate-in fade-in">
                 <div className="space-y-2">
