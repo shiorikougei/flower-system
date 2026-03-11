@@ -2,12 +2,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation'; // ★ルーターを追加
 import { 
   Calendar, ShoppingBag, PlusCircle, Settings, 
   Clock, Package, ChevronRight, Truck, Store 
 } from 'lucide-react';
 
 export default function DashboardPage() {
+  const router = useRouter(); // ★ルーターを初期化
   const [stats, setStats] = useState({
     todayOrders: 0,
     uncompletedOrders: 0,
@@ -38,13 +40,13 @@ export default function DashboardPage() {
         orders.forEach(order => {
           const d = order.order_data || {};
           
-          // 未完了のものをカウント
-          if (d.status !== 'completed') {
+          // 未完了のものをカウント（完了とキャンセル以外）
+          if (d.status !== '完了' && d.status !== 'キャンセル' && d.status !== 'completed') {
             uncompletedCount++;
           }
 
-          // 今日の日付で、かつ未完了のものをカウント
-          if (d.selectedDate === todayStr && d.status !== 'completed') {
+          // 今日の日付で、かつキャンセル以外のものをカウント
+          if (d.selectedDate === todayStr && d.status !== 'キャンセル') {
             todayCount++;
           }
 
@@ -97,29 +99,49 @@ export default function DashboardPage() {
 
         {/* 統計サマリーカード */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="bg-white rounded-[24px] p-6 border border-[#EAEAEA] shadow-sm flex flex-col gap-4 relative overflow-hidden group">
+          
+          {/* ★ 本日の予定カード -> クリックで配達管理へ */}
+          <div 
+            onClick={() => router.push('/staff/deliveries')}
+            className="bg-white rounded-[24px] p-6 border border-[#EAEAEA] shadow-sm flex flex-col gap-4 relative overflow-hidden group cursor-pointer hover:shadow-md hover:-translate-y-1 hover:border-[#4285F4]/40 transition-all duration-300"
+          >
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#2D4B3E]/5 rounded-bl-[64px] -mr-4 -mt-4 transition-transform duration-500 group-hover:scale-110"></div>
-            <div className="flex items-center gap-3 relative z-10">
-              <div className="w-10 h-10 rounded-xl bg-[#2D4B3E]/10 text-[#2D4B3E] flex items-center justify-center"><Calendar size={20}/></div>
-              <span className="text-[12px] font-bold text-[#999999] uppercase tracking-widest">本日 (お届け/受取)</span>
+            <div className="flex items-start justify-between relative z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#2D4B3E]/10 text-[#2D4B3E] flex items-center justify-center"><Calendar size={20}/></div>
+                <span className="text-[12px] font-bold text-[#999999] uppercase tracking-widest">本日 (お届け/受取)</span>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-[#FBFAF9] flex items-center justify-center group-hover:bg-[#4285F4] transition-colors">
+                <ChevronRight size={16} className="text-[#999999] group-hover:text-white transition-colors" />
+              </div>
             </div>
-            <div className="flex items-baseline gap-2 relative z-10">
-              <span className="text-[48px] font-black text-[#2D4B3E] leading-none">{isLoading ? '-' : stats.todayOrders}</span>
+            <div className="flex items-baseline gap-2 relative z-10 pt-2">
+              <span className="text-[48px] font-black text-[#2D4B3E] leading-none group-hover:text-[#4285F4] transition-colors">{isLoading ? '-' : stats.todayOrders}</span>
               <span className="text-[14px] font-bold text-[#999999]">件</span>
             </div>
           </div>
           
-          <div className="bg-white rounded-[24px] p-6 border border-[#EAEAEA] shadow-sm flex flex-col gap-4 relative overflow-hidden group">
+          {/* ★ 未完了の注文カード -> クリックで受注一覧へ */}
+          <div 
+            onClick={() => router.push('/staff/orders')}
+            className="bg-white rounded-[24px] p-6 border border-[#EAEAEA] shadow-sm flex flex-col gap-4 relative overflow-hidden group cursor-pointer hover:shadow-md hover:-translate-y-1 hover:border-[#E74C3C]/40 transition-all duration-300"
+          >
             <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-[64px] -mr-4 -mt-4 transition-transform duration-500 group-hover:scale-110"></div>
-            <div className="flex items-center gap-3 relative z-10">
-              <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><Clock size={20}/></div>
-              <span className="text-[12px] font-bold text-[#999999] uppercase tracking-widest">未完了の注文総数</span>
+            <div className="flex items-start justify-between relative z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><Clock size={20}/></div>
+                <span className="text-[12px] font-bold text-[#999999] uppercase tracking-widest">未完了の注文総数</span>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-[#FBFAF9] flex items-center justify-center group-hover:bg-[#E74C3C] transition-colors">
+                <ChevronRight size={16} className="text-[#999999] group-hover:text-white transition-colors" />
+              </div>
             </div>
-            <div className="flex items-baseline gap-2 relative z-10">
-              <span className="text-[48px] font-black text-[#111111] leading-none">{isLoading ? '-' : stats.uncompletedOrders}</span>
+            <div className="flex items-baseline gap-2 relative z-10 pt-2">
+              <span className="text-[48px] font-black text-[#111111] leading-none group-hover:text-[#E74C3C] transition-colors">{isLoading ? '-' : stats.uncompletedOrders}</span>
               <span className="text-[14px] font-bold text-[#999999]">件</span>
             </div>
           </div>
+
         </div>
 
         {/* クイックアクション */}
@@ -180,8 +202,8 @@ export default function DashboardPage() {
                       </div>
                       
                       <div className="flex items-center gap-6 justify-between md:justify-end">
-                        <span className={`px-4 py-1.5 rounded-lg text-[11px] font-bold ${d.status === 'completed' ? 'bg-gray-100 text-gray-500' : 'bg-orange-50 text-orange-600'}`}>
-                          {d.status === 'completed' ? '完了済み' : (d.currentStatus || '未対応')}
+                        <span className={`px-4 py-1.5 rounded-lg text-[11px] font-bold ${d.status === '完了' || d.status === 'completed' ? 'bg-gray-100 text-gray-500' : 'bg-orange-50 text-orange-600'}`}>
+                          {d.status === 'completed' ? '完了' : (d.status || '未対応')}
                         </span>
                         <Link href="/staff/orders" className="w-10 h-10 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center text-[#999999] group-hover:border-[#2D4B3E] group-hover:text-[#2D4B3E] transition-all shadow-sm">
                           <ChevronRight size={18}/>
