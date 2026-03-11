@@ -1,368 +1,208 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
-import { Save, Plus, Trash2, Clock, Truck, Store, Package } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { 
+  Calendar, ShoppingBag, PlusCircle, Settings, 
+  Clock, Package, ChevronRight, Truck, Store 
+} from 'lucide-react';
 
-export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState('general');
+export default function DashboardPage() {
+  const router = useRouter();
+  const [stats, setStats] = useState({ todayOrders: 0, uncompletedOrders: 0 });
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-
-  // --- 設定データ群 ---
-  const [generalConfig, setGeneralConfig] = useState({ appName: 'FLORIX', logoUrl: '' });
-  const [shops, setShops] = useState([]);
-  const [flowerItems, setFlowerItems] = useState([]);
-  const [deliveryAreas, setDeliveryAreas] = useState([]);
-  const [shippingRates, setShippingRates] = useState([]);
-  const [shippingSizes, setShippingSizes] = useState(['80', '100', '120']);
-  
-  // ★ 新規追加：時間帯枠の設定
-  const [timeSlots, setTimeSlots] = useState({
-    pickup: ['10:00-12:00', '12:00-15:00', '15:00-18:00'],
-    delivery: ['9:00-12:00', '12:00-15:00', '15:00-18:00', '18:00-21:00'],
-    shipping: ['午前中', '14:00-16:00', '16:00-18:00', '18:00-20:00', '19:00-21:00']
-  });
-
-  const [boxFeeConfig, setBoxFeeConfig] = useState({
-    type: 'flat', flatFee: 0, priceTiers: [], coolBinEnabled: false, coolBinPeriods: [], returnFeeType: 'flat', returnFeeValue: 0
-  });
-  const [staffList, setStaffList] = useState([]);
-  const [staffOrderConfig, setStaffOrderConfig] = useState({ paymentMethods: ['現地決済', '銀行振込', '請求書払い'], ignoreLeadTime: false, allowCustomPrice: false });
-  const [statusConfig, setStatusConfig] = useState({ customLabels: ['制作中', '制作完了', '配達中'] });
 
   useEffect(() => {
-    fetchSettings();
-  }, []);
+    async function fetchDashboardData() {
+      try {
+        const todayStr = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
+        const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
 
-  const fetchSettings = async () => {
-    try {
-      const { data, error } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
-      if (error && error.code !== 'PGRST116') throw error;
-      
-      if (data && data.settings_data) {
-        const d = data.settings_data;
-        setGeneralConfig(d.generalConfig || { appName: 'FLORIX', logoUrl: '' });
-        setShops(d.shops || []);
-        setFlowerItems(d.flowerItems || []);
-        setDeliveryAreas(d.deliveryAreas || []);
-        
-        // 地域別送料の初期データ（リードタイム項目を追加）
-        const defaultRates = [
-          { region: '北海道', prefs: '北海道', fee80: 0, fee100: 0, cool80: 0, cool100: 0, leadDays: 1 },
-          { region: '北東北', prefs: '青森,岩手,秋田', fee80: 0, fee100: 0, cool80: 0, cool100: 0, leadDays: 2 },
-          { region: '南東北', prefs: '宮城,山形,福島', fee80: 0, fee100: 0, cool80: 0, cool100: 0, leadDays: 2 },
-          { region: '関東', prefs: '茨城,栃木,群馬,埼玉,千葉,東京,神奈川,山梨', fee80: 0, fee100: 0, cool80: 0, cool100: 0, leadDays: 2 },
-          { region: '信越', prefs: '新潟,長野', fee80: 0, fee100: 0, cool80: 0, cool100: 0, leadDays: 2 },
-          { region: '北陸', prefs: '富山,石川,福井', fee80: 0, fee100: 0, cool80: 0, cool100: 0, leadDays: 2 },
-          { region: '中部', prefs: '岐阜,静岡,愛知,三重', fee80: 0, fee100: 0, cool80: 0, cool100: 0, leadDays: 2 },
-          { region: '関西', prefs: '滋賀,京都,大阪,兵庫,奈良,和歌山', fee80: 0, fee100: 0, cool80: 0, cool100: 0, leadDays: 3 },
-          { region: '中国', prefs: '鳥取,島根,岡山,広島,山口', fee80: 0, fee100: 0, cool80: 0, cool100: 0, leadDays: 3 },
-          { region: '四国', prefs: '徳島,香川,愛媛,高知', fee80: 0, fee100: 0, cool80: 0, cool100: 0, leadDays: 3 },
-          { region: '九州', prefs: '福岡,佐賀,長崎,熊本,大分,宮崎,鹿児島', fee80: 0, fee100: 0, cool80: 0, cool100: 0, leadDays: 3 },
-          { region: '沖縄', prefs: '沖縄', fee80: 0, fee100: 0, cool80: 0, cool100: 0, leadDays: 4 }
-        ];
-        
-        // 既存のデータがあれば結合、なければデフォルト
-        const loadedRates = d.shippingRates?.length > 0 ? d.shippingRates : defaultRates;
-        // 古いデータに leadDays が無い場合への対応
-        const ratesWithLeadDays = loadedRates.map(r => ({ ...r, leadDays: r.leadDays ?? 2 }));
-        setShippingRates(ratesWithLeadDays);
-        
-        setShippingSizes(d.shippingSizes || ['80', '100', '120']);
-        
-        // 時間枠設定の読み込み
-        setTimeSlots(d.timeSlots || {
-          pickup: ['10:00-12:00', '12:00-15:00', '15:00-18:00'],
-          delivery: ['9:00-12:00', '12:00-15:00', '15:00-18:00', '18:00-21:00'],
-          shipping: ['午前中', '14:00-16:00', '16:00-18:00', '18:00-20:00', '19:00-21:00']
+        const fetchedOrders = data || [];
+        setOrders(fetchedOrders);
+
+        let todayCount = 0;
+        let uncompletedCount = 0;
+        const recent = [];
+
+        fetchedOrders.forEach(order => {
+          const d = order.order_data || {};
+          
+          if (d.status !== '完了' && d.status !== 'キャンセル' && d.status !== 'completed') {
+            uncompletedCount++;
+          }
+
+          // 業者配送なら「発送日」、それ以外は「納品日」を今日のタスク基準にする
+          const targetDate = d.receiveMethod === 'sagawa' ? (d.shippingDate || d.selectedDate) : d.selectedDate;
+
+          if (targetDate === todayStr && d.status !== 'キャンセル') {
+            todayCount++;
+          }
+
+          if (recent.length < 5) recent.push(order);
         });
 
-        setBoxFeeConfig(d.boxFeeConfig || { type: 'flat', flatFee: 0, priceTiers: [], coolBinEnabled: false, coolBinPeriods: [], returnFeeType: 'flat', returnFeeValue: 0 });
-        setStaffList(d.staffList || []);
-        setStaffOrderConfig(d.staffOrderConfig || { paymentMethods: ['現地決済', '銀行振込'], ignoreLeadTime: false, allowCustomPrice: false });
-        setStatusConfig(d.statusConfig || { customLabels: ['制作中', '制作完了', '配達中'] });
+        setStats({ todayOrders: todayCount, uncompletedOrders: uncompletedCount });
+        setRecentOrders(recent);
+      } catch (error) {
+        console.error('データ取得エラー:', error.message);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('設定の読み込みエラー', error);
-    } finally {
-      setIsLoading(false);
     }
+    fetchDashboardData();
+  }, []);
+
+  const getMethodIcon = (method) => {
+    if (method === 'pickup') return <Store size={14} className="text-blue-500" />;
+    if (method === 'delivery') return <Truck size={14} className="text-[#D97C8F]" />;
+    return <Package size={14} className="text-[#2D4B3E]" />;
   };
 
-  const saveSettings = async () => {
-    setIsSaving(true);
-    const settingsData = {
-      generalConfig, shops, flowerItems, deliveryAreas, shippingRates, shippingSizes, timeSlots, // ★保存データにtimeSlots追加
-      boxFeeConfig, staffList, staffOrderConfig, statusConfig
-    };
-    try {
-      const { error } = await supabase.from('app_settings').upsert({ id: 'default', settings_data: settingsData });
-      if (error) throw error;
-      alert('設定を保存しました！');
-    } catch (error) {
-      console.error('保存エラー', error);
-      alert('設定の保存に失敗しました。');
-    } finally {
-      setIsSaving(false);
-    }
+  const getMethodLabel = (method) => {
+    const map = { pickup: '店頭受取', delivery: '自社配達', sagawa: '佐川急便' };
+    return map[method] || method;
   };
 
-  // --- ハンドラー関数 ---
-  const handleArrayChange = (setter, index, value) => {
-    setter(prev => { const newArr = [...prev]; newArr[index] = value; return newArr; });
-  };
-  const addArrayItem = (setter, emptyItem) => setter(prev => [...prev, emptyItem]);
-  const removeArrayItem = (setter, index) => setter(prev => prev.filter((_, i) => i !== index));
+  // 本日の受取方法別の内訳（配送は発送日基準）
+  const todayStr = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
+  const todayOrdersList = orders.filter(o => {
+    const d = o.order_data || {};
+    const tDate = d.receiveMethod === 'sagawa' ? (d.shippingDate || d.selectedDate) : d.selectedDate;
+    return tDate === todayStr && d.status !== 'キャンセル';
+  });
 
-  const handleRateChange = (index, field, value) => {
-    setShippingRates(prev => {
-      const newRates = [...prev];
-      newRates[index][field] = value;
-      return newRates;
-    });
-  };
+  const todayPickup = todayOrdersList.filter(o => o.order_data?.receiveMethod === 'pickup').length;
+  const todayDelivery = todayOrdersList.filter(o => o.order_data?.receiveMethod === 'delivery').length;
+  const todaySagawa = todayOrdersList.filter(o => o.order_data?.receiveMethod === 'sagawa').length;
 
-  // 時間枠のハンドラー
-  const handleTimeSlotChange = (method, index, value) => {
-    setTimeSlots(prev => {
-      const newSlots = { ...prev };
-      newSlots[method][index] = value;
-      return newSlots;
-    });
-  };
-  const addTimeSlot = (method) => {
-    setTimeSlots(prev => ({ ...prev, [method]: [...prev[method], ''] }));
-  };
-  const removeTimeSlot = (method, index) => {
-    setTimeSlots(prev => ({ ...prev, [method]: prev[method].filter((_, i) => i !== index) }));
-  };
-
-  if (isLoading) return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center text-[#2D4B3E] font-bold tracking-widest animate-pulse">読み込み中...</div>;
+  if (isLoading) return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-sans text-[#2D4B3E] font-bold tracking-widest animate-pulse">読み込み中...</div>;
 
   return (
-    <div className="min-h-screen bg-[#FBFAF9] font-sans pb-32">
-      <header className="bg-white border-b border-[#EAEAEA] sticky top-0 z-30 px-6 py-4 shadow-sm flex items-center justify-between">
-        <h1 className="text-[20px] font-black text-[#2D4B3E] tracking-widest">各種設定</h1>
-        <button onClick={saveSettings} disabled={isSaving} className="bg-[#2D4B3E] text-white px-6 py-2.5 rounded-xl font-bold text-[13px] flex items-center gap-2 hover:bg-[#1f352b] transition-all shadow-md active:scale-95 disabled:opacity-50">
-          <Save size={16} /> {isSaving ? '保存中...' : '設定を保存'}
-        </button>
+    <main className="pb-32 font-sans">
+      <header className="h-20 bg-white/80 backdrop-blur-md border-b border-[#EAEAEA] flex items-center px-8 sticky top-0 z-10">
+        <h1 className="text-[18px] font-bold tracking-tight text-[#2D4B3E]">ダッシュボード</h1>
       </header>
 
-      <main className="max-w-[1000px] mx-auto p-6 pt-8 flex flex-col md:flex-row gap-8">
+      <div className="max-w-[1200px] mx-auto w-full p-4 md:p-8 space-y-10">
         
-        {/* 左側：タブメニュー */}
-        <aside className="w-full md:w-48 shrink-0 flex flex-col gap-2">
-          {[{ id: 'general', label: '基本・店舗' }, { id: 'items', label: '商品・納期' }, { id: 'shipping', label: '配送・時間枠' }, { id: 'staff', label: 'スタッフ・決済' }].map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`px-4 py-3 rounded-xl text-left font-bold text-[13px] transition-all ${activeTab === tab.id ? 'bg-[#2D4B3E] text-white shadow-md' : 'bg-white text-[#555555] border border-[#EAEAEA] hover:border-[#2D4B3E]'}`}>
-              {tab.label}
-            </button>
-          ))}
-        </aside>
-
-        {/* 右側：設定内容 */}
-        <div className="flex-1 bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-12">
-          
-          {/* =========================================
-              タブ：基本・店舗設定
-          ========================================= */}
-          {activeTab === 'general' && (
-            <div className="space-y-8 animate-in fade-in">
-              <section className="space-y-4">
-                <h2 className="text-[16px] font-black text-[#2D4B3E] border-b pb-2">店舗（受取場所）の設定</h2>
-                {shops.map((shop, i) => (
-                  <div key={i} className="flex flex-col gap-3 bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA] relative">
-                    <input type="text" placeholder="店舗名" value={shop.name || ''} onChange={(e) => { const newShops = [...shops]; newShops[i].name = e.target.value; setShops(newShops); }} className="w-full px-4 py-2 rounded-lg border outline-none font-bold" />
-                    <input type="text" placeholder="住所" value={shop.address || ''} onChange={(e) => { const newShops = [...shops]; newShops[i].address = e.target.value; setShops(newShops); }} className="w-full px-4 py-2 rounded-lg border outline-none text-[13px]" />
-                    <button onClick={() => removeArrayItem(setShops, i)} className="absolute top-4 right-4 text-red-500 hover:bg-red-50 p-2 rounded-lg"><Trash2 size={16} /></button>
-                  </div>
-                ))}
-                <button onClick={() => addArrayItem(setShops, { id: Date.now(), name: '', address: '', openTime: '10:00', closeTime: '19:00' })} className="text-[13px] font-bold text-[#4285F4] flex items-center gap-1 p-2"><Plus size={16}/> 店舗を追加</button>
-              </section>
-            </div>
-          )}
-
-          {/* =========================================
-              タブ：商品・納期設定
-          ========================================= */}
-          {activeTab === 'items' && (
-            <div className="space-y-8 animate-in fade-in">
-              <section className="space-y-4">
-                <h2 className="text-[16px] font-black text-[#2D4B3E] border-b pb-2">商品リストと納期（リードタイム）</h2>
-                {flowerItems.map((item, i) => (
-                  <div key={i} className="bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA] space-y-4 relative">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-[#999999]">商品名</label>
-                        <input type="text" value={item.name || ''} onChange={(e) => { const newItems = [...flowerItems]; newItems[i].name = e.target.value; setFlowerItems(newItems); }} className="w-full px-3 py-2 rounded-lg border font-bold" />
-                      </div>
-                      <div className="flex items-center gap-3 pt-6">
-                        <label className="flex items-center gap-2 text-[12px] font-bold"><input type="checkbox" checked={item.canBringFlowers || false} onChange={(e) => { const newItems = [...flowerItems]; newItems[i].canBringFlowers = e.target.checked; setFlowerItems(newItems); }} className="accent-[#2D4B3E] w-4 h-4" /> お花持込可</label>
-                        <label className="flex items-center gap-2 text-[12px] font-bold"><input type="checkbox" checked={item.canBringVase || false} onChange={(e) => { const newItems = [...flowerItems]; newItems[i].canBringVase = e.target.checked; setFlowerItems(newItems); }} className="accent-[#2D4B3E] w-4 h-4" /> 器持込可</label>
-                        <label className="flex items-center gap-2 text-[12px] font-bold text-orange-600"><input type="checkbox" checked={item.hasReturn || false} onChange={(e) => { const newItems = [...flowerItems]; newItems[i].hasReturn = e.target.checked; setFlowerItems(newItems); }} className="accent-orange-600 w-4 h-4" /> 後日回収あり</label>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-white p-3 rounded-xl border border-[#EAEAEA]">
-                      <div>
-                        <label className="text-[10px] font-bold text-[#999999] block mb-1">通常納期 (自社/店頭)</label>
-                        <div className="flex items-center gap-1"><input type="number" value={item.normalLeadDays || 0} onChange={(e) => { const newItems = [...flowerItems]; newItems[i].normalLeadDays = e.target.value; setFlowerItems(newItems); }} className="w-16 px-2 py-1 border rounded text-center font-bold" /> 日前</div>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-[#999999] block mb-1">配送納期 (業者)</label>
-                        <div className="flex items-center gap-1"><input type="number" value={item.shippingLeadDays || 0} onChange={(e) => { const newItems = [...flowerItems]; newItems[i].shippingLeadDays = e.target.value; setFlowerItems(newItems); }} className="w-16 px-2 py-1 border rounded text-center font-bold" /> 日前</div>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-[#999999] block mb-1">花材持込時の納期</label>
-                        <div className="flex items-center gap-1"><input type="number" value={item.canBringFlowersLeadDays || 0} onChange={(e) => { const newItems = [...flowerItems]; newItems[i].canBringFlowersLeadDays = e.target.value; setFlowerItems(newItems); }} className="w-16 px-2 py-1 border rounded text-center font-bold" /> 日前</div>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-[#999999] block mb-1">器持込時の納期</label>
-                        <div className="flex items-center gap-1"><input type="number" value={item.canBringVaseLeadDays || 0} onChange={(e) => { const newItems = [...flowerItems]; newItems[i].canBringVaseLeadDays = e.target.value; setFlowerItems(newItems); }} className="w-16 px-2 py-1 border rounded text-center font-bold" /> 日前</div>
-                      </div>
-                    </div>
-                    <button onClick={() => removeArrayItem(setFlowerItems, i)} className="absolute top-4 right-4 text-red-500 hover:bg-red-50 p-2 rounded-lg"><Trash2 size={16} /></button>
-                  </div>
-                ))}
-                <button onClick={() => addArrayItem(setFlowerItems, { id: Date.now(), name: '', normalLeadDays: 2, shippingLeadDays: 3, canBringFlowers: false, canBringVase: false })} className="text-[13px] font-bold text-[#4285F4] flex items-center gap-1 p-2"><Plus size={16}/> 商品を追加</button>
-              </section>
-            </div>
-          )}
-
-          {/* =========================================
-              タブ：配送・時間枠設定
-          ========================================= */}
-          {activeTab === 'shipping' && (
-            <div className="space-y-12 animate-in fade-in">
-              
-              {/* ★ 新機能：時間帯の枠設定 */}
-              <section className="space-y-6">
-                <h2 className="text-[16px] font-black text-[#2D4B3E] border-b pb-2 flex items-center gap-2"><Clock size={18}/> 受取・配達の時間帯枠設定</h2>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* 店頭受取の時間枠 */}
-                  <div className="bg-orange-50 p-4 rounded-2xl border border-orange-200">
-                    <h3 className="text-[13px] font-bold text-orange-800 mb-3 flex items-center gap-1"><Store size={14}/> 店頭受取の時間帯</h3>
-                    <div className="space-y-2">
-                      {timeSlots.pickup.map((slot, i) => (
-                        <div key={i} className="flex gap-2">
-                          <input type="text" value={slot} placeholder="例: 10:00-12:00" onChange={(e) => handleTimeSlotChange('pickup', i, e.target.value)} className="flex-1 px-3 py-1.5 rounded-lg border border-orange-200 text-[13px] font-bold outline-none" />
-                          <button onClick={() => removeTimeSlot('pickup', i)} className="text-red-500 p-1.5"><X size={14}/></button>
-                        </div>
-                      ))}
-                      <button onClick={() => addTimeSlot('pickup')} className="text-[11px] font-bold text-orange-600 flex items-center gap-1 mt-2"><Plus size={14}/> 枠を追加</button>
-                    </div>
-                  </div>
-
-                  {/* 自社配達の時間枠 */}
-                  <div className="bg-blue-50 p-4 rounded-2xl border border-blue-200">
-                    <h3 className="text-[13px] font-bold text-blue-800 mb-3 flex items-center gap-1"><Truck size={14}/> 自社配達の時間帯</h3>
-                    <div className="space-y-2">
-                      {timeSlots.delivery.map((slot, i) => (
-                        <div key={i} className="flex gap-2">
-                          <input type="text" value={slot} placeholder="例: 9:00-12:00" onChange={(e) => handleTimeSlotChange('delivery', i, e.target.value)} className="flex-1 px-3 py-1.5 rounded-lg border border-blue-200 text-[13px] font-bold outline-none" />
-                          <button onClick={() => removeTimeSlot('delivery', i)} className="text-red-500 p-1.5"><X size={14}/></button>
-                        </div>
-                      ))}
-                      <button onClick={() => addTimeSlot('delivery')} className="text-[11px] font-bold text-blue-600 flex items-center gap-1 mt-2"><Plus size={14}/> 枠を追加</button>
-                    </div>
-                  </div>
-
-                  {/* 業者配送の時間枠 */}
-                  <div className="bg-green-50 p-4 rounded-2xl border border-green-200">
-                    <h3 className="text-[13px] font-bold text-green-800 mb-3 flex items-center gap-1"><Package size={14}/> 業者配送の時間帯</h3>
-                    <div className="space-y-2">
-                      {timeSlots.shipping.map((slot, i) => (
-                        <div key={i} className="flex gap-2">
-                          <input type="text" value={slot} placeholder="例: 午前中" onChange={(e) => handleTimeSlotChange('shipping', i, e.target.value)} className="flex-1 px-3 py-1.5 rounded-lg border border-green-200 text-[13px] font-bold outline-none" />
-                          <button onClick={() => removeTimeSlot('shipping', i)} className="text-red-500 p-1.5"><X size={14}/></button>
-                        </div>
-                      ))}
-                      <button onClick={() => addTimeSlot('shipping')} className="text-[11px] font-bold text-green-600 flex items-center gap-1 mt-2"><Plus size={14}/> 枠を追加</button>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section className="space-y-4">
-                <h2 className="text-[16px] font-black text-[#2D4B3E] border-b pb-2">自社配達エリアと送料</h2>
-                {deliveryAreas.map((area, i) => (
-                  <div key={i} className="flex flex-col md:flex-row gap-3 bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA] relative">
-                    <input type="text" placeholder="キーワード (例: 北区,中央区)" value={area.name || ''} onChange={(e) => { const newAreas = [...deliveryAreas]; newAreas[i].name = e.target.value; setDeliveryAreas(newAreas); }} className="flex-1 px-4 py-2 rounded-lg border outline-none text-[13px]" />
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold">¥</span>
-                      <input type="number" placeholder="送料" value={area.fee || ''} onChange={(e) => { const newAreas = [...deliveryAreas]; newAreas[i].fee = e.target.value; setDeliveryAreas(newAreas); }} className="w-24 px-4 py-2 rounded-lg border outline-none font-bold" />
-                    </div>
-                    <button onClick={() => removeArrayItem(setDeliveryAreas, i)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg"><Trash2 size={16} /></button>
-                  </div>
-                ))}
-                <button onClick={() => addArrayItem(setDeliveryAreas, { name: '', fee: 0 })} className="text-[13px] font-bold text-[#4285F4] flex items-center gap-1 p-2"><Plus size={16}/> エリアを追加</button>
-              </section>
-
-              {/* ★ 地域別送料と配送日数 */}
-              <section className="space-y-4">
-                <div className="flex items-center justify-between border-b pb-2">
-                  <h2 className="text-[16px] font-black text-[#2D4B3E]">業者配送：地域別の送料と「配送日数」</h2>
-                </div>
-                <div className="overflow-x-auto border border-[#EAEAEA] rounded-2xl">
-                  <table className="w-full text-[12px] text-left">
-                    <thead className="bg-[#F7F7F7] text-[#555555] font-bold">
-                      <tr>
-                        <th className="p-3 border-b border-r">地域 (都道府県)</th>
-                        <th className="p-3 border-b border-r text-center w-24 bg-green-50 text-green-800">配送日数</th>
-                        {shippingSizes.map(size => (
-                          <th key={size} className="p-3 border-b text-center">サイズ {size}<br/><span className="text-[10px] font-normal text-blue-500">基本 / クール</span></th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {shippingRates.map((rate, idx) => (
-                        <tr key={idx} className="border-b last:border-0 hover:bg-[#FBFAF9]">
-                          <td className="p-3 border-r font-bold text-[#2D4B3E]">{rate.region} <span className="text-[10px] font-normal text-[#999999] block mt-1">{rate.prefs}</span></td>
-                          {/* ★ 配送日数の入力欄 */}
-                          <td className="p-3 border-r text-center bg-green-50/30">
-                            <div className="flex items-center justify-center gap-1">
-                              <input type="number" value={rate.leadDays || 1} onChange={(e) => handleRateChange(idx, 'leadDays', e.target.value)} className="w-12 p-1.5 border rounded-lg text-center font-black outline-none focus:border-green-500" />
-                              <span className="text-[10px] text-green-800 font-bold">日</span>
-                            </div>
-                          </td>
-                          {shippingSizes.map(size => (
-                            <td key={size} className="p-2 text-center border-l border-[#F7F7F7]">
-                              <div className="flex flex-col gap-1 items-center">
-                                <input type="number" value={rate[`fee${size}`] || 0} onChange={(e) => handleRateChange(idx, `fee${size}`, e.target.value)} className="w-16 p-1 border rounded text-center text-[11px] outline-none" title="基本送料" />
-                                <input type="number" value={rate[`cool${size}`] || 0} onChange={(e) => handleRateChange(idx, `cool${size}`, e.target.value)} className="w-16 p-1 border border-blue-200 bg-blue-50 text-blue-700 rounded text-center text-[11px] outline-none" title="クール便加算" />
-                              </div>
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            </div>
-          )}
-
-          {/* =========================================
-              タブ：スタッフ・決済
-          ========================================= */}
-          {activeTab === 'staff' && (
-            <div className="space-y-8 animate-in fade-in">
-              <section className="space-y-4">
-                <h2 className="text-[16px] font-black text-[#2D4B3E] border-b pb-2">スタッフ入力用の特別権限</h2>
-                <label className="flex items-center gap-3 p-4 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA] cursor-pointer">
-                  <input type="checkbox" checked={staffOrderConfig.ignoreLeadTime || false} onChange={(e) => setStaffOrderConfig({...staffOrderConfig, ignoreLeadTime: e.target.checked})} className="w-5 h-5 accent-[#2D4B3E]" />
-                  <span className="text-[13px] font-bold">納期制限を無視して、当日の日付でも強制的にカレンダーを選択可能にする</span>
-                </label>
-                <label className="flex items-center gap-3 p-4 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA] cursor-pointer">
-                  <input type="checkbox" checked={staffOrderConfig.allowCustomPrice || false} onChange={(e) => setStaffOrderConfig({...staffOrderConfig, allowCustomPrice: e.target.checked})} className="w-5 h-5 accent-[#2D4B3E]" />
-                  <span className="text-[13px] font-bold">商品金額をプルダウンではなく「自由入力」できるようにする</span>
-                </label>
-              </section>
-            </div>
-          )}
-          
+        <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2">
+          <h2 className="text-[28px] font-black text-[#111111]">お疲れ様です！</h2>
+          <p className="text-[14px] font-bold text-[#999999]">本日の業務状況と最新の注文状況を確認しましょう。</p>
         </div>
-      </main>
-    </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          
+          {/* ★ 修正: クリック時の遷移先を /staff/calendar に変更しました！ */}
+          <div onClick={() => router.push('/staff/calendar')} className="bg-white rounded-[24px] p-6 border border-[#EAEAEA] shadow-sm flex flex-col gap-4 relative overflow-hidden group cursor-pointer hover:shadow-md hover:-translate-y-1 hover:border-[#4285F4]/40 transition-all duration-300">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#2D4B3E]/5 rounded-bl-[64px] -mr-4 -mt-4 transition-transform duration-500 group-hover:scale-110"></div>
+            <div className="flex items-start justify-between relative z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#2D4B3E]/10 text-[#2D4B3E] flex items-center justify-center"><Calendar size={20}/></div>
+                <span className="text-[12px] font-bold text-[#999999] uppercase tracking-widest">本日 (お届け/受取/発送)</span>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-[#FBFAF9] flex items-center justify-center group-hover:bg-[#4285F4] transition-colors"><ChevronRight size={16} className="text-[#999999] group-hover:text-white" /></div>
+            </div>
+            <div className="flex items-baseline gap-2 relative z-10 pt-2">
+              <span className="text-[48px] font-black text-[#2D4B3E] leading-none group-hover:text-[#4285F4] transition-colors">{stats.todayOrders}</span>
+              <span className="text-[14px] font-bold text-[#999999]">件</span>
+            </div>
+            
+            <div className="mt-4 grid grid-cols-3 gap-3 relative z-10">
+              <div className="bg-orange-50 text-orange-700 flex flex-col items-center justify-center p-3 rounded-2xl border border-orange-100 shadow-inner">
+                <span className="flex items-center gap-1.5 text-[11px] font-bold tracking-widest mb-1"><Store size={14}/> 店頭</span>
+                <span className="text-[20px] font-black">{todayPickup}</span>
+              </div>
+              <div className="bg-blue-50 text-blue-700 flex flex-col items-center justify-center p-3 rounded-2xl border border-blue-100 shadow-inner">
+                <span className="flex items-center gap-1.5 text-[11px] font-bold tracking-widest mb-1"><Truck size={14}/> 配達</span>
+                <span className="text-[20px] font-black">{todayDelivery}</span>
+              </div>
+              <div className="bg-green-50 text-green-700 flex flex-col items-center justify-center p-3 rounded-2xl border border-green-100 shadow-inner">
+                <span className="flex items-center gap-1.5 text-[11px] font-bold tracking-widest mb-1"><Package size={14}/> 発送</span>
+                <span className="text-[20px] font-black">{todaySagawa}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div onClick={() => router.push('/staff/orders')} className="bg-white rounded-[24px] p-6 border border-[#EAEAEA] shadow-sm flex flex-col gap-4 relative overflow-hidden group cursor-pointer hover:shadow-md hover:-translate-y-1 hover:border-[#E74C3C]/40 transition-all duration-300">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-[64px] -mr-4 -mt-4 transition-transform duration-500 group-hover:scale-110"></div>
+            <div className="flex items-start justify-between relative z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><Clock size={20}/></div>
+                <span className="text-[12px] font-bold text-[#999999] uppercase tracking-widest">未完了の注文総数</span>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-[#FBFAF9] flex items-center justify-center group-hover:bg-[#E74C3C] transition-colors"><ChevronRight size={16} className="text-[#999999] group-hover:text-white" /></div>
+            </div>
+            <div className="flex items-baseline gap-2 relative z-10 pt-2">
+              <span className="text-[48px] font-black text-[#111111] leading-none group-hover:text-[#E74C3C] transition-colors">{stats.uncompletedOrders}</span>
+              <span className="text-[14px] font-bold text-[#999999]">件</span>
+            </div>
+          </div>
+
+        </div>
+
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-6 duration-700">
+          <h3 className="text-[14px] font-bold text-[#2D4B3E] border-l-4 border-[#2D4B3E] pl-3">クイックメニュー</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Link href="/staff/new-order" className="bg-[#2D4B3E] text-white rounded-[24px] p-6 flex flex-col items-center justify-center gap-4 hover:bg-[#1f352b] hover:shadow-lg transition-all shadow-md group"><PlusCircle size={32} className="group-hover:scale-110 transition-transform duration-300"/><span className="text-[13px] font-bold tracking-widest">新規注文</span></Link>
+            <Link href="/staff/orders" className="bg-white border border-[#EAEAEA] text-[#555555] rounded-[24px] p-6 flex flex-col items-center justify-center gap-4 hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all shadow-sm group"><ShoppingBag size={32} className="group-hover:scale-110 transition-transform duration-300"/><span className="text-[13px] font-bold tracking-widest">受注一覧</span></Link>
+            <Link href="/staff/calendar" className="bg-white border border-[#EAEAEA] text-[#555555] rounded-[24px] p-6 flex flex-col items-center justify-center gap-4 hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all shadow-sm group"><Calendar size={32} className="group-hover:scale-110 transition-transform duration-300"/><span className="text-[13px] font-bold tracking-widest">カレンダー</span></Link>
+            <Link href="/staff/settings" className="bg-white border border-[#EAEAEA] text-[#555555] rounded-[24px] p-6 flex flex-col items-center justify-center gap-4 hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all shadow-sm group"><Settings size={32} className="group-hover:scale-110 transition-transform duration-300"/><span className="text-[13px] font-bold tracking-widest">各種設定</span></Link>
+          </div>
+        </div>
+
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[14px] font-bold text-[#2D4B3E] border-l-4 border-[#2D4B3E] pl-3">最近受付した注文</h3>
+            <Link href="/staff/orders" className="text-[12px] font-bold text-[#999999] hover:text-[#2D4B3E] flex items-center gap-1 bg-white px-4 py-2 rounded-full border border-[#EAEAEA] shadow-sm transition-colors">すべて見る <ChevronRight size={14}/></Link>
+          </div>
+          
+          <div className="bg-white border border-[#EAEAEA] rounded-[32px] shadow-sm overflow-hidden">
+            {recentOrders.length === 0 ? (
+              <div className="p-16 text-center text-[#999999] font-bold tracking-widest">最近の注文はありません</div>
+            ) : (
+              <div className="divide-y divide-[#F7F7F7]">
+                {recentOrders.map(order => {
+                  const d = order.order_data || {};
+                  return (
+                    <div key={order.id} className="p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-[#FBFAF9]/50 transition-colors group">
+                      <div className="flex items-center gap-5">
+                        <div className="w-14 h-14 rounded-2xl bg-[#2D4B3E]/5 text-[#2D4B3E] flex flex-col items-center justify-center border border-[#2D4B3E]/10">
+                          <span className="text-[9px] font-bold opacity-60 leading-none mb-1">{d.selectedDate?.split('-')[1] || '--'}月</span>
+                          <span className="text-[18px] font-black leading-none">{d.selectedDate?.split('-')[2] || '--'}</span>
+                        </div>
+                        <div>
+                          <p className="text-[15px] font-bold text-[#111111]">{d.customerInfo?.name} 様</p>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <span className="flex items-center gap-1 text-[11px] font-bold text-[#555555] bg-gray-100 px-2 py-0.5 rounded-md">
+                              {getMethodIcon(d.receiveMethod)} {getMethodLabel(d.receiveMethod)}
+                            </span>
+                            <span className="text-[12px] font-bold text-[#999999]">{d.flowerType}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-6 justify-between md:justify-end">
+                        <span className={`px-4 py-1.5 rounded-lg text-[11px] font-bold ${d.status === '完了' || d.status === 'completed' ? 'bg-gray-100 text-gray-500' : 'bg-orange-50 text-orange-600'}`}>
+                          {d.status === 'completed' ? '完了' : (d.status || '未対応')}
+                        </span>
+                        <Link href="/staff/orders" className="w-10 h-10 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center text-[#999999] group-hover:border-[#2D4B3E] group-hover:text-[#2D4B3E] transition-all shadow-sm">
+                          <ChevronRight size={18}/>
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>
+    </main>
   );
 }
