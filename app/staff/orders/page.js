@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/utils/supabase';
-import { Search, Printer, Clock, Camera, CheckCircle, ChevronRight, X, Calendar as CalendarIcon, User, MapPin, Tag, FileText } from 'lucide-react';
+import { Search, Printer, Clock, Camera, CheckCircle, ChevronRight, X, Calendar, User, MapPin, Tag, FileText, Smartphone } from 'lucide-react';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -33,7 +33,6 @@ export default function OrdersPage() {
     return map[method] || method;
   };
 
-  // 1. 並び替えロジック（安全な比較）
   const sortedOrders = useMemo(() => {
     return [...orders].sort((a, b) => {
       let valA, valB;
@@ -50,7 +49,6 @@ export default function OrdersPage() {
     });
   }, [orders, sortConfig]);
 
-  // 2. 検索フィルタリング
   const filteredOrders = useMemo(() => {
     return sortedOrders.filter(order => {
       const d = order.order_data || {};
@@ -59,7 +57,6 @@ export default function OrdersPage() {
     });
   }, [sortedOrders, searchTerm]);
 
-  // 受領書UP関数
   const handleUploadReceipt = async (order, e) => {
     e.stopPropagation();
     const file = e.target.files[0]; if (!file) return;
@@ -74,10 +71,10 @@ export default function OrdersPage() {
     };
   };
 
-  if (isLoading) return <div className="p-20 text-center font-bold text-[#2D4B3E] animate-pulse">データを読み込み中...</div>;
+  if (isLoading) return <div className="p-20 text-center font-bold text-[#2D4B3E] animate-pulse font-sans">データを読み込み中...</div>;
 
   return (
-    <main className="pb-32">
+    <main className="pb-32 font-sans">
       <header className="h-20 bg-white/80 backdrop-blur-md border-b border-[#EAEAEA] flex items-center justify-between px-8 sticky top-0 z-10">
         <h1 className="text-[18px] font-bold tracking-tight text-[#2D4B3E]">受注一覧</h1>
         <div className="flex items-center gap-4">
@@ -153,7 +150,7 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      {/* --- 詳細モーダル (CalendarPageと同じUI) --- */}
+      {/* --- 詳細モーダル (カレンダーUIと統一、絵文字なし) --- */}
       {selectedOrder && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#111111]/40 backdrop-blur-sm p-4 animate-in fade-in" onClick={() => setSelectedOrder(null)}>
           <div className="bg-[#FBFAF9] rounded-[32px] w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
@@ -161,45 +158,75 @@ export default function OrdersPage() {
               <h2 className="text-[18px] font-bold text-[#2D4B3E]">注文詳細</h2>
               <button onClick={() => setSelectedOrder(null)} className="w-10 h-10 bg-[#FBFAF9] rounded-full flex items-center justify-center text-[#555555] font-bold hover:bg-[#EAEAEA]">✕</button>
             </div>
+            
             <div className="p-8 space-y-8 text-left">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-2">
-                  <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest flex items-center gap-2"><CalendarIcon size={12}/> お届け・受取情報</p>
+                  <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest flex items-center gap-2"><Calendar size={12}/> お届け・受取情報</p>
                   <p className="text-[16px] font-black text-[#2D4B3E]">{selectedOrder.order_data.selectedDate} {selectedOrder.order_data.selectedTime}</p>
                   <p className="text-[13px] font-bold">{getMethodLabel(selectedOrder.order_data.receiveMethod)}</p>
                 </div>
                 <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-2">
                   <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest flex items-center gap-2"><User size={12}/> ご注文者様</p>
                   <p className="font-bold text-[15px]">{selectedOrder.order_data.customerInfo?.name} 様</p>
-                  <p className="text-[12px] text-[#555555]">📞 {selectedOrder.order_data.customerInfo?.phone}</p>
+                  <p className="text-[12px] text-[#555555] flex items-center gap-1"><Smartphone size={12}/> {selectedOrder.order_data.customerInfo?.phone}</p>
                 </div>
               </div>
+
+              {selectedOrder.order_data.isRecipientDifferent && (
+                <div className="space-y-3 animate-in fade-in">
+                  <h3 className="text-[11px] font-bold text-red-500 uppercase tracking-widest flex items-center gap-2"><MapPin size={12}/> お届け先様（別住所）</h3>
+                  <div className="bg-white p-5 rounded-2xl border border-red-100 shadow-sm space-y-2 text-[13px]">
+                    <p className="font-bold text-[15px] text-red-700">{selectedOrder.order_data.recipientInfo?.name} 様</p>
+                    <p className="text-[#555555]">📞 {selectedOrder.order_data.recipientInfo?.phone}</p>
+                    <p className="text-[12px] text-red-600/70 leading-tight">〒{selectedOrder.order_data.recipientInfo?.zip}<br/>{selectedOrder.order_data.recipientInfo?.address1}{selectedOrder.order_data.recipientInfo?.address2}</p>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] shadow-sm">
                 <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest mb-4 flex items-center gap-2"><Tag size={12}/> 商品詳細</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-[13px] font-bold">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-[13px] font-bold mb-6">
                   <div><span className="text-[10px] block text-[#999999]">種類</span>{selectedOrder.order_data.flowerType}</div>
                   <div><span className="text-[10px] block text-[#999999]">用途</span>{selectedOrder.order_data.flowerPurpose}</div>
                   <div><span className="text-[10px] block text-[#999999]">カラー</span>{selectedOrder.order_data.flowerColor}</div>
                   <div><span className="text-[10px] block text-[#999999]">イメージ</span>{selectedOrder.order_data.flowerVibe}</div>
                 </div>
+                {/* ★ 金額詳細パネルを追加 */}
+                <div className="border-t border-[#FBFAF9] pt-4 space-y-1.5 text-[13px]">
+                  <div className="flex justify-between"><span>商品代金 (税抜)</span><span className="font-bold font-mono">¥{Number(selectedOrder.order_data.itemPrice).toLocaleString()}</span></div>
+                  {(Number(selectedOrder.order_data.calculatedFee) > 0) && (
+                    <div className="flex justify-between"><span>配達・送料</span><span className="font-bold font-mono">¥{Number(selectedOrder.order_data.calculatedFee).toLocaleString()}</span></div>
+                  )}
+                  {(Number(selectedOrder.order_data.pickupFee) > 0) && (
+                    <div className="flex justify-between text-orange-600"><span>後日回収料</span><span className="font-bold font-mono">¥{Number(selectedOrder.order_data.pickupFee).toLocaleString()}</span></div>
+                  )}
+                  <div className="flex justify-between text-[16px] mt-2 pt-2 border-t border-[#FBFAF9] font-black text-[#2D4B3E]">
+                    <span>合計金額 (税込)</span>
+                    <span className="font-mono">
+                      ¥{Math.floor(((Number(selectedOrder.order_data.itemPrice) + Number(selectedOrder.order_data.calculatedFee || 0) + Number(selectedOrder.order_data.pickupFee || 0)) * 1.1)).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] shadow-sm">
-                <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest mb-4 flex items-center gap-2"><FileText size={12}/> 立札・備考</p>
-                <div className="space-y-4 text-[13px]">
-                   <div className="p-3 bg-[#FBFAF9] rounded-lg">
-                     <span className="text-[10px] font-bold text-[#2D4B3E] block mb-1">【{selectedOrder.order_data.cardType}】</span>
-                     {selectedOrder.order_data.cardType === '立札' ? (
-                       <div className="space-y-1 text-[12px]">
-                         <p>①内容: {selectedOrder.order_data.tateInput1}</p>
-                         <p>②宛名: {selectedOrder.order_data.tateInput2}</p>
-                         <p>③贈り主: {selectedOrder.order_data.tateInput3}</p>
-                       </div>
-                     ) : <p className="whitespace-pre-wrap">{selectedOrder.order_data.cardMessage || 'メッセージなし'}</p>}
-                   </div>
-                   <div className="p-3 border-l-4 border-[#2D4B3E] bg-[#FBFAF9]">
-                     <span className="text-[10px] font-bold text-[#999999] block mb-1">備考・要望</span>
-                     <p className="whitespace-pre-wrap">{selectedOrder.order_data.note || '特になし'}</p>
-                   </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-4">
+                <div className="space-y-3">
+                  <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest flex items-center gap-2"><FileText size={12}/> 立札・メッセージ</p>
+                  <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm">
+                    <span className="inline-block px-3 py-1 bg-[#2D4B3E] text-white text-[10px] font-bold rounded-md mb-3">{selectedOrder.order_data.cardType}</span>
+                    {selectedOrder.order_data.cardType === '立札' ? (
+                      <div className="space-y-1 text-[12px] font-bold">
+                        <p className="text-[#999999] font-normal">①内容:</p><p className="mb-2">{selectedOrder.order_data.tateInput1}</p>
+                        <p className="text-[#999999] font-normal">②宛名:</p><p className="mb-2">{selectedOrder.order_data.tateInput2}</p>
+                        <p className="text-[#999999] font-normal">③贈り主:</p><p>{selectedOrder.order_data.tateInput3}</p>
+                      </div>
+                    ) : <p className="text-[13px] whitespace-pre-wrap leading-relaxed font-bold">{selectedOrder.order_data.cardMessage || 'メッセージなし'}</p>}
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest flex items-center gap-2"><FileText size={12}/> 備考・要望</p>
+                  <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm min-h-[100px]"><p className="text-[13px] whitespace-pre-wrap text-[#111111] font-bold">{selectedOrder.order_data.note || '特になし'}</p></div>
                 </div>
               </div>
             </div>
@@ -207,7 +234,7 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {/* 受領書プレビューモーダル */}
+      {/* 受領書プレビュー */}
       {previewImage && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 p-6" onClick={() => setPreviewImage(null)}>
           <img src={previewImage} className="max-w-full max-h-[85vh] rounded-xl border-4 border-white shadow-2xl" />
