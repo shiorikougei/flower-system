@@ -2,8 +2,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/utils/supabase';
 import { 
-  ChevronLeft, ChevronRight, RefreshCw, X, Calendar as CalendarIcon, 
-  User, MapPin, Tag, FileText, Smartphone, Archive, RotateCcw, Clock 
+  ChevronLeft, ChevronRight, RefreshCw, X, Calendar, 
+  User, MapPin, Tag, FileText, Smartphone, Clock, Archive, RotateCcw 
 } from 'lucide-react';
 
 export default function CalendarPage() {
@@ -23,9 +23,9 @@ export default function CalendarPage() {
       const { data: settings } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
       if (settings) setAppSettings(settings.settings_data);
 
-      const { data, error } = await supabase.from('orders').select('*');
+      const { data: ordersData, error } = await supabase.from('orders').select('*');
       if (error) throw error;
-      setOrders(data || []);
+      setOrders(ordersData || []);
     } catch (error) {
       console.error('取得エラー:', error.message);
     } finally {
@@ -33,7 +33,25 @@ export default function CalendarPage() {
     }
   };
 
-  // --- カレンダーロジック ---
+  // ステータス設定の取得
+  const getStatusOptions = () => {
+    const config = appSettings?.statusConfig;
+    if (config?.type === 'custom' && config?.customLabels?.length > 0) return config.customLabels;
+    return ['未対応', '制作中', '制作完了', '配達中'];
+  };
+
+  // ステータス更新処理
+  const updateStatusValue = async (orderId, newStatusValue) => {
+    try {
+      const targetOrder = orders.find(o => o.id === orderId);
+      const updatedData = { ...targetOrder.order_data, currentStatus: newStatusValue };
+      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId);
+      setOrders(orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o));
+      if (selectedOrder?.id === orderId) setSelectedOrder({ ...selectedOrder, order_data: updatedData });
+    } catch (err) { alert('更新に失敗しました。'); }
+  };
+
+  // カレンダー操作
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
@@ -54,23 +72,6 @@ export default function CalendarPage() {
   for (let i = 0; i < startDay; i++) calendarDays.push(null);
   for (let i = 1; i <= daysInMonth; i++) calendarDays.push(i);
 
-  // --- ヘルパー関数 ---
-  const getStatusOptions = () => {
-    const config = appSettings?.statusConfig;
-    if (config?.type === 'custom' && config?.customLabels?.length > 0) return config.customLabels;
-    return ['未対応', '制作中', '制作完了', '配達中'];
-  };
-
-  const updateStatusValue = async (orderId, newStatusValue) => {
-    try {
-      const targetOrder = orders.find(o => o.id === orderId);
-      const updatedData = { ...targetOrder.order_data, currentStatus: newStatusValue };
-      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId);
-      setOrders(orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o));
-      if (selectedOrder?.id === orderId) setSelectedOrder({ ...selectedOrder, order_data: updatedData });
-    } catch (err) { alert('更新失敗'); }
-  };
-
   const getMethodLabel = (method) => {
     const map = { pickup: '店頭受取', delivery: '自社配達', sagawa: '佐川急便' };
     return map[method] || method;
@@ -79,26 +80,18 @@ export default function CalendarPage() {
   const renderDay = (day, index) => {
     if (!day) return <div key={`empty-${index}`} className="min-h-[120px] bg-[#FBFAF9]/50 border-r border-b border-[#EAEAEA]"></div>;
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const dayOrders = ordersByDate[dateStr] || [];
+    const dayOrders = (ordersByDate[dateStr] || []).filter(o => o.order_data.status !== 'completed');
     const isToday = new Date().toISOString().split('T')[0] === dateStr;
 
     return (
       <div key={day} className={`min-h-[120px] p-2 border-r border-b border-[#EAEAEA] bg-white transition-all hover:bg-gray-50/50 ${isToday ? 'bg-[#2D4B3E]/5' : ''}`}>
         <div className={`text-[11px] font-bold mb-2 flex items-center justify-center w-6 h-6 rounded-full mx-auto ${isToday ? 'bg-[#2D4B3E] text-white' : 'text-[#999999]'}`}>{day}</div>
         <div className="space-y-1">
-          {dayOrders.map(order => {
-             const d = order.order_data;
-             if (d.status === 'completed') return null; // 完了済みはカレンダーに出さない（出したい場合はここを消す）
-             let badgeStyle = 'bg-gray-100 text-gray-600';
-             if(d.receiveMethod === 'delivery') badgeStyle = 'bg-[#2D4B3E]/10 text-[#2D4B3E]';
-             if(d.receiveMethod === 'sagawa') badgeStyle = 'bg-blue-50 text-blue-600';
-             
-             return (
-               <div key={order.id} onClick={() => setSelectedOrder(order)} className={`text-[9px] p-1.5 rounded font-bold cursor-pointer truncate transition-all border border-transparent hover:border-gray-300 ${badgeStyle}`}>
-                 {d.selectedTime?.split('-')[0]} {d.customerInfo?.name}
-               </div>
-             )
-          })}
+          {dayOrders.map(order => (
+            <div key={order.id} onClick={() => setSelectedOrder(order)} className={`text-[9px] p-1.5 rounded font-bold cursor-pointer truncate transition-all border border-transparent hover:border-gray-300 ${order.order_data.receiveMethod === 'pickup' ? 'bg-blue-50 text-blue-600' : 'bg-[#2D4B3E]/10 text-[#2D4B3E]'}`}>
+              {order.order_data.selectedTime?.split('-')[0]} {order.order_data.customerInfo?.name}
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -122,7 +115,7 @@ export default function CalendarPage() {
 
       <div className="p-4 md:p-8">
         {isLoading ? (
-          <div className="p-20 text-center text-[#999999] font-bold animate-pulse tracking-widest">データを読み込み中...</div>
+          <div className="p-20 text-center text-[#999999] font-bold animate-pulse">データを読み込み中...</div>
         ) : (
           <div className="bg-white rounded-[32px] border border-[#EAEAEA] shadow-sm overflow-hidden">
             <div className="grid grid-cols-7 border-b border-[#EAEAEA] bg-[#FBFAF9]">
@@ -137,7 +130,7 @@ export default function CalendarPage() {
         )}
       </div>
 
-      {/* --- 詳細モーダル (OrdersPageと共通) --- */}
+      {/* --- 詳細モーダル (全情報完全復活版) --- */}
       {selectedOrder && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#111111]/40 backdrop-blur-sm p-4 animate-in fade-in" onClick={() => setSelectedOrder(null)}>
           <div className="bg-[#FBFAF9] rounded-[32px] w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
@@ -160,14 +153,15 @@ export default function CalendarPage() {
             <div className="p-8 space-y-8 text-left">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-2">
-                  <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest flex items-center gap-2"><CalendarIcon size={12}/> お届け・受取情報</p>
+                  <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest flex items-center gap-2"><Calendar size={12}/> お届け・受取情報</p>
                   <p className="text-[16px] font-black text-[#2D4B3E]">{selectedOrder.order_data.selectedDate} {selectedOrder.order_data.selectedTime}</p>
-                  <p className="text-[13px] font-bold">{getMethodLabel(selectedOrder.order_data.receiveMethod)}</p>
+                  <p className="text-[13px] font-bold">{getMethodLabel(selectedOrder.order_data.receiveMethod)} {selectedOrder.order_data.receiveMethod === 'pickup' && `(${selectedOrder.order_data.selectedShop})`}</p>
                 </div>
                 <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-2">
                   <p className="text-[10px] font-bold text-[#999999] uppercase tracking-widest flex items-center gap-2"><User size={12}/> ご注文者様</p>
                   <p className="font-bold text-[15px]">{selectedOrder.order_data.customerInfo?.name} 様</p>
                   <p className="text-[12px] text-[#555555] flex items-center gap-1"><Smartphone size={12}/> {selectedOrder.order_data.customerInfo?.phone}</p>
+                  {selectedOrder.order_data.receiveMethod !== 'pickup' && <p className="text-[11px] text-[#999999] leading-tight">〒{selectedOrder.order_data.customerInfo?.zip}<br/>{selectedOrder.order_data.customerInfo?.address1}{selectedOrder.order_data.customerInfo?.address2}</p>}
                 </div>
               </div>
 
@@ -176,6 +170,7 @@ export default function CalendarPage() {
                   <h3 className="text-[11px] font-bold text-red-500 uppercase tracking-widest flex items-center gap-2"><MapPin size={12}/> お届け先様（別住所）</h3>
                   <div className="bg-white p-5 rounded-2xl border border-red-100 shadow-sm space-y-2 text-[13px]">
                     <p className="font-bold text-[15px] text-red-700">{selectedOrder.order_data.recipientInfo?.name} 様</p>
+                    <p className="text-[#555555]">📞 {selectedOrder.order_data.recipientInfo?.phone}</p>
                     <p className="text-[12px] text-red-600/70 leading-tight">〒{selectedOrder.order_data.recipientInfo?.zip}<br/>{selectedOrder.order_data.recipientInfo?.address1}{selectedOrder.order_data.recipientInfo?.address2}</p>
                   </div>
                 </div>
@@ -189,8 +184,11 @@ export default function CalendarPage() {
                   <div><span className="text-[10px] block text-[#999999]">カラー</span>{selectedOrder.order_data.flowerColor}</div>
                   <div><span className="text-[10px] block text-[#999999]">イメージ</span>{selectedOrder.order_data.flowerVibe}</div>
                 </div>
-                <div className="border-t border-[#FBFAF9] pt-4 text-[13px]">
-                   <div className="flex justify-between items-center"><span className="text-[#999999] font-bold text-[11px]">合計金額 (税込)</span><span className="font-black text-[#2D4B3E] text-[18px] font-mono">¥{Math.floor(((Number(selectedOrder.order_data.itemPrice) + Number(selectedOrder.order_data.calculatedFee || 0) + Number(selectedOrder.order_data.pickupFee || 0)) * 1.1)).toLocaleString()}</span></div>
+                <div className="border-t border-[#FBFAF9] pt-4 space-y-1.5 text-[13px]">
+                  <div className="flex justify-between text-[#555555]"><span>商品代金 (税抜)</span><span className="font-bold">¥{Number(selectedOrder.order_data.itemPrice).toLocaleString()}</span></div>
+                  {Number(selectedOrder.order_data.calculatedFee) > 0 && <div className="flex justify-between text-[#555555]"><span>配達・送料</span><span className="font-bold">¥{Number(selectedOrder.order_data.calculatedFee).toLocaleString()}</span></div>}
+                  {Number(selectedOrder.order_data.pickupFee) > 0 && <div className="flex justify-between text-orange-600"><span>回収料</span><span className="font-bold">¥{Number(selectedOrder.order_data.pickupFee).toLocaleString()}</span></div>}
+                  <div className="flex justify-between text-[16px] mt-2 pt-2 border-t border-[#FBFAF9] font-black text-[#2D4B3E]"><span>合計金額 (税込)</span><span>¥{Math.floor(((Number(selectedOrder.order_data.itemPrice) + Number(selectedOrder.order_data.calculatedFee || 0) + Number(selectedOrder.order_data.pickupFee || 0)) * 1.1)).toLocaleString()}</span></div>
                 </div>
               </div>
 
