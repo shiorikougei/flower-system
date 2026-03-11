@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 import { 
+  Home,
   ClipboardList, 
   PlusSquare, 
   CalendarDays, 
@@ -35,13 +36,14 @@ export default function StaffLayout({ children }) {
     fetchSettings();
   }, []);
 
-  // ★ 消えていたメニューを完全復活！
+  // ★ ご指定の並び順 ＆ ホーム復活！
   const menuItems = [
-    { name: '受注一覧', path: '/staff/orders', icon: ClipboardList },
+    { name: 'ホーム', path: '/staff', icon: Home },
     { name: '店舗注文受付', path: '/staff/new-order', icon: PlusSquare },
-    { name: 'カレンダー', path: '/staff/calendar', icon: CalendarDays },
-    { name: '配達・ルート管理', path: '/staff/deliveries', icon: Truck },
-    { name: '配達業務委託 (外部)', path: '/staff/contractors', icon: Briefcase },
+    { name: '受注一覧', path: '/staff/orders', icon: ClipboardList },
+    { name: '受注カレンダー', path: '/staff/calendar', icon: CalendarDays },
+    { name: '配達管理', path: '/staff/deliveries', icon: Truck },
+    { name: '配達業務委託', path: '/staff/contractors', icon: Briefcase },
     { name: '顧客管理', path: '/staff/customers', icon: Users },
     { name: '法人管理', path: '/staff/corporations', icon: Building2 },
     { name: '各種設定', path: '/staff/settings', icon: Settings },
@@ -63,8 +65,11 @@ export default function StaffLayout({ children }) {
         
         <nav className="p-4 space-y-1.5 flex-1 overflow-y-auto hide-scrollbar">
           {menuItems.map(item => {
-            // 現在のページかどうかを判定して色を変える
-            const isActive = pathname?.startsWith(item.path);
+            // ★ ホーム（/staff）が他の全ページでも「選択中」になってしまうのを防ぐ厳密判定
+            const isActive = item.path === '/staff' 
+              ? pathname === '/staff' 
+              : pathname?.startsWith(item.path);
+              
             const Icon = item.icon;
             
             return (
