@@ -60,7 +60,7 @@ export default function OrderPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ★ デフォルトの時間枠
+  // デフォルトの時間枠
   const defaultTimeSlots = {
     pickup: ['10:00-12:00', '12:00-15:00', '15:00-18:00'],
     delivery: ['9:00-12:00', '12:00-15:00', '15:00-18:00', '18:00-21:00'],
@@ -154,7 +154,7 @@ export default function OrderPage() {
     return options;
   };
 
-  // ★ 新規：入力された住所から「配送日数（リードタイム）」を自動判定
+  // ★ 住所から「配送リードタイム」を自動判定
   const transitDays = useMemo(() => {
     if (receiveMethod !== 'sagawa') return 0;
     const targetInfo = isRecipientDifferent ? recipientInfo : customerInfo;
@@ -172,7 +172,7 @@ export default function OrderPage() {
     return 1; // 住所が未入力の場合は最低1日とする
   }, [receiveMethod, customerInfo.address1, recipientInfo.address1, isRecipientDifferent, appSettings]);
 
-  // ★ 最短納期の計算（準備日数 ＋ 配送日数）
+  // ★ 最短納期の計算（準備日数 ＋ 配送リードタイム）
   const minDateLimit = useMemo(() => {
     const base = new Date();
     let prepDays = 0;
@@ -322,7 +322,6 @@ export default function OrderPage() {
     } catch (error) { console.error("住所検索エラー"); }
   };
 
-  // ★ 時間枠のプルダウン（設定連動）
   const getTimeOptions = () => {
     if (!selectedDate) return [];
     if (receiveMethod === 'pickup') return timeSlots.pickup;
@@ -345,12 +344,8 @@ export default function OrderPage() {
       if (cardType === '立札' && !tatePattern) return true;
     }
     if (step === 4) {
-      // ★ お客様用はメールアドレス(email)を必須化
       if (!customerInfo.name || !customerInfo.phone || !customerInfo.email || !selectedDate || !selectedTime || !methodAgreed) return true;
-      
-      // 住所変更などで日付が最短納期を下回ってしまった場合はエラーアウト
       if (selectedDate && selectedDate < minDateLimit) return true;
-
       if ((receiveMethod === 'delivery' || receiveMethod === 'sagawa') && areaError) return true;
       if (receiveMethod === 'delivery' && absenceAction === '置き配' && !absenceNote) return true;
     }
@@ -431,8 +426,8 @@ export default function OrderPage() {
                   <p className="text-[11px] font-bold text-[#111111] tracking-widest border-b border-[#EAEAEA] pb-2">納期に関する注意事項</p>
                   <div className="space-y-2 text-[12px] text-[#555555] font-medium">
                     {selectedItemSettings.normalLeadDays && <div className="flex justify-between"><span>通常納期 (店頭/配達)</span><span className="font-bold">{selectedItemSettings.normalLeadDays}日後以降</span></div>}
-                    {/* ★「佐川急便」ではなく「業者配送」に変更＆表現を調整 */}
-                    {selectedItemSettings.shippingLeadDays && <div className="flex justify-between"><span>業者配送 納期</span><span className="font-bold">発送まで{selectedItemSettings.shippingLeadDays}日 + 配送日数</span></div>}
+                    {/* ★「配送リードタイム」の表記に修正 */}
+                    {selectedItemSettings.shippingLeadDays && <div className="flex justify-between text-[#2D4B3E]"><span>業者配送 納期</span><span className="font-bold">発送準備 {selectedItemSettings.shippingLeadDays}日 ＋ 配送リードタイム(最短1日〜)</span></div>}
                     {isBring === 'bring' && (selectedItemSettings.canBringFlowersLeadDays || selectedItemSettings.canBringVaseLeadDays) && <div className="flex justify-between text-[#2D4B3E] pt-1"><span>お持ち込み時 (通常より延長)</span><span className="font-bold">{Math.max(Number(selectedItemSettings.canBringFlowersLeadDays)||0, Number(selectedItemSettings.canBringVaseLeadDays)||0)}日後以降</span></div>}
                   </div>
                   <label className="flex items-center gap-3 pt-4 cursor-pointer border-t border-[#EAEAEA]">
@@ -614,7 +609,6 @@ export default function OrderPage() {
                   <label className="text-[11px] font-bold text-[#999999] tracking-widest">注文者情報</label>
                   <input type="text" placeholder="お名前" value={customerInfo.name} onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]" />
                   <input type="tel" placeholder="電話番号" value={customerInfo.phone} onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]" />
-                  {/* ★ お客様はメールアドレス必須化 */}
                   <input type="email" placeholder="メールアドレス (必須)" value={customerInfo.email} onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]" />
                   
                   {receiveMethod !== 'pickup' && (
@@ -647,7 +641,6 @@ export default function OrderPage() {
                 </div>
               )}
 
-              {/* ★ カレンダーと時間枠（住所入力後に正確な日数が反映されるため下に配置） */}
               <div className="grid grid-cols-2 gap-4 mt-6">
                 <div className="space-y-2">
                   <label className="text-[11px] font-bold text-[#999999] tracking-widest">お届け・受取希望日</label>
@@ -662,7 +655,6 @@ export default function OrderPage() {
                 </div>
               </div>
 
-              {/* ★ 発送予定日の自動表示（住所と日付入力後に出現） */}
               {receiveMethod === 'sagawa' && selectedDate && shippingDate && (
                 <div className="mt-4 p-5 bg-green-50 border border-green-200 rounded-2xl flex flex-col gap-3 animate-in fade-in shadow-sm">
                   <p className="text-[11px] font-bold text-green-700 tracking-widest">配送スケジュール</p>
@@ -678,7 +670,6 @@ export default function OrderPage() {
                 </div>
               )}
 
-              {/* 置き配設定（自社配達の時のみ） */}
               {receiveMethod === 'delivery' && (
                 <div className="p-8 bg-white rounded-[28px] border border-[#EAEAEA] shadow-sm space-y-4 animate-in fade-in mt-6">
                   <div className="space-y-2">
@@ -707,7 +698,6 @@ export default function OrderPage() {
                 </div>
               )}
 
-              {/* 料金内訳パネル */}
               <div className="bg-white p-8 rounded-[32px] border-2 border-[#2D4B3E]/30 shadow-md mt-8">
                 <div className="flex flex-col items-center justify-center gap-6">
                   <div className="w-full">
