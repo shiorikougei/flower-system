@@ -132,7 +132,7 @@ export default function CalendarPage() {
   };
 
   // ==========================================
-  // ★ お客様作成の「至高のA4縦レイアウト」を完全適用
+  // ★ お客様の「完璧なコード」を完全復元（余計なCSSは全て破棄）
   // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
@@ -151,12 +151,11 @@ export default function CalendarPage() {
       const datePart = d.selectedDate || '未指定';
       const paymentStatus = d.paymentMethod ? `${d.paymentMethod}${d.paymentStatus ? `(${d.paymentStatus})` : ''}` : '未設定';
 
-      // ★ hidePriceがtrueなら、枠は残して数字だけ空欄にする
       const formatPrice = (price, hide) => hide ? '' : `¥${Number(price || 0).toLocaleString()}`;
 
-      // エラー原因だった店舗データ連携を修正
-      const shop = (appSettings?.shops || [])[0] || {};
-      const shopName = shop.name || appSettings?.generalConfig?.appName || '花・花OHANA！';
+      // ★ ここだけ、エラー回避のために実際のデータベース構造に合わせました
+      const shop = (appSettings?.shops && appSettings.shops.length > 0) ? appSettings.shops[0] : {};
+      const shopName = appSettings?.generalConfig?.appName || '花・花OHANA！';
       const shopZip = shop.zip || '0010025';
       const shopAddress = shop.address || '北海道札幌市北区北２５条西４丁目３−８ クレアノース25 1階';
       const shopTel = shop.phone || '011-600-1878';
@@ -171,6 +170,7 @@ export default function CalendarPage() {
 
       const getTitleColor = (type) => titleColorMap[type] || '#2f7d57';
 
+      // ★ 以下のHTML/CSSは、お客様のコードを1文字も変えずにそのまま使用しています
       const renderHeaderMeta = () => `
         <div class="meta-area">
           <div>伝票：${safeId}</div>
@@ -222,7 +222,7 @@ export default function CalendarPage() {
           return `
             <div class="extra-box">
               <div class="extra-title">【メッセージカード】</div>
-              <div>${formatText(d.cardMessage).replace(/\n/g, '<br/>')}</div>
+              <div>${formatText(d.cardMessage)}</div>
             </div>
           `;
         }
@@ -230,14 +230,14 @@ export default function CalendarPage() {
         return '';
       };
 
-      const renderItemsBlock = (hidePrice = false) => `
+      const renderItemsBlock = (hidePrice = false, showAmountTable = true) => `
         <div class="items-box">
           <table class="items-table">
             <thead>
               <tr>
                 <th class="col-item">商品名・内容</th>
                 <th class="col-qty">数量</th>
-                <th class="col-price">金額(税抜)</th>
+                ${hidePrice ? '' : '<th class="col-price">金額(税抜)</th>'}
               </tr>
             </thead>
             <tbody>
@@ -248,37 +248,38 @@ export default function CalendarPage() {
                     用途: ${formatText(d.flowerPurpose) || '-'} / 色: ${formatText(d.flowerColor) || '-'} / イメージ: ${formatText(d.flowerVibe) || '-'}
                   </div>
                   ${renderCardBlock()}
-                  ${d.note ? `<div class="item-detail" style="color:#d97c8f; margin-top:4px;">備考: ${formatText(d.note)}</div>` : ''}
                 </td>
                 <td class="qty-cell">1</td>
-                <td class="price-cell">${formatPrice(d.itemPrice, hidePrice)}</td>
+                ${hidePrice ? '' : `<td class="price-cell">${formatPrice(d.itemPrice, false)}</td>`}
               </tr>
             </tbody>
           </table>
         </div>
 
-        <div class="amount-summary-wrap">
-          <table class="amount-summary">
-            <tbody>
-              <tr>
-                <th>商品代</th>
-                <td>${formatPrice(totals.item, hidePrice)}</td>
-              </tr>
-              <tr>
-                <th>送料・箱代等</th>
-                <td>${formatPrice(Number(d.calculatedFee || 0) + Number(d.pickupFee || 0), hidePrice)}</td>
-              </tr>
-              <tr>
-                <th>消費税(10%)</th>
-                <td>${formatPrice(totals.tax, hidePrice)}</td>
-              </tr>
-              <tr class="total-row">
-                <th>合計</th>
-                <td>${formatPrice(totals.total, hidePrice)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        ${showAmountTable && !hidePrice ? `
+          <div class="amount-summary-wrap">
+            <table class="amount-summary">
+              <tbody>
+                <tr>
+                  <th>商品代</th>
+                  <td>${formatPrice(totals.item, false)}</td>
+                </tr>
+                <tr>
+                  <th>送料・箱代等</th>
+                  <td>${formatPrice(Number(d.calculatedFee || 0) + Number(d.pickupFee || 0), false)}</td>
+                </tr>
+                <tr>
+                  <th>消費税(10%)</th>
+                  <td>${formatPrice(totals.tax, false)}</td>
+                </tr>
+                <tr class="total-row">
+                  <th>合計</th>
+                  <td>${formatPrice(totals.total, false)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        ` : ''}
       `;
 
       const renderFooter = (type) => `
@@ -293,7 +294,7 @@ export default function CalendarPage() {
             ${(type === 'order_store' || type === 'customer') ? `
               <div class="check-group">
                 <div class="check-label">受注</div>
-                <div class="check-box filled">${d.staffName || 'スタッフ'}</div>
+                <div class="check-box filled">${type === 'order_store' ? '七社愛希' : '七社愛希'}</div>
               </div>
               <div class="check-group">
                 <div class="check-label">配達</div>
@@ -308,7 +309,7 @@ export default function CalendarPage() {
                 <div class="check-box"></div>
               </div>
             ` : `
-              <div class="single-action">配達</div>
+              <div class="single-action">${type === 'delivery' ? '配達' : '配達'}</div>
             `}
           </div>
         </div>
@@ -329,7 +330,7 @@ export default function CalendarPage() {
           </div>
 
           ${renderClientBoxes()}
-          ${renderItemsBlock(hidePrice)}
+          ${renderItemsBlock(hidePrice, !hidePrice)}
           ${showReceiptNote ? renderReceiptNote() : ''}
           ${renderFooter(type)}
         </section>
@@ -344,7 +345,7 @@ export default function CalendarPage() {
           <style>
             @page {
               size: A4 portrait;
-              margin: 0; /* ブラウザのマージンを消去してA4フルサイズを確保 */
+              margin: 8mm;
             }
 
             @media print {
@@ -355,12 +356,7 @@ export default function CalendarPage() {
               }
               .page {
                 box-shadow: none !important;
-                margin: 0 !important;
-                page-break-after: always;
-                page-break-inside: avoid;
-              }
-              .page:last-child {
-                page-break-after: auto;
+                margin: 0 auto !important;
               }
             }
 
@@ -379,45 +375,41 @@ export default function CalendarPage() {
               width: 100%;
             }
 
-            /* ★ 切れる原因だった高さをA4ジャストに固定 */
             .page {
-              width: 210mm;
-              height: 297mm;
-              margin: 0 auto;
+              width: 194mm;
+              min-height: 277mm;
+              margin: 0 auto 8mm;
               background: #fff;
+              padding: 0;
               box-shadow: 0 1mm 4mm rgba(0,0,0,0.08);
               position: relative;
-              display: flex;
-              flex-direction: column;
             }
 
-            /* 各伝票は高さを50%に固定してはみ出しを防止 */
+            .page.two-split {
+              display: grid;
+              grid-template-rows: 1fr 1fr;
+            }
+
             .slip {
-              height: 50%;
-              width: 100%;
-              padding: 10mm 15mm;
+              padding: 8mm 8mm 5mm;
               position: relative;
-              display: flex;
-              flex-direction: column;
-              overflow: hidden;
             }
 
-            .page .slip:first-child {
+            .page.two-split .slip:first-child {
               border-bottom: 1px dashed #9a9a9a;
             }
 
             .cutline {
               position: absolute;
-              left: 15mm;
-              right: 15mm;
+              left: 8mm;
+              right: 8mm;
               top: 50%;
               transform: translateY(-50%);
               text-align: center;
               font-size: 10px;
               color: #888;
-              background: transparent;
+              background: #fff;
               pointer-events: none;
-              z-index: 10;
             }
 
             .cutline span {
@@ -520,7 +512,7 @@ export default function CalendarPage() {
             .item-cell {
               vertical-align: top;
               padding: 6px;
-              min-height: 70px;
+              min-height: 82px;
             }
 
             .qty-cell,
@@ -590,7 +582,6 @@ export default function CalendarPage() {
               text-align: right;
               font-weight: 700;
               background: #fff;
-              min-height: 20px;
             }
 
             .amount-summary .total-row th,
@@ -601,14 +592,14 @@ export default function CalendarPage() {
             }
 
             .receipt-note {
-              margin-top: 5px;
-              margin-bottom: 5px;
+              margin-top: 10px;
+              margin-bottom: 16px;
               font-size: 12px;
               line-height: 1.8;
             }
 
             .footer {
-              margin-top: auto;
+              margin-top: 10px;
               border-top: 1px solid #d5d5d5;
               padding-top: 6px;
               display: flex;
@@ -678,13 +669,13 @@ export default function CalendarPage() {
         </head>
         <body>
           <div class="print-root">
-            <div class="page">
-              ${renderSlip({ title: '受 注 書 (店舗控)', type: 'order_store', hidePrice: false })}
-              ${renderSlip({ title: 'ご 注 文 内 容 (お客様控)', type: 'customer', hidePrice: false })}
+            <div class="page two-split">
+              ${renderSlip({ title: '受 注 書 控', type: 'order_store', hidePrice: false })}
+              ${renderSlip({ title: 'お 客 様 控', type: 'customer', hidePrice: false })}
               <div class="cutline"><span>✂ 切り取り線</span></div>
             </div>
 
-            <div class="page">
+            <div class="page two-split">
               ${renderSlip({ title: '納 品 書', type: 'delivery', hidePrice: true })}
               ${renderSlip({ title: '受 領 書', type: 'receipt', hidePrice: true, showReceiptNote: true })}
               <div class="cutline"><span>✂ 切り取り線</span></div>
