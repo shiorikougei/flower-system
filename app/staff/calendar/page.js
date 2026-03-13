@@ -123,7 +123,7 @@ export default function CalendarPage() {
   };
 
   // ==========================================
-  // ★ 強固に保護された印刷・PDF出力ロジック
+  // ★ 【復刻】4分割 (2x2) A4伝票 印刷ロジック
   // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
@@ -131,6 +131,12 @@ export default function CalendarPage() {
     if (!selectedOrder) return;
     
     try {
+      const printWindow = window.open('', '_blank');
+      if(!printWindow) {
+        alert('ポップアップブロックを解除してください。');
+        return;
+      }
+
       const d = selectedOrder.order_data || {};
       const tInfo = d.isRecipientDifferent ? (d.recipientInfo || {}) : (d.customerInfo || {});
       const slipBgUrl = appSettings?.generalConfig?.slipBgUrl || '';
@@ -139,142 +145,149 @@ export default function CalendarPage() {
       const shop = (appSettings?.shops || [])[0] || {};
       const totals = getTotals(d);
 
-      // 安全なテキスト変換（空データやundefinedで落ちないように保護）
       const formatText = (txt) => String(txt || '').replace(/\n/g, '<br/>');
-      // IDを確実に文字列にしてから切り取る
       const safeId = String(selectedOrder.id || '').slice(0, 8);
+
+      // ★ 1枚の伝票（1ブロック）を生成する関数
+      const renderSlip = (title, hidePrice, isReceipt) => `
+        <div class="slip">
+          ${slipBgUrl ? `<div class="bg-image"></div>` : ''}
+          <div class="title">${title}</div>
+          <div class="meta">
+            <span>受付: ${safeFormatDate(selectedOrder.created_at, true)}</span>
+            <span>ID: ${safeId}</span>
+          </div>
+
+          <div class="flex-row section">
+            <div class="box" style="flex: 1.2;">
+              <div class="label">ご依頼主様</div>
+              <div class="val-lg" style="margin-bottom: 2px;">${formatText(d.customerInfo?.name)} 様</div>
+              <div class="val">TEL: ${formatText(d.customerInfo?.phone)}</div>
+            </div>
+            <div class="box" style="flex: 1;">
+              <div class="label">お受取方法</div>
+              <div class="val">${getMethodLabel(d.receiveMethod)} ${d.receiveMethod === 'pickup' ? `(${d.selectedShop || ''})` : ''}</div>
+              <div class="label" style="margin-top:4px;">お届け・ご来店日時</div>
+              <div class="val-lg">${d.selectedDate || '未指定'} ${d.selectedTime || ''}</div>
+            </div>
+          </div>
+
+          <div class="box section">
+            <div class="label">お届け先様 ${!d.isRecipientDifferent ? '(ご依頼主様と同じ)' : ''}</div>
+            ${d.isRecipientDifferent ? `
+              <div class="val-lg" style="margin-bottom: 2px;">${formatText(tInfo?.name)} 様</div>
+              <div class="val">〒${formatText(tInfo?.zip)} ${formatText(tInfo?.address1)}${formatText(tInfo?.address2)}</div>
+              <div class="val">TEL: ${formatText(tInfo?.phone)}</div>
+            ` : `
+              <div class="val" style="padding: 4px 0;">ご依頼主様とお持ち帰り/お届け先は同一です。</div>
+            `}
+          </div>
+
+          <div class="box section">
+            <div class="label">ご注文内容</div>
+            <div class="val-lg" style="margin-bottom: 4px;">${formatText(d.flowerType)}</div>
+            <div class="val" style="font-weight:normal;">用途: ${d.flowerPurpose || '-'} / 色: ${d.flowerColor || '-'}</div>
+            <div class="val" style="font-weight:normal;">立札/カード: ${d.cardType && d.cardType !== 'なし' ? d.cardType : 'なし'}</div>
+          </div>
+
+          ${!hidePrice ? `
+          <table class="section">
+            <tr><th style="width:65%; text-align:left;">項目</th><th style="text-align:right;">金額</th></tr>
+            <tr><td>商品代金 (税抜)</td><td style="text-align:right;">¥${Number(d.itemPrice || 0).toLocaleString()}</td></tr>
+            ${Number(d.calculatedFee) > 0 ? `<tr><td>送料・その他</td><td style="text-align:right;">¥${Number(d.calculatedFee).toLocaleString()}</td></tr>` : ''}
+            ${Number(d.pickupFee) > 0 ? `<tr><td>回収費用</td><td style="text-align:right;">¥${Number(d.pickupFee).toLocaleString()}</td></tr>` : ''}
+            <tr><td style="text-align:right; font-size:9px;">消費税(10%)</td><td style="text-align:right;">¥${totals.tax.toLocaleString()}</td></tr>
+            <tr><td style="font-weight:bold;">合計金額 (税込)</td><td style="text-align:right; font-weight:bold; font-size:13px;">¥${totals.total.toLocaleString()}</td></tr>
+          </table>
+          ` : `
+          <div class="box section" style="height: 90px; display:flex; align-items:center; justify-content:center; border: 1px dashed #999; background: #fafafa;">
+             <span style="color:#666; font-size: 11px;">※ギフト配送のため、金額の記載は控えさせていただいております。</span>
+          </div>
+          `}
+
+          <div class="flex-row" style="margin-top:auto; position:relative; padding-top: 10px;">
+            <div style="font-size:9px; color:#333;">
+              ${logoUrl ? `<img src="${logoUrl}" class="shop-logo" /><br/>` : `<strong style="font-size:12px;">${appSettings?.generalConfig?.appName || 'FLORIX'}</strong><br/>`}
+              ${shop.name || ''}<br/>
+              ${shop.address || ''}<br/>
+              TEL: ${shop.phone || ''}
+            </div>
+            ${isReceipt ? `<div class="sign-box">受領印</div>` : ''}
+          </div>
+        </div>
+      `;
+
+      // ギフト（受取人が違う）場合は、納品書と受領書の金額を隠す
+      const hideGiftPrice = d.isRecipientDifferent;
 
       const html = `
         <!DOCTYPE html>
         <html lang="ja">
         <head>
           <meta charset="UTF-8">
-          <title>受注伝票 - ${safeId}</title>
+          <title>伝票出力 - ${safeId}</title>
           <style>
-            body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; margin: 0; padding: 40px; color: #333; line-height: 1.6; }
-            .slip-container { position: relative; max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 40px; min-height: 1100px; background-color: #fff; }
-            .bg-image { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: url('${slipBgUrl}'); background-size: cover; background-position: center; opacity: ${slipBgOpacity / 100}; z-index: 0; filter: grayscale(100%); }
-            .content { position: relative; z-index: 10; }
-            .header { display: flex; justify-content: space-between; border-bottom: 2px solid #2D4B3E; padding-bottom: 20px; margin-bottom: 30px; }
-            .title { font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #2D4B3E; }
-            .shop-info { text-align: right; font-size: 12px; }
-            .shop-logo { max-height: 60px; margin-bottom: 10px; object-fit: contain; }
-            .customer-section { margin-bottom: 30px; }
-            .customer-name { font-size: 20px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 5px; width: 60%; margin-bottom: 10px; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; font-size: 14px; background-color: rgba(255,255,255,0.8); }
-            th { background-color: #f0f0f0; font-weight: bold; }
-            .total-row { font-size: 18px; font-weight: bold; color: #2D4B3E; }
-            .info-box { border: 1px solid #ddd; padding: 15px; font-size: 13px; background-color: rgba(255,255,255,0.9); margin-bottom: 20px; border-radius: 8px; }
             @media print {
-              body { padding: 0; }
-              .slip-container { border: none; padding: 20px; }
-              .bg-image { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-              th, td, .info-box { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              @page { size: A4 portrait; margin: 0; }
+              body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .a4-grid { border: none !important; margin: 0 !important; }
             }
+            body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; background: #e0e0e0; margin: 20px 0; }
+            
+            /* A4サイズの十字4分割グリッド */
+            .a4-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              grid-template-rows: 1fr 1fr;
+              width: 210mm;
+              height: 297mm;
+              background: white;
+              margin: 0 auto;
+              box-sizing: border-box;
+              border: 1px solid #ccc;
+            }
+            
+            .slip {
+              position: relative;
+              padding: 10mm;
+              box-sizing: border-box;
+              display: flex;
+              flex-direction: column;
+              overflow: hidden;
+              border-right: 1px dashed #aaa;
+              border-bottom: 1px dashed #aaa;
+              z-index: 1;
+            }
+            .slip:nth-child(2n) { border-right: none; }
+            .slip:nth-child(n+3) { border-bottom: none; }
+            
+            .bg-image { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: url('${slipBgUrl}'); background-size: cover; background-position: center; opacity: ${slipBgOpacity / 100}; filter: grayscale(100%); z-index: -1; }
+            
+            .title { text-align: center; font-size: 16px; font-weight: bold; letter-spacing: 4px; margin-bottom: 8px; border-bottom: 2px solid #333; padding-bottom: 5px; color: #2D4B3E; }
+            .meta { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 12px; font-weight: bold; color: #555; }
+            .section { margin-bottom: 8px; }
+            
+            .label { font-size: 9px; color: #666; background: #eee; padding: 2px 6px; display: inline-block; margin-bottom: 2px; border-radius: 2px; }
+            .val { font-size: 11px; font-weight: bold; line-height: 1.4; }
+            .val-lg { font-size: 14px; font-weight: black; }
+            
+            .flex-row { display: flex; justify-content: space-between; gap: 8px; }
+            .box { border: 1px solid #ddd; padding: 6px; background: rgba(255,255,255,0.8); border-radius: 4px; }
+            
+            table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 10px; background: rgba(255,255,255,0.8); }
+            th, td { border: 1px solid #ddd; padding: 5px; }
+            th { background: #f7f7f7; font-weight: bold; color: #555; }
+            
+            .sign-box { border: 1px solid #333; width: 60px; height: 60px; position: absolute; bottom: 0; right: 0; text-align: center; padding-top: 4px; font-size: 10px; color: #999; border-radius: 4px; background: #fff; }
+            .shop-logo { max-width: 80px; max-height: 25px; object-fit: contain; }
           </style>
         </head>
         <body>
-          <div class="slip-container">
-            ${slipBgUrl ? `<div class="bg-image"></div>` : ''}
-            <div class="content">
-              <div class="header">
-                <div>
-                  <div class="title">受 注 伝 票</div>
-                  <div style="margin-top: 15px; font-size: 12px;">受付日時: ${safeFormatDate(selectedOrder.created_at, true)}</div>
-                  <div style="font-size: 12px;">注文ID: ${selectedOrder.id}</div>
-                </div>
-                <div class="shop-info">
-                  ${logoUrl ? `<img src="${logoUrl}" class="shop-logo" /><br/>` : `<div style="font-size:18px;font-weight:bold;margin-bottom:10px;">${appSettings?.generalConfig?.appName || 'FLORIX'}</div>`}
-                  ${shop.name || ''}<br/>
-                  ${shop.address || '店舗住所未設定'}<br/>
-                  TEL: ${shop.phone || '未設定'}
-                </div>
-              </div>
-
-              <div class="customer-section">
-                <div class="customer-name">${d.customerInfo?.name || 'お客様'} 様</div>
-                <div style="font-size: 12px; margin-left: 10px;">
-                  TEL: ${d.customerInfo?.phone || '未登録'}<br/>
-                  ${d.receiveMethod !== 'pickup' ? `〒${d.customerInfo?.zip || ''} ${d.customerInfo?.address1 || ''} ${d.customerInfo?.address2 || ''}` : ''}
-                </div>
-              </div>
-
-              <table>
-                <thead>
-                  <tr>
-                    <th style="width: 50%;">ご注文内容</th>
-                    <th style="width: 20%;">数量</th>
-                    <th style="width: 30%;">金額 (税抜)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>
-                      <b>${d.flowerType || '未設定'}</b><br/>
-                      <span style="font-size:11px; color:#555;">
-                        用途: ${d.flowerPurpose || '-'} / 色: ${d.flowerColor || '-'} / イメージ: ${d.flowerVibe || '-'}
-                      </span>
-                    </td>
-                    <td>1</td>
-                    <td>¥${Number(d.itemPrice || 0).toLocaleString()}</td>
-                  </tr>
-                  ${Number(d.calculatedFee) > 0 ? `
-                  <tr>
-                    <td>配送料 (箱代・クール便等含む)</td>
-                    <td>1</td>
-                    <td>¥${Number(d.calculatedFee).toLocaleString()}</td>
-                  </tr>` : ''}
-                  ${Number(d.pickupFee) > 0 ? `
-                  <tr>
-                    <td>器回収・返却費用</td>
-                    <td>1</td>
-                    <td>¥${Number(d.pickupFee).toLocaleString()}</td>
-                  </tr>` : ''}
-                  <tr>
-                    <td colspan="2" style="text-align: right; font-weight: bold;">消費税 (10%)</td>
-                    <td>¥${totals.tax.toLocaleString()}</td>
-                  </tr>
-                  <tr class="total-row">
-                    <td colspan="2" style="text-align: right;">合計金額 (税込)</td>
-                    <td>¥${totals.total.toLocaleString()}</td>
-                  </tr>
-                </tbody>
-              </table>
-
-              <div class="info-box">
-                <div style="font-weight: bold; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; color:#2D4B3E;">お届け・受取スケジュール</div>
-                受取方法: <b>${getMethodLabel(d.receiveMethod)}</b> ${d.receiveMethod === 'pickup' ? `(${d.selectedShop || ''})` : ''}<br/>
-                予定日: <b>${d.selectedDate || '未指定'}</b> ${d.selectedTime ? `(${d.selectedTime})` : ''}<br/>
-                ${d.receiveMethod === 'sagawa' ? `<span style="color: green;">発送予定日: ${d.shippingDate || '未定'}</span><br/>` : ''}
-                ${d.receiveMethod !== 'pickup' ? `
-                  <br/><b>【お届け先】</b><br/>
-                  宛名: ${tInfo?.name || ''} 様<br/>
-                  電話: ${tInfo?.phone || ''}<br/>
-                  住所: 〒${tInfo?.zip || ''} ${tInfo?.address1 || ''} ${tInfo?.address2 || ''}
-                ` : ''}
-                ${d.absenceAction === '置き配' ? `<br/><span style="color:red; font-weight:bold;">※置き配希望: ${d.absenceNote || ''}</span>` : ''}
-              </div>
-
-              ${d.cardType && d.cardType !== 'なし' ? `
-              <div class="info-box">
-                <div style="font-weight: bold; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; color:#2D4B3E;">添付物: ${d.cardType}</div>
-                ${d.cardMessage ? formatText(d.cardMessage) : ''}
-                ${d.tatePattern ? `【パターン】 ${d.tatePattern}<br/>` : ''}
-                ${d.tateInput1 ? `【内容】 ${d.tateInput1}<br/>` : ''}
-                ${d.tateInput2 ? `【宛名】 ${d.tateInput2} 様<br/>` : ''}
-                ${d.tateInput3 ? `【贈り主】 ${d.tateInput3}<br/>` : ''}
-                ${d.tateInput3a ? `【会社名】 ${d.tateInput3a}<br/>` : ''}
-                ${d.tateInput3b ? `【役職・名】 ${d.tateInput3b}<br/>` : ''}
-              </div>` : ''}
-              
-              ${d.note ? `
-              <div class="info-box" style="background-color: #fffdf0; border-color: #f2e4b0;">
-                <div style="font-weight: bold; margin-bottom: 5px; color:#8a6d3b;">社内メモ / 要望</div>
-                ${formatText(d.note)}
-              </div>` : ''}
-
-            </div>
+          <div class="a4-grid">
+            ${renderSlip('受 注 書 (店舗控)', false, false)}
+            ${renderSlip('ご 注 文 内 容 (お客様控)', false, false)}
+            ${renderSlip('納 品 書', hideGiftPrice, false)}
+            ${renderSlip('受 領 書', hideGiftPrice, true)}
           </div>
           <script>
             window.onload = function() {
@@ -286,13 +299,8 @@ export default function CalendarPage() {
         </body>
         </html>
       `;
-
-      const printWindow = window.open('', '_blank');
-      if(!printWindow) {
-        alert('ポップアップがブロックされました。ブラウザの設定で許可してください。');
-        return;
-      }
       
+      printWindow.document.open();
       printWindow.document.write(html);
       printWindow.document.close();
 
@@ -302,9 +310,6 @@ export default function CalendarPage() {
     }
   };
 
-  // ==========================================
-  // ★ メール送信ロジック（確実にメーラーを起動）
-  // ==========================================
   const handleSendEmail = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -336,7 +341,6 @@ export default function CalendarPage() {
       const body = encodeURIComponent(bodyText);
       const mailtoUrl = `mailto:${email}?subject=${subject}&body=${body}`;
       
-      // _blankで開くことで、メーラーアプリへの受け渡しをより確実に実行
       window.open(mailtoUrl, '_blank');
 
     } catch (err) {
@@ -485,15 +489,16 @@ export default function CalendarPage() {
                 <p className="text-[10px] md:text-[11px] text-[#999999] font-bold mt-1">受付: {safeFormatDate(selectedOrder.created_at, true)} | ID: {selectedOrder.id}</p>
               </div>
 
+              {/* ★ ここで印刷・メールボタンに機能を接続！！ */}
               <div className="flex flex-wrap items-center gap-2 ml-auto">
-                {/* ★ 印刷・PDFボタン */}
                 <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all">
                   <Printer size={14} /> <span className="hidden sm:inline">印刷 / PDF出力</span>
                 </button>
-                {/* ★ メールボタン */}
-                <button onClick={handleSendEmail} className="flex items-center gap-1.5 px-3 py-2 bg-[#2D4B3E] text-white rounded-xl text-[10px] md:text-[11px] font-bold hover:bg-[#1f352b] transition-all shadow-sm">
-                  <Send size={14} /> <span className="hidden sm:inline">メール作成</span>
-                </button>
+                {modalData.customerInfo?.email && (
+                  <button onClick={handleSendEmail} className="flex items-center gap-1.5 px-3 py-2 bg-[#2D4B3E] text-white rounded-xl text-[10px] md:text-[11px] font-bold hover:bg-[#1f352b] transition-all shadow-sm">
+                    <Send size={14} /> <span className="hidden sm:inline">メール作成</span>
+                  </button>
+                )}
                 
                 <div className="w-[1px] h-6 bg-[#EAEAEA] mx-1"></div>
 
