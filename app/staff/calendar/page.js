@@ -1,10 +1,12 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/utils/supabase';
+// ★ エラーの原因：MessageSquare と CreditCard などのアイコン読み込みを追加！
 import { 
   ChevronLeft, ChevronRight, RefreshCw, X, Calendar as CalendarIcon, 
   User, MapPin, Tag, FileText, Smartphone, Archive, RotateCcw, 
-  Package, Store, Truck, Send, Printer, ListChecks, AlertCircle
+  Package, Store, Truck, Send, Printer, ListChecks, AlertCircle,
+  MessageSquare, CreditCard
 } from 'lucide-react';
 
 export default function CalendarPage() {
@@ -67,6 +69,7 @@ export default function CalendarPage() {
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
   const startDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
 
+  // ★ 注文データをカレンダーイベントにマッピング（発送日とお届け日を分離）
   const calendarEvents = useMemo(() => {
     const map = {};
     orders.forEach(order => {
@@ -80,6 +83,7 @@ export default function CalendarPage() {
       };
 
       if (d.receiveMethod === 'sagawa') {
+        // 業者配送：発送日(集荷) と お届け日 の両方をカレンダーに出す
         if (d.shippingDate) addEvent(d.shippingDate, 'dispatch');
         if (d.selectedDate) addEvent(d.selectedDate, 'sagawa_delivery');
       } else if (d.receiveMethod === 'pickup') {
@@ -128,6 +132,7 @@ export default function CalendarPage() {
     const dayEvents = calendarEvents[dateStr] || []; 
     const isToday = new Date().toISOString().split('T')[0] === dateStr;
 
+    // イベントを並び替え（発送業務を一番上に、その後は時間順）
     dayEvents.sort((a, b) => {
       if (a.type === 'dispatch' && b.type !== 'dispatch') return -1;
       if (a.type !== 'dispatch' && b.type === 'dispatch') return 1;
@@ -147,6 +152,7 @@ export default function CalendarPage() {
              let badgeColor = '';
              let timeLabel = '';
 
+             // ★ バッジのデザインとラベル
              if (ev.type === 'dispatch') {
                badgeColor = 'bg-green-600 text-white hover:bg-green-700 shadow-sm';
                timeLabel = '発送';
@@ -191,7 +197,6 @@ export default function CalendarPage() {
   const isPickup = modalData.receiveMethod === 'pickup';
   const isDelivery = modalData.receiveMethod === 'delivery';
 
-  // ★ ここから下が <main> で始まり、</main> で終わるように修正しました！
   return (
     <main className="pb-32 font-sans">
       <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] flex flex-col md:flex-row md:items-center justify-between px-4 md:px-8 py-3 md:h-20 gap-3 sticky top-0 z-10">
@@ -202,6 +207,7 @@ export default function CalendarPage() {
           </button>
         </div>
         
+        {/* ★ 凡例（レジェンド）の追加 */}
         <div className="hidden lg:flex flex-wrap gap-3 text-[10px] font-bold bg-[#FBFAF9] px-4 py-2 rounded-xl border border-[#EAEAEA]">
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-green-600 shadow-sm"></span> 発送業務 (箱詰め)</span>
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-green-50 border border-green-200"></span> 業者お届け日</span>
@@ -222,6 +228,7 @@ export default function CalendarPage() {
       </header>
 
       <div className="p-2 md:p-8 max-w-[1400px] mx-auto">
+        {/* スマホ用凡例 */}
         <div className="lg:hidden flex flex-wrap gap-2 text-[9px] font-bold bg-white p-3 rounded-xl border border-[#EAEAEA] mb-3 shadow-sm">
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-green-600"></span> 発送</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-green-50 border border-green-200"></span> お届け</span>
@@ -245,7 +252,7 @@ export default function CalendarPage() {
         )}
       </div>
 
-      {/* --- 詳細モーダル --- */}
+      {/* --- 詳細モーダル (完全最新版) --- */}
       {selectedOrder && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#111111]/60 backdrop-blur-sm p-3 md:p-4 animate-in fade-in" onClick={() => setSelectedOrder(null)}>
           <div className="bg-[#FBFAF9] rounded-[24px] md:rounded-[32px] w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -290,6 +297,7 @@ export default function CalendarPage() {
             
             <div className="p-4 md:p-8 space-y-6 md:space-y-8 text-left overflow-x-hidden">
               
+              {/* ステータス変更 */}
               <div className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <span className={`px-3 py-1.5 rounded-lg text-[11px] md:text-[12px] font-bold flex items-center gap-1 ${isPickup ? 'bg-orange-100 text-orange-700' : isDelivery ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
@@ -310,6 +318,7 @@ export default function CalendarPage() {
                 </div>
               </div>
 
+              {/* ★ 巨大な発送日パネル（業者配送の場合） */}
               {isSagawa ? (
                 <div className="bg-green-50 border-2 border-green-200 p-6 md:p-8 rounded-[24px] flex flex-col md:flex-row items-center gap-6 justify-center text-center shadow-inner relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-bl-[64px] -mr-4 -mt-4"></div>
@@ -346,6 +355,7 @@ export default function CalendarPage() {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* 注文者情報 */}
                 <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
                   <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><User size={18}/> 注文者情報</h3>
                   <div className="space-y-4 text-[13px] bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA]">
@@ -356,6 +366,7 @@ export default function CalendarPage() {
                   </div>
                 </div>
 
+                {/* お届け先情報 ＆ Googleマップ */}
                 <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
                   <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><MapPin size={18}/> お届け先情報</h3>
                   <div className="space-y-3 text-[13px]">
@@ -384,6 +395,7 @@ export default function CalendarPage() {
                 </div>
               </div>
 
+              {/* 置き配設定 */}
               {(isDelivery || isSagawa) && (
                 <div className="bg-orange-50 p-6 rounded-[24px] border border-orange-200 shadow-sm space-y-2">
                   <h3 className="text-[12px] font-bold text-orange-800 flex items-center gap-2"><AlertCircle size={16}/> ご不在時の対応</h3>
@@ -393,6 +405,7 @@ export default function CalendarPage() {
                 </div>
               )}
 
+              {/* 商品とデザイン詳細 */}
               <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
                 <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><Tag size={18}/> オーダー内容</h3>
                 <div className="flex flex-col sm:flex-row gap-6">
@@ -412,6 +425,7 @@ export default function CalendarPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-4">
+                {/* メッセージ・立札 */}
                 {modalData.cardType !== 'なし' && (
                   <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
                     <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><MessageSquare size={18}/> 添付物: {modalData.cardType}</h3>
@@ -435,6 +449,7 @@ export default function CalendarPage() {
                   </div>
                 )}
 
+                {/* お支払い内訳 */}
                 <div className="bg-white p-6 md:p-8 rounded-[32px] border-2 border-[#2D4B3E]/20 shadow-md space-y-6">
                   <h3 className="text-[16px] font-black text-[#2D4B3E] border-b border-[#EAEAEA] pb-3 flex items-center gap-2"><CreditCard size={20}/> お支払い情報</h3>
                   <div className="space-y-3 text-[13px] md:text-[14px] font-medium text-[#555555]">
@@ -458,6 +473,7 @@ export default function CalendarPage() {
                 </div>
               </div>
 
+              {/* メモ */}
               {modalData.note && (
                 <div className="bg-yellow-50 p-6 rounded-[24px] border border-yellow-200 shadow-sm mb-4">
                   <h3 className="text-[12px] font-bold text-yellow-800 mb-2 tracking-widest flex items-center gap-2">社内メモ / お客様要望</h3>
@@ -473,6 +489,6 @@ export default function CalendarPage() {
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
-    </main> // ★ ここを修正しました！
+    </main>
   );
 }
