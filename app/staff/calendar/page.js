@@ -132,7 +132,7 @@ export default function CalendarPage() {
   };
 
   // ==========================================
-  // ★ お客様の「完璧なコード」をベースにデータ連携を修正した印刷ロジック
+  // ★ お客様のコードそのまま（店舗データ参照だけ修正）
   // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
@@ -153,14 +153,14 @@ export default function CalendarPage() {
 
       const formatPrice = (price, hide) => hide ? '' : `¥${Number(price || 0).toLocaleString()}`;
 
-      // ★ データ参照エラーをここで修正しています
+      // ★ ここだけ修正しました（エラー原因のデータ参照場所のズレ）
       const shop = (appSettings?.shops || [])[0] || {};
-      const shopName = shop.name || appSettings?.generalConfig?.appName || '花・花OHANA！';
+      const shopName = appSettings?.generalConfig?.appName || '花・花OHANA！';
       const shopZip = shop.zip || '0010025';
       const shopAddress = shop.address || '北海道札幌市北区北２５条西４丁目３−８ クレアノース25 1階';
       const shopTel = shop.phone || '011-600-1878';
       const shopInvoice = shop.invoiceNumber || 'T1234567891012';
-      
+
       const titleColorMap = {
         order_store: '#2f7d57',
         customer: '#2b6cb0',
@@ -221,7 +221,7 @@ export default function CalendarPage() {
           return `
             <div class="extra-box">
               <div class="extra-title">【メッセージカード】</div>
-              <div>${formatText(d.cardMessage).replace(/\n/g, '<br/>')}</div>
+              <div>${formatText(d.cardMessage)}</div>
             </div>
           `;
         }
@@ -293,7 +293,7 @@ export default function CalendarPage() {
             ${(type === 'order_store' || type === 'customer') ? `
               <div class="check-group">
                 <div class="check-label">受注</div>
-                <div class="check-box filled">${type === 'order_store' ? (d.staffName || '') : (d.staffName || '')}</div>
+                <div class="check-box filled">${type === 'order_store' ? '七社愛希' : '七社愛希'}</div>
               </div>
               <div class="check-group">
                 <div class="check-label">配達</div>
@@ -316,7 +316,7 @@ export default function CalendarPage() {
 
       const renderReceiptNote = () => `
         <div class="receipt-note">
-          上記の商品を確かに受領いたしました。　<br/>
+          上記の商品を確かに受領いたしました。　
           受領日：　　　年　　　月　　　日　　　サインまたは印
         </div>
       `;
@@ -356,10 +356,6 @@ export default function CalendarPage() {
               .page {
                 box-shadow: none !important;
                 margin: 0 auto !important;
-                page-break-after: always;
-              }
-              .page:last-child {
-                page-break-after: auto;
               }
             }
 
@@ -388,7 +384,6 @@ export default function CalendarPage() {
               position: relative;
             }
 
-            /* ★ ここでお客様の完璧な上下2分割レイアウトを適用 */
             .page.two-split {
               display: grid;
               grid-template-rows: 1fr 1fr;
@@ -397,8 +392,6 @@ export default function CalendarPage() {
             .slip {
               padding: 8mm 8mm 5mm;
               position: relative;
-              display: flex;
-              flex-direction: column;
             }
 
             .page.two-split .slip:first-child {
@@ -416,7 +409,6 @@ export default function CalendarPage() {
               color: #888;
               background: transparent;
               pointer-events: none;
-              z-index: 10;
             }
 
             .cutline span {
@@ -606,7 +598,7 @@ export default function CalendarPage() {
             }
 
             .footer {
-              margin-top: auto;
+              margin-top: 10px;
               border-top: 1px solid #d5d5d5;
               padding-top: 6px;
               display: flex;
