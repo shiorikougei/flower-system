@@ -132,7 +132,7 @@ export default function CalendarPage() {
   };
 
   // ==========================================
-  // ★ 印刷ロジック (A4サイズ完全ロック版)
+  // ★ 印刷ロジック (A4サイズ完全ロック・金額空欄対応版)
   // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
@@ -151,7 +151,7 @@ export default function CalendarPage() {
       const datePart = d.selectedDate || '未指定';
       const paymentStatus = d.paymentMethod ? `${d.paymentMethod}${d.paymentStatus ? `(${d.paymentStatus})` : ''}` : '未設定';
 
-      const formatPrice = (price, hide) => hide ? '' : `¥${Number(price || 0).toLocaleString()}`;
+      const formatPrice = (price) => `¥${Number(price || 0).toLocaleString()}`;
 
       const shop = (appSettings?.shops || [])[0] || {};
       const shopName = shop.name || appSettings?.generalConfig?.appName || '花・花OHANA！';
@@ -202,22 +202,20 @@ export default function CalendarPage() {
         </div>
       `;
 
-      // ★ 内容は一切省略せず、そのまま出力します
+      // ★ 内容は一切変更せず、元の改行スタイルのまま表示します
       const renderCardBlock = () => {
         if (d.cardType === '立札') {
           return `
             <div class="extra-box">
               <div class="extra-title">【立札の内容】</div>
-              ${d.tatePattern ? `<div style="color: #d32f2f; font-weight: 800; font-size: 13px; margin-top: 2px;">${formatText(d.tatePattern)}</div>` : ''}
-              ${d.tateInput1 ? `<div style="font-weight: 800; font-size: 13px;">${formatText(d.tateInput1)}</div>` : ''}
-              ${d.tateInput2 ? `<div style="font-weight: 800; font-size: 13px;">${formatText(d.tateInput2)}</div>` : ''}
-              ${d.tateInput3 ? `<div style="font-weight: 800; font-size: 13px;">${formatText(d.tateInput3)}</div>` : ''}
+              ${d.tateInput1 ? `<div>${formatText(d.tateInput1)}</div>` : ''}
+              ${d.tateInput2 ? `<div>${formatText(d.tateInput2)}</div>` : ''}
+              ${d.tateInput3 ? `<div>${formatText(d.tateInput3)}</div>` : ''}
               ${d.tateInput3a ? `<div>${formatText(d.tateInput3a)}</div>` : ''}
               ${d.tateInput3b ? `<div>${formatText(d.tateInput3b)}</div>` : ''}
             </div>
           `;
         }
-
         if (d.cardType === 'メッセージカード') {
           return `
             <div class="extra-box">
@@ -226,12 +224,11 @@ export default function CalendarPage() {
             </div>
           `;
         }
-
         return '';
       };
 
-      // ★ 金額を非表示にする場合も、td（枠）は残して中身だけ空にする
-      const renderItemsBlock = (hidePrice = false, showAmountTable = true) => `
+      // ★ 枠は残しつつ、hidePriceがtrueの場合は金額を「空欄」にします
+      const renderItemsBlock = (hidePrice = false) => `
         <div class="items-box">
           <table class="items-table">
             <thead>
@@ -249,81 +246,70 @@ export default function CalendarPage() {
                     用途: ${formatText(d.flowerPurpose) || '-'} / 色: ${formatText(d.flowerColor) || '-'} / イメージ: ${formatText(d.flowerVibe) || '-'}
                   </div>
                   ${renderCardBlock()}
-                  ${d.note ? `<div class="item-detail" style="color:#d97c8f; margin-top:4px;">備考: ${formatText(d.note)}</div>` : ''}
                 </td>
                 <td class="qty-cell">1</td>
-                <td class="price-cell">${hidePrice ? '' : formatPrice(d.itemPrice, false)}</td>
+                <td class="price-cell">${hidePrice ? '' : formatPrice(d.itemPrice)}</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        ${showAmountTable ? `
-          <div class="amount-summary-wrap">
-            <table class="amount-summary">
-              <tbody>
-                <tr>
-                  <th>商品代</th>
-                  <td>${hidePrice ? '' : formatPrice(totals.item, false)}</td>
-                </tr>
-                <tr>
-                  <th>送料・箱代等</th>
-                  <td>${hidePrice ? '' : formatPrice(Number(d.calculatedFee || 0) + Number(d.pickupFee || 0), false)}</td>
-                </tr>
-                <tr>
-                  <th>消費税(10%)</th>
-                  <td>${hidePrice ? '' : formatPrice(totals.tax, false)}</td>
-                </tr>
-                <tr class="total-row">
-                  <th>合計</th>
-                  <td>${hidePrice ? '' : formatPrice(totals.total, false)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        ` : ''}
+        <div class="amount-summary-wrap">
+          <table class="amount-summary">
+            <tbody>
+              <tr>
+                <th>商品代</th>
+                <td>${hidePrice ? '' : formatPrice(totals.item)}</td>
+              </tr>
+              <tr>
+                <th>送料・箱代等</th>
+                <td>${hidePrice ? '' : formatPrice(Number(d.calculatedFee || 0) + Number(d.pickupFee || 0))}</td>
+              </tr>
+              <tr>
+                <th>消費税(10%)</th>
+                <td>${hidePrice ? '' : formatPrice(totals.tax)}</td>
+              </tr>
+              <tr class="total-row">
+                <th>合計</th>
+                <td>${hidePrice ? '' : formatPrice(totals.total)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       `;
 
-      // ★ 納品書・受領書（配達）にも担当者名を表示させる
-      const renderFooter = (type) => `
+      // ★ すべての伝票で4つのチェックボックスを表示し、配達スタッフ等の名前を書けるように統一
+      const renderFooter = () => `
         <div class="footer">
           <div class="shop-block">
             <div class="shop-name">${shopName}</div>
             <div class="shop-info">〒${shopZip} ${shopAddress}</div>
             <div class="shop-info">TEL: ${shopTel} (${shopInvoice})</div>
           </div>
-
           <div class="footer-actions">
-            ${(type === 'order_store' || type === 'customer') ? `
-              <div class="check-group">
-                <div class="check-label">受注</div>
-                <div class="check-box filled">${formatText(d.staffName)}</div>
-              </div>
-              <div class="check-group">
-                <div class="check-label">配達</div>
-                <div class="check-box"></div>
-              </div>
-              <div class="check-group">
-                <div class="check-label">片付</div>
-                <div class="check-box"></div>
-              </div>
-              <div class="check-group">
-                <div class="check-label">請求</div>
-                <div class="check-box"></div>
-              </div>
-            ` : `
-              <div class="check-group">
-                <div class="check-label">配達</div>
-                <div class="check-box filled">${formatText(d.staffName)}</div>
-              </div>
-            `}
+            <div class="check-group">
+              <div class="check-label">受注</div>
+              <div class="check-box filled">${formatText(d.staffName)}</div>
+            </div>
+            <div class="check-group">
+              <div class="check-label">配達</div>
+              <div class="check-box"></div>
+            </div>
+            <div class="check-group">
+              <div class="check-label">片付</div>
+              <div class="check-box"></div>
+            </div>
+            <div class="check-group">
+              <div class="check-label">請求</div>
+              <div class="check-box"></div>
+            </div>
           </div>
         </div>
       `;
 
       const renderReceiptNote = () => `
         <div class="receipt-note">
-          上記の商品を確かに受領いたしました。　<br/>
+          上記の商品を確かに受領いたしました。　
           受領日：　　　年　　　月　　　日　　　サインまたは印
         </div>
       `;
@@ -336,9 +322,9 @@ export default function CalendarPage() {
           </div>
 
           ${renderClientBoxes()}
-          ${renderItemsBlock(hidePrice, true)}
+          ${renderItemsBlock(hidePrice)}
           ${showReceiptNote ? renderReceiptNote() : ''}
-          ${renderFooter(type)}
+          ${renderFooter()}
         </section>
       `;
 
@@ -349,10 +335,9 @@ export default function CalendarPage() {
           <meta charset="UTF-8" />
           <title>伝票出力 - ${safeId}</title>
           <style>
-            /* ★ 1ページに1伝票になってしまうエラーをこれで完全ロック */
             @page {
               size: A4 portrait;
-              margin: 0; 
+              margin: 8mm;
             }
 
             @media print {
@@ -388,29 +373,31 @@ export default function CalendarPage() {
               width: 100%;
             }
 
-            /* ★ 高さを297mmにガチガチに固定し、ブラウザの改ページ干渉を防ぐ */
+            /* ★ 高さをガチガチに固定し、ブラウザの改ページ干渉による4分割バグを完全に防ぐ */
             .page {
-              width: 210mm;
-              height: 297mm; 
+              width: 194mm;
+              height: 277mm; 
               margin: 0 auto 8mm;
               background: #fff;
-              padding: 8mm;
+              padding: 0;
               box-shadow: 0 1mm 4mm rgba(0,0,0,0.08);
               position: relative;
-              display: flex;
-              flex-direction: column;
+              overflow: hidden; 
             }
 
-            /* 1枚の伝票はちょうどA4の半分の高さ(140.5mm) */
+            /* 1ページにつききっちり半分（138.5mm）を2つ割り当てる */
+            .page.two-split {
+              display: grid;
+              grid-template-rows: 138.5mm 138.5mm;
+            }
+
             .slip {
-              height: 140.5mm;
-              padding: 4mm 6mm;
+              padding: 8mm 8mm 5mm;
               position: relative;
-              display: flex;
-              flex-direction: column;
+              overflow: hidden; /* コンテンツが長すぎても枠を壊さない */
             }
 
-            .page .slip:first-child {
+            .page.two-split .slip:first-child {
               border-bottom: 1px dashed #9a9a9a;
             }
 
@@ -598,7 +585,7 @@ export default function CalendarPage() {
               text-align: right;
               font-weight: 700;
               background: #fff;
-              height: 22px; /* 枠の高さ維持のため */
+              height: 23px; /* 金額が空欄の時も枠の高さを保つ */
             }
 
             .amount-summary .total-row th,
@@ -616,7 +603,7 @@ export default function CalendarPage() {
             }
 
             .footer {
-              margin-top: auto;
+              margin-top: 10px;
               border-top: 1px solid #d5d5d5;
               padding-top: 6px;
               display: flex;
@@ -679,16 +666,16 @@ export default function CalendarPage() {
         </head>
         <body>
           <div class="print-root">
-            <div class="page">
+            <div class="page two-split">
               ${renderSlip({ title: '受 注 書 控', type: 'order_store', hidePrice: false })}
-              ${renderSlip({ title: 'お 客 様 控', type: 'customer', hidePrice: false })}
               <div class="cutline"><span>✂ 切り取り線</span></div>
+              ${renderSlip({ title: 'お 客 様 控', type: 'customer', hidePrice: false })}
             </div>
 
-            <div class="page">
+            <div class="page two-split">
               ${renderSlip({ title: '納 品 書', type: 'delivery', hidePrice: true })}
-              ${renderSlip({ title: '受 領 書', type: 'receipt', hidePrice: true, showReceiptNote: true })}
               <div class="cutline"><span>✂ 切り取り線</span></div>
+              ${renderSlip({ title: '受 領 書', type: 'receipt', hidePrice: true, showReceiptNote: true })}
             </div>
           </div>
 
