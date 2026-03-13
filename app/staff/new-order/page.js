@@ -55,7 +55,6 @@ export default function StaffNewOrderPage() {
   const [areaError, setAreaError] = useState('');
   const [note, setNote] = useState('');
 
-  // ★ デフォルトの時間枠
   const defaultTimeSlots = {
     pickup: ['10:00-12:00', '12:00-15:00', '15:00-18:00'],
     delivery: ['9:00-12:00', '12:00-15:00', '15:00-18:00', '18:00-21:00'],
@@ -139,7 +138,7 @@ export default function StaffNewOrderPage() {
   const tateNeeds = selectedTateOpt?.needs || [];
   const topPrefixText = isOsonae ? (prefixFormat === 'hiragana' ? 'お供え' : '御供') : (prefixFormat === 'hiragana' ? 'お祝い' : '祝');
 
-  // ★ 新規：入力された住所から「配送日数（リードタイム）」を自動判定
+  // ★ 住所から「配送日数」を自動判定
   const transitDays = useMemo(() => {
     if (receiveMethod !== 'sagawa') return 0;
     const targetInfo = isRecipientDifferent ? recipientInfo : customerInfo;
@@ -154,10 +153,10 @@ export default function StaffNewOrderPage() {
       
       if (rateData) return Number(rateData.leadDays) || 1;
     }
-    return 1; // デフォルト1日
+    return 1;
   }, [receiveMethod, customerInfo.address1, recipientInfo.address1, isRecipientDifferent, appSettings]);
 
-  // ★ 納期バグ修正
+  // ★ 納期計算
   const properMinDate = useMemo(() => {
     if (!flowerType) return '';
     const base = new Date();
@@ -195,7 +194,6 @@ export default function StaffNewOrderPage() {
     return options;
   };
 
-  // ★ 時間枠のプルダウン（設定連動）
   const getTimeOptions = () => {
     if (!selectedDate) return [];
     if (receiveMethod === 'pickup') return timeSlots.pickup;
@@ -279,7 +277,7 @@ export default function StaffNewOrderPage() {
       if (rateData) { 
         if (selectedDate) {
           const dDate = new Date(selectedDate);
-          dDate.setDate(dDate.getDate() - transitDays); // 配送日数分マイナス
+          dDate.setDate(dDate.getDate() - transitDays);
           setShippingDate(dDate.toISOString().split('T')[0]);
         } else {
           setShippingDate('');
