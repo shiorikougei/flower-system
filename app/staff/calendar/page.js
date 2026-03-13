@@ -132,7 +132,7 @@ export default function CalendarPage() {
   };
 
   // ==========================================
-  // ★ ユーザー様ご提示の「至高の伝票デザイン」を完全適用した印刷ロジック
+  // ★ お客様の「完璧なコード」をベースにデータ連携を修正した印刷ロジック
   // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
@@ -146,21 +146,21 @@ export default function CalendarPage() {
       const totals = getTotals(d);
 
       const formatText = (txt) => String(txt || '');
-      const safeId = String(selectedOrder.id || '').slice(0, 8);
+      const safeId = String(selectedOrder.id || '');
       const receiveMethodStr = getMethodLabel(d.receiveMethod);
       const datePart = d.selectedDate || '未指定';
-      const paymentStatus = d.paymentMethod ? `${d.paymentMethod}` : '未設定';
+      const paymentStatus = d.paymentMethod ? `${d.paymentMethod}${d.paymentStatus ? `(${d.paymentStatus})` : ''}` : '未設定';
 
       const formatPrice = (price, hide) => hide ? '' : `¥${Number(price || 0).toLocaleString()}`;
 
-      // ★ エラーの原因だった「データ参照のズレ」を修正
+      // ★ データ参照エラーをここで修正しています
       const shop = (appSettings?.shops || [])[0] || {};
-      const shopName = appSettings?.generalConfig?.appName || '店舗名未設定';
-      const shopZip = shop.zip || '000-0000';
-      const shopAddress = shop.address || '店舗住所未設定';
-      const shopTel = shop.phone || '000-000-0000';
-      const shopInvoice = shop.invoiceNumber ? `(${shop.invoiceNumber})` : '';
-
+      const shopName = shop.name || appSettings?.generalConfig?.appName || '花・花OHANA！';
+      const shopZip = shop.zip || '0010025';
+      const shopAddress = shop.address || '北海道札幌市北区北２５条西４丁目３−８ クレアノース25 1階';
+      const shopTel = shop.phone || '011-600-1878';
+      const shopInvoice = shop.invoiceNumber || 'T1234567891012';
+      
       const titleColorMap = {
         order_store: '#2f7d57',
         customer: '#2b6cb0',
@@ -225,6 +225,7 @@ export default function CalendarPage() {
             </div>
           `;
         }
+
         return '';
       };
 
@@ -246,7 +247,6 @@ export default function CalendarPage() {
                     用途: ${formatText(d.flowerPurpose) || '-'} / 色: ${formatText(d.flowerColor) || '-'} / イメージ: ${formatText(d.flowerVibe) || '-'}
                   </div>
                   ${renderCardBlock()}
-                  ${d.note ? `<div class="item-detail" style="color:#d97c8f; margin-top:4px;">備考: ${formatText(d.note)}</div>` : ''}
                 </td>
                 <td class="qty-cell">1</td>
                 ${hidePrice ? '' : `<td class="price-cell">${formatPrice(d.itemPrice, false)}</td>`}
@@ -286,14 +286,14 @@ export default function CalendarPage() {
           <div class="shop-block">
             <div class="shop-name">${shopName}</div>
             <div class="shop-info">〒${shopZip} ${shopAddress}</div>
-            <div class="shop-info">TEL: ${shopTel} ${shopInvoice}</div>
+            <div class="shop-info">TEL: ${shopTel} (${shopInvoice})</div>
           </div>
 
           <div class="footer-actions">
             ${(type === 'order_store' || type === 'customer') ? `
               <div class="check-group">
                 <div class="check-label">受注</div>
-                <div class="check-box filled">${d.staffName || ''}</div>
+                <div class="check-box filled">${type === 'order_store' ? (d.staffName || '') : (d.staffName || '')}</div>
               </div>
               <div class="check-group">
                 <div class="check-label">配達</div>
@@ -308,7 +308,7 @@ export default function CalendarPage() {
                 <div class="check-box"></div>
               </div>
             ` : `
-              <div class="single-action">配達</div>
+              <div class="single-action">${type === 'delivery' ? '配達' : '配達'}</div>
             `}
           </div>
         </div>
@@ -316,7 +316,7 @@ export default function CalendarPage() {
 
       const renderReceiptNote = () => `
         <div class="receipt-note">
-          上記の商品を確かに受領いたしました。<br/>
+          上記の商品を確かに受領いたしました。　<br/>
           受領日：　　　年　　　月　　　日　　　サインまたは印
         </div>
       `;
@@ -334,8 +334,6 @@ export default function CalendarPage() {
           ${renderFooter(type)}
         </section>
       `;
-
-      const isGift = d.isRecipientDifferent;
 
       const html = `
         <!DOCTYPE html>
@@ -359,6 +357,9 @@ export default function CalendarPage() {
                 box-shadow: none !important;
                 margin: 0 auto !important;
                 page-break-after: always;
+              }
+              .page:last-child {
+                page-break-after: auto;
               }
             }
 
@@ -387,6 +388,7 @@ export default function CalendarPage() {
               position: relative;
             }
 
+            /* ★ ここでお客様の完璧な上下2分割レイアウトを適用 */
             .page.two-split {
               display: grid;
               grid-template-rows: 1fr 1fr;
@@ -395,6 +397,8 @@ export default function CalendarPage() {
             .slip {
               padding: 8mm 8mm 5mm;
               position: relative;
+              display: flex;
+              flex-direction: column;
             }
 
             .page.two-split .slip:first-child {
@@ -412,6 +416,7 @@ export default function CalendarPage() {
               color: #888;
               background: transparent;
               pointer-events: none;
+              z-index: 10;
             }
 
             .cutline span {
@@ -678,8 +683,8 @@ export default function CalendarPage() {
             </div>
 
             <div class="page two-split">
-              ${renderSlip({ title: '納 品 書', type: 'delivery', hidePrice: isGift })}
-              ${renderSlip({ title: '受 領 書', type: 'receipt', hidePrice: isGift, showReceiptNote: true })}
+              ${renderSlip({ title: '納 品 書', type: 'delivery', hidePrice: true })}
+              ${renderSlip({ title: '受 領 書', type: 'receipt', hidePrice: true, showReceiptNote: true })}
               <div class="cutline"><span>✂ 切り取り線</span></div>
             </div>
           </div>
