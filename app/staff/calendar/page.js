@@ -122,9 +122,12 @@ export default function CalendarPage() {
     return { item, fee, pickup, subTotal, tax, total: subTotal + tax };
   };
 
-  // ★ 印刷・PDF出力ロジック
+  // ==========================================
+  // ★ 復活した機能：伝票印刷・PDF出力ロジック
+  // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!selectedOrder) return;
     
     const printWindow = window.open('', '_blank');
@@ -254,7 +257,7 @@ export default function CalendarPage() {
             ${d.cardType !== 'なし' ? `
             <div class="info-box">
               <div style="font-weight: bold; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; color:#2D4B3E;">添付物: ${d.cardType}</div>
-              ${d.cardMessage ? d.cardMessage.replace(/\n/g, '<br/>') : ''}
+              ${d.cardMessage ? d.cardMessage.replace(/\\n/g, '<br/>') : ''}
               ${d.tatePattern ? `【パターン】 ${d.tatePattern}<br/>` : ''}
               ${d.tateInput1 ? `【内容】 ${d.tateInput1}<br/>` : ''}
               ${d.tateInput2 ? `【宛名】 ${d.tateInput2} 様<br/>` : ''}
@@ -266,7 +269,7 @@ export default function CalendarPage() {
             ${d.note ? `
             <div class="info-box" style="background-color: #fffdf0; border-color: #f2e4b0;">
               <div style="font-weight: bold; margin-bottom: 5px; color:#8a6d3b;">社内メモ / 要望</div>
-              ${d.note.replace(/\n/g, '<br/>')}
+              ${d.note.replace(/\\n/g, '<br/>')}
             </div>` : ''}
 
           </div>
@@ -286,9 +289,12 @@ export default function CalendarPage() {
     printWindow.document.close();
   };
 
-  // ★ メール送信ロジック（メーラー起動）
+  // ==========================================
+  // ★ 復活した機能：メール送信ロジック（メーラー起動）
+  // ==========================================
   const handleSendEmail = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     const d = selectedOrder?.order_data;
     if (!d?.customerInfo?.email) {
       alert("メールアドレスが登録されていません。");
@@ -300,7 +306,6 @@ export default function CalendarPage() {
     
     const subject = encodeURIComponent(template.subject);
     
-    // 注文詳細のテキスト組み立て
     const orderDetails = `
 【ご注文内容】
 商品: ${d.flowerType}
@@ -314,10 +319,9 @@ export default function CalendarPage() {
       .replace(/\{OrderDetails\}/g, orderDetails);
     
     const body = encodeURIComponent(bodyText);
-    
-    // メーラーを起動
     window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
   };
+
 
   const renderDay = (day, index) => {
     if (!day) return <div key={`empty-${index}`} className="min-h-[80px] md:min-h-[120px] bg-[#FBFAF9]/50 border-r border-b border-[#EAEAEA]"></div>;
@@ -459,7 +463,7 @@ export default function CalendarPage() {
                 <p className="text-[10px] md:text-[11px] text-[#999999] font-bold mt-1">受付: {safeFormatDate(selectedOrder.created_at, true)} | ID: {selectedOrder.id}</p>
               </div>
 
-              {/* ★ 印刷・PDF・メールボタンに機能を接続！ */}
+              {/* ★ ここで印刷・メールボタンに機能を接続！！ */}
               <div className="flex flex-wrap items-center gap-2 ml-auto">
                 <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all">
                   <Printer size={14} /> <span className="hidden sm:inline">印刷</span>
