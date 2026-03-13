@@ -132,7 +132,7 @@ export default function CalendarPage() {
   };
 
   // ==========================================
-  // ★ お客様のコードを完全復元（店舗情報の参照先だけ修正）
+  // ★ 印刷ロジック（立札のスリム化＋はみ出し防止ロック版）
   // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
@@ -153,9 +153,8 @@ export default function CalendarPage() {
 
       const formatPrice = (price, hide) => hide ? '' : `¥${Number(price || 0).toLocaleString()}`;
 
-      // ★ ここだけ、エラー回避のために実際のデータベース構造に合わせました
       const shop = (appSettings?.shops || [])[0] || {};
-      const shopName = appSettings?.generalConfig?.appName || '花・花OHANA！';
+      const shopName = shop.name || appSettings?.generalConfig?.appName || '花・花OHANA！';
       const shopZip = shop.zip || '0010025';
       const shopAddress = shop.address || '北海道札幌市北区北２５条西４丁目３−８ クレアノース25 1階';
       const shopTel = shop.phone || '011-600-1878';
@@ -170,7 +169,6 @@ export default function CalendarPage() {
 
       const getTitleColor = (type) => titleColorMap[type] || '#2f7d57';
 
-      // ★ 以下のHTMLとCSSは、お客様から頂いたコードを一文字も変えていません
       const renderHeaderMeta = () => `
         <div class="meta-area">
           <div>伝票：${safeId}</div>
@@ -204,16 +202,15 @@ export default function CalendarPage() {
         </div>
       `;
 
+      // ★ ここが今回のはみ出し防止の最重要ポイント！！
+      // 配列に入れてスラッシュ（/）区切りで1〜2行に収めます。
       const renderCardBlock = () => {
         if (d.cardType === '立札') {
+          const parts = [d.tateInput1, d.tateInput2, d.tateInput3, d.tateInput3a, d.tateInput3b].filter(Boolean);
           return `
             <div class="extra-box">
-              <div class="extra-title">【立札の内容】</div>
-              ${d.tateInput1 ? `<div>${formatText(d.tateInput1)}</div>` : ''}
-              ${d.tateInput2 ? `<div>${formatText(d.tateInput2)}</div>` : ''}
-              ${d.tateInput3 ? `<div>${formatText(d.tateInput3)}</div>` : ''}
-              ${d.tateInput3a ? `<div>${formatText(d.tateInput3a)}</div>` : ''}
-              ${d.tateInput3b ? `<div>${formatText(d.tateInput3b)}</div>` : ''}
+              <span class="extra-title">【立札の内容】</span>
+              <span class="extra-text line-clamp">${parts.map(formatText).join(' / ')}</span>
             </div>
           `;
         }
@@ -222,11 +219,10 @@ export default function CalendarPage() {
           return `
             <div class="extra-box">
               <div class="extra-title">【メッセージカード】</div>
-              <div>${formatText(d.cardMessage)}</div>
+              <div class="extra-text line-clamp">${formatText(d.cardMessage)}</div>
             </div>
           `;
         }
-
         return '';
       };
 
@@ -375,24 +371,31 @@ export default function CalendarPage() {
               width: 100%;
             }
 
+            /* ★ 高さを完全固定し、はみ出しを許さない */
             .page {
               width: 194mm;
-              min-height: 277mm;
+              height: 277mm; /* min-heightからheightに変更 */
               margin: 0 auto 8mm;
               background: #fff;
               padding: 0;
               box-shadow: 0 1mm 4mm rgba(0,0,0,0.08);
               position: relative;
+              overflow: hidden; /* 絶対にはみ出させない */
             }
 
             .page.two-split {
-              display: grid;
-              grid-template-rows: 1fr 1fr;
+              display: flex;
+              flex-direction: column;
             }
 
+            /* ★ 各伝票が必ず半分(50%)に収まる魔法のCSS */
             .slip {
+              flex: 1;
+              min-height: 0; 
               padding: 8mm 8mm 5mm;
               position: relative;
+              display: flex;
+              flex-direction: column;
             }
 
             .page.two-split .slip:first-child {
@@ -410,6 +413,7 @@ export default function CalendarPage() {
               color: #888;
               background: transparent;
               pointer-events: none;
+              z-index: 10;
             }
 
             .cutline span {
@@ -512,7 +516,6 @@ export default function CalendarPage() {
             .item-cell {
               vertical-align: top;
               padding: 6px;
-              min-height: 82px;
             }
 
             .qty-cell,
@@ -536,21 +539,35 @@ export default function CalendarPage() {
               margin-bottom: 6px;
             }
 
+            /* ★ ここで立札ボックスをスリム化！ */
             .extra-box {
-              display: inline-block;
+              display: block;
               border: 1px dashed #bbb;
               padding: 4px 6px;
-              font-size: 11px;
-              line-height: 1.45;
               margin-top: 2px;
-              white-space: pre-wrap;
             }
 
             .extra-title {
               font-size: 10px;
               color: #666;
-              margin-bottom: 2px;
               font-weight: 700;
+              display: inline-block;
+              margin-bottom: 2px;
+            }
+
+            .extra-text {
+              font-size: 11px;
+              font-weight: 700;
+              line-height: 1.3;
+            }
+
+            /* 長すぎる文章は2行でストップさせる（はみ出し防止） */
+            .line-clamp {
+              display: -webkit-box;
+              -webkit-line-clamp: 2;
+              -webkit-box-orient: vertical;
+              overflow: hidden;
+              white-space: pre-wrap;
             }
 
             .amount-summary-wrap {
@@ -592,14 +609,15 @@ export default function CalendarPage() {
             }
 
             .receipt-note {
-              margin-top: 10px;
-              margin-bottom: 16px;
+              margin-top: 5px;
+              margin-bottom: 5px;
               font-size: 12px;
               line-height: 1.8;
             }
 
+            /* ★ フッターを常に伝票の一番下に押し付ける */
             .footer {
-              margin-top: 10px;
+              margin-top: auto;
               border-top: 1px solid #d5d5d5;
               padding-top: 6px;
               display: flex;
