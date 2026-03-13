@@ -73,11 +73,13 @@ export default function CalendarPage() {
     orders.forEach(order => {
       const d = order.order_data || {};
       if (d.status === 'キャンセル') return;
+
       const addEvent = (dateStr, type) => {
         if (!dateStr) return;
         if (!map[dateStr]) map[dateStr] = [];
         map[dateStr].push({ order, type });
       };
+
       if (d.receiveMethod === 'sagawa') {
         if (d.shippingDate) addEvent(d.shippingDate, 'dispatch');
         if (d.selectedDate) addEvent(d.selectedDate, 'sagawa_delivery');
@@ -105,7 +107,9 @@ export default function CalendarPage() {
       const address = `${info.address1 || ''} ${info.address2 || ''}`.trim();
       if (!address) return '#';
       return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
-    } catch (e) { return '#'; }
+    } catch (e) {
+      return '#';
+    }
   };
 
   const getTotals = (orderData) => {
@@ -128,7 +132,7 @@ export default function CalendarPage() {
   };
 
   // ==========================================
-  // ★ 印刷ロジック (PDF完全再現・A4 2分割ロック版)
+  // ★ 印刷ロジック (PDF完全再現版)
   // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
@@ -142,7 +146,14 @@ export default function CalendarPage() {
       const totals = getTotals(d);
       const staffName = d.staffName || "";
 
-      // 店舗情報
+      const formatText = (txt) => String(txt || '');
+      const safeId = String(selectedOrder.id || '').slice(0, 8);
+      const receiveMethodStr = getMethodLabel(d.receiveMethod);
+      const datePart = d.selectedDate || '未指定';
+      const paymentStatus = d.paymentMethod ? `${d.paymentMethod}${d.paymentStatus ? `(${d.paymentStatus})` : ''}` : '未設定';
+
+      const formatPrice = (price) => `¥${Number(price || 0).toLocaleString()}`;
+
       const shop = (appSettings?.shops || [])[0] || {};
       const shopName = appSettings?.generalConfig?.appName || '花・花OHANA！';
       const shopZip = shop.zip || '0010025';
@@ -157,30 +168,30 @@ export default function CalendarPage() {
             <div class="slip-header">
               <div class="slip-title" style="color:${titleColors[type]}">${title}</div>
               <div class="meta-area">
-                <div>伝票：${String(selectedOrder.id || '').slice(0, 8)}    受付：${safeFormatDate(selectedOrder.created_at, false)}</div>
-                <div>お渡し：${getMethodLabel(d.receiveMethod)}    希望日：${d.selectedDate || '未指定'}</div>
-                <div>入金状況：${d.paymentMethod || '未設定'}</div>
+                <div>伝票：${safeId}    受付：${safeFormatDate(selectedOrder.created_at, false)}</div>
+                <div>お渡し：${receiveMethodStr}    希望日：${datePart}</div>
+                <div>入金状況：${paymentStatus}</div>
               </div>
             </div>
 
             <div class="info-grid">
               <div class="info-box">
                 <div class="info-title">【ご依頼主様（ご注文者）】</div>
-                <div class="info-main">${String(customer.name || '')} 様</div>
+                <div class="info-main">${formatText(customer.name)} 様</div>
                 <div class="info-sub-bottom">
-                  <div>〒${String(customer.zip || '')}</div>
-                  <div>${String(customer.address1 || '')} ${String(customer.address2 || '')}</div>
-                  <div>TEL: ${String(customer.phone || '')}</div>
+                  <div>〒${formatText(customer.zip)}</div>
+                  <div>${formatText(customer.address1)} ${formatText(customer.address2)}</div>
+                  <div>TEL: ${formatText(customer.phone)}</div>
                 </div>
               </div>
               <div class="info-box">
                 <div class="info-title">【お届け先様】</div>
                 ${d.isRecipientDifferent ? `
-                  <div class="info-main">${String(recipient.name || '')} 様</div>
+                  <div class="info-main">${formatText(recipient.name)} 様</div>
                   <div class="info-sub-bottom">
-                    <div>〒${String(recipient.zip || '')}</div>
-                    <div>${String(recipient.address1 || '')} ${String(recipient.address2 || '')}</div>
-                    <div>TEL: ${String(recipient.phone || '')}</div>
+                    <div>〒${formatText(recipient.zip)}</div>
+                    <div>${formatText(recipient.address1)} ${formatText(recipient.address2)}</div>
+                    <div>TEL: ${formatText(recipient.phone)}</div>
                   </div>
                 ` : `<div class="same-text">ご依頼主様と同じ</div>`}
               </div>
@@ -198,20 +209,20 @@ export default function CalendarPage() {
                 <tbody>
                   <tr>
                     <td class="item-cell">
-                      <div class="item-name">${String(d.flowerType || '未設定')}</div>
-                      <div class="item-detail">用途: ${String(d.flowerPurpose || '-')} / 色: ${String(d.flowerColor || '-')} / イメージ: ${String(d.flowerVibe || '-')}</div>
+                      <div class="item-name">${formatText(d.flowerType)}</div>
+                      <div class="item-detail">用途: ${formatText(d.flowerPurpose)} / 色: ${formatText(d.flowerColor)} / イメージ: ${formatText(d.flowerVibe)}</div>
                       
                       ${d.cardType !== 'なし' ? `
                         <div class="extra-box">
                           <div class="extra-title">【${d.cardType}の内容】</div>
                           <div class="extra-text">${d.cardType === '立札' ? 
-                            (d.tatePattern ? `<span style="color:#d32f2f;">${String(d.tatePattern)}</span><br/>` : '') + 
+                            (d.tatePattern ? `<span style="color:#d32f2f;">${formatText(d.tatePattern)}</span><br/>` : '') + 
                             [d.tateInput1, d.tateInput2, d.tateInput3, d.tateInput3a, d.tateInput3b].filter(Boolean).join('<br/>') : 
-                            String(d.cardMessage || '').replace(/\n/g, '<br/>')}</div>
+                            formatText(d.cardMessage).replace(/\n/g, '<br/>')}</div>
                         </div>
                       ` : ''}
                       
-                      ${d.note ? `<div class="item-detail" style="color:#d97c8f; margin-top:2mm;">備考: ${String(d.note)}</div>` : ''}
+                      ${d.note ? `<div class="item-detail" style="color:#d97c8f; margin-top:2mm;">備考: ${formatText(d.note)}</div>` : ''}
                     </td>
                     <td class="qty-cell">1</td>
                     <td class="price-cell">${hidePrice ? '' : '¥' + Number(d.itemPrice || 0).toLocaleString()}</td>
@@ -234,7 +245,7 @@ export default function CalendarPage() {
             <div class="footer">
               <div class="shop-block">
                 <div class="shop-name">${shopName}</div>
-                <div>〒${shopZip} ${shopAddress}</div>
+                <div>${shopZip} ${shopAddress}</div>
                 <div>TEL: ${shopTel} (${shopInvoice})</div>
               </div>
               <div class="footer-actions">
@@ -259,7 +270,7 @@ export default function CalendarPage() {
         <head>
           <style>
             @page { size: A4 portrait; margin: 0; }
-            body { margin: 0; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; color: #222; }
+            body { margin: 0; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; color: #222; }
             * { box-sizing: border-box; }
             .page { width: 210mm; height: 296mm; background: #fff; display: flex; flex-direction: column; overflow: hidden; page-break-after: always; }
             .slip { width: 100%; height: 148mm; padding: 10mm 15mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
@@ -269,7 +280,7 @@ export default function CalendarPage() {
             .slip-header { display: flex; justify-content: space-between; margin-bottom: 3mm; }
             .slip-title { font-size: 16pt; font-weight: 800; letter-spacing: 0.3em; }
             .meta-area { font-size: 8pt; text-align: right; font-weight: bold; line-height: 1.4; }
-            .info-grid { display: flex; gap: 4mm; height: 24mm; margin-bottom: 4mm; }
+            .info-grid { display: flex; gap: 4mm; height: 25mm; margin-bottom: 3mm; }
             .info-box { flex: 1; border: 0.5pt solid #444; padding: 2mm; display: flex; flex-direction: column; }
             .info-title { font-size: 7pt; font-weight: bold; margin-bottom: 1mm; }
             .info-main { font-size: 12pt; font-weight: bold; }
@@ -280,10 +291,9 @@ export default function CalendarPage() {
             .items-table th { font-size: 8pt; padding: 1.5mm 1mm; background: #fafafa; border-bottom: 0.5pt solid #444; text-align: left; }
             .item-cell { padding: 2mm 1mm; vertical-align: top; }
             .item-name { font-size: 12pt; font-weight: bold; margin-bottom: 1mm; }
-            .item-detail { font-size: 8pt; color: #555; }
             .qty-cell, .price-cell { text-align: center; font-weight: bold; padding-top: 2mm; vertical-align: top; font-size: 10pt; }
             .price-cell { text-align: right; width: 26mm; }
-            .extra-box { border: 0.5pt dashed #999; padding: 2mm; width: 65mm; margin-top: 2mm; font-size: 9pt; }
+            .extra-box { border: 0.5pt dashed #999; padding: 2mm; width: 70mm; margin-top: 2mm; font-size: 9pt; }
             .extra-title { font-size: 7pt; font-weight: bold; color: #666; }
             .extra-text { font-size: 8pt; font-weight: bold; line-height: 1.3; }
             .amount-summary { width: 65mm; border-collapse: collapse; font-size: 8.5pt; }
@@ -293,9 +303,7 @@ export default function CalendarPage() {
             .amount-val-total { color: #117768; font-size: 11pt; }
             .receipt-note { margin: 2mm 0; font-size: 8.5pt; border: 1px solid #eee; padding: 2mm; }
             .footer { margin-top: auto; border-top: 0.5pt dashed #bbb; padding-top: 2mm; display: flex; justify-content: space-between; align-items: flex-end; }
-            .shop-name { font-size: 13pt; font-weight: 900; margin-bottom: 1mm; }
-            .shop-block { font-size: 8pt; line-height: 1.4; color: #444; }
-            .footer-actions { display: flex; gap: 2mm; }
+            .shop-name { font-size: 13pt; font-weight: 900; color: #222; margin-bottom: 1mm; }
             .check-group { display: flex; flex-direction: column; align-items: center; }
             .check-label { font-size: 6.5pt; color: #666; font-weight: bold; margin-bottom: 0.5mm; }
             .check-box { border: 0.5pt solid #666; width: 15mm; height: 6.5mm; display: flex; align-items: center; justify-content: center; font-size: 7pt; font-weight: bold; border-radius: 1px; }
@@ -323,10 +331,7 @@ export default function CalendarPage() {
         p.document.write(html);
         p.document.close();
       }
-
-    } catch (err) {
-      alert("印刷ウィンドウの起動に失敗しました。");
-    }
+    } catch (err) { alert("印刷ウィンドウを開けませんでした。"); }
   };
 
   const handleSendEmail = (e) => {
@@ -452,7 +457,7 @@ export default function CalendarPage() {
                       <p className="font-black text-[18px]">{modalTargetInfo?.name} 様</p>
                       <p className="text-[#555] font-bold">{modalTargetInfo?.phone}</p>
                       <p className="text-[#999] text-[12px] pt-2 border-t">〒{modalTargetInfo?.zip}<br/>{modalTargetInfo?.address1} {modalTargetInfo?.address2}</p>
-                      <a href={getGoogleMapsUrl(modalTargetInfo)} target="_blank" className="inline-block mt-2 text-blue-500 text-[11px] font-bold">Googleマップ</a>
+                      <a href={getGoogleMapsUrl(modalTargetInfo)} target="_blank" className="inline-block mt-2 text-blue-500 text-[11px] font-bold hover:underline">Googleマップ</a>
                     </div>
                   ) : <div className="h-full flex items-center justify-center text-[#999] font-bold italic">注文者と同じ</div>}
                 </div>
@@ -469,12 +474,14 @@ export default function CalendarPage() {
                 {modalData.cardType !== 'なし' && (
                   <div className="mt-4 p-4 bg-[#FBFAF9] rounded-xl border border-dashed border-[#CCC] space-y-2">
                     <span className="text-[11px] font-bold text-[#2D4B3E] bg-[#2D4B3E]/5 px-2 py-0.5 rounded">{modalData.cardType}</span>
-                    <p className="text-[13px] font-bold whitespace-pre-wrap">{modalData.cardType === '立札' ? [modalData.tatePattern, modalData.tateInput1, modalData.tateInput2, modalData.tateInput3].filter(Boolean).join('\n') : modalData.cardMessage}</p>
+                    <p className="text-[13px] font-bold whitespace-pre-wrap">
+                      {modalData.cardType === '立札' ? [modalData.tatePattern, modalData.tateInput1, modalData.tateInput2, modalData.tateInput3].filter(Boolean).join('\n') : modalData.cardMessage}
+                    </p>
                   </div>
                 )}
               </div>
 
-              <div className="bg-white p-8 rounded-[32px] border-2 border-[#2D4B3E]/20 shadow-md space-y-4">
+              <div className="bg-white p-8 rounded-[32px] border-2 border-[#2D4B3E]/10 shadow-md space-y-4">
                 <h3 className="text-[16px] font-black text-[#2D4B3E] flex items-center gap-2"><CreditCard size={20}/> お支払い情報</h3>
                 <div className="space-y-2 text-[14px] font-bold text-[#555]">
                   <div className="flex justify-between"><span>商品代(税抜):</span><span>¥{Number(modalData.itemPrice || 0).toLocaleString()}</span></div>
@@ -488,6 +495,7 @@ export default function CalendarPage() {
           </div>
         </div>
       )}
+
       <style jsx global>{`
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
