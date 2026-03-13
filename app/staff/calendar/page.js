@@ -123,7 +123,7 @@ export default function CalendarPage() {
   };
 
   // ==========================================
-  // ★ 【復刻】4分割 (2x2) A4伝票 印刷ロジック
+  // ★ 【完全復刻】A4横・十字4分割の美しい伝票ロジック
   // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
@@ -131,94 +131,79 @@ export default function CalendarPage() {
     if (!selectedOrder) return;
     
     try {
-      const printWindow = window.open('', '_blank');
-      if(!printWindow) {
-        alert('ポップアップブロックを解除してください。');
-        return;
-      }
-
       const d = selectedOrder.order_data || {};
-      const tInfo = d.isRecipientDifferent ? (d.recipientInfo || {}) : (d.customerInfo || {});
+      const customer = d.customerInfo || {};
+      const recipient = d.isRecipientDifferent ? (d.recipientInfo || {}) : customer;
       const slipBgUrl = appSettings?.generalConfig?.slipBgUrl || '';
       const slipBgOpacity = appSettings?.generalConfig?.slipBgOpacity || 50;
-      const logoUrl = appSettings?.generalConfig?.logoUrl || '';
-      const shop = (appSettings?.shops || [])[0] || {};
       const totals = getTotals(d);
+      const isGift = Boolean(d.isRecipientDifferent);
 
-      const formatText = (txt) => String(txt || '').replace(/\n/g, '<br/>');
+      // 安全に文字列化する関数
+      const formatText = (txt) => String(txt || '');
+      // 金額を非表示にする（空欄にする）関数
+      const formatPrice = (price, hide) => hide ? '' : `¥${Number(price).toLocaleString()}`;
+      
       const safeId = String(selectedOrder.id || '').slice(0, 8);
+      const receiveMethodStr = getMethodLabel(d.receiveMethod);
+      const dateTimeStr = `${d.selectedDate || '未指定'} ${d.selectedTime || ''}`;
 
-      // ★ 1枚の伝票（1ブロック）を生成する関数
+      // 1ブロック（伝票1枚）を生成する関数
       const renderSlip = (title, hidePrice, isReceipt) => `
         <div class="slip">
           ${slipBgUrl ? `<div class="bg-image"></div>` : ''}
-          <div class="title">${title}</div>
+          <div class="header">
+            <div class="title">${title}</div>
+          </div>
           <div class="meta">
             <span>受付: ${safeFormatDate(selectedOrder.created_at, true)}</span>
             <span>ID: ${safeId}</span>
           </div>
 
-          <div class="flex-row section">
+          <div class="box-row">
             <div class="box" style="flex: 1.2;">
-              <div class="label">ご依頼主様</div>
-              <div class="val-lg" style="margin-bottom: 2px;">${formatText(d.customerInfo?.name)} 様</div>
-              <div class="val">TEL: ${formatText(d.customerInfo?.phone)}</div>
+              <span class="box-label">ご依頼主様</span>
+              <div class="text-lg">${formatText(customer.name)} 様</div>
+              <div class="text-sm">TEL: ${formatText(customer.phone)}</div>
             </div>
             <div class="box" style="flex: 1;">
-              <div class="label">お受取方法</div>
-              <div class="val">${getMethodLabel(d.receiveMethod)} ${d.receiveMethod === 'pickup' ? `(${d.selectedShop || ''})` : ''}</div>
-              <div class="label" style="margin-top:4px;">お届け・ご来店日時</div>
-              <div class="val-lg">${d.selectedDate || '未指定'} ${d.selectedTime || ''}</div>
+              <span class="box-label">お受取方法</span>
+              <div class="text-md" style="margin-bottom: 4px;">${receiveMethodStr}</div>
+              <span class="box-label">お届け・ご来店日時</span>
+              <div class="text-md">${dateTimeStr}</div>
             </div>
           </div>
 
-          <div class="box section">
-            <div class="label">お届け先様 ${!d.isRecipientDifferent ? '(ご依頼主様と同じ)' : ''}</div>
+          <div class="box">
+            <span class="box-label">お届け先様</span>
             ${d.isRecipientDifferent ? `
-              <div class="val-lg" style="margin-bottom: 2px;">${formatText(tInfo?.name)} 様</div>
-              <div class="val">〒${formatText(tInfo?.zip)} ${formatText(tInfo?.address1)}${formatText(tInfo?.address2)}</div>
-              <div class="val">TEL: ${formatText(tInfo?.phone)}</div>
+              <div class="text-lg">${formatText(recipient.name)} 様</div>
+              <div class="text-sm">〒${formatText(recipient.zip)} ${formatText(recipient.address1)}${formatText(recipient.address2)}</div>
+              <div class="text-sm">TEL: ${formatText(recipient.phone)}</div>
             ` : `
-              <div class="val" style="padding: 4px 0;">ご依頼主様とお持ち帰り/お届け先は同一です。</div>
+              <div class="text-sm" style="padding-top:6px;">ご依頼主様と同じ</div>
             `}
           </div>
 
-          <div class="box section">
-            <div class="label">ご注文内容</div>
-            <div class="val-lg" style="margin-bottom: 4px;">${formatText(d.flowerType)}</div>
-            <div class="val" style="font-weight:normal;">用途: ${d.flowerPurpose || '-'} / 色: ${d.flowerColor || '-'}</div>
-            <div class="val" style="font-weight:normal;">立札/カード: ${d.cardType && d.cardType !== 'なし' ? d.cardType : 'なし'}</div>
+          <div class="box">
+            <span class="box-label">ご注文内容</span>
+            <div class="text-lg">${formatText(d.flowerType)}</div>
+            <div class="text-sm">用途: ${d.flowerPurpose || '-'} / 色: ${d.flowerColor || '-'}</div>
+            <div class="text-sm">立札/カード: ${d.cardType && d.cardType !== 'なし' ? d.cardType : 'なし'}</div>
+            ${d.receiveMethod === 'sagawa' ? `<div class="text-sm" style="color:green; font-weight:bold; margin-top:2px;">※発送予定日: ${d.shippingDate || '未定'}</div>` : ''}
+            ${d.note ? `<div class="text-sm" style="color:#d97c8f; font-weight:bold; margin-top:2px;">※特記事項あり（システムで確認してください）</div>` : ''}
           </div>
 
-          ${!hidePrice ? `
-          <table class="section">
-            <tr><th style="width:65%; text-align:left;">項目</th><th style="text-align:right;">金額</th></tr>
-            <tr><td>商品代金 (税抜)</td><td style="text-align:right;">¥${Number(d.itemPrice || 0).toLocaleString()}</td></tr>
-            ${Number(d.calculatedFee) > 0 ? `<tr><td>送料・その他</td><td style="text-align:right;">¥${Number(d.calculatedFee).toLocaleString()}</td></tr>` : ''}
-            ${Number(d.pickupFee) > 0 ? `<tr><td>回収費用</td><td style="text-align:right;">¥${Number(d.pickupFee).toLocaleString()}</td></tr>` : ''}
-            <tr><td style="text-align:right; font-size:9px;">消費税(10%)</td><td style="text-align:right;">¥${totals.tax.toLocaleString()}</td></tr>
-            <tr><td style="font-weight:bold;">合計金額 (税込)</td><td style="text-align:right; font-weight:bold; font-size:13px;">¥${totals.total.toLocaleString()}</td></tr>
+          <table>
+            <tr><td>商品代金 (税抜)</td><td class="amount-col">${formatPrice(d.itemPrice, hidePrice)}</td></tr>
+            <tr><td>送料・その他</td><td class="amount-col">${formatPrice(Number(d.calculatedFee||0) + Number(d.pickupFee||0), hidePrice)}</td></tr>
+            <tr><td style="text-align:right;">消費税(10%)</td><td class="amount-col">${formatPrice(totals.tax, hidePrice)}</td></tr>
+            <tr class="total-row"><td>合計金額 (税込)</td><td class="amount-col" style="font-size:14px;">${formatPrice(totals.total, hidePrice)}</td></tr>
           </table>
-          ` : `
-          <div class="box section" style="height: 90px; display:flex; align-items:center; justify-content:center; border: 1px dashed #999; background: #fafafa;">
-             <span style="color:#666; font-size: 11px;">※ギフト配送のため、金額の記載は控えさせていただいております。</span>
-          </div>
-          `}
-
-          <div class="flex-row" style="margin-top:auto; position:relative; padding-top: 10px;">
-            <div style="font-size:9px; color:#333;">
-              ${logoUrl ? `<img src="${logoUrl}" class="shop-logo" /><br/>` : `<strong style="font-size:12px;">${appSettings?.generalConfig?.appName || 'FLORIX'}</strong><br/>`}
-              ${shop.name || ''}<br/>
-              ${shop.address || ''}<br/>
-              TEL: ${shop.phone || ''}
-            </div>
-            ${isReceipt ? `<div class="sign-box">受領印</div>` : ''}
-          </div>
+          
+          ${isReceipt ? `<div class="sign-box">受領印</div>` : ''}
         </div>
       `;
-
-      // ギフト（受取人が違う）場合は、納品書と受領書の金額を隠す
-      const hideGiftPrice = d.isRecipientDifferent;
 
       const html = `
         <!DOCTYPE html>
@@ -228,19 +213,19 @@ export default function CalendarPage() {
           <title>伝票出力 - ${safeId}</title>
           <style>
             @media print {
-              @page { size: A4 portrait; margin: 0; }
+              @page { size: A4 landscape; margin: 0; }
               body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-              .a4-grid { border: none !important; margin: 0 !important; }
+              .page { border: none !important; margin: 0 !important; }
             }
-            body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; background: #e0e0e0; margin: 20px 0; }
+            body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; background: #e0e0e0; margin: 20px 0; color: #333; }
             
-            /* A4サイズの十字4分割グリッド */
-            .a4-grid {
+            /* A4横向き 十字4分割グリッド */
+            .page {
               display: grid;
               grid-template-columns: 1fr 1fr;
               grid-template-rows: 1fr 1fr;
-              width: 210mm;
-              height: 297mm;
+              width: 297mm;
+              height: 210mm;
               background: white;
               margin: 0 auto;
               box-sizing: border-box;
@@ -249,45 +234,47 @@ export default function CalendarPage() {
             
             .slip {
               position: relative;
-              padding: 10mm;
+              padding: 12mm 15mm;
               box-sizing: border-box;
               display: flex;
               flex-direction: column;
-              overflow: hidden;
+              gap: 8px;
               border-right: 1px dashed #aaa;
               border-bottom: 1px dashed #aaa;
               z-index: 1;
+              overflow: hidden;
             }
             .slip:nth-child(2n) { border-right: none; }
             .slip:nth-child(n+3) { border-bottom: none; }
             
             .bg-image { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: url('${slipBgUrl}'); background-size: cover; background-position: center; opacity: ${slipBgOpacity / 100}; filter: grayscale(100%); z-index: -1; }
             
-            .title { text-align: center; font-size: 16px; font-weight: bold; letter-spacing: 4px; margin-bottom: 8px; border-bottom: 2px solid #333; padding-bottom: 5px; color: #2D4B3E; }
-            .meta { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 12px; font-weight: bold; color: #555; }
-            .section { margin-bottom: 8px; }
+            .header { text-align: center; margin-bottom: 2px; }
+            .title { font-size: 16px; font-weight: bold; letter-spacing: 4px; color: #2D4B3E; display: inline-block; padding: 0 20px 4px; border-bottom: 2px solid #2D4B3E; }
+            .meta { display: flex; justify-content: space-between; font-size: 9px; font-weight: bold; color: #555; margin-bottom: 2px; }
             
-            .label { font-size: 9px; color: #666; background: #eee; padding: 2px 6px; display: inline-block; margin-bottom: 2px; border-radius: 2px; }
-            .val { font-size: 11px; font-weight: bold; line-height: 1.4; }
-            .val-lg { font-size: 14px; font-weight: black; }
+            .box-row { display: flex; gap: 8px; }
+            .box { border: 1px solid #ddd; border-radius: 6px; padding: 6px 10px; background: rgba(255,255,255,0.8); }
+            .box-label { font-size: 8px; color: #666; background: #f0f0f0; padding: 2px 6px; display: inline-block; border-radius: 2px; margin-bottom: 4px; }
             
-            .flex-row { display: flex; justify-content: space-between; gap: 8px; }
-            .box { border: 1px solid #ddd; padding: 6px; background: rgba(255,255,255,0.8); border-radius: 4px; }
+            .text-lg { font-size: 14px; font-weight: bold; margin-bottom: 2px; }
+            .text-md { font-size: 12px; font-weight: bold; }
+            .text-sm { font-size: 10px; line-height: 1.4; }
             
-            table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 10px; background: rgba(255,255,255,0.8); }
-            th, td { border: 1px solid #ddd; padding: 5px; }
-            th { background: #f7f7f7; font-weight: bold; color: #555; }
-            
-            .sign-box { border: 1px solid #333; width: 60px; height: 60px; position: absolute; bottom: 0; right: 0; text-align: center; padding-top: 4px; font-size: 10px; color: #999; border-radius: 4px; background: #fff; }
-            .shop-logo { max-width: 80px; max-height: 25px; object-fit: contain; }
+            table { width: 100%; border-collapse: collapse; margin-top: auto; background: rgba(255,255,255,0.8); border: 1px solid #ddd; }
+            th, td { border: 1px solid #ddd; padding: 5px 10px; font-size: 10px; }
+            .amount-col { text-align: right; font-weight: bold; width: 30%; }
+            .total-row td { background: #f9f9f9; font-weight: bold; font-size: 11px; }
+
+            .sign-box { position: absolute; bottom: 15mm; right: 15mm; border: 1px solid #999; width: 50px; height: 50px; text-align: center; line-height: 50px; font-size: 10px; color: #999; background: white; border-radius: 4px; }
           </style>
         </head>
         <body>
-          <div class="a4-grid">
+          <div class="page">
             ${renderSlip('受 注 書 (店舗控)', false, false)}
             ${renderSlip('ご 注 文 内 容 (お客様控)', false, false)}
-            ${renderSlip('納 品 書', hideGiftPrice, false)}
-            ${renderSlip('受 領 書', hideGiftPrice, true)}
+            ${renderSlip('納 品 書', isGift, false)}
+            ${renderSlip('受 領 書', isGift, true)}
           </div>
           <script>
             window.onload = function() {
@@ -299,6 +286,12 @@ export default function CalendarPage() {
         </body>
         </html>
       `;
+
+      const printWindow = window.open('', '_blank');
+      if(!printWindow) {
+        alert('ポップアップがブロックされました。ブラウザの設定で許可してください。');
+        return;
+      }
       
       printWindow.document.open();
       printWindow.document.write(html);
@@ -310,6 +303,7 @@ export default function CalendarPage() {
     }
   };
 
+  // ★ メール送信ロジック（そのまま）
   const handleSendEmail = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -489,7 +483,7 @@ export default function CalendarPage() {
                 <p className="text-[10px] md:text-[11px] text-[#999999] font-bold mt-1">受付: {safeFormatDate(selectedOrder.created_at, true)} | ID: {selectedOrder.id}</p>
               </div>
 
-              {/* ★ ここで印刷・メールボタンに機能を接続！！ */}
+              {/* ★ 印刷・PDFボタン */}
               <div className="flex flex-wrap items-center gap-2 ml-auto">
                 <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all">
                   <Printer size={14} /> <span className="hidden sm:inline">印刷 / PDF出力</span>
