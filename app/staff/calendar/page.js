@@ -132,7 +132,7 @@ export default function CalendarPage() {
   };
 
   // ==========================================
-  // ★ 【完全復刻】画像準拠の美しいA4横 4分割伝票
+  // ★ 【大正解版】A4横1枚に2伝票 × 2ページ出力ロジック
   // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
@@ -144,91 +144,105 @@ export default function CalendarPage() {
       const customer = d.customerInfo || {};
       const recipient = d.isRecipientDifferent ? (d.recipientInfo || {}) : customer;
       const slipBgUrl = appSettings?.generalConfig?.slipBgUrl || '';
-      const slipBgOpacity = appSettings?.generalConfig?.slipBgOpacity || 30; // 透かしは薄めに設定
+      const slipBgOpacity = appSettings?.generalConfig?.slipBgOpacity || 30; 
       const totals = getTotals(d);
       
       const isGift = Boolean(d.isRecipientDifferent);
       const formatText = (txt) => String(txt || '');
       const safeId = String(selectedOrder.id || '').slice(0, 8);
       const receiveMethodStr = getMethodLabel(d.receiveMethod);
-      
-      // 日付フォーマットの調整
-      const datePart = d.selectedDate || '未指定';
-      const timePart = d.selectedTime || '';
-      const dateTimeStr = `${datePart} ${timePart}`;
+      const dateTimeStr = `${d.selectedDate || '未指定'} ${d.selectedTime || ''}`;
 
-      // 金額をフォーマット（非表示の場合は空文字）
+      // 金額を非表示（空欄）にする関数
       const formatPrice = (price, hide) => hide ? '' : `¥${Number(price).toLocaleString()}`;
+      const shop = (appSettings?.shops || [])[0] || {};
+      const logoUrl = appSettings?.generalConfig?.logoUrl || '';
 
-      // 1ブロックを生成する関数
-      const renderSlip = (title, hidePrice) => `
-        <div class="slip">
-          ${slipBgUrl ? `<div class="slip-bg" style="background-image: url('${slipBgUrl}'); opacity: ${slipBgOpacity / 100};"></div>` : ''}
-          
-          <div class="header">
-            <div class="title-text">${title}</div>
-          </div>
-          
-          <div class="meta">
-            <span>受付: ${safeFormatDate(selectedOrder.created_at, true)}</span>
-            <span>ID: ${safeId}</span>
-          </div>
+      // 伝票の「中身（コンテンツ）」を生成する関数
+      const renderSlipContent = (title, hidePrice, isReceipt) => `
+        ${slipBgUrl ? `<div class="slip-bg" style="background-image: url('${slipBgUrl}'); opacity: ${slipBgOpacity / 100};"></div>` : ''}
+        
+        <div class="header">
+          <div class="title-text">${title}</div>
+        </div>
+        
+        <div class="meta">
+          <span>受付: ${safeFormatDate(selectedOrder.created_at, true)}</span>
+          <span>ID: ${safeId}</span>
+        </div>
 
-          <div class="box-row">
-            <div class="box" style="flex: 1.2;">
-              <span class="label">ご依頼主様</span>
-              <div class="val-lg">${formatText(customer.name)} 様</div>
-              <div class="val">TEL: ${formatText(customer.phone)}</div>
+        <div class="box-row">
+          <div class="box" style="flex: 1;">
+            <span class="label">ご依頼主様</span>
+            <div class="val-lg">${formatText(customer.name)} 様</div>
+            <div class="val">TEL: ${formatText(customer.phone)}</div>
+          </div>
+          <div class="box" style="flex: 1;">
+            <span class="label">お受取方法</span>
+            <div class="val-md">${receiveMethodStr} ${d.receiveMethod === 'pickup' && d.selectedShop ? `<br/>(${d.selectedShop})` : ''}</div>
+            <span class="label" style="margin-top: 6px;">お届け・ご来店日時</span>
+            <div class="val-md">${dateTimeStr}</div>
+          </div>
+        </div>
+
+        <div class="box">
+          <span class="label">お届け先様</span>
+          ${d.isRecipientDifferent ? `
+            <div class="val-lg">${formatText(recipient.name)} 様</div>
+            <div class="val">〒${formatText(recipient.zip)} ${formatText(recipient.address1)}${formatText(recipient.address2)}</div>
+            <div class="val">TEL: ${formatText(recipient.phone)}</div>
+          ` : `
+            <div class="val" style="color: #666; padding-top: 4px;">ご依頼主様と同じ</div>
+          `}
+        </div>
+
+        <div class="box">
+          <span class="label">ご注文内容</span>
+          <div class="val-lg" style="margin-bottom: 4px;">${formatText(d.flowerType)}</div>
+          <div class="val" style="font-weight: normal; color: #444;">用途: ${d.flowerPurpose || '-'} / 色: ${d.flowerColor || '-'}</div>
+          <div class="val" style="font-weight: normal; color: #444;">立札/カード: ${d.cardType && d.cardType !== 'なし' ? d.cardType : 'なし'}</div>
+          ${d.receiveMethod === 'sagawa' ? `<div class="val" style="color: green; margin-top: 4px;">※発送予定日: ${d.shippingDate || '未定'}</div>` : ''}
+          ${d.note ? `<div class="val" style="color: #d97c8f; margin-top: 4px;">※特記事項あり（システムで確認してください）</div>` : ''}
+        </div>
+
+        <table class="price-table">
+          <thead>
+            <tr><th style="text-align:left;">項目</th><th style="text-align:right;">金額</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>商品代金 (税抜)</td>
+              <td class="amount">${formatPrice(d.itemPrice, hidePrice)}</td>
+            </tr>
+            <tr>
+              <td>送料・その他</td>
+              <td class="amount">${formatPrice(Number(d.calculatedFee||0) + Number(d.pickupFee||0), hidePrice)}</td>
+            </tr>
+            <tr>
+              <td style="text-align:right; font-size:11px; color:#888;">消費税(10%)</td>
+              <td class="amount">${formatPrice(totals.tax, hidePrice)}</td>
+            </tr>
+            <tr class="total-row">
+              <td>合計金額 (税込)</td>
+              <td class="amount" style="font-size:16px;">${formatPrice(totals.total, hidePrice)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="flex-grow: 1;"></div>
+        
+        <div class="footer-area">
+          <div class="shop-info">
+            ${logoUrl ? `<img src="${logoUrl}" class="shop-logo" />` : `<div class="shop-name">${appSettings?.generalConfig?.appName || 'FLORIX'}</div>`}
+            <div>
+              ${shop.name || ''}<br/>
+              ${shop.address || ''}<br/>
+              TEL: ${shop.phone || ''}
             </div>
-            <div class="box" style="flex: 1;">
-              <span class="label">お受取方法</span>
-              <div class="val-md">${receiveMethodStr} ${d.receiveMethod === 'pickup' && d.selectedShop ? `(${d.selectedShop})` : ''}</div>
-              <span class="label" style="margin-top: 4px;">お届け・ご来店日時</span>
-              <div class="val-md">${dateTimeStr}</div>
-            </div>
           </div>
-
-          <div class="box">
-            <span class="label">お届け先様</span>
-            ${d.isRecipientDifferent ? `
-              <div class="val-lg">${formatText(recipient.name)} 様</div>
-              <div class="val">〒${formatText(recipient.zip)} ${formatText(recipient.address1)}${formatText(recipient.address2)}</div>
-              <div class="val">TEL: ${formatText(recipient.phone)}</div>
-            ` : `
-              <div class="val" style="color: #666; padding-top: 4px;">ご依頼主様と同じ</div>
-            `}
-          </div>
-
-          <div class="box">
-            <span class="label">ご注文内容</span>
-            <div class="val-lg">${formatText(d.flowerType)}</div>
-            <div class="val" style="font-weight: normal; color: #444;">用途: ${d.flowerPurpose || '-'} / 色: ${d.flowerColor || '-'}</div>
-            <div class="val" style="font-weight: normal; color: #444;">立札/カード: ${d.cardType && d.cardType !== 'なし' ? d.cardType : 'なし'}</div>
-          </div>
-
-          <table class="price-table">
-            <thead>
-              <tr><th style="text-align:left;">項目</th><th style="text-align:right;">金額</th></tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>商品代金 (税抜)</td>
-                <td class="amount">${formatPrice(d.itemPrice, hidePrice)}</td>
-              </tr>
-              <tr>
-                <td>送料・その他</td>
-                <td class="amount">${formatPrice(Number(d.calculatedFee||0) + Number(d.pickupFee||0), hidePrice)}</td>
-              </tr>
-              <tr>
-                <td style="text-align:right; font-size:9px; color:#888;">消費税(10%)</td>
-                <td class="amount">${formatPrice(totals.tax, hidePrice)}</td>
-              </tr>
-              <tr class="total-row">
-                <td>合計金額 (税込)</td>
-                <td class="amount" style="font-size:13px;">${formatPrice(totals.total, hidePrice)}</td>
-              </tr>
-            </tbody>
-          </table>
+          ${isReceipt ? `
+            <div class="sign-box">受領印</div>
+          ` : ''}
         </div>
       `;
 
@@ -241,68 +255,91 @@ export default function CalendarPage() {
           <style>
             @media print {
               @page { size: A4 landscape; margin: 0; }
-              body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-              .page { border: none !important; margin: 0 !important; box-shadow: none !important; }
+              body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; background: transparent !important; }
+              .page-container { border: none !important; margin: 0 !important; box-shadow: none !important; width: 297mm; height: 209.5mm; page-break-after: always; }
+              .page-container:last-child { page-break-after: auto; }
             }
-            body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; background: #e0e0e0; margin: 10mm auto; color: #333; }
+            body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; background: #e0e0e0; margin: 10mm auto; color: #222; }
             
-            /* A4横向き 十字4分割グリッド */
-            .page {
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              grid-template-rows: 1fr 1fr;
+            /* A4横 1ページ分のコンテナ */
+            .page-container {
+              display: flex;
+              flex-direction: row;
               width: 297mm;
-              height: 210mm;
+              height: 209.5mm;
               background: white;
+              margin: 0 auto 15mm auto;
               box-sizing: border-box;
               box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+              overflow: hidden;
+              position: relative;
             }
             
+            /* 1つの伝票（A4の半分 = A5縦相当） */
             .slip {
-              position: relative;
-              padding: 10mm 15mm;
+              width: 50%;
+              height: 100%;
+              padding: 15mm 20mm; 
               box-sizing: border-box;
-              border-right: 1px dashed #bbb;
-              border-bottom: 1px dashed #bbb;
               display: flex;
               flex-direction: column;
-              gap: 6px;
-              overflow: hidden;
+              gap: 8px;
+              position: relative;
               z-index: 1;
             }
-            .slip:nth-child(2n) { border-right: none; }
-            .slip:nth-child(n+3) { border-bottom: none; }
+            .slip-left {
+              border-right: 1px dashed #bbb;
+            }
             
             .slip-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: grayscale(100%); z-index: -1; }
             
-            .header { text-align: center; position: relative; margin-bottom: 6px; margin-top: 5px; }
-            .header::before { content: ""; position: absolute; top: 50%; left: 5%; right: 5%; border-top: 1px solid #ddd; z-index: -1; }
-            .title-text { display: inline-block; background: white; padding: 0 15px; font-size: 16px; font-weight: bold; letter-spacing: 4px; color: #2D4B3E; border-radius: 4px; }
+            .header { text-align: center; position: relative; margin-bottom: 8px; margin-top: 5px; }
+            .header::before { content: ""; position: absolute; top: 50%; left: 0; right: 0; border-top: 1px solid #ddd; z-index: -1; }
+            .title-text { display: inline-block; background: white; padding: 0 15px; font-size: 18px; font-weight: bold; letter-spacing: 4px; color: #2D4B3E; border-radius: 4px; }
             
-            .meta { display: flex; justify-content: space-between; font-size: 9px; font-weight: bold; color: #666; margin-bottom: 4px; }
+            .meta { display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; color: #666; margin-bottom: 6px; }
             
-            .box-row { display: flex; gap: 8px; }
-            .box { border: 1px solid #eaeaea; border-radius: 6px; padding: 8px 10px; background: rgba(255,255,255,0.95); box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+            .box-row { display: flex; gap: 12px; }
+            .box { border: 1px solid #eaeaea; border-radius: 8px; padding: 10px 14px; background: rgba(255,255,255,0.95); box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
             
-            .label { display: inline-block; background: #f5f5f5; color: #888; font-size: 8px; font-weight: bold; padding: 2px 8px; border-radius: 12px; margin-bottom: 4px; }
-            .val-lg { font-size: 14px; font-weight: bold; margin-bottom: 2px; }
-            .val-md { font-size: 12px; font-weight: bold; margin-bottom: 2px; }
-            .val { font-size: 10px; font-weight: bold; line-height: 1.4; }
+            .label { display: inline-block; background: #f5f5f5; color: #888; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 12px; margin-bottom: 6px; }
+            .val-lg { font-size: 16px; font-weight: bold; margin-bottom: 4px; }
+            .val-md { font-size: 13px; font-weight: bold; margin-bottom: 4px; }
+            .val { font-size: 12px; font-weight: bold; line-height: 1.5; }
             
-            .price-table { width: 100%; border-collapse: collapse; margin-top: auto; background: rgba(255,255,255,0.95); border: 1px solid #eaeaea; border-radius: 6px; overflow: hidden; }
-            .price-table th, .price-table td { border-bottom: 1px solid #f0f0f0; padding: 6px 10px; font-size: 10px; }
+            .price-table { width: 100%; border-collapse: collapse; margin-top: auto; background: rgba(255,255,255,0.95); border: 1px solid #eaeaea; border-radius: 8px; overflow: hidden; }
+            .price-table th, .price-table td { border-bottom: 1px solid #f0f0f0; padding: 8px 12px; font-size: 12px; }
             .price-table th { color: #888; font-weight: normal; background: #fafafa; }
             .amount { text-align: right; font-weight: bold; }
-            .total-row td { background: #fafafa; font-weight: bold; border-bottom: none; font-size: 12px; }
+            .total-row td { background: #fafafa; font-weight: bold; border-bottom: none; font-size: 14px; }
+            
+            .footer-area { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 15px; }
+            .shop-info { font-size: 11px; line-height: 1.5; color: #333; }
+            .shop-logo { max-height: 35px; margin-bottom: 6px; object-fit: contain; }
+            .shop-name { font-size: 16px; font-weight: 900; margin-bottom: 6px; color: #2D4B3E; }
+            
+            .sign-box { border: 1px solid #999; width: 65px; height: 65px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #999; border-radius: 6px; background: rgba(255,255,255,0.8); }
           </style>
         </head>
         <body>
-          <div class="page">
-            ${renderSlip('受 注 書 （店舗控）', false)}
-            ${renderSlip('ご 注 文 内 容 （お客様控）', false)}
-            ${renderSlip('納 品 書', isGift)}
-            ${renderSlip('受 領 書', isGift)}
+          <div class="page-container">
+            <div class="slip slip-left">
+              ${renderSlipContent('受 注 書 （店舗控）', false, false)}
+            </div>
+            <div class="slip">
+              ${renderSlipContent('ご 注 文 内 容 （お客様控）', false, false)}
+            </div>
           </div>
+          
+          <div class="page-container">
+            <div class="slip slip-left">
+              ${renderSlipContent('納 品 書', isGift, false)}
+            </div>
+            <div class="slip">
+              ${renderSlipContent('受 領 書', isGift, true)}
+            </div>
+          </div>
+
           <script>
             window.onload = function() {
               setTimeout(function() {
