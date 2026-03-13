@@ -123,7 +123,7 @@ export default function CalendarPage() {
   };
 
   // ==========================================
-  // ★ 印刷・PDF出力ロジック（エラー保護強化版）
+  // ★ 強固に保護された印刷・PDF出力ロジック
   // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
@@ -131,12 +131,6 @@ export default function CalendarPage() {
     if (!selectedOrder) return;
     
     try {
-      const printWindow = window.open('', '_blank');
-      if(!printWindow) {
-        alert('ポップアップブロックを解除してください。');
-        return;
-      }
-
       const d = selectedOrder.order_data || {};
       const tInfo = d.isRecipientDifferent ? (d.recipientInfo || {}) : (d.customerInfo || {});
       const slipBgUrl = appSettings?.generalConfig?.slipBgUrl || '';
@@ -145,15 +139,17 @@ export default function CalendarPage() {
       const shop = (appSettings?.shops || [])[0] || {};
       const totals = getTotals(d);
 
-      // ★ undefinedやnullで落ちないように文字列化してから改行を置換する安全な関数
+      // 安全なテキスト変換（空データやundefinedで落ちないように保護）
       const formatText = (txt) => String(txt || '').replace(/\n/g, '<br/>');
+      // IDを確実に文字列にしてから切り取る
+      const safeId = String(selectedOrder.id || '').slice(0, 8);
 
       const html = `
         <!DOCTYPE html>
         <html lang="ja">
         <head>
           <meta charset="UTF-8">
-          <title>受注伝票 - ${selectedOrder.id.slice(0,8)}</title>
+          <title>受注伝票 - ${safeId}</title>
           <style>
             body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; margin: 0; padding: 40px; color: #333; line-height: 1.6; }
             .slip-container { position: relative; max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 40px; min-height: 1100px; background-color: #fff; }
@@ -284,52 +280,69 @@ export default function CalendarPage() {
             window.onload = function() {
               setTimeout(function() {
                 window.print();
-              }, 800);
+              }, 500);
             }
           </script>
         </body>
         </html>
       `;
+
+      const printWindow = window.open('', '_blank');
+      if(!printWindow) {
+        alert('ポップアップがブロックされました。ブラウザの設定で許可してください。');
+        return;
+      }
       
-      printWindow.document.open();
       printWindow.document.write(html);
       printWindow.document.close();
 
     } catch (err) {
       console.error("伝票生成エラー:", err);
-      alert("伝票の生成中に予期せぬエラーが発生しました。");
+      alert(`エラーが発生しました: ${err.message}`);
     }
   };
 
-  // ★ メール送信ロジック
+  // ==========================================
+  // ★ メール送信ロジック（確実にメーラーを起動）
+  // ==========================================
   const handleSendEmail = (e) => {
     e.preventDefault();
     e.stopPropagation();
     const d = selectedOrder?.order_data || {};
+    
     if (!d?.customerInfo?.email) {
-      alert("メールアドレスが登録されていません。");
+      alert("この注文にはお客様のメールアドレスが登録されていません。");
       return;
     }
     
-    const email = d.customerInfo.email;
-    const template = appSettings?.autoReply || { subject: 'ご注文ありがとうございます', body: '{CustomerName} 様\n\nご注文ありがとうございます。' };
-    const subject = encodeURIComponent(template.subject || 'ご注文ありがとうございます');
-    const totals = getTotals(d);
-    
-    const orderDetails = `
+    try {
+      const email = d.customerInfo.email;
+      const template = appSettings?.autoReply || { subject: 'ご注文ありがとうございます', body: '{CustomerName} 様\n\nご注文ありがとうございます。' };
+      const subject = encodeURIComponent(template.subject || 'ご注文ありがとうございます');
+      const totals = getTotals(d);
+      
+      const orderDetails = `
 【ご注文内容】
 商品: ${d.flowerType || '未設定'}
 合計金額: ¥${totals.total.toLocaleString()} (税込)
 受取方法: ${getMethodLabel(d.receiveMethod)}
 予定日: ${d.selectedDate || '未定'} ${d.selectedTime || ''}
-    `.trim();
+      `.trim();
 
-    let bodyText = (template.body || '')
-      .replace(/\{CustomerName\}/g, d.customerInfo.name || 'お客様')
-      .replace(/\{OrderDetails\}/g, orderDetails);
-    
-    const body = encodeURIComponent(bodyText);
-    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+      let bodyText = (template.body || '')
+        .replace(/\{CustomerName\}/g, d.customerInfo?.name || 'お客様')
+        .replace(/\{OrderDetails\}/g, orderDetails);
+      
+      const body = encodeURIComponent(bodyText);
+      const mailtoUrl = `mailto:${email}?subject=${subject}&body=${body}`;
+      
+      // _blankで開くことで、メーラーアプリへの受け渡しをより確実に実行
+      window.open(mailtoUrl, '_blank');
+
+    } catch (err) {
+      console.error("メール生成エラー:", err);
+      alert(`メールの起動に失敗しました: ${err.message}`);
+    }
   };
 
   const renderDay = (day, index) => {
@@ -472,19 +485,15 @@ export default function CalendarPage() {
                 <p className="text-[10px] md:text-[11px] text-[#999999] font-bold mt-1">受付: {safeFormatDate(selectedOrder.created_at, true)} | ID: {selectedOrder.id}</p>
               </div>
 
-              {/* ★ ここで印刷・メールボタンに機能を接続！！ */}
               <div className="flex flex-wrap items-center gap-2 ml-auto">
+                {/* ★ 印刷・PDFボタン */}
                 <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all">
-                  <Printer size={14} /> <span className="hidden sm:inline">印刷</span>
+                  <Printer size={14} /> <span className="hidden sm:inline">印刷 / PDF出力</span>
                 </button>
-                <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all">
-                  <FileText size={14} /> PDF
+                {/* ★ メールボタン */}
+                <button onClick={handleSendEmail} className="flex items-center gap-1.5 px-3 py-2 bg-[#2D4B3E] text-white rounded-xl text-[10px] md:text-[11px] font-bold hover:bg-[#1f352b] transition-all shadow-sm">
+                  <Send size={14} /> <span className="hidden sm:inline">メール作成</span>
                 </button>
-                {modalData.customerInfo?.email && (
-                  <button onClick={handleSendEmail} className="flex items-center gap-1.5 px-3 py-2 bg-[#2D4B3E] text-white rounded-xl text-[10px] md:text-[11px] font-bold hover:bg-[#1f352b] transition-all shadow-sm">
-                    <Send size={14} /> <span className="hidden sm:inline">メール</span>
-                  </button>
-                )}
                 
                 <div className="w-[1px] h-6 bg-[#EAEAEA] mx-1"></div>
 
