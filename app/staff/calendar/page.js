@@ -132,7 +132,7 @@ export default function CalendarPage() {
   };
 
   // ==========================================
-  // ★ 印刷ロジック (A4サイズ完全ロック・金額空欄対応版)
+  // ★ 印刷ロジック (PDF完全再現版を組み込み)
   // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
@@ -146,13 +146,14 @@ export default function CalendarPage() {
       const totals = getTotals(d);
 
       const formatText = (txt) => String(txt || '');
-      const safeId = String(selectedOrder.id || '');
+      const safeId = String(selectedOrder.id || '').slice(0, 8);
       const receiveMethodStr = getMethodLabel(d.receiveMethod);
       const datePart = d.selectedDate || '未指定';
       const paymentStatus = d.paymentMethod ? `${d.paymentMethod}${d.paymentStatus ? `(${d.paymentStatus})` : ''}` : '未設定';
 
-      const formatPrice = (price) => `¥${Number(price || 0).toLocaleString()}`;
+      const formatPrice = (price, hide) => hide ? '' : `¥${Number(price || 0).toLocaleString()}`;
 
+      // 店舗情報 (appSettingsから取得)
       const shop = (appSettings?.shops || [])[0] || {};
       const shopName = shop.name || appSettings?.generalConfig?.appName || '花・花OHANA！';
       const shopZip = shop.zip || '0010025';
@@ -160,21 +161,21 @@ export default function CalendarPage() {
       const shopTel = shop.phone || '011-600-1878';
       const shopInvoice = shop.invoiceNumber || 'T1234567891012';
 
-      const titleColorMap = {
-        order_store: '#2f7d57',
-        customer: '#2b6cb0',
-        delivery: '#2f7d57',
-        receipt: '#2f7d57',
+      // タイトルの色分け
+      const getTitleColor = (type) => {
+        const map = {
+          order_store: '#117768',
+          customer: '#1a56a8',
+          delivery: '#333333',
+          receipt: '#333333',
+        };
+        return map[type] || '#333333';
       };
-
-      const getTitleColor = (type) => titleColorMap[type] || '#2f7d57';
 
       const renderHeaderMeta = () => `
         <div class="meta-area">
-          <div>伝票：${safeId}</div>
-          <div>受付：${safeFormatDate(selectedOrder.created_at, false)}</div>
-          <div>お渡し：${receiveMethodStr}</div>
-          <div>希望日：${datePart}</div>
+          <div>伝票：${safeId} &nbsp;&nbsp; 受付：${safeFormatDate(selectedOrder.created_at, false)}</div>
+          <div>お渡し：${receiveMethodStr} &nbsp;&nbsp; 希望日：${datePart}</div>
           <div>入金状況：${paymentStatus}</div>
         </div>
       `;
@@ -183,18 +184,20 @@ export default function CalendarPage() {
         <div class="info-grid">
           <div class="info-box">
             <div class="info-title">【ご依頼主様（ご注文者）】</div>
-            <div class="info-main">${formatText(customer.name)} 様</div>
-            <div class="info-sub">〒${formatText(customer.zip)}</div>
-            <div class="info-sub">${formatText(customer.address1)} ${formatText(customer.address2)}</div>
-            <div class="info-sub">TEL: ${formatText(customer.phone)}</div>
+            <div class="info-main">${formatText(customer.name)} <span style="font-size:9pt; font-weight:normal;">様</span></div>
+            <div class="info-sub-bottom">
+              <div>〒${formatText(customer.zip)}</div>
+              <div>TEL: ${formatText(customer.phone)}</div>
+            </div>
           </div>
           <div class="info-box">
             <div class="info-title">【お届け先様】</div>
             ${d.isRecipientDifferent ? `
-              <div class="info-main">${formatText(recipient.name)} 様</div>
-              <div class="info-sub">〒${formatText(recipient.zip)}</div>
-              <div class="info-sub">${formatText(recipient.address1)} ${formatText(recipient.address2)}</div>
-              <div class="info-sub">TEL: ${formatText(recipient.phone)}</div>
+              <div class="info-main">${formatText(recipient.name)} <span style="font-size:9pt; font-weight:normal;">様</span></div>
+              <div class="info-sub-bottom">
+                <div>〒${formatText(recipient.zip)}</div>
+                <div>TEL: ${formatText(recipient.phone)}</div>
+              </div>
             ` : `
               <div class="same-text">ご依頼主様と同じ</div>
             `}
@@ -202,131 +205,144 @@ export default function CalendarPage() {
         </div>
       `;
 
-      // ★ 内容は一切変更せず、元の改行スタイルのまま表示します
       const renderCardBlock = () => {
-        if (d.cardType === '立札') {
+        if (d.cardType === '立札' && (d.tatePattern || d.tateInput1 || d.tateInput2 || d.tateInput3)) {
           return `
             <div class="extra-box">
               <div class="extra-title">【立札の内容】</div>
-              ${d.tateInput1 ? `<div>${formatText(d.tateInput1)}</div>` : ''}
-              ${d.tateInput2 ? `<div>${formatText(d.tateInput2)}</div>` : ''}
-              ${d.tateInput3 ? `<div>${formatText(d.tateInput3)}</div>` : ''}
-              ${d.tateInput3a ? `<div>${formatText(d.tateInput3a)}</div>` : ''}
-              ${d.tateInput3b ? `<div>${formatText(d.tateInput3b)}</div>` : ''}
+              ${d.tatePattern ? `<div style="font-size:9pt; font-weight:bold; color:#d32f2f; margin-bottom:1.5mm;">${formatText(d.tatePattern)}</div>` : ''}
+              ${d.tateInput1 ? `<div class="extra-text">${formatText(d.tateInput1)}</div>` : ''}
+              ${d.tateInput2 ? `<div class="extra-text">${formatText(d.tateInput2)}</div>` : ''}
+              ${d.tateInput3 ? `<div class="extra-text" style="margin-top:0.5mm;">${formatText(d.tateInput3)}</div>` : ''}
+              ${d.tateInput3a ? `<div class="extra-text">${formatText(d.tateInput3a)}</div>` : ''}
+              ${d.tateInput3b ? `<div class="extra-text">${formatText(d.tateInput3b)}</div>` : ''}
             </div>
           `;
         }
+
         if (d.cardType === 'メッセージカード') {
           return `
             <div class="extra-box">
               <div class="extra-title">【メッセージカード】</div>
-              <div>${formatText(d.cardMessage).replace(/\n/g, '<br/>')}</div>
+              <div class="extra-text">${formatText(d.cardMessage).replace(/\n/g, '<br/>')}</div>
             </div>
           `;
         }
+
         return '';
       };
 
-      // ★ 枠は残しつつ、hidePriceがtrueの場合は金額を「空欄」にします
-      const renderItemsBlock = (hidePrice = false) => `
-        <div class="items-box">
-          <table class="items-table">
-            <thead>
-              <tr>
-                <th class="col-item">商品名・内容</th>
-                <th class="col-qty">数量</th>
-                <th class="col-price">金額(税抜)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="item-cell">
-                  <div class="item-name">${formatText(d.flowerType) || '未設定'}</div>
-                  <div class="item-detail">
-                    用途: ${formatText(d.flowerPurpose) || '-'} / 色: ${formatText(d.flowerColor) || '-'} / イメージ: ${formatText(d.flowerVibe) || '-'}
-                  </div>
-                  ${renderCardBlock()}
-                </td>
-                <td class="qty-cell">1</td>
-                <td class="price-cell">${hidePrice ? '' : formatPrice(d.itemPrice)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="amount-summary-wrap">
-          <table class="amount-summary">
-            <tbody>
-              <tr>
-                <th>商品代</th>
-                <td>${hidePrice ? '' : formatPrice(totals.item)}</td>
-              </tr>
-              <tr>
-                <th>送料・箱代等</th>
-                <td>${hidePrice ? '' : formatPrice(Number(d.calculatedFee || 0) + Number(d.pickupFee || 0))}</td>
-              </tr>
-              <tr>
-                <th>消費税(10%)</th>
-                <td>${hidePrice ? '' : formatPrice(totals.tax)}</td>
-              </tr>
-              <tr class="total-row">
-                <th>合計</th>
-                <td>${hidePrice ? '' : formatPrice(totals.total)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      `;
-
-      // ★ すべての伝票で4つのチェックボックスを表示し、配達スタッフ等の名前を書けるように統一
-      const renderFooter = () => `
-        <div class="footer">
-          <div class="shop-block">
-            <div class="shop-name">${shopName}</div>
-            <div class="shop-info">〒${shopZip} ${shopAddress}</div>
-            <div class="shop-info">TEL: ${shopTel} (${shopInvoice})</div>
+      const renderItemsBlock = (hidePrice = false, showAmountTable = true) => `
+        <div class="items-area">
+          <div class="items-header">
+            <div style="flex:1; padding-left:1mm;">商品名・内容</div>
+            <div style="width:18mm; text-align:center;">数量</div>
+            <div style="width:24mm; text-align:right; padding-right:1mm;">金額(税抜)</div>
           </div>
-          <div class="footer-actions">
-            <div class="check-group">
-              <div class="check-label">受注</div>
-              <div class="check-box filled">${formatText(d.staffName)}</div>
-            </div>
-            <div class="check-group">
-              <div class="check-label">配達</div>
-              <div class="check-box"></div>
-            </div>
-            <div class="check-group">
-              <div class="check-label">片付</div>
-              <div class="check-box"></div>
-            </div>
-            <div class="check-group">
-              <div class="check-label">請求</div>
-              <div class="check-box"></div>
+          
+          <div class="items-body">
+            <div style="display:flex; margin-bottom:4mm;">
+              <div style="flex:1; padding-left:1mm;">
+                <div class="item-name">${formatText(d.flowerType) || '未設定'}</div>
+                <div class="item-detail">
+                  用途: ${formatText(d.flowerPurpose) || '-'} / 色: ${formatText(d.flowerColor) || '-'} / イメージ: ${formatText(d.flowerVibe) || '-'}
+                </div>
+                ${renderCardBlock()}
+                ${d.note ? `<div class="item-detail" style="color:#d97c8f; margin-top:2mm;">備考: ${formatText(d.note)}</div>` : ''}
+              </div>
+              <div class="qty-cell">1</div>
+              <div class="price-cell">${hidePrice ? '' : formatPrice(d.itemPrice, false)}</div>
             </div>
           </div>
         </div>
+
+        <div style="display:flex; justify-content:flex-end; height:22mm;">
+          ${showAmountTable && !hidePrice ? `
+            <table class="amount-summary">
+              <tbody>
+                <tr>
+                  <td class="amount-label">商品代</td>
+                  <td class="amount-val">${formatPrice(totals.item, false)}</td>
+                </tr>
+                <tr>
+                  <td class="amount-label">送料・箱代等</td>
+                  <td class="amount-val">${formatPrice(Number(d.calculatedFee || 0) + Number(d.pickupFee || 0), false)}</td>
+                </tr>
+                <tr>
+                  <td class="amount-label">消費税(10%)</td>
+                  <td class="amount-val">${formatPrice(totals.tax, false)}</td>
+                </tr>
+                <tr>
+                  <td class="amount-label-total">合計</td>
+                  <td class="amount-val-total">${formatPrice(totals.total, false)}</td>
+                </tr>
+              </tbody>
+            </table>
+          ` : ''}
+        </div>
       `;
+
+      const renderFooter = (type) => {
+        const isDeliveryOrReceipt = type === 'delivery' || type === 'receipt';
+        return `
+          <div class="footer">
+            <div class="shop-block">
+              <div class="shop-name">${shopName}</div>
+              <div>${shopAddress}</div>
+              <div>TEL: ${shopTel} (${shopInvoice})</div>
+            </div>
+
+            <div class="footer-actions">
+              ${isDeliveryOrReceipt ? `
+                <div style="font-size:7.5pt; font-weight:bold; color:#666; margin-bottom:1mm; margin-right:2mm;">配達</div>
+              ` : `
+                <div class="check-group">
+                  <div class="check-label">受注</div>
+                  <div class="check-box filled">${formatText(d.staffName)}</div>
+                </div>
+                <div class="check-group">
+                  <div class="check-label">配達</div>
+                  <div class="check-box"></div>
+                </div>
+                <div class="check-group">
+                  <div class="check-label">片付</div>
+                  <div class="check-box"></div>
+                </div>
+                <div class="check-group">
+                  <div class="check-label">請求</div>
+                  <div class="check-box"></div>
+                </div>
+              `}
+            </div>
+          </div>
+        `;
+      };
 
       const renderReceiptNote = () => `
         <div class="receipt-note">
-          上記の商品を確かに受領いたしました。　
-          受領日：　　　年　　　月　　　日　　　サインまたは印
+          上記の商品を確かに受領いたしました。&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;受領日：&nbsp;&nbsp;&nbsp;&nbsp;年&nbsp;&nbsp;&nbsp;&nbsp;月&nbsp;&nbsp;&nbsp;&nbsp;日&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;サインまたは印
         </div>
       `;
 
-      const renderSlip = ({ title, type, hidePrice = false, showReceiptNote = false }) => `
-        <section class="slip slip-${type}">
-          <div class="slip-header">
-            <div class="slip-title" style="color:${getTitleColor(type)}">${title}</div>
-            ${renderHeaderMeta()}
-          </div>
+      const renderSlip = ({ title, type, hidePrice = false, showReceiptNote = false }) => {
+        const titleTitle = title === '受 注 書 控' ? '受 注 書 控' :
+                           title === 'お 客 様 控' ? 'お 客 様 控' :
+                           title === '納 品 書' ? '納 品 書' : '受 領 書';
+        
+        return `
+          <div class="slip">
+            <div class="slip-header">
+              <div class="slip-title" style="color:${getTitleColor(type)}">${titleTitle}</div>
+              ${renderHeaderMeta()}
+            </div>
 
-          ${renderClientBoxes()}
-          ${renderItemsBlock(hidePrice)}
-          ${showReceiptNote ? renderReceiptNote() : ''}
-          ${renderFooter()}
-        </section>
-      `;
+            ${renderClientBoxes()}
+            ${renderItemsBlock(hidePrice, type === 'order_store' || type === 'customer')}
+            ${showReceiptNote ? renderReceiptNote() : ''}
+            ${renderFooter(type)}
+          </div>
+        `;
+      };
 
       const html = `
         <!DOCTYPE html>
@@ -337,351 +353,332 @@ export default function CalendarPage() {
           <style>
             @page {
               size: A4 portrait;
-              margin: 8mm;
+              margin: 0;
             }
 
             @media print {
               body {
+                background-color: white !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
                 margin: 0;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
               }
-              .page {
+              .a4-page {
                 box-shadow: none !important;
-                margin: 0 auto !important;
-                page-break-after: always !important;
-                break-after: page !important;
+                margin: 0 !important;
+                page-break-after: always;
               }
-              .page:last-child {
-                page-break-after: auto !important;
-                break-after: auto !important;
+              .a4-page:last-child {
+                page-break-after: auto;
               }
             }
 
-            * {
-              box-sizing: border-box;
-            }
+            * { box-sizing: border-box; }
 
             body {
               margin: 0;
-              font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
-              color: #222;
-              background: #f2f2f2;
+              background-color: #f3f4f6;
+              font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
             }
 
             .print-root {
-              width: 100%;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              padding: 10mm 0;
             }
 
-            /* ★ 高さをガチガチに固定し、ブラウザの改ページ干渉による4分割バグを完全に防ぐ */
-            .page {
-              width: 194mm;
-              height: 277mm; 
-              margin: 0 auto 8mm;
-              background: #fff;
-              padding: 0;
-              box-shadow: 0 1mm 4mm rgba(0,0,0,0.08);
+            .a4-page {
               position: relative;
-              overflow: hidden; 
+              width: 210mm;
+              height: 297mm;
+              background: white;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+              margin-bottom: 10mm;
+              display: flex;
+              flex-direction: column;
+              overflow: hidden;
             }
 
-            /* 1ページにつききっちり半分（138.5mm）を2つ割り当てる */
-            .page.two-split {
-              display: grid;
-              grid-template-rows: 138.5mm 138.5mm;
-            }
-
+            /* 伝票1枚分 (A4の半分) */
             .slip {
-              padding: 8mm 8mm 5mm;
               position: relative;
-              overflow: hidden; /* コンテンツが長すぎても枠を壊さない */
+              display: flex;
+              flex-direction: column;
+              height: 148.5mm;
+              padding: 10mm 12mm;
+              background: white;
+              overflow: hidden;
             }
 
-            .page.two-split .slip:first-child {
-              border-bottom: 1px dashed #9a9a9a;
-            }
-
-            .cutline {
+            /* 中央の切り取り線 */
+            .cutline-container {
               position: absolute;
-              left: 8mm;
-              right: 8mm;
-              top: 50%;
-              transform: translateY(-50%);
-              text-align: center;
-              font-size: 10px;
-              color: #888;
-              background: transparent;
-              pointer-events: none;
+              top: 148.5mm;
+              left: 5mm;
+              right: 5mm;
+              border-top: 0.5pt dashed #aaa;
               z-index: 10;
+              display: flex;
+              justify-content: center;
+              height: 0;
+            }
+            .cutline-text {
+              background: white;
+              padding: 0 4mm;
+              font-size: 6.5pt;
+              color: #888;
+              letter-spacing: 0.1em;
+              transform: translateY(-50%);
             }
 
-            .cutline span {
-              background: #fff;
-              padding: 0 10px;
-            }
-
+            /* 内部レイアウト */
             .slip-header {
               display: flex;
               justify-content: space-between;
               align-items: flex-start;
-              margin-bottom: 6px;
+              margin-bottom: 3mm;
             }
-
             .slip-title {
-              font-size: 17px;
-              font-weight: 800;
-              letter-spacing: 0.3em;
+              font-size: 15pt;
+              font-weight: bold;
+              letter-spacing: 0.4em;
               line-height: 1;
-              padding-top: 2px;
+              padding-top: 1mm;
             }
-
             .meta-area {
+              font-size: 7.5pt;
               text-align: right;
-              font-size: 11px;
-              line-height: 1.45;
-              font-weight: 600;
-              white-space: nowrap;
+              color: #333;
+              font-weight: 500;
+              line-height: 1.35;
+              letter-spacing: 0.05em;
             }
 
             .info-grid {
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 10px;
-              margin-bottom: 8px;
+              display: flex;
+              gap: 4mm;
+              height: 22mm;
+              margin-bottom: 3mm;
             }
-
             .info-box {
-              border: 1px solid #666;
-              min-height: 66px;
-              padding: 6px 8px;
+              flex: 1;
+              border: 0.5pt solid #444;
+              padding: 1.5mm;
+              display: flex;
+              flex-direction: column;
+              position: relative;
             }
-
             .info-title {
-              font-size: 10px;
+              font-size: 7pt;
+              font-weight: bold;
               color: #444;
-              margin-bottom: 4px;
-              font-weight: 700;
+              margin-bottom: 1mm;
             }
-
             .info-main {
-              font-size: 14px;
-              font-weight: 700;
-              margin-bottom: 2px;
+              font-size: 11.5pt;
+              font-weight: bold;
+              color: #222;
             }
-
-            .info-sub {
-              font-size: 11px;
-              line-height: 1.4;
+            .info-sub-bottom {
+              margin-top: auto;
+              font-size: 7.5pt;
+              color: #222;
+              line-height: 1.2;
             }
-
             .same-text {
-              height: calc(100% - 18px);
+              flex: 1;
               display: flex;
               align-items: center;
               justify-content: center;
-              color: #999;
-              font-size: 16px;
-              font-weight: 700;
+              font-size: 11.5pt;
+              color: #888;
+              font-weight: bold;
+              letter-spacing: 0.1em;
             }
 
-            .items-box {
-              border: 1px solid #666;
-              margin-bottom: 4px;
+            .items-area {
+              display: flex;
+              flex-direction: column;
+              flex-grow: 1;
             }
-
-            .items-table {
-              width: 100%;
-              border-collapse: collapse;
+            .items-header {
+              display: flex;
+              border-top: 0.5pt solid #444;
+              border-bottom: 0.5pt solid #444;
+              padding: 1mm 0;
+              font-size: 7.5pt;
+              font-weight: bold;
+              color: #444;
             }
-
-            .items-table thead th {
-              font-size: 11px;
-              font-weight: 700;
-              text-align: left;
-              border-bottom: 1px solid #666;
-              padding: 4px 6px;
-              background: #fff;
+            .items-body {
+              padding-top: 2mm;
+              flex-grow: 1;
+              position: relative;
             }
-
-            .items-table thead th.col-qty,
-            .items-table thead th.col-price {
-              text-align: right;
-            }
-
-            .col-item { width: auto; }
-            .col-qty { width: 52px; }
-            .col-price { width: 92px; }
-
-            .item-cell {
-              vertical-align: top;
-              padding: 6px;
-              min-height: 82px;
-            }
-
-            .qty-cell,
-            .price-cell {
-              vertical-align: top;
-              text-align: right;
-              padding: 6px;
-              font-size: 12px;
-              font-weight: 700;
-            }
-
             .item-name {
-              font-size: 16px;
-              font-weight: 800;
-              margin-bottom: 4px;
+              font-size: 11.5pt;
+              font-weight: bold;
+              color: #222;
+              line-height: 1.2;
+              margin-bottom: 1mm;
             }
-
             .item-detail {
-              font-size: 11px;
+              font-size: 7.5pt;
               color: #555;
-              margin-bottom: 6px;
+              margin-bottom: 2mm;
+            }
+            .qty-cell {
+              width: 18mm;
+              text-align: center;
+              font-size: 9.5pt;
+              font-weight: bold;
+              color: #333;
+              padding-top: 0.5mm;
+            }
+            .price-cell {
+              width: 24mm;
+              text-align: right;
+              font-size: 9.5pt;
+              font-weight: bold;
+              color: #333;
+              padding-right: 1mm;
+              padding-top: 0.5mm;
             }
 
             .extra-box {
-              display: inline-block;
-              border: 1px dashed #bbb;
-              padding: 4px 6px;
-              font-size: 11px;
-              line-height: 1.45;
-              margin-top: 2px;
-              white-space: pre-wrap;
+              border: 0.5pt dashed #999;
+              padding: 2mm;
+              width: 55mm;
             }
-
             .extra-title {
-              font-size: 10px;
+              font-size: 6.5pt;
               color: #666;
-              margin-bottom: 2px;
-              font-weight: 700;
+              margin-bottom: 1mm;
             }
-
-            .amount-summary-wrap {
-              display: flex;
-              justify-content: flex-end;
-              margin-bottom: 6px;
+            .extra-text {
+              font-size: 8pt;
+              font-weight: bold;
+              color: #333;
+              line-height: 1.2;
             }
 
             .amount-summary {
-              width: 180px;
+              width: 62mm;
               border-collapse: collapse;
-              font-size: 11px;
+              font-size: 7.5pt;
             }
-
-            .amount-summary th,
-            .amount-summary td {
-              border: 1px solid #d7d7d7;
-              padding: 4px 6px;
+            .amount-label {
+              border: 0.5pt solid #999;
+              padding: 1mm 0 1mm 2mm;
+              background: #f9f9f9;
+              color: #555;
+              width: 50%;
             }
-
-            .amount-summary th {
-              text-align: left;
-              background: #f7f7f7;
-              width: 60%;
-              font-weight: 700;
-            }
-
-            .amount-summary td {
+            .amount-val {
+              border: 0.5pt solid #999;
+              padding: 1mm 2mm 1mm 0;
               text-align: right;
-              font-weight: 700;
-              background: #fff;
-              height: 23px; /* 金額が空欄の時も枠の高さを保つ */
+              font-weight: bold;
+              color: #333;
             }
-
-            .amount-summary .total-row th,
-            .amount-summary .total-row td {
-              font-weight: 800;
-              color: #1f5f43;
-              font-size: 13px;
+            .amount-label-total {
+              border: 0.5pt solid #999;
+              padding: 1mm 0 1mm 2mm;
+              background: #f9f9f9;
+              font-weight: bold;
+              color: #117768;
+            }
+            .amount-val-total {
+              border: 0.5pt solid #999;
+              padding: 1mm 2mm 1mm 0;
+              text-align: right;
+              font-weight: bold;
+              font-size: 9.5pt;
+              color: #117768;
             }
 
             .receipt-note {
-              margin-top: 10px;
-              margin-bottom: 10px;
-              font-size: 12px;
-              line-height: 1.8;
+              margin-bottom: 2mm;
+              font-size: 8pt;
+              color: #333;
+              letter-spacing: 0.05em;
             }
 
             .footer {
-              margin-top: 10px;
-              border-top: 1px solid #d5d5d5;
-              padding-top: 6px;
               display: flex;
               justify-content: space-between;
               align-items: flex-end;
-              gap: 10px;
+              margin-top: 2mm;
+              padding-top: 1.5mm;
+              border-top: 0.5pt dashed #bbb;
             }
-
             .shop-block {
-              font-size: 10px;
-              line-height: 1.35;
+              font-size: 7pt;
+              color: #444;
+              line-height: 1.3;
             }
-
             .shop-name {
-              font-size: 14px;
-              font-weight: 800;
-              margin-bottom: 2px;
+              font-size: 11.5pt;
+              font-weight: 900;
+              margin-bottom: 1mm;
+              letter-spacing: 0.1em;
+              color: #222;
             }
-
-            .shop-info {
-              font-size: 10px;
-            }
-
             .footer-actions {
               display: flex;
-              align-items: flex-end;
-              gap: 6px;
+              gap: 1.5mm;
             }
-
             .check-group {
               display: flex;
               flex-direction: column;
               align-items: center;
-              gap: 3px;
+              gap: 0.5mm;
             }
-
             .check-label {
-              font-size: 9px;
+              font-size: 6pt;
               color: #666;
-              font-weight: 700;
             }
-
             .check-box {
-              width: 54px;
-              height: 24px;
-              border: 1px solid #999;
-              border-radius: 6px;
-              background: #fff;
-              font-size: 11px;
+              border: 0.5pt solid #666;
+              width: 13.5mm;
+              height: 5.5mm;
               display: flex;
               align-items: center;
               justify-content: center;
-              font-weight: 700;
-            }
-
-            .check-box.filled {
-              box-shadow: inset 0 0 0 1px #bbb;
+              font-size: 6.5pt;
+              font-weight: bold;
+              color: #333;
+              border-radius: 1px;
             }
           </style>
         </head>
         <body>
           <div class="print-root">
-            <div class="page two-split">
+            <div class="a4-page">
               ${renderSlip({ title: '受 注 書 控', type: 'order_store', hidePrice: false })}
-              <div class="cutline"><span>✂ 切り取り線</span></div>
+              
+              <div class="cutline-container">
+                <span class="cutline-text">✂ 切り取り線</span>
+              </div>
+
               ${renderSlip({ title: 'お 客 様 控', type: 'customer', hidePrice: false })}
             </div>
 
-            <div class="page two-split">
+            <div class="a4-page">
               ${renderSlip({ title: '納 品 書', type: 'delivery', hidePrice: true })}
-              <div class="cutline"><span>✂ 切り取り線</span></div>
+              
+              <div class="cutline-container">
+                <span class="cutline-text">✂ 切り取り線</span>
+              </div>
+
               ${renderSlip({ title: '受 領 書', type: 'receipt', hidePrice: true, showReceiptNote: true })}
             </div>
           </div>
 
           <script>
-            window.onload = function () {
-              setTimeout(function () {
+            window.onload = function() {
+              setTimeout(function() {
                 window.print();
               }, 400);
             };
@@ -705,6 +702,7 @@ export default function CalendarPage() {
       alert(`エラーが発生しました: ${err.message}`);
     }
   };
+  // ==========================================
 
   const handleSendEmail = (e) => {
     e.preventDefault();
