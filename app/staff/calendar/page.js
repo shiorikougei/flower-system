@@ -123,179 +123,189 @@ export default function CalendarPage() {
   };
 
   // ==========================================
-  // ★ 復活した機能：伝票印刷・PDF出力ロジック
+  // ★ 印刷・PDF出力ロジック（エラー保護強化版）
   // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (!selectedOrder) return;
     
-    const printWindow = window.open('', '_blank');
-    if(!printWindow) {
-      alert('ポップアップブロックを解除してください。');
-      return;
-    }
+    try {
+      const printWindow = window.open('', '_blank');
+      if(!printWindow) {
+        alert('ポップアップブロックを解除してください。');
+        return;
+      }
 
-    const d = selectedOrder.order_data;
-    const tInfo = d.isRecipientDifferent ? d.recipientInfo : d.customerInfo;
-    const slipBgUrl = appSettings?.generalConfig?.slipBgUrl || '';
-    const slipBgOpacity = appSettings?.generalConfig?.slipBgOpacity || 50;
-    const logoUrl = appSettings?.generalConfig?.logoUrl || '';
+      const d = selectedOrder.order_data || {};
+      const tInfo = d.isRecipientDifferent ? (d.recipientInfo || {}) : (d.customerInfo || {});
+      const slipBgUrl = appSettings?.generalConfig?.slipBgUrl || '';
+      const slipBgOpacity = appSettings?.generalConfig?.slipBgOpacity || 50;
+      const logoUrl = appSettings?.generalConfig?.logoUrl || '';
+      const shop = (appSettings?.shops || [])[0] || {};
+      const totals = getTotals(d);
 
-    const html = `
-      <!DOCTYPE html>
-      <html lang="ja">
-      <head>
-        <meta charset="UTF-8">
-        <title>受注伝票 - ${selectedOrder.id.slice(0,8)}</title>
-        <style>
-          body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; margin: 0; padding: 40px; color: #333; line-height: 1.6; }
-          .slip-container { position: relative; max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 40px; min-height: 1100px; background-color: #fff; }
-          .bg-image { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: url('${slipBgUrl}'); background-size: cover; background-position: center; opacity: ${slipBgOpacity / 100}; z-index: 0; filter: grayscale(100%); }
-          .content { position: relative; z-index: 10; }
-          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #2D4B3E; padding-bottom: 20px; margin-bottom: 30px; }
-          .title { font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #2D4B3E; }
-          .shop-info { text-align: right; font-size: 12px; }
-          .shop-logo { max-height: 60px; margin-bottom: 10px; object-fit: contain; }
-          .customer-section { margin-bottom: 30px; }
-          .customer-name { font-size: 20px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 5px; width: 60%; margin-bottom: 10px; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-          th, td { border: 1px solid #ddd; padding: 12px; text-align: left; font-size: 14px; background-color: rgba(255,255,255,0.8); }
-          th { background-color: #f0f0f0; font-weight: bold; }
-          .total-row { font-size: 18px; font-weight: bold; color: #2D4B3E; }
-          .info-box { border: 1px solid #ddd; padding: 15px; font-size: 13px; background-color: rgba(255,255,255,0.9); margin-bottom: 20px; border-radius: 8px; }
-          @media print {
-            body { padding: 0; }
-            .slip-container { border: none; padding: 20px; }
-            .bg-image { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            th, td, .info-box { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="slip-container">
-          ${slipBgUrl ? `<div class="bg-image"></div>` : ''}
-          <div class="content">
-            <div class="header">
-              <div>
-                <div class="title">受 注 伝 票</div>
-                <div style="margin-top: 15px; font-size: 12px;">受付日時: ${safeFormatDate(selectedOrder.created_at, true)}</div>
-                <div style="font-size: 12px;">注文ID: ${selectedOrder.id}</div>
+      // ★ undefinedやnullで落ちないように文字列化してから改行を置換する安全な関数
+      const formatText = (txt) => String(txt || '').replace(/\n/g, '<br/>');
+
+      const html = `
+        <!DOCTYPE html>
+        <html lang="ja">
+        <head>
+          <meta charset="UTF-8">
+          <title>受注伝票 - ${selectedOrder.id.slice(0,8)}</title>
+          <style>
+            body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; margin: 0; padding: 40px; color: #333; line-height: 1.6; }
+            .slip-container { position: relative; max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 40px; min-height: 1100px; background-color: #fff; }
+            .bg-image { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: url('${slipBgUrl}'); background-size: cover; background-position: center; opacity: ${slipBgOpacity / 100}; z-index: 0; filter: grayscale(100%); }
+            .content { position: relative; z-index: 10; }
+            .header { display: flex; justify-content: space-between; border-bottom: 2px solid #2D4B3E; padding-bottom: 20px; margin-bottom: 30px; }
+            .title { font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #2D4B3E; }
+            .shop-info { text-align: right; font-size: 12px; }
+            .shop-logo { max-height: 60px; margin-bottom: 10px; object-fit: contain; }
+            .customer-section { margin-bottom: 30px; }
+            .customer-name { font-size: 20px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 5px; width: 60%; margin-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; font-size: 14px; background-color: rgba(255,255,255,0.8); }
+            th { background-color: #f0f0f0; font-weight: bold; }
+            .total-row { font-size: 18px; font-weight: bold; color: #2D4B3E; }
+            .info-box { border: 1px solid #ddd; padding: 15px; font-size: 13px; background-color: rgba(255,255,255,0.9); margin-bottom: 20px; border-radius: 8px; }
+            @media print {
+              body { padding: 0; }
+              .slip-container { border: none; padding: 20px; }
+              .bg-image { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              th, td, .info-box { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="slip-container">
+            ${slipBgUrl ? `<div class="bg-image"></div>` : ''}
+            <div class="content">
+              <div class="header">
+                <div>
+                  <div class="title">受 注 伝 票</div>
+                  <div style="margin-top: 15px; font-size: 12px;">受付日時: ${safeFormatDate(selectedOrder.created_at, true)}</div>
+                  <div style="font-size: 12px;">注文ID: ${selectedOrder.id}</div>
+                </div>
+                <div class="shop-info">
+                  ${logoUrl ? `<img src="${logoUrl}" class="shop-logo" /><br/>` : `<div style="font-size:18px;font-weight:bold;margin-bottom:10px;">${appSettings?.generalConfig?.appName || 'FLORIX'}</div>`}
+                  ${shop.name || ''}<br/>
+                  ${shop.address || '店舗住所未設定'}<br/>
+                  TEL: ${shop.phone || '未設定'}
+                </div>
               </div>
-              <div class="shop-info">
-                ${logoUrl ? `<img src="${logoUrl}" class="shop-logo" /><br/>` : `<div style="font-size:18px;font-weight:bold;margin-bottom:10px;">${appSettings?.generalConfig?.appName || 'FLORIX'}</div>`}
-                ${appSettings?.shops?.[0]?.name || ''}<br/>
-                ${appSettings?.shops?.[0]?.address || '店舗住所未設定'}<br/>
-                TEL: ${appSettings?.shops?.[0]?.phone || '未設定'}
+
+              <div class="customer-section">
+                <div class="customer-name">${d.customerInfo?.name || 'お客様'} 様</div>
+                <div style="font-size: 12px; margin-left: 10px;">
+                  TEL: ${d.customerInfo?.phone || '未登録'}<br/>
+                  ${d.receiveMethod !== 'pickup' ? `〒${d.customerInfo?.zip || ''} ${d.customerInfo?.address1 || ''} ${d.customerInfo?.address2 || ''}` : ''}
+                </div>
               </div>
-            </div>
 
-            <div class="customer-section">
-              <div class="customer-name">${d.customerInfo?.name || 'お客様'} 様</div>
-              <div style="font-size: 12px; margin-left: 10px;">
-                TEL: ${d.customerInfo?.phone || '未登録'}<br/>
-                ${d.receiveMethod !== 'pickup' ? `〒${d.customerInfo?.zip || ''} ${d.customerInfo?.address1 || ''} ${d.customerInfo?.address2 || ''}` : ''}
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 50%;">ご注文内容</th>
+                    <th style="width: 20%;">数量</th>
+                    <th style="width: 30%;">金額 (税抜)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <b>${d.flowerType || '未設定'}</b><br/>
+                      <span style="font-size:11px; color:#555;">
+                        用途: ${d.flowerPurpose || '-'} / 色: ${d.flowerColor || '-'} / イメージ: ${d.flowerVibe || '-'}
+                      </span>
+                    </td>
+                    <td>1</td>
+                    <td>¥${Number(d.itemPrice || 0).toLocaleString()}</td>
+                  </tr>
+                  ${Number(d.calculatedFee) > 0 ? `
+                  <tr>
+                    <td>配送料 (箱代・クール便等含む)</td>
+                    <td>1</td>
+                    <td>¥${Number(d.calculatedFee).toLocaleString()}</td>
+                  </tr>` : ''}
+                  ${Number(d.pickupFee) > 0 ? `
+                  <tr>
+                    <td>器回収・返却費用</td>
+                    <td>1</td>
+                    <td>¥${Number(d.pickupFee).toLocaleString()}</td>
+                  </tr>` : ''}
+                  <tr>
+                    <td colspan="2" style="text-align: right; font-weight: bold;">消費税 (10%)</td>
+                    <td>¥${totals.tax.toLocaleString()}</td>
+                  </tr>
+                  <tr class="total-row">
+                    <td colspan="2" style="text-align: right;">合計金額 (税込)</td>
+                    <td>¥${totals.total.toLocaleString()}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div class="info-box">
+                <div style="font-weight: bold; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; color:#2D4B3E;">お届け・受取スケジュール</div>
+                受取方法: <b>${getMethodLabel(d.receiveMethod)}</b> ${d.receiveMethod === 'pickup' ? `(${d.selectedShop || ''})` : ''}<br/>
+                予定日: <b>${d.selectedDate || '未指定'}</b> ${d.selectedTime ? `(${d.selectedTime})` : ''}<br/>
+                ${d.receiveMethod === 'sagawa' ? `<span style="color: green;">発送予定日: ${d.shippingDate || '未定'}</span><br/>` : ''}
+                ${d.receiveMethod !== 'pickup' ? `
+                  <br/><b>【お届け先】</b><br/>
+                  宛名: ${tInfo?.name || ''} 様<br/>
+                  電話: ${tInfo?.phone || ''}<br/>
+                  住所: 〒${tInfo?.zip || ''} ${tInfo?.address1 || ''} ${tInfo?.address2 || ''}
+                ` : ''}
+                ${d.absenceAction === '置き配' ? `<br/><span style="color:red; font-weight:bold;">※置き配希望: ${d.absenceNote || ''}</span>` : ''}
               </div>
+
+              ${d.cardType && d.cardType !== 'なし' ? `
+              <div class="info-box">
+                <div style="font-weight: bold; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; color:#2D4B3E;">添付物: ${d.cardType}</div>
+                ${d.cardMessage ? formatText(d.cardMessage) : ''}
+                ${d.tatePattern ? `【パターン】 ${d.tatePattern}<br/>` : ''}
+                ${d.tateInput1 ? `【内容】 ${d.tateInput1}<br/>` : ''}
+                ${d.tateInput2 ? `【宛名】 ${d.tateInput2} 様<br/>` : ''}
+                ${d.tateInput3 ? `【贈り主】 ${d.tateInput3}<br/>` : ''}
+                ${d.tateInput3a ? `【会社名】 ${d.tateInput3a}<br/>` : ''}
+                ${d.tateInput3b ? `【役職・名】 ${d.tateInput3b}<br/>` : ''}
+              </div>` : ''}
+              
+              ${d.note ? `
+              <div class="info-box" style="background-color: #fffdf0; border-color: #f2e4b0;">
+                <div style="font-weight: bold; margin-bottom: 5px; color:#8a6d3b;">社内メモ / 要望</div>
+                ${formatText(d.note)}
+              </div>` : ''}
+
             </div>
-
-            <table>
-              <thead>
-                <tr>
-                  <th style="width: 50%;">ご注文内容</th>
-                  <th style="width: 20%;">数量</th>
-                  <th style="width: 30%;">金額 (税抜)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>
-                    <b>${d.flowerType}</b><br/>
-                    <span style="font-size:11px; color:#555;">
-                      用途: ${d.flowerPurpose} / 色: ${d.flowerColor} / イメージ: ${d.flowerVibe}
-                    </span>
-                  </td>
-                  <td>1</td>
-                  <td>¥${Number(d.itemPrice).toLocaleString()}</td>
-                </tr>
-                ${Number(d.calculatedFee) > 0 ? `
-                <tr>
-                  <td>配送料 (箱代・クール便等含む)</td>
-                  <td>1</td>
-                  <td>¥${Number(d.calculatedFee).toLocaleString()}</td>
-                </tr>` : ''}
-                ${Number(d.pickupFee) > 0 ? `
-                <tr>
-                  <td>器回収・返却費用</td>
-                  <td>1</td>
-                  <td>¥${Number(d.pickupFee).toLocaleString()}</td>
-                </tr>` : ''}
-                <tr>
-                  <td colspan="2" style="text-align: right; font-weight: bold;">消費税 (10%)</td>
-                  <td>¥${getTotals(d).tax.toLocaleString()}</td>
-                </tr>
-                <tr class="total-row">
-                  <td colspan="2" style="text-align: right;">合計金額 (税込)</td>
-                  <td>¥${getTotals(d).total.toLocaleString()}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <div class="info-box">
-              <div style="font-weight: bold; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; color:#2D4B3E;">お届け・受取スケジュール</div>
-              受取方法: <b>${getMethodLabel(d.receiveMethod)}</b> ${d.receiveMethod === 'pickup' ? `(${d.selectedShop})` : ''}<br/>
-              予定日: <b>${d.selectedDate || '未指定'}</b> ${d.selectedTime ? `(${d.selectedTime})` : ''}<br/>
-              ${d.receiveMethod === 'sagawa' ? `<span style="color: green;">発送予定日: ${d.shippingDate || '未定'}</span><br/>` : ''}
-              ${d.receiveMethod !== 'pickup' ? `
-                <br/><b>【お届け先】</b><br/>
-                宛名: ${tInfo?.name || ''} 様<br/>
-                電話: ${tInfo?.phone || ''}<br/>
-                住所: 〒${tInfo?.zip || ''} ${tInfo?.address1 || ''} ${tInfo?.address2 || ''}
-              ` : ''}
-              ${d.absenceAction === '置き配' ? `<br/><span style="color:red; font-weight:bold;">※置き配希望: ${d.absenceNote}</span>` : ''}
-            </div>
-
-            ${d.cardType !== 'なし' ? `
-            <div class="info-box">
-              <div style="font-weight: bold; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; color:#2D4B3E;">添付物: ${d.cardType}</div>
-              ${d.cardMessage ? d.cardMessage.replace(/\\n/g, '<br/>') : ''}
-              ${d.tatePattern ? `【パターン】 ${d.tatePattern}<br/>` : ''}
-              ${d.tateInput1 ? `【内容】 ${d.tateInput1}<br/>` : ''}
-              ${d.tateInput2 ? `【宛名】 ${d.tateInput2} 様<br/>` : ''}
-              ${d.tateInput3 ? `【贈り主】 ${d.tateInput3}<br/>` : ''}
-              ${d.tateInput3a ? `【会社名】 ${d.tateInput3a}<br/>` : ''}
-              ${d.tateInput3b ? `【役職・名】 ${d.tateInput3b}<br/>` : ''}
-            </div>` : ''}
-            
-            ${d.note ? `
-            <div class="info-box" style="background-color: #fffdf0; border-color: #f2e4b0;">
-              <div style="font-weight: bold; margin-bottom: 5px; color:#8a6d3b;">社内メモ / 要望</div>
-              ${d.note.replace(/\\n/g, '<br/>')}
-            </div>` : ''}
-
           </div>
-        </div>
-        <script>
-          window.onload = function() {
-            setTimeout(function() {
-              window.print();
-            }, 800);
-          }
-        </script>
-      </body>
-      </html>
-    `;
-    
-    printWindow.document.write(html);
-    printWindow.document.close();
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+              }, 800);
+            }
+          </script>
+        </body>
+        </html>
+      `;
+      
+      printWindow.document.open();
+      printWindow.document.write(html);
+      printWindow.document.close();
+
+    } catch (err) {
+      console.error("伝票生成エラー:", err);
+      alert("伝票の生成中に予期せぬエラーが発生しました。");
+    }
   };
 
-  // ==========================================
-  // ★ 復活した機能：メール送信ロジック（メーラー起動）
-  // ==========================================
+  // ★ メール送信ロジック
   const handleSendEmail = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const d = selectedOrder?.order_data;
+    const d = selectedOrder?.order_data || {};
     if (!d?.customerInfo?.email) {
       alert("メールアドレスが登録されていません。");
       return;
@@ -303,25 +313,24 @@ export default function CalendarPage() {
     
     const email = d.customerInfo.email;
     const template = appSettings?.autoReply || { subject: 'ご注文ありがとうございます', body: '{CustomerName} 様\n\nご注文ありがとうございます。' };
-    
-    const subject = encodeURIComponent(template.subject);
+    const subject = encodeURIComponent(template.subject || 'ご注文ありがとうございます');
+    const totals = getTotals(d);
     
     const orderDetails = `
 【ご注文内容】
-商品: ${d.flowerType}
-合計金額: ¥${getTotals(d).total.toLocaleString()} (税込)
+商品: ${d.flowerType || '未設定'}
+合計金額: ¥${totals.total.toLocaleString()} (税込)
 受取方法: ${getMethodLabel(d.receiveMethod)}
 予定日: ${d.selectedDate || '未定'} ${d.selectedTime || ''}
     `.trim();
 
-    let bodyText = template.body
+    let bodyText = (template.body || '')
       .replace(/\{CustomerName\}/g, d.customerInfo.name || 'お客様')
       .replace(/\{OrderDetails\}/g, orderDetails);
     
     const body = encodeURIComponent(bodyText);
     window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
   };
-
 
   const renderDay = (day, index) => {
     if (!day) return <div key={`empty-${index}`} className="min-h-[80px] md:min-h-[120px] bg-[#FBFAF9]/50 border-r border-b border-[#EAEAEA]"></div>;
