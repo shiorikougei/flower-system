@@ -132,7 +132,7 @@ export default function CalendarPage() {
   };
 
   // ==========================================
-  // ★ 印刷時の「はみ出し防止」CSSハック適用版
+  // ★ 【完全修正版】A4横に「左右2分割」で配置し、2ページ出力するロジック
   // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
@@ -155,8 +155,11 @@ export default function CalendarPage() {
 
       // 金額を非表示にする関数
       const formatPrice = (price, hide) => hide ? '' : `¥${Number(price).toLocaleString()}`;
+      const shop = (appSettings?.shops || [])[0] || {};
+      const logoUrl = appSettings?.generalConfig?.logoUrl || '';
 
-      const renderSlip = (title, hidePrice) => `
+      // 1枚の伝票（A4横の半分サイズ）を生成する関数
+      const renderSlip = (title, hidePrice, isReceipt) => `
         <div class="slip">
           ${slipBgUrl ? `<div class="slip-bg" style="background-image: url('${slipBgUrl}'); opacity: ${slipBgOpacity / 100};"></div>` : ''}
           
@@ -164,12 +167,12 @@ export default function CalendarPage() {
             <div class="title-text">${title}</div>
           </div>
           
-          <div class="meta">
+          <div class="meta" style="margin-bottom: 10px;">
             <span>受付: ${safeFormatDate(selectedOrder.created_at, true)}</span>
             <span>ID: ${safeId}</span>
           </div>
 
-          <div class="box-row">
+          <div class="box-row" style="margin-bottom: 10px;">
             <div class="box" style="flex: 1.2;">
               <span class="label">ご依頼主様</span>
               <div class="val-lg">${formatText(customer.name)} 様</div>
@@ -178,27 +181,29 @@ export default function CalendarPage() {
             <div class="box" style="flex: 1;">
               <span class="label">お受取方法</span>
               <div class="val-md">${receiveMethodStr} ${d.receiveMethod === 'pickup' && d.selectedShop ? `(${d.selectedShop})` : ''}</div>
-              <span class="label" style="margin-top: 2px;">お届け・ご来店日時</span>
+              <span class="label" style="margin-top: 8px;">お届け・ご来店日時</span>
               <div class="val-md">${dateTimeStr}</div>
             </div>
           </div>
 
-          <div class="box">
+          <div class="box" style="margin-bottom: 10px;">
             <span class="label">お届け先様</span>
             ${d.isRecipientDifferent ? `
               <div class="val-lg">${formatText(recipient.name)} 様</div>
               <div class="val">〒${formatText(recipient.zip)} ${formatText(recipient.address1)}${formatText(recipient.address2)}</div>
               <div class="val">TEL: ${formatText(recipient.phone)}</div>
             ` : `
-              <div class="val" style="color: #666; padding-top: 2px;">ご依頼主様と同じ</div>
+              <div class="val" style="color: #666; padding-top: 4px;">ご依頼主様と同じ</div>
             `}
           </div>
 
-          <div class="box" style="flex-grow: 1;">
+          <div class="box" style="margin-bottom: 10px; flex-grow: 0;">
             <span class="label">ご注文内容</span>
             <div class="val-lg">${formatText(d.flowerType)}</div>
             <div class="val" style="font-weight: normal; color: #444;">用途: ${d.flowerPurpose || '-'} / 色: ${d.flowerColor || '-'}</div>
             <div class="val" style="font-weight: normal; color: #444;">立札/カード: ${d.cardType && d.cardType !== 'なし' ? d.cardType : 'なし'}</div>
+            ${d.receiveMethod === 'sagawa' ? `<div class="val" style="color: green; margin-top: 4px;">※発送予定日: ${d.shippingDate || '未定'}</div>` : ''}
+            ${d.note ? `<div class="val" style="color: #d97c8f; margin-top: 2px;">※備考あり</div>` : ''}
           </div>
 
           <table class="price-table">
@@ -215,15 +220,31 @@ export default function CalendarPage() {
                 <td class="amount">${formatPrice(Number(d.calculatedFee||0) + Number(d.pickupFee||0), hidePrice)}</td>
               </tr>
               <tr>
-                <td style="text-align:right; font-size:8px; color:#888;">消費税(10%)</td>
+                <td style="text-align:right; font-size:10px; color:#888;">消費税(10%)</td>
                 <td class="amount">${formatPrice(totals.tax, hidePrice)}</td>
               </tr>
               <tr class="total-row">
                 <td>合計金額 (税込)</td>
-                <td class="amount" style="font-size:12px;">${formatPrice(totals.total, hidePrice)}</td>
+                <td class="amount" style="font-size:16px;">${formatPrice(totals.total, hidePrice)}</td>
               </tr>
             </tbody>
           </table>
+
+          <div style="flex-grow: 1;"></div>
+          
+          <div style="display:flex; justify-content: space-between; align-items: flex-end; margin-top: 15px;">
+            <div class="shop-info" style="font-size: 11px; line-height: 1.4;">
+              ${logoUrl ? `<img src="${logoUrl}" class="shop-logo" style="max-height:30px; margin-bottom:5px; object-fit:contain;" /><br/>` : `<div style="font-size:16px;font-weight:900;margin-bottom:5px;">${appSettings?.generalConfig?.appName || 'FLORIX'}</div>`}
+              ${shop.name || ''}<br/>
+              ${shop.address || ''}<br/>
+              TEL: ${shop.phone || ''}
+            </div>
+            ${isReceipt ? `
+              <div class="sign-box" style="border: 1px solid #999; width: 60px; height: 60px; text-align: center; display:flex; align-items:center; justify-content:center; font-size: 11px; color: #999; border-radius: 4px; background: rgba(255,255,255,0.8);">
+                受領印
+              </div>
+            ` : ''}
+          </div>
         </div>
       `;
 
@@ -237,69 +258,71 @@ export default function CalendarPage() {
             @media print {
               @page { size: A4 landscape; margin: 0; }
               body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-              /* 高さを210mmから209.5mmに削ることで、無駄な改ページを完全に防ぐ */
-              .page { border: none !important; margin: 0 !important; box-shadow: none !important; width: 297mm; height: 209.5mm; page-break-after: avoid; overflow: hidden; }
+              .page-container { border: none !important; margin: 0 !important; box-shadow: none !important; }
             }
             body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; background: #e0e0e0; margin: 10mm auto; color: #333; }
             
-            /* A4横向き 十字4分割グリッド */
-            .page {
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              grid-template-rows: 1fr 1fr;
+            /* A4横に左右2分割で配置するためのコンテナ（1ページ分） */
+            .page-container {
+              display: flex;
               width: 297mm;
               height: 209.5mm; 
               background: white;
+              margin: 0 auto 10mm auto;
               box-sizing: border-box;
               box-shadow: 0 4px 12px rgba(0,0,0,0.1);
               overflow: hidden;
+              page-break-after: always;
             }
             
             .slip {
+              flex: 1;
               position: relative;
-              padding: 8mm 12mm; /* 余白を少し削って中身を確実に収める */
+              padding: 15mm 20mm; 
               box-sizing: border-box;
-              border-right: 1px dashed #bbb;
-              border-bottom: 1px dashed #bbb;
               display: flex;
               flex-direction: column;
-              gap: 4px; /* ボックス間の隙間を詰める */
               overflow: hidden;
               z-index: 1;
             }
-            .slip:nth-child(2n) { border-right: none; }
-            .slip:nth-child(n+3) { border-bottom: none; }
+            .slip:first-child {
+              border-right: 1px dashed #bbb;
+            }
             
             .slip-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: grayscale(100%); z-index: -1; }
             
-            .header { text-align: center; position: relative; margin-bottom: 0px; margin-top: 2px; }
-            .header::before { content: ""; position: absolute; top: 50%; left: 5%; right: 5%; border-top: 1px solid #ddd; z-index: -1; }
-            .title-text { display: inline-block; background: white; padding: 0 10px; font-size: 13px; font-weight: bold; letter-spacing: 4px; color: #2D4B3E; border-radius: 4px; }
+            .header { text-align: center; position: relative; margin-bottom: 5px; }
+            .header::before { content: ""; position: absolute; top: 50%; left: 0; right: 0; border-top: 1px solid #ddd; z-index: -1; }
+            .title-text { display: inline-block; background: white; padding: 0 15px; font-size: 18px; font-weight: bold; letter-spacing: 4px; color: #2D4B3E; border-radius: 4px; }
             
-            .meta { display: flex; justify-content: space-between; font-size: 8px; font-weight: bold; color: #666; margin-bottom: 2px; }
+            .meta { display: flex; justify-content: space-between; font-size: 10px; font-weight: bold; color: #666; }
             
-            .box-row { display: flex; gap: 4px; }
-            .box { border: 1px solid #eaeaea; border-radius: 6px; padding: 4px 8px; background: rgba(255,255,255,0.95); box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+            .box-row { display: flex; gap: 10px; }
+            .box { border: 1px solid #eaeaea; border-radius: 8px; padding: 10px 12px; background: rgba(255,255,255,0.95); box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
             
-            .label { display: inline-block; background: #f5f5f5; color: #888; font-size: 7px; font-weight: bold; padding: 2px 6px; border-radius: 12px; margin-bottom: 2px; }
-            .val-lg { font-size: 12px; font-weight: bold; margin-bottom: 2px; }
-            .val-md { font-size: 10px; font-weight: bold; margin-bottom: 2px; }
-            .val { font-size: 9px; font-weight: bold; line-height: 1.3; }
+            .label { display: inline-block; background: #f5f5f5; color: #888; font-size: 9px; font-weight: bold; padding: 2px 8px; border-radius: 12px; margin-bottom: 4px; }
+            .val-lg { font-size: 16px; font-weight: bold; margin-bottom: 4px; }
+            .val-md { font-size: 14px; font-weight: bold; margin-bottom: 4px; }
+            .val { font-size: 11px; font-weight: bold; line-height: 1.4; }
             
-            .price-table { width: 100%; border-collapse: collapse; margin-top: auto; background: rgba(255,255,255,0.95); border: 1px solid #eaeaea; border-radius: 6px; overflow: hidden; }
-            .price-table th, .price-table td { border-bottom: 1px solid #f0f0f0; padding: 3px 8px; font-size: 9px; }
+            .price-table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.95); border: 1px solid #eaeaea; border-radius: 6px; overflow: hidden; }
+            .price-table th, .price-table td { border-bottom: 1px solid #f0f0f0; padding: 6px 10px; font-size: 11px; }
             .price-table th { color: #888; font-weight: normal; background: #fafafa; }
             .amount { text-align: right; font-weight: bold; }
-            .total-row td { background: #fafafa; font-weight: bold; border-bottom: none; font-size: 11px; }
+            .total-row td { background: #fafafa; font-weight: bold; border-bottom: none; font-size: 14px; }
           </style>
         </head>
         <body>
-          <div class="page">
-            ${renderSlip('受 注 書 （店舗控）', false)}
-            ${renderSlip('ご 注 文 内 容 （お客様控）', false)}
-            ${renderSlip('納 品 書', isGift)}
-            ${renderSlip('受 領 書', isGift)}
+          <div class="page-container">
+            ${renderSlip('受 注 書 控', false, false)}
+            ${renderSlip('お 客 様 控', false, false)}
           </div>
+          
+          <div class="page-container" style="page-break-after: auto;">
+            ${renderSlip('納 品 書', isGift, false)}
+            ${renderSlip('受 領 書', isGift, true)}
+          </div>
+
           <script>
             window.onload = function() {
               setTimeout(function() {
@@ -421,6 +444,15 @@ export default function CalendarPage() {
     );
   };
 
+  const safeFormatDate = (dateString, withTime = false) => {
+    try {
+      if (!dateString) return '日時不明';
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return '日時不明';
+      return withTime ? d.toLocaleString('ja-JP') : d.toLocaleDateString('ja-JP');
+    } catch (e) { return '日時不明'; }
+  };
+
   const modalData = selectedOrder?.order_data || {};
   const modalTargetInfo = modalData.isRecipientDifferent ? (modalData.recipientInfo || {}) : (modalData.customerInfo || {});
   const isSagawa = modalData.receiveMethod === 'sagawa';
@@ -497,7 +529,7 @@ export default function CalendarPage() {
                 <p className="text-[10px] md:text-[11px] text-[#999999] font-bold mt-1">受付: {safeFormatDate(selectedOrder.created_at, true)} | ID: {selectedOrder.id}</p>
               </div>
 
-              {/* ★ 印刷・PDFボタン */}
+              {/* ★ ここで印刷・メールボタンに機能を接続！！ */}
               <div className="flex flex-wrap items-center gap-2 ml-auto">
                 <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all">
                   <Printer size={14} /> <span className="hidden sm:inline">印刷 / PDF出力</span>
