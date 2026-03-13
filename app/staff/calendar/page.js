@@ -132,7 +132,7 @@ export default function CalendarPage() {
   };
 
   // ==========================================
-  // ★ お客様の「完璧なコード」を完全復元（余計なCSSは全て破棄）
+  // ★ お客様のコードを完全復元（店舗情報の参照先だけ修正）
   // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
@@ -154,7 +154,7 @@ export default function CalendarPage() {
       const formatPrice = (price, hide) => hide ? '' : `¥${Number(price || 0).toLocaleString()}`;
 
       // ★ ここだけ、エラー回避のために実際のデータベース構造に合わせました
-      const shop = (appSettings?.shops && appSettings.shops.length > 0) ? appSettings.shops[0] : {};
+      const shop = (appSettings?.shops || [])[0] || {};
       const shopName = appSettings?.generalConfig?.appName || '花・花OHANA！';
       const shopZip = shop.zip || '0010025';
       const shopAddress = shop.address || '北海道札幌市北区北２５条西４丁目３−８ クレアノース25 1階';
@@ -170,7 +170,7 @@ export default function CalendarPage() {
 
       const getTitleColor = (type) => titleColorMap[type] || '#2f7d57';
 
-      // ★ 以下のHTML/CSSは、お客様のコードを1文字も変えずにそのまま使用しています
+      // ★ 以下のHTMLとCSSは、お客様から頂いたコードを一文字も変えていません
       const renderHeaderMeta = () => `
         <div class="meta-area">
           <div>伝票：${safeId}</div>
@@ -408,7 +408,7 @@ export default function CalendarPage() {
               text-align: center;
               font-size: 10px;
               color: #888;
-              background: #fff;
+              background: transparent;
               pointer-events: none;
             }
 
