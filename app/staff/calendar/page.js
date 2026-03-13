@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/utils/supabase';
-// ★ エラーの原因：MessageSquare と CreditCard などのアイコン読み込みを追加！
 import { 
   ChevronLeft, ChevronRight, RefreshCw, X, Calendar as CalendarIcon, 
   User, MapPin, Tag, FileText, Smartphone, Archive, RotateCcw, 
@@ -69,7 +68,6 @@ export default function CalendarPage() {
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
   const startDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
 
-  // ★ 注文データをカレンダーイベントにマッピング（発送日とお届け日を分離）
   const calendarEvents = useMemo(() => {
     const map = {};
     orders.forEach(order => {
@@ -83,7 +81,6 @@ export default function CalendarPage() {
       };
 
       if (d.receiveMethod === 'sagawa') {
-        // 業者配送：発送日(集荷) と お届け日 の両方をカレンダーに出す
         if (d.shippingDate) addEvent(d.shippingDate, 'dispatch');
         if (d.selectedDate) addEvent(d.selectedDate, 'sagawa_delivery');
       } else if (d.receiveMethod === 'pickup') {
@@ -125,6 +122,203 @@ export default function CalendarPage() {
     return { item, fee, pickup, subTotal, tax, total: subTotal + tax };
   };
 
+  // ★ 印刷・PDF出力ロジック
+  const handlePrint = (e) => {
+    e.preventDefault();
+    if (!selectedOrder) return;
+    
+    const printWindow = window.open('', '_blank');
+    if(!printWindow) {
+      alert('ポップアップブロックを解除してください。');
+      return;
+    }
+
+    const d = selectedOrder.order_data;
+    const tInfo = d.isRecipientDifferent ? d.recipientInfo : d.customerInfo;
+    const slipBgUrl = appSettings?.generalConfig?.slipBgUrl || '';
+    const slipBgOpacity = appSettings?.generalConfig?.slipBgOpacity || 50;
+    const logoUrl = appSettings?.generalConfig?.logoUrl || '';
+
+    const html = `
+      <!DOCTYPE html>
+      <html lang="ja">
+      <head>
+        <meta charset="UTF-8">
+        <title>受注伝票 - ${selectedOrder.id.slice(0,8)}</title>
+        <style>
+          body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; margin: 0; padding: 40px; color: #333; line-height: 1.6; }
+          .slip-container { position: relative; max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 40px; min-height: 1100px; background-color: #fff; }
+          .bg-image { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: url('${slipBgUrl}'); background-size: cover; background-position: center; opacity: ${slipBgOpacity / 100}; z-index: 0; filter: grayscale(100%); }
+          .content { position: relative; z-index: 10; }
+          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #2D4B3E; padding-bottom: 20px; margin-bottom: 30px; }
+          .title { font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #2D4B3E; }
+          .shop-info { text-align: right; font-size: 12px; }
+          .shop-logo { max-height: 60px; margin-bottom: 10px; object-fit: contain; }
+          .customer-section { margin-bottom: 30px; }
+          .customer-name { font-size: 20px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 5px; width: 60%; margin-bottom: 10px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+          th, td { border: 1px solid #ddd; padding: 12px; text-align: left; font-size: 14px; background-color: rgba(255,255,255,0.8); }
+          th { background-color: #f0f0f0; font-weight: bold; }
+          .total-row { font-size: 18px; font-weight: bold; color: #2D4B3E; }
+          .info-box { border: 1px solid #ddd; padding: 15px; font-size: 13px; background-color: rgba(255,255,255,0.9); margin-bottom: 20px; border-radius: 8px; }
+          @media print {
+            body { padding: 0; }
+            .slip-container { border: none; padding: 20px; }
+            .bg-image { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            th, td, .info-box { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="slip-container">
+          ${slipBgUrl ? `<div class="bg-image"></div>` : ''}
+          <div class="content">
+            <div class="header">
+              <div>
+                <div class="title">受 注 伝 票</div>
+                <div style="margin-top: 15px; font-size: 12px;">受付日時: ${safeFormatDate(selectedOrder.created_at, true)}</div>
+                <div style="font-size: 12px;">注文ID: ${selectedOrder.id}</div>
+              </div>
+              <div class="shop-info">
+                ${logoUrl ? `<img src="${logoUrl}" class="shop-logo" /><br/>` : `<div style="font-size:18px;font-weight:bold;margin-bottom:10px;">${appSettings?.generalConfig?.appName || 'FLORIX'}</div>`}
+                ${appSettings?.shops?.[0]?.name || ''}<br/>
+                ${appSettings?.shops?.[0]?.address || '店舗住所未設定'}<br/>
+                TEL: ${appSettings?.shops?.[0]?.phone || '未設定'}
+              </div>
+            </div>
+
+            <div class="customer-section">
+              <div class="customer-name">${d.customerInfo?.name || 'お客様'} 様</div>
+              <div style="font-size: 12px; margin-left: 10px;">
+                TEL: ${d.customerInfo?.phone || '未登録'}<br/>
+                ${d.receiveMethod !== 'pickup' ? `〒${d.customerInfo?.zip || ''} ${d.customerInfo?.address1 || ''} ${d.customerInfo?.address2 || ''}` : ''}
+              </div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 50%;">ご注文内容</th>
+                  <th style="width: 20%;">数量</th>
+                  <th style="width: 30%;">金額 (税抜)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <b>${d.flowerType}</b><br/>
+                    <span style="font-size:11px; color:#555;">
+                      用途: ${d.flowerPurpose} / 色: ${d.flowerColor} / イメージ: ${d.flowerVibe}
+                    </span>
+                  </td>
+                  <td>1</td>
+                  <td>¥${Number(d.itemPrice).toLocaleString()}</td>
+                </tr>
+                ${Number(d.calculatedFee) > 0 ? `
+                <tr>
+                  <td>配送料 (箱代・クール便等含む)</td>
+                  <td>1</td>
+                  <td>¥${Number(d.calculatedFee).toLocaleString()}</td>
+                </tr>` : ''}
+                ${Number(d.pickupFee) > 0 ? `
+                <tr>
+                  <td>器回収・返却費用</td>
+                  <td>1</td>
+                  <td>¥${Number(d.pickupFee).toLocaleString()}</td>
+                </tr>` : ''}
+                <tr>
+                  <td colspan="2" style="text-align: right; font-weight: bold;">消費税 (10%)</td>
+                  <td>¥${getTotals(d).tax.toLocaleString()}</td>
+                </tr>
+                <tr class="total-row">
+                  <td colspan="2" style="text-align: right;">合計金額 (税込)</td>
+                  <td>¥${getTotals(d).total.toLocaleString()}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="info-box">
+              <div style="font-weight: bold; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; color:#2D4B3E;">お届け・受取スケジュール</div>
+              受取方法: <b>${getMethodLabel(d.receiveMethod)}</b> ${d.receiveMethod === 'pickup' ? `(${d.selectedShop})` : ''}<br/>
+              予定日: <b>${d.selectedDate || '未指定'}</b> ${d.selectedTime ? `(${d.selectedTime})` : ''}<br/>
+              ${d.receiveMethod === 'sagawa' ? `<span style="color: green;">発送予定日: ${d.shippingDate || '未定'}</span><br/>` : ''}
+              ${d.receiveMethod !== 'pickup' ? `
+                <br/><b>【お届け先】</b><br/>
+                宛名: ${tInfo?.name || ''} 様<br/>
+                電話: ${tInfo?.phone || ''}<br/>
+                住所: 〒${tInfo?.zip || ''} ${tInfo?.address1 || ''} ${tInfo?.address2 || ''}
+              ` : ''}
+              ${d.absenceAction === '置き配' ? `<br/><span style="color:red; font-weight:bold;">※置き配希望: ${d.absenceNote}</span>` : ''}
+            </div>
+
+            ${d.cardType !== 'なし' ? `
+            <div class="info-box">
+              <div style="font-weight: bold; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; color:#2D4B3E;">添付物: ${d.cardType}</div>
+              ${d.cardMessage ? d.cardMessage.replace(/\n/g, '<br/>') : ''}
+              ${d.tatePattern ? `【パターン】 ${d.tatePattern}<br/>` : ''}
+              ${d.tateInput1 ? `【内容】 ${d.tateInput1}<br/>` : ''}
+              ${d.tateInput2 ? `【宛名】 ${d.tateInput2} 様<br/>` : ''}
+              ${d.tateInput3 ? `【贈り主】 ${d.tateInput3}<br/>` : ''}
+              ${d.tateInput3a ? `【会社名】 ${d.tateInput3a}<br/>` : ''}
+              ${d.tateInput3b ? `【役職・名】 ${d.tateInput3b}<br/>` : ''}
+            </div>` : ''}
+            
+            ${d.note ? `
+            <div class="info-box" style="background-color: #fffdf0; border-color: #f2e4b0;">
+              <div style="font-weight: bold; margin-bottom: 5px; color:#8a6d3b;">社内メモ / 要望</div>
+              ${d.note.replace(/\n/g, '<br/>')}
+            </div>` : ''}
+
+          </div>
+        </div>
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 800);
+          }
+        </script>
+      </body>
+      </html>
+    `;
+    
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
+  // ★ メール送信ロジック（メーラー起動）
+  const handleSendEmail = (e) => {
+    e.preventDefault();
+    const d = selectedOrder?.order_data;
+    if (!d?.customerInfo?.email) {
+      alert("メールアドレスが登録されていません。");
+      return;
+    }
+    
+    const email = d.customerInfo.email;
+    const template = appSettings?.autoReply || { subject: 'ご注文ありがとうございます', body: '{CustomerName} 様\n\nご注文ありがとうございます。' };
+    
+    const subject = encodeURIComponent(template.subject);
+    
+    // 注文詳細のテキスト組み立て
+    const orderDetails = `
+【ご注文内容】
+商品: ${d.flowerType}
+合計金額: ¥${getTotals(d).total.toLocaleString()} (税込)
+受取方法: ${getMethodLabel(d.receiveMethod)}
+予定日: ${d.selectedDate || '未定'} ${d.selectedTime || ''}
+    `.trim();
+
+    let bodyText = template.body
+      .replace(/\{CustomerName\}/g, d.customerInfo.name || 'お客様')
+      .replace(/\{OrderDetails\}/g, orderDetails);
+    
+    const body = encodeURIComponent(bodyText);
+    
+    // メーラーを起動
+    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+  };
+
   const renderDay = (day, index) => {
     if (!day) return <div key={`empty-${index}`} className="min-h-[80px] md:min-h-[120px] bg-[#FBFAF9]/50 border-r border-b border-[#EAEAEA]"></div>;
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -132,7 +326,6 @@ export default function CalendarPage() {
     const dayEvents = calendarEvents[dateStr] || []; 
     const isToday = new Date().toISOString().split('T')[0] === dateStr;
 
-    // イベントを並び替え（発送業務を一番上に、その後は時間順）
     dayEvents.sort((a, b) => {
       if (a.type === 'dispatch' && b.type !== 'dispatch') return -1;
       if (a.type !== 'dispatch' && b.type === 'dispatch') return 1;
@@ -152,7 +345,6 @@ export default function CalendarPage() {
              let badgeColor = '';
              let timeLabel = '';
 
-             // ★ バッジのデザインとラベル
              if (ev.type === 'dispatch') {
                badgeColor = 'bg-green-600 text-white hover:bg-green-700 shadow-sm';
                timeLabel = '発送';
@@ -207,7 +399,6 @@ export default function CalendarPage() {
           </button>
         </div>
         
-        {/* ★ 凡例（レジェンド）の追加 */}
         <div className="hidden lg:flex flex-wrap gap-3 text-[10px] font-bold bg-[#FBFAF9] px-4 py-2 rounded-xl border border-[#EAEAEA]">
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-green-600 shadow-sm"></span> 発送業務 (箱詰め)</span>
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-green-50 border border-green-200"></span> 業者お届け日</span>
@@ -228,7 +419,6 @@ export default function CalendarPage() {
       </header>
 
       <div className="p-2 md:p-8 max-w-[1400px] mx-auto">
-        {/* スマホ用凡例 */}
         <div className="lg:hidden flex flex-wrap gap-2 text-[9px] font-bold bg-white p-3 rounded-xl border border-[#EAEAEA] mb-3 shadow-sm">
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-green-600"></span> 発送</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-green-50 border border-green-200"></span> お届け</span>
@@ -252,7 +442,7 @@ export default function CalendarPage() {
         )}
       </div>
 
-      {/* --- 詳細モーダル (完全最新版) --- */}
+      {/* --- 詳細モーダル --- */}
       {selectedOrder && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#111111]/60 backdrop-blur-sm p-3 md:p-4 animate-in fade-in" onClick={() => setSelectedOrder(null)}>
           <div className="bg-[#FBFAF9] rounded-[24px] md:rounded-[32px] w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -269,15 +459,16 @@ export default function CalendarPage() {
                 <p className="text-[10px] md:text-[11px] text-[#999999] font-bold mt-1">受付: {safeFormatDate(selectedOrder.created_at, true)} | ID: {selectedOrder.id}</p>
               </div>
 
+              {/* ★ 印刷・PDF・メールボタンに機能を接続！ */}
               <div className="flex flex-wrap items-center gap-2 ml-auto">
-                <button className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all">
+                <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all">
                   <Printer size={14} /> <span className="hidden sm:inline">印刷</span>
                 </button>
-                <button className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all">
+                <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all">
                   <FileText size={14} /> PDF
                 </button>
                 {modalData.customerInfo?.email && (
-                  <button className="flex items-center gap-1.5 px-3 py-2 bg-[#2D4B3E] text-white rounded-xl text-[10px] md:text-[11px] font-bold hover:bg-[#1f352b] transition-all shadow-sm">
+                  <button onClick={handleSendEmail} className="flex items-center gap-1.5 px-3 py-2 bg-[#2D4B3E] text-white rounded-xl text-[10px] md:text-[11px] font-bold hover:bg-[#1f352b] transition-all shadow-sm">
                     <Send size={14} /> <span className="hidden sm:inline">メール</span>
                   </button>
                 )}
@@ -297,7 +488,6 @@ export default function CalendarPage() {
             
             <div className="p-4 md:p-8 space-y-6 md:space-y-8 text-left overflow-x-hidden">
               
-              {/* ステータス変更 */}
               <div className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <span className={`px-3 py-1.5 rounded-lg text-[11px] md:text-[12px] font-bold flex items-center gap-1 ${isPickup ? 'bg-orange-100 text-orange-700' : isDelivery ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
@@ -318,7 +508,6 @@ export default function CalendarPage() {
                 </div>
               </div>
 
-              {/* ★ 巨大な発送日パネル（業者配送の場合） */}
               {isSagawa ? (
                 <div className="bg-green-50 border-2 border-green-200 p-6 md:p-8 rounded-[24px] flex flex-col md:flex-row items-center gap-6 justify-center text-center shadow-inner relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-bl-[64px] -mr-4 -mt-4"></div>
@@ -355,7 +544,6 @@ export default function CalendarPage() {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* 注文者情報 */}
                 <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
                   <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><User size={18}/> 注文者情報</h3>
                   <div className="space-y-4 text-[13px] bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA]">
@@ -366,7 +554,6 @@ export default function CalendarPage() {
                   </div>
                 </div>
 
-                {/* お届け先情報 ＆ Googleマップ */}
                 <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
                   <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><MapPin size={18}/> お届け先情報</h3>
                   <div className="space-y-3 text-[13px]">
@@ -395,7 +582,6 @@ export default function CalendarPage() {
                 </div>
               </div>
 
-              {/* 置き配設定 */}
               {(isDelivery || isSagawa) && (
                 <div className="bg-orange-50 p-6 rounded-[24px] border border-orange-200 shadow-sm space-y-2">
                   <h3 className="text-[12px] font-bold text-orange-800 flex items-center gap-2"><AlertCircle size={16}/> ご不在時の対応</h3>
@@ -405,7 +591,6 @@ export default function CalendarPage() {
                 </div>
               )}
 
-              {/* 商品とデザイン詳細 */}
               <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
                 <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><Tag size={18}/> オーダー内容</h3>
                 <div className="flex flex-col sm:flex-row gap-6">
@@ -425,7 +610,6 @@ export default function CalendarPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-4">
-                {/* メッセージ・立札 */}
                 {modalData.cardType !== 'なし' && (
                   <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
                     <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><MessageSquare size={18}/> 添付物: {modalData.cardType}</h3>
@@ -449,7 +633,6 @@ export default function CalendarPage() {
                   </div>
                 )}
 
-                {/* お支払い内訳 */}
                 <div className="bg-white p-6 md:p-8 rounded-[32px] border-2 border-[#2D4B3E]/20 shadow-md space-y-6">
                   <h3 className="text-[16px] font-black text-[#2D4B3E] border-b border-[#EAEAEA] pb-3 flex items-center gap-2"><CreditCard size={20}/> お支払い情報</h3>
                   <div className="space-y-3 text-[13px] md:text-[14px] font-medium text-[#555555]">
@@ -473,7 +656,6 @@ export default function CalendarPage() {
                 </div>
               </div>
 
-              {/* メモ */}
               {modalData.note && (
                 <div className="bg-yellow-50 p-6 rounded-[24px] border border-yellow-200 shadow-sm mb-4">
                   <h3 className="text-[12px] font-bold text-yellow-800 mb-2 tracking-widest flex items-center gap-2">社内メモ / お客様要望</h3>
