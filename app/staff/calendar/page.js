@@ -122,8 +122,17 @@ export default function CalendarPage() {
     return { item, fee, pickup, subTotal, tax, total: subTotal + tax };
   };
 
+  const safeFormatDate = (dateString, withTime = false) => {
+    try {
+      if (!dateString) return '日時不明';
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return '日時不明';
+      return withTime ? d.toLocaleString('ja-JP') : d.toLocaleDateString('ja-JP');
+    } catch (e) { return '日時不明'; }
+  };
+
   // ==========================================
-  // ★ 【完全復刻】画像準拠の美しいA4横 4分割伝票
+  // ★ 印刷時の「はみ出し防止」CSSハック適用版
   // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
@@ -135,7 +144,7 @@ export default function CalendarPage() {
       const customer = d.customerInfo || {};
       const recipient = d.isRecipientDifferent ? (d.recipientInfo || {}) : customer;
       const slipBgUrl = appSettings?.generalConfig?.slipBgUrl || '';
-      const slipBgOpacity = appSettings?.generalConfig?.slipBgOpacity || 30; // 透かしは薄めに設定
+      const slipBgOpacity = appSettings?.generalConfig?.slipBgOpacity || 30; 
       const totals = getTotals(d);
       
       const isGift = Boolean(d.isRecipientDifferent);
@@ -144,10 +153,9 @@ export default function CalendarPage() {
       const receiveMethodStr = getMethodLabel(d.receiveMethod);
       const dateTimeStr = `${d.selectedDate || '未指定'} ${d.selectedTime || ''}`;
 
-      // ★ 金額を「非表示」にする場合はただの空欄('')にする
+      // 金額を非表示にする関数
       const formatPrice = (price, hide) => hide ? '' : `¥${Number(price).toLocaleString()}`;
 
-      // 1つのブロックを生成する関数
       const renderSlip = (title, hidePrice) => `
         <div class="slip">
           ${slipBgUrl ? `<div class="slip-bg" style="background-image: url('${slipBgUrl}'); opacity: ${slipBgOpacity / 100};"></div>` : ''}
@@ -170,7 +178,7 @@ export default function CalendarPage() {
             <div class="box" style="flex: 1;">
               <span class="label">お受取方法</span>
               <div class="val-md">${receiveMethodStr} ${d.receiveMethod === 'pickup' && d.selectedShop ? `(${d.selectedShop})` : ''}</div>
-              <span class="label" style="margin-top: 4px;">お届け・ご来店日時</span>
+              <span class="label" style="margin-top: 2px;">お届け・ご来店日時</span>
               <div class="val-md">${dateTimeStr}</div>
             </div>
           </div>
@@ -182,11 +190,11 @@ export default function CalendarPage() {
               <div class="val">〒${formatText(recipient.zip)} ${formatText(recipient.address1)}${formatText(recipient.address2)}</div>
               <div class="val">TEL: ${formatText(recipient.phone)}</div>
             ` : `
-              <div class="val" style="color: #666; padding-top: 4px;">ご依頼主様と同じ</div>
+              <div class="val" style="color: #666; padding-top: 2px;">ご依頼主様と同じ</div>
             `}
           </div>
 
-          <div class="box">
+          <div class="box" style="flex-grow: 1;">
             <span class="label">ご注文内容</span>
             <div class="val-lg">${formatText(d.flowerType)}</div>
             <div class="val" style="font-weight: normal; color: #444;">用途: ${d.flowerPurpose || '-'} / 色: ${d.flowerColor || '-'}</div>
@@ -207,12 +215,12 @@ export default function CalendarPage() {
                 <td class="amount">${formatPrice(Number(d.calculatedFee||0) + Number(d.pickupFee||0), hidePrice)}</td>
               </tr>
               <tr>
-                <td style="text-align:right; font-size:9px; color:#888;">消費税(10%)</td>
+                <td style="text-align:right; font-size:8px; color:#888;">消費税(10%)</td>
                 <td class="amount">${formatPrice(totals.tax, hidePrice)}</td>
               </tr>
               <tr class="total-row">
                 <td>合計金額 (税込)</td>
-                <td class="amount" style="font-size:13px;">${formatPrice(totals.total, hidePrice)}</td>
+                <td class="amount" style="font-size:12px;">${formatPrice(totals.total, hidePrice)}</td>
               </tr>
             </tbody>
           </table>
@@ -228,8 +236,9 @@ export default function CalendarPage() {
           <style>
             @media print {
               @page { size: A4 landscape; margin: 0; }
-              body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-              .page { border: none !important; margin: 0 !important; box-shadow: none !important; }
+              body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              /* 高さを210mmから209.5mmに削ることで、無駄な改ページを完全に防ぐ */
+              .page { border: none !important; margin: 0 !important; box-shadow: none !important; width: 297mm; height: 209.5mm; page-break-after: avoid; overflow: hidden; }
             }
             body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; background: #e0e0e0; margin: 10mm auto; color: #333; }
             
@@ -239,21 +248,22 @@ export default function CalendarPage() {
               grid-template-columns: 1fr 1fr;
               grid-template-rows: 1fr 1fr;
               width: 297mm;
-              height: 210mm;
+              height: 209.5mm; 
               background: white;
               box-sizing: border-box;
               box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+              overflow: hidden;
             }
             
             .slip {
               position: relative;
-              padding: 10mm 15mm;
+              padding: 8mm 12mm; /* 余白を少し削って中身を確実に収める */
               box-sizing: border-box;
               border-right: 1px dashed #bbb;
               border-bottom: 1px dashed #bbb;
               display: flex;
               flex-direction: column;
-              gap: 6px;
+              gap: 4px; /* ボックス間の隙間を詰める */
               overflow: hidden;
               z-index: 1;
             }
@@ -262,25 +272,25 @@ export default function CalendarPage() {
             
             .slip-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: grayscale(100%); z-index: -1; }
             
-            .header { text-align: center; position: relative; margin-bottom: 6px; margin-top: 5px; }
+            .header { text-align: center; position: relative; margin-bottom: 0px; margin-top: 2px; }
             .header::before { content: ""; position: absolute; top: 50%; left: 5%; right: 5%; border-top: 1px solid #ddd; z-index: -1; }
-            .title-text { display: inline-block; background: white; padding: 0 15px; font-size: 16px; font-weight: bold; letter-spacing: 4px; color: #2D4B3E; border-radius: 4px; }
+            .title-text { display: inline-block; background: white; padding: 0 10px; font-size: 13px; font-weight: bold; letter-spacing: 4px; color: #2D4B3E; border-radius: 4px; }
             
-            .meta { display: flex; justify-content: space-between; font-size: 9px; font-weight: bold; color: #666; margin-bottom: 4px; }
+            .meta { display: flex; justify-content: space-between; font-size: 8px; font-weight: bold; color: #666; margin-bottom: 2px; }
             
-            .box-row { display: flex; gap: 8px; }
-            .box { border: 1px solid #eaeaea; border-radius: 6px; padding: 8px 10px; background: rgba(255,255,255,0.95); box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+            .box-row { display: flex; gap: 4px; }
+            .box { border: 1px solid #eaeaea; border-radius: 6px; padding: 4px 8px; background: rgba(255,255,255,0.95); box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
             
-            .label { display: inline-block; background: #f5f5f5; color: #888; font-size: 8px; font-weight: bold; padding: 2px 8px; border-radius: 12px; margin-bottom: 4px; }
-            .val-lg { font-size: 14px; font-weight: bold; margin-bottom: 2px; }
-            .val-md { font-size: 12px; font-weight: bold; margin-bottom: 2px; }
-            .val { font-size: 10px; font-weight: bold; line-height: 1.4; }
+            .label { display: inline-block; background: #f5f5f5; color: #888; font-size: 7px; font-weight: bold; padding: 2px 6px; border-radius: 12px; margin-bottom: 2px; }
+            .val-lg { font-size: 12px; font-weight: bold; margin-bottom: 2px; }
+            .val-md { font-size: 10px; font-weight: bold; margin-bottom: 2px; }
+            .val { font-size: 9px; font-weight: bold; line-height: 1.3; }
             
             .price-table { width: 100%; border-collapse: collapse; margin-top: auto; background: rgba(255,255,255,0.95); border: 1px solid #eaeaea; border-radius: 6px; overflow: hidden; }
-            .price-table th, .price-table td { border-bottom: 1px solid #f0f0f0; padding: 6px 10px; font-size: 10px; }
+            .price-table th, .price-table td { border-bottom: 1px solid #f0f0f0; padding: 3px 8px; font-size: 9px; }
             .price-table th { color: #888; font-weight: normal; background: #fafafa; }
             .amount { text-align: right; font-weight: bold; }
-            .total-row td { background: #fafafa; font-weight: bold; border-bottom: none; font-size: 12px; }
+            .total-row td { background: #fafafa; font-weight: bold; border-bottom: none; font-size: 11px; }
           </style>
         </head>
         <body>
@@ -409,15 +419,6 @@ export default function CalendarPage() {
         </div>
       </div>
     );
-  };
-
-  const safeFormatDate = (dateString, withTime = false) => {
-    try {
-      if (!dateString) return '日時不明';
-      const d = new Date(dateString);
-      if (isNaN(d.getTime())) return '日時不明';
-      return withTime ? d.toLocaleString('ja-JP') : d.toLocaleDateString('ja-JP');
-    } catch (e) { return '日時不明'; }
   };
 
   const modalData = selectedOrder?.order_data || {};
