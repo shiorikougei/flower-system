@@ -3,7 +3,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/utils/supabase';
 import { 
   TrendingUp, Calendar, DollarSign, ShoppingBag, 
-  CreditCard, BarChart3, AlertCircle, RefreshCw
+  CreditCard, BarChart3, AlertCircle, RefreshCw,
+  FileText, Printer
 } from 'lucide-react';
 
 export default function SalesPage() {
@@ -79,16 +80,175 @@ export default function SalesPage() {
   const totalAllTime = monthlySales.reduce((sum, month) => sum + month.totalSales, 0);
   const totalOrdersAllTime = monthlySales.reduce((sum, month) => sum + month.orderCount, 0);
 
+  // ==========================================
+  // ★ CSVダウンロード機能
+  // ==========================================
+  const handleDownloadCSV = () => {
+    if (monthlySales.length === 0) {
+      alert('出力するデータがありません。');
+      return;
+    }
+
+    // ヘッダー行
+    const headers = ['対象月', '売上合計(税込)', '商品代(税抜)', '送料・手数料(税抜)', '受注件数', '平均客単価(税込)', '未入金件数'];
+    
+    // データ行
+    const rows = monthlySales.map(m => [
+      m.month,
+      m.totalSales,
+      m.itemSales,
+      m.shippingFees,
+      m.orderCount,
+      Math.floor(m.totalSales / m.orderCount),
+      m.unpaidCount
+    ]);
+
+    // CSV文字列の作成
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    // Excelで文字化けしないようにBOM(Byte Order Mark)を付与
+    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+    const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
+    
+    // ダウンロード実行
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `売上レポート_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // ==========================================
+  // ★ PDF・印刷出力機能 (A4レポート形式)
+  // ==========================================
+  const handlePrintPDF = () => {
+    if (monthlySales.length === 0) {
+      alert('出力するデータがありません。');
+      return;
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html lang="ja">
+      <head>
+        <meta charset="UTF-8">
+        <title>売上レポート_${new Date().toISOString().split('T')[0]}</title>
+        <style>
+          @page { size: A4 portrait; margin: 15mm; }
+          body { font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; color: #333; margin: 0; }
+          h1 { text-align: center; color: #2D4B3E; border-bottom: 2px solid #2D4B3E; padding-bottom: 10px; margin-bottom: 20px; font-size: 24px; }
+          .meta { text-align: right; font-size: 12px; color: #666; margin-bottom: 10px; }
+          .summary { display: flex; justify-content: space-between; margin-bottom: 30px; background: #f9f9f9; padding: 20px; border-radius: 8px; border: 1px solid #ddd; }
+          .summary-item { text-align: center; flex: 1; border-right: 1px solid #ddd; }
+          .summary-item:last-child { border-right: none; }
+          .summary-title { font-size: 12px; color: #666; margin-bottom: 8px; font-weight: bold; }
+          .summary-value { font-size: 24px; font-weight: bold; color: #2D4B3E; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th, td { border: 1px solid #ccc; padding: 12px 8px; text-align: right; font-size: 13px; }
+          th { background: #2D4B3E; color: white; text-align: center; font-weight: bold; }
+          .text-center { text-align: center; }
+          .alert { color: #d32f2f; font-weight: bold; }
+          .total-sales-col { font-weight: bold; font-size: 14px; background: #fdfdfd; }
+        </style>
+      </head>
+      <body>
+        <h1>月別売上レポート</h1>
+        <div class="meta">出力日: ${new Date().toLocaleDateString('ja-JP')}</div>
+        
+        <div class="summary">
+          <div class="summary-item">
+            <div class="summary-title">全期間 累計売上(税込)</div>
+            <div class="summary-value">¥${totalAllTime.toLocaleString()}</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-title">累計受注件数</div>
+            <div class="summary-value">${totalOrdersAllTime} 件</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-title">平均客単価</div>
+            <div class="summary-value">¥${totalOrdersAllTime > 0 ? Math.floor(totalAllTime / totalOrdersAllTime).toLocaleString() : 0}</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>対象月</th>
+              <th>売上合計(税込)</th>
+              <th>商品代(税抜)</th>
+              <th>送料・手数料</th>
+              <th>受注件数</th>
+              <th>平均客単価</th>
+              <th>未入金アラート</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${monthlySales.map(m => `
+              <tr>
+                <td class="text-center font-bold">${m.month}</td>
+                <td class="total-sales-col">¥${m.totalSales.toLocaleString()}</td>
+                <td>¥${m.itemSales.toLocaleString()}</td>
+                <td>¥${m.shippingFees.toLocaleString()}</td>
+                <td class="text-center">${m.orderCount}</td>
+                <td>¥${Math.floor(m.totalSales / m.orderCount).toLocaleString()}</td>
+                <td class="${m.unpaidCount > 0 ? 'alert' : ''} text-center">
+                  ${m.unpaidCount > 0 ? `${m.unpaidCount}件の未入金` : '-'}
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+              window.close();
+            }, 500);
+          }
+        </script>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.open();
+      printWindow.document.write(html);
+      printWindow.document.close();
+    } else {
+      alert('ポップアップがブロックされました。ブラウザの設定を確認してください。');
+    }
+  };
+
   return (
     <main className="pb-32 font-sans text-left">
-      <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] flex items-center justify-between px-6 md:px-8 py-4 sticky top-0 z-10">
+      <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] flex flex-col md:flex-row md:items-center justify-between px-6 md:px-8 py-4 sticky top-0 z-10 gap-4">
         <div>
           <h1 className="text-[18px] md:text-[20px] font-black text-[#2D4B3E] tracking-tight">売上ダッシュボード</h1>
           <p className="text-[11px] font-bold text-[#999] mt-1 tracking-widest">月ごとの売上・受注件数の自動集計</p>
         </div>
-        <button onClick={fetchOrders} className="flex items-center gap-2 px-4 py-2 bg-white border border-[#EAEAEA] rounded-xl text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] transition-all shadow-sm">
-          <RefreshCw size={14} /> 更新
-        </button>
+        
+        {/* ★ ボタン群の追加 */}
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <button onClick={handlePrintPDF} className="flex items-center gap-2 px-4 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[11px] font-bold text-[#555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all shadow-sm">
+            <Printer size={14} /> PDF / 印刷
+          </button>
+          <button onClick={handleDownloadCSV} className="flex items-center gap-2 px-4 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[11px] font-bold text-[#555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all shadow-sm">
+            <FileText size={14} /> CSV出力 (Excel用)
+          </button>
+          
+          <div className="w-[1px] h-6 bg-[#EAEAEA] mx-1 hidden md:block"></div>
+          
+          <button onClick={fetchOrders} className="flex items-center gap-2 px-4 py-2 bg-[#2D4B3E] text-white rounded-xl text-[11px] font-bold hover:bg-[#1f352b] transition-all shadow-sm">
+            <RefreshCw size={14} /> 最新の状態に更新
+          </button>
+        </div>
       </header>
 
       <div className="p-4 md:p-8 max-w-[1000px] mx-auto space-y-8">
