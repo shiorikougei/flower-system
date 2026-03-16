@@ -32,15 +32,37 @@ export default function CalendarPage() {
     }
   }, [selectedOrder]);
 
-  const fetchData = async () => {
+  const fetchData = async (forceRefresh = false) => {
+    // キャッシュがあるか確認し、初回ロード以外（forceRefreshがfalse）ならそれを使う
+    if (!forceRefresh) {
+      const cachedOrders = sessionStorage.getItem('florix_orders_cache');
+      const cachedSettings = sessionStorage.getItem('florix_settings_cache');
+      
+      if (cachedOrders && cachedSettings) {
+        setOrders(JSON.parse(cachedOrders));
+        setAppSettings(JSON.parse(cachedSettings));
+        setIsLoading(false);
+        // 裏で静かに最新データを取得してキャッシュを更新しておく
+        fetchLatestDataSilently();
+        return;
+      }
+    }
+
     setIsLoading(true);
     try {
       const { data: settings } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
-      if (settings) setAppSettings(settings.settings_data);
+      if (settings) {
+        setAppSettings(settings.settings_data);
+        sessionStorage.setItem('florix_settings_cache', JSON.stringify(settings.settings_data));
+      }
 
       const { data: ordersData, error } = await supabase.from('orders').select('*');
       if (error) throw error;
-      setOrders(ordersData || []);
+      
+      const latestOrders = ordersData || [];
+      setOrders(latestOrders);
+      sessionStorage.setItem('florix_orders_cache', JSON.stringify(latestOrders));
+      
     } catch (error) {
       console.error('取得エラー:', error.message);
     } finally {
@@ -48,20 +70,23 @@ export default function CalendarPage() {
     }
   };
 
+  // 裏でこっそり最新データを取得する関数
+  const fetchLatestDataSilently = async () => {
+    try {
+      const { data: ordersData } = await supabase.from('orders').select('*');
+      if (ordersData) {
+        setOrders(ordersData);
+        sessionStorage.setItem('florix_orders_cache', JSON.stringify(ordersData));
+      }
+    } catch (error) {
+      console.error('バックグラウンド更新エラー:', error.message);
+    }
+  };
+
   const getStatusOptions = () => {
     const config = appSettings?.statusConfig;
     if (config?.type === 'custom' && config?.customLabels?.length > 0) return config.customLabels;
     return ['未対応', '制作中', '制作完了', '配達中'];
-  };
-
-  const updateStatusValue = async (orderId, newStatusValue) => {
-    try {
-      const targetOrder = orders.find(o => o.id === orderId);
-      const updatedData = { ...targetOrder.order_data, currentStatus: newStatusValue, status: newStatusValue };
-      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId);
-      setOrders(orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o));
-      if (selectedOrder?.id === orderId) setSelectedOrder({ ...selectedOrder, order_data: updatedData });
-    } catch (err) { alert('更新に失敗しました。'); }
   };
 
   // ★ ステータスを履歴付きで更新する新ロジック
@@ -88,7 +113,11 @@ export default function CalendarPage() {
       };
       
       await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId);
-      setOrders(orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o));
+      
+      const newOrders = orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o);
+      setOrders(newOrders);
+      sessionStorage.setItem('florix_orders_cache', JSON.stringify(newOrders)); // キャッシュも更新
+      
       setSelectedOrder({ ...targetOrder, order_data: updatedData });
     } catch (err) { 
       alert('更新に失敗しました。'); 
@@ -102,7 +131,11 @@ export default function CalendarPage() {
       const targetOrder = orders.find(o => o.id === orderId);
       const updatedData = { ...targetOrder.order_data, status: newStatus };
       await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId);
-      setOrders(orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o));
+      
+      const newOrders = orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o);
+      setOrders(newOrders);
+      sessionStorage.setItem('florix_orders_cache', JSON.stringify(newOrders)); // キャッシュも更新
+      
       setSelectedOrder(null);
     } catch (err) { alert('更新失敗'); }
   };
@@ -252,7 +285,6 @@ export default function CalendarPage() {
         </div>
       `;
 
-      // 立札やメッセージの改行等は元のまま保持
       const renderCardBlock = () => {
         if (d.cardType === '立札' && (d.tatePattern || d.tateInput1 || d.tateInput2 || d.tateInput3)) {
           return `
@@ -272,7 +304,6 @@ export default function CalendarPage() {
         return '';
       };
 
-      // 枠は残し、金額を非表示
       const renderItemsBlock = (hidePrice = false) => `
         <div class="items-area">
           <table class="items-table" style="border-color:${hidePrice ? '#888' : '#444'}">
@@ -287,9 +318,7 @@ export default function CalendarPage() {
               <tr>
                 <td class="item-cell">
                   <div class="item-name">${formatText(d.flowerType) || '未設定'}</div>
-                  <div class="item-detail">
-                    用途: ${formatText(d.flowerPurpose) || '-'} / 色: ${formatText(d.flowerColor) || '-'} / イメージ: ${formatText(d.flowerVibe) || '-'}
-                  </div>
+                  <div class="item-detail">用途: ${formatText(d.flowerPurpose) || '-'} / 色: ${formatText(d.flowerColor) || '-'} / イメージ: ${formatText(d.flowerVibe) || '-'}</div>
                   ${renderCardBlock()}
                   ${d.note ? `<div class="item-detail" style="color:#d97c8f; margin-top:2mm;">備考: ${formatText(d.note)}</div>` : ''}
                 </td>
@@ -304,22 +333,10 @@ export default function CalendarPage() {
           ${!hidePrice ? `
             <table class="amount-summary">
               <tbody>
-                <tr>
-                  <td class="amount-label">商品代</td>
-                  <td class="amount-val">${formatPrice(totals.item)}</td>
-                </tr>
-                <tr>
-                  <td class="amount-label">送料・手数料</td>
-                  <td class="amount-val">${formatPrice(totals.fee + totals.pickup)}</td>
-                </tr>
-                <tr>
-                  <td class="amount-label">消費税(10%)</td>
-                  <td class="amount-val">${formatPrice(totals.tax)}</td>
-                </tr>
-                <tr>
-                  <td class="amount-label-total">合計</td>
-                  <td class="amount-val-total">${formatPrice(totals.total)}</td>
-                </tr>
+                <tr><td class="amount-label">商品代</td><td class="amount-val">${formatPrice(totals.item)}</td></tr>
+                <tr><td class="amount-label">送料・手数料</td><td class="amount-val">${formatPrice(totals.fee + totals.pickup)}</td></tr>
+                <tr><td class="amount-label">消費税(10%)</td><td class="amount-val">${formatPrice(totals.tax)}</td></tr>
+                <tr><td class="amount-label-total">合計</td><td class="amount-val-total">${formatPrice(totals.total)}</td></tr>
               </tbody>
             </table>
           ` : `<div style="height:23.5mm;"></div>`}
@@ -564,7 +581,7 @@ export default function CalendarPage() {
       <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] flex flex-col md:flex-row md:items-center justify-between px-4 md:px-8 py-3 md:h-20 gap-3 sticky top-0 z-10">
         <div className="flex items-center justify-between w-full md:w-auto">
           <h1 className="text-[16px] md:text-[18px] font-bold tracking-tight text-[#2D4B3E]">納品カレンダー</h1>
-          <button onClick={fetchData} className="md:hidden flex items-center gap-1 px-3 py-1.5 bg-white border border-[#EAEAEA] rounded-lg text-[10px] font-bold text-[#555555] hover:border-[#2D4B3E] transition-all shadow-sm">
+          <button onClick={() => fetchData(true)} className="md:hidden flex items-center gap-1 px-3 py-1.5 bg-white border border-[#EAEAEA] rounded-lg text-[10px] font-bold text-[#555555] hover:border-[#2D4B3E] transition-all shadow-sm">
             <RefreshCw size={12} /> 更新
           </button>
         </div>
@@ -582,8 +599,8 @@ export default function CalendarPage() {
             <span className="px-2 md:px-3 font-bold text-[12px] md:text-[13px] min-w-[90px] md:min-w-[100px] text-center">{currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月</span>
             <button onClick={nextMonth} className="p-2 hover:bg-white rounded-lg transition-all text-[#555555]"><ChevronRight size={16}/></button>
           </div>
-          <button onClick={fetchData} className="hidden md:flex items-center gap-2 px-4 py-2 bg-white border border-[#EAEAEA] rounded-xl text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] transition-all shadow-sm shrink-0">
-            <RefreshCw size={14} /> 表示更新
+          <button onClick={() => fetchData(true)} className="hidden md:flex items-center gap-2 px-4 py-2 bg-white border border-[#EAEAEA] rounded-xl text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] transition-all shadow-sm shrink-0">
+            <RefreshCw size={14} /> 最新の情報に更新
           </button>
         </div>
       </header>
@@ -791,7 +808,7 @@ export default function CalendarPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-4">
-                {modalData.cardType !== 'なし' && (
+                {modalData.cardType && modalData.cardType !== 'なし' && (
                   <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
                     <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><MessageSquare size={18}/> 添付物: {modalData.cardType}</h3>
                     
