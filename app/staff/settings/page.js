@@ -8,6 +8,9 @@ import {
   LayoutTemplate, Package
 } from 'lucide-react';
 
+// キャッシュ用のキーを定義
+const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
+
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('general');
   const [isSaving, setIsSaving] = useState(false);
@@ -69,34 +72,49 @@ export default function SettingsPage() {
     { id: 'status', label: 'ステータス', icon: ListChecks },
     { id: 'shop', label: '店舗・決済', icon: Store }, 
     { id: 'items', label: '商品・納期', icon: Tag },
-    { id: 'shipping', label: '配送・時間枠', icon: Truck }, // ★ タブ名変更
+    { id: 'shipping', label: '配送・時間枠', icon: Truck },
     { id: 'rules', label: '立札デザイン', icon: LayoutTemplate },
     { id: 'staff_order', label: '店舗受付', icon: Clock },
     { id: 'staff', label: 'スタッフ', icon: User },
     { id: 'message', label: '通知メール', icon: Mail },
   ];
 
+  // ★ 取得したデータを各Stateに適用する共通関数
+  const applySettings = (s) => {
+    if (s.generalConfig) setGeneralConfig(prev => ({...prev, ...s.generalConfig}));
+    if (s.statusConfig) setStatusConfig(s.statusConfig);
+    if (s.shops) setShops(s.shops);
+    if (s.flowerItems) setFlowerItems(s.flowerItems);
+    if (s.staffList) setStaffList(s.staffList);
+    if (s.deliveryAreas) setDeliveryAreas(s.deliveryAreas);
+    if (s.shippingSizes) setShippingSizes(s.shippingSizes);
+    if (s.shippingRates) setShippingRates(s.shippingRates);
+    if (s.boxFeeConfig) setBoxFeeConfig(prev => ({...prev, ...s.boxFeeConfig}));
+    if (s.staffOrderConfig) setStaffOrderConfig(s.staffOrderConfig);
+    if (s.autoReply) setAutoReply(s.autoReply);
+    if (s.timeSlots) setTimeSlots(s.timeSlots);
+  };
+
   useEffect(() => {
     async function loadSettings() {
       try {
+        // 1. まずは sessionStorage (キャッシュ) から復元して高速表示
+        const cached = sessionStorage.getItem(SETTINGS_CACHE_KEY);
+        if (cached) {
+          applySettings(JSON.parse(cached));
+        }
+
+        // 2. DBから最新データを取得（他の端末からの変更を検知するため）
         const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
         if (data?.settings_data) {
           const s = data.settings_data;
-          if (s.generalConfig) setGeneralConfig({...generalConfig, ...s.generalConfig});
-          if (s.statusConfig) setStatusConfig(s.statusConfig);
-          if (s.shops) setShops(s.shops);
-          if (s.flowerItems) setFlowerItems(s.flowerItems);
-          if (s.staffList) setStaffList(s.staffList);
-          if (s.deliveryAreas) setDeliveryAreas(s.deliveryAreas);
-          if (s.shippingSizes) setShippingSizes(s.shippingSizes);
-          if (s.shippingRates) setShippingRates(s.shippingRates);
-          if (s.boxFeeConfig) setBoxFeeConfig({...boxFeeConfig, ...s.boxFeeConfig});
-          if (s.staffOrderConfig) setStaffOrderConfig(s.staffOrderConfig);
-          if (s.autoReply) setAutoReply(s.autoReply);
-          // ★ 時間枠の読み込み
-          if (s.timeSlots) setTimeSlots(s.timeSlots);
+          applySettings(s);
+          // キャッシュを最新化
+          sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(s));
         }
-      } catch (e) { console.error('読込失敗', e); }
+      } catch (e) { 
+        console.error('読込失敗', e); 
+      }
     }
     loadSettings();
   }, []);
@@ -110,11 +128,18 @@ export default function SettingsPage() {
     if (!isAdmin) return;
     setIsSaving(true);
     try {
-      // ★ timeSlots を保存対象に追加
       const payload = { generalConfig, statusConfig, shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReply, staffOrderConfig, timeSlots };
       await supabase.from('app_settings').upsert({ id: 'default', settings_data: payload });
+      
+      // ★ 保存成功時にキャッシュも更新する
+      sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(payload));
+      
       alert('すべての設定を完璧に保存しました！');
-    } catch (e) { alert('保存失敗'); } finally { setIsSaving(false); }
+    } catch (e) { 
+      alert('保存失敗'); 
+    } finally { 
+      setIsSaving(false); 
+    }
   };
 
   const handleImg = (e, f) => {
@@ -125,7 +150,6 @@ export default function SettingsPage() {
     r.readAsDataURL(file);
   };
 
-  // ★ 時間枠のハンドラー
   const handleTimeSlotChange = (method, index, value) => {
     setTimeSlots(prev => {
       const newSlots = { ...prev };
