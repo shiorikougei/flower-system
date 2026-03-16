@@ -3,13 +3,17 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/utils/supabase';
 import { 
   TrendingUp, Calendar, DollarSign, ShoppingBag, 
-  CreditCard, BarChart3, AlertCircle, RefreshCw,
-  FileText, Printer
+  BarChart3, AlertCircle, RefreshCw, FileText, Printer,
+  CalendarDays, CalendarRange
 } from 'lucide-react';
 
 export default function SalesPage() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // ★ 表示モードと選択月の状態管理
+  const [viewMode, setViewMode] = useState('monthly'); // 'monthly' (月別) or 'daily' (日別)
+  const [targetMonth, setTargetMonth] = useState('');  // 日別表示のときに選択する月 (例: "2026-03")
 
   useEffect(() => {
     fetchOrders();
@@ -28,20 +32,50 @@ export default function SalesPage() {
     }
   };
 
-  // ★ 注文データから月別の売上を自動集計
-  const monthlySales = useMemo(() => {
+  // ★ 注文データに存在する「年月」のリストを作成（セレクトボックス用）
+  const availableMonths = useMemo(() => {
+    const months = new Set();
+    orders.forEach(o => {
+      const d = o.order_data || {};
+      if (d.status === 'キャンセル') return;
+      const date = new Date(o.created_at);
+      months.add(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+    });
+    return Array.from(months).sort().reverse();
+  }, [orders]);
+
+  // 初期ロード時、最新の月をデフォルトセット
+  useEffect(() => {
+    if (availableMonths.length > 0 && !targetMonth) {
+      setTargetMonth(availableMonths[0]);
+    }
+  }, [availableMonths, targetMonth]);
+
+  // ★ 注文データから「月別」または「指定月の日別」の売上を集計
+  const displayedSales = useMemo(() => {
     const map = {};
 
     orders.forEach(order => {
       const d = order.order_data || {};
-      // キャンセルされた注文は売上から除外
       if (d.status === 'キャンセル') return;
 
-      // 日付から「YYYY-MM」のキーを作成
       const date = new Date(order.created_at);
-      const yearMonth = `${date.getFullYear()}年 ${String(date.getMonth() + 1).padStart(2, '0')}月`;
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 
-      // 金額計算
+      let key = '';
+      let displayLabel = '';
+
+      // モードによる集計の分岐
+      if (viewMode === 'monthly') {
+        key = monthKey;
+        displayLabel = `${date.getFullYear()}年 ${String(date.getMonth() + 1).padStart(2, '0')}月`;
+      } else {
+        // 日別モードのときは、選択された月(targetMonth)以外のデータは弾く
+        if (monthKey !== targetMonth) return;
+        key = `${monthKey}-${String(date.getDate()).padStart(2, '0')}`;
+        displayLabel = `${String(date.getMonth() + 1).padStart(2, '0')}月${String(date.getDate()).padStart(2, '0')}日`;
+      }
+
       const itemPrice = Number(d.itemPrice) || 0;
       const fee = Number(d.calculatedFee) || 0;
       const pickup = Number(d.pickupFee) || 0;
@@ -49,52 +83,47 @@ export default function SalesPage() {
       const tax = Math.floor(subTotal * 0.1);
       const total = subTotal + tax;
 
-      if (!map[yearMonth]) {
-        map[yearMonth] = {
-          month: yearMonth,
+      if (!map[key]) {
+        map[key] = {
+          key: key,
+          label: displayLabel,
           rawDate: date, // 並び替え用
           totalSales: 0,
           orderCount: 0,
           itemSales: 0,
           shippingFees: 0,
-          unpaidCount: 0, // 未入金の件数
+          unpaidCount: 0, 
         };
       }
 
-      map[yearMonth].totalSales += total;
-      map[yearMonth].itemSales += itemPrice;
-      map[yearMonth].shippingFees += (fee + pickup);
-      map[yearMonth].orderCount += 1;
+      map[key].totalSales += total;
+      map[key].itemSales += itemPrice;
+      map[key].shippingFees += (fee + pickup);
+      map[key].orderCount += 1;
 
-      // 未入金（支払いが完了していない）の判定
       if (!d.paymentStatus || d.paymentStatus.includes('未') || d.paymentStatus === '') {
-        map[yearMonth].unpaidCount += 1;
+        map[key].unpaidCount += 1;
       }
     });
 
-    // 最新の月が一番上に来るように並び替え
     return Object.values(map).sort((a, b) => b.rawDate - a.rawDate);
-  }, [orders]);
+  }, [orders, viewMode, targetMonth]);
 
-  // 全期間の合計
-  const totalAllTime = monthlySales.reduce((sum, month) => sum + month.totalSales, 0);
-  const totalOrdersAllTime = monthlySales.reduce((sum, month) => sum + month.orderCount, 0);
+  // 画面上部のサマリー用（表示されているリストの合計）
+  const currentTotalSales = displayedSales.reduce((sum, item) => sum + item.totalSales, 0);
+  const currentTotalOrders = displayedSales.reduce((sum, item) => sum + item.orderCount, 0);
 
   // ==========================================
   // ★ CSVダウンロード機能
   // ==========================================
   const handleDownloadCSV = () => {
-    if (monthlySales.length === 0) {
+    if (displayedSales.length === 0) {
       alert('出力するデータがありません。');
       return;
     }
-
-    // ヘッダー行
-    const headers = ['対象月', '売上合計(税込)', '商品代(税抜)', '送料・手数料(税抜)', '受注件数', '平均客単価(税込)', '未入金件数'];
-    
-    // データ行
-    const rows = monthlySales.map(m => [
-      m.month,
+    const headers = ['対象', '売上合計(税込)', '商品代(税抜)', '送料・手数料(税抜)', '受注件数', '平均客単価(税込)', '未入金件数'];
+    const rows = displayedSales.map(m => [
+      m.label,
       m.totalSales,
       m.itemSales,
       m.shippingFees,
@@ -102,42 +131,36 @@ export default function SalesPage() {
       Math.floor(m.totalSales / m.orderCount),
       m.unpaidCount
     ]);
-
-    // CSV文字列の作成
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.join(','))
-    ].join('\n');
-
-    // Excelで文字化けしないようにBOM(Byte Order Mark)を付与
+    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
     const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
     const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
     
-    // ダウンロード実行
+    const fileName = viewMode === 'monthly' ? '月別_売上レポート' : `${targetMonth}_日別売上レポート`;
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `売上レポート_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `${fileName}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   // ==========================================
-  // ★ PDF・印刷出力機能 (A4レポート形式)
+  // ★ PDF・印刷出力機能
   // ==========================================
   const handlePrintPDF = () => {
-    if (monthlySales.length === 0) {
+    if (displayedSales.length === 0) {
       alert('出力するデータがありません。');
       return;
     }
-
+    const reportTitle = viewMode === 'monthly' ? '月別 売上レポート' : `${targetMonth.replace('-', '年')}月 日別売上レポート`;
+    
     const html = `
       <!DOCTYPE html>
       <html lang="ja">
       <head>
         <meta charset="UTF-8">
-        <title>売上レポート_${new Date().toISOString().split('T')[0]}</title>
+        <title>${reportTitle}</title>
         <style>
           @page { size: A4 portrait; margin: 15mm; }
           body { font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; color: #333; margin: 0; }
@@ -157,28 +180,26 @@ export default function SalesPage() {
         </style>
       </head>
       <body>
-        <h1>月別売上レポート</h1>
+        <h1>${reportTitle}</h1>
         <div class="meta">出力日: ${new Date().toLocaleDateString('ja-JP')}</div>
-        
         <div class="summary">
           <div class="summary-item">
-            <div class="summary-title">全期間 累計売上(税込)</div>
-            <div class="summary-value">¥${totalAllTime.toLocaleString()}</div>
+            <div class="summary-title">リスト合計 売上(税込)</div>
+            <div class="summary-value">¥${currentTotalSales.toLocaleString()}</div>
           </div>
           <div class="summary-item">
-            <div class="summary-title">累計受注件数</div>
-            <div class="summary-value">${totalOrdersAllTime} 件</div>
+            <div class="summary-title">リスト合計 受注件数</div>
+            <div class="summary-value">${currentTotalOrders} 件</div>
           </div>
           <div class="summary-item">
             <div class="summary-title">平均客単価</div>
-            <div class="summary-value">¥${totalOrdersAllTime > 0 ? Math.floor(totalAllTime / totalOrdersAllTime).toLocaleString() : 0}</div>
+            <div class="summary-value">¥${currentTotalOrders > 0 ? Math.floor(currentTotalSales / currentTotalOrders).toLocaleString() : 0}</div>
           </div>
         </div>
-
         <table>
           <thead>
             <tr>
-              <th>対象月</th>
+              <th>対象</th>
               <th>売上合計(税込)</th>
               <th>商品代(税抜)</th>
               <th>送料・手数料</th>
@@ -188,9 +209,9 @@ export default function SalesPage() {
             </tr>
           </thead>
           <tbody>
-            ${monthlySales.map(m => `
+            ${displayedSales.map(m => `
               <tr>
-                <td class="text-center font-bold">${m.month}</td>
+                <td class="text-center font-bold">${m.label}</td>
                 <td class="total-sales-col">¥${m.totalSales.toLocaleString()}</td>
                 <td>¥${m.itemSales.toLocaleString()}</td>
                 <td>¥${m.shippingFees.toLocaleString()}</td>
@@ -203,26 +224,17 @@ export default function SalesPage() {
             `).join('')}
           </tbody>
         </table>
-        
         <script>
-          window.onload = function() {
-            setTimeout(function() {
-              window.print();
-              window.close();
-            }, 500);
-          }
+          window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 500); }
         </script>
       </body>
       </html>
     `;
-
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.open();
       printWindow.document.write(html);
       printWindow.document.close();
-    } else {
-      alert('ポップアップがブロックされました。ブラウザの設定を確認してください。');
     }
   };
 
@@ -231,92 +243,114 @@ export default function SalesPage() {
       <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] flex flex-col md:flex-row md:items-center justify-between px-6 md:px-8 py-4 sticky top-0 z-10 gap-4">
         <div>
           <h1 className="text-[18px] md:text-[20px] font-black text-[#2D4B3E] tracking-tight">売上ダッシュボード</h1>
-          <p className="text-[11px] font-bold text-[#999] mt-1 tracking-widest">月ごとの売上・受注件数の自動集計</p>
+          <p className="text-[11px] font-bold text-[#999] mt-1 tracking-widest">月別・日別 売上の自動集計</p>
         </div>
         
-        {/* ★ ボタン群の追加 */}
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          <button onClick={handlePrintPDF} className="flex items-center gap-2 px-4 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[11px] font-bold text-[#555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all shadow-sm">
-            <Printer size={14} /> PDF / 印刷
-          </button>
-          <button onClick={handleDownloadCSV} className="flex items-center gap-2 px-4 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[11px] font-bold text-[#555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all shadow-sm">
-            <FileText size={14} /> CSV出力 (Excel用)
-          </button>
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           
-          <div className="w-[1px] h-6 bg-[#EAEAEA] mx-1 hidden md:block"></div>
-          
-          <button onClick={fetchOrders} className="flex items-center gap-2 px-4 py-2 bg-[#2D4B3E] text-white rounded-xl text-[11px] font-bold hover:bg-[#1f352b] transition-all shadow-sm">
-            <RefreshCw size={14} /> 最新の状態に更新
+          {/* ★ 表示切り替えトグル */}
+          <div className="flex bg-[#FBFAF9] p-1 rounded-xl border border-[#EAEAEA]">
+            <button onClick={() => setViewMode('monthly')} className={`flex items-center gap-1.5 px-4 py-2 text-[12px] font-bold rounded-lg transition-all ${viewMode === 'monthly' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999]'}`}>
+              <CalendarRange size={14}/> 月別
+            </button>
+            <button onClick={() => setViewMode('daily')} className={`flex items-center gap-1.5 px-4 py-2 text-[12px] font-bold rounded-lg transition-all ${viewMode === 'daily' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999]'}`}>
+              <CalendarDays size={14}/> 日別
+            </button>
+          </div>
+
+          {/* ★ 日別モードの時の月セレクター */}
+          {viewMode === 'daily' && (
+            <select 
+              value={targetMonth} 
+              onChange={(e) => setTargetMonth(e.target.value)}
+              className="h-10 px-4 bg-white border border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#555] outline-none shadow-sm cursor-pointer"
+            >
+              {availableMonths.map(m => <option key={m} value={m}>{m.replace('-', '年')}月 の日別売上</option>)}
+            </select>
+          )}
+
+          <div className="w-[1px] h-6 bg-[#EAEAEA] mx-1 hidden lg:block"></div>
+
+          <button onClick={handlePrintPDF} className="flex items-center gap-2 px-3 py-2 bg-white border border-[#EAEAEA] rounded-xl text-[11px] font-bold text-[#555] hover:border-[#2D4B3E] transition-all shadow-sm">
+            <Printer size={14} /> <span className="hidden sm:inline">印刷 / PDF</span>
+          </button>
+          <button onClick={handleDownloadCSV} className="flex items-center gap-2 px-3 py-2 bg-white border border-[#EAEAEA] rounded-xl text-[11px] font-bold text-[#555] hover:border-[#2D4B3E] transition-all shadow-sm">
+            <FileText size={14} /> <span className="hidden sm:inline">CSV出力</span>
+          </button>
+          <button onClick={fetchOrders} className="flex items-center gap-2 px-3 py-2 bg-[#2D4B3E] text-white rounded-xl text-[11px] font-bold hover:bg-[#1f352b] transition-all shadow-sm">
+            <RefreshCw size={14} />
           </button>
         </div>
       </header>
 
       <div className="p-4 md:p-8 max-w-[1000px] mx-auto space-y-8">
         
-        {/* 上部：全期間サマリー */}
+        {/* 上部サマリー（現在表示中のリスト合計） */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-[#2D4B3E] text-white p-6 rounded-[24px] shadow-md relative overflow-hidden">
             <TrendingUp size={100} className="absolute -right-4 -bottom-4 text-white/10" />
-            <h3 className="text-[12px] font-bold text-white/80 tracking-widest mb-2 flex items-center gap-2"><DollarSign size={16}/> 全期間 累計売上</h3>
-            <p className="text-[32px] font-black tracking-tight">¥{totalAllTime.toLocaleString()}</p>
+            <h3 className="text-[12px] font-bold text-white/80 tracking-widest mb-2 flex items-center gap-2">
+              <DollarSign size={16}/> {viewMode === 'monthly' ? '全期間 累計売上' : `${targetMonth.replace('-','年')}月 合計売上`}
+            </h3>
+            <p className="text-[32px] font-black tracking-tight">¥{currentTotalSales.toLocaleString()}</p>
           </div>
           <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm flex flex-col justify-center">
-            <h3 className="text-[12px] font-bold text-[#999] tracking-widest mb-1 flex items-center gap-2"><ShoppingBag size={14}/> 累計受注件数</h3>
-            <p className="text-[24px] font-black text-[#2D4B3E]">{totalOrdersAllTime} <span className="text-[12px] font-bold text-[#999]">件</span></p>
+            <h3 className="text-[12px] font-bold text-[#999] tracking-widest mb-1 flex items-center gap-2"><ShoppingBag size={14}/> 合計受注件数</h3>
+            <p className="text-[24px] font-black text-[#2D4B3E]">{currentTotalOrders} <span className="text-[12px] font-bold text-[#999]">件</span></p>
           </div>
           <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm flex flex-col justify-center">
             <h3 className="text-[12px] font-bold text-[#999] tracking-widest mb-1 flex items-center gap-2"><BarChart3 size={14}/> 平均客単価</h3>
             <p className="text-[24px] font-black text-[#2D4B3E]">
-              ¥{totalOrdersAllTime > 0 ? Math.floor(totalAllTime / totalOrdersAllTime).toLocaleString() : 0}
+              ¥{currentTotalOrders > 0 ? Math.floor(currentTotalSales / currentTotalOrders).toLocaleString() : 0}
             </p>
           </div>
         </div>
 
         {isLoading ? (
           <div className="p-20 text-center text-[#999] font-bold animate-pulse tracking-widest">売上データを計算中...</div>
-        ) : monthlySales.length === 0 ? (
+        ) : displayedSales.length === 0 ? (
           <div className="bg-white rounded-3xl border border-dashed border-[#CCC] p-20 text-center shadow-sm">
             <p className="text-[14px] font-bold text-[#999]">売上データがありません</p>
           </div>
         ) : (
           <div className="space-y-4">
             <h2 className="text-[16px] font-black text-[#2D4B3E] flex items-center gap-2 border-b border-[#EAEAEA] pb-2">
-              <Calendar size={18} /> 月別売上一覧
+              {viewMode === 'monthly' ? <><Calendar size={18} /> 月別売上一覧</> : <><CalendarDays size={18} /> 日別売上一覧</>}
             </h2>
 
             <div className="grid grid-cols-1 gap-4">
-              {monthlySales.map((month, index) => (
-                <div key={month.month} className="bg-white rounded-[24px] border border-[#EAEAEA] shadow-sm overflow-hidden flex flex-col md:flex-row">
+              {displayedSales.map((item, index) => (
+                <div key={item.key} className="bg-white rounded-[24px] border border-[#EAEAEA] shadow-sm overflow-hidden flex flex-col md:flex-row">
                   
-                  {/* 左側：月のタイトルとメイン売上 */}
+                  {/* 左側：タイトルとメイン売上 */}
                   <div className={`p-6 md:w-1/3 flex flex-col justify-center border-b md:border-b-0 md:border-r border-[#EAEAEA] ${index === 0 ? 'bg-[#FBFAF9]' : ''}`}>
-                    <span className="text-[14px] font-black text-[#555] tracking-widest mb-2">{month.month}</span>
-                    <span className="text-[28px] font-black text-[#2D4B3E] leading-none mb-1">¥{month.totalSales.toLocaleString()}</span>
-                    <span className="text-[11px] font-bold text-[#999]">受注件数: {month.orderCount}件</span>
+                    <span className="text-[14px] font-black text-[#555] tracking-widest mb-2">{item.label}</span>
+                    <span className="text-[28px] font-black text-[#2D4B3E] leading-none mb-1">¥{item.totalSales.toLocaleString()}</span>
+                    <span className="text-[11px] font-bold text-[#999]">受注件数: {item.orderCount}件</span>
                   </div>
 
                   {/* 右側：内訳詳細 */}
                   <div className="p-6 md:w-2/3 grid grid-cols-2 gap-x-6 gap-y-4">
                     <div>
                       <p className="text-[10px] font-bold text-[#999] tracking-widest mb-1">商品代（税抜）</p>
-                      <p className="text-[16px] font-black text-[#444]">¥{month.itemSales.toLocaleString()}</p>
+                      <p className="text-[16px] font-black text-[#444]">¥{item.itemSales.toLocaleString()}</p>
                     </div>
                     <div>
                       <p className="text-[10px] font-bold text-[#999] tracking-widest mb-1">送料・手数料（税抜）</p>
-                      <p className="text-[16px] font-black text-[#444]">¥{month.shippingFees.toLocaleString()}</p>
+                      <p className="text-[16px] font-black text-[#444]">¥{item.shippingFees.toLocaleString()}</p>
                     </div>
                     
                     <div className="col-span-2 pt-4 border-t border-[#F7F7F7] flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-bold text-[#999] tracking-widest">月間客単価:</span>
-                        <span className="text-[14px] font-black text-[#2D4B3E]">¥{Math.floor(month.totalSales / month.orderCount).toLocaleString()}</span>
+                        <span className="text-[11px] font-bold text-[#999] tracking-widest">客単価:</span>
+                        <span className="text-[14px] font-black text-[#2D4B3E]">¥{Math.floor(item.totalSales / item.orderCount).toLocaleString()}</span>
                       </div>
                       
-                      {/* 未入金アラート（未入金がある月だけ赤く表示） */}
-                      {month.unpaidCount > 0 ? (
+                      {/* 未入金アラート */}
+                      {item.unpaidCount > 0 ? (
                         <div className="flex items-center gap-1.5 bg-red-50 text-red-600 px-3 py-1.5 rounded-lg border border-red-100">
                           <AlertCircle size={14} />
-                          <span className="text-[11px] font-bold">未入金あり: {month.unpaidCount}件</span>
+                          <span className="text-[11px] font-bold">未入金あり: {item.unpaidCount}件</span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-1.5 text-green-600">
