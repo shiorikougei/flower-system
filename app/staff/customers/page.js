@@ -3,14 +3,18 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/utils/supabase';
 import { 
   Search, User, Phone, Mail, MapPin, ShoppingBag, 
-  Calendar, Star, ChevronRight, X, ArrowUpDown, Gift
+  Calendar, ChevronRight, X, Filter, PieChart
 } from 'lucide-react';
 
 export default function CustomersPage() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // ★ 追加: 新しいフィルター＆ソート状態
   const [sortOption, setSortOption] = useState('recent'); // recent, frequent, spend
+  const [filterMonth, setFilterMonth] = useState('all');
+  const [filterType, setFilterType] = useState('all'); // all, new, repeat
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   useEffect(() => {
@@ -30,19 +34,17 @@ export default function CustomersPage() {
     }
   };
 
-  // ★ 注文データから「顧客ごとの名寄せ・集計」を自動で行う賢いロジック
+  // 注文データから「顧客ごとの名寄せ・集計」を自動で行うロジック
   const customers = useMemo(() => {
     const cmap = {};
     
     orders.forEach(order => {
       const d = order.order_data || {};
       const c = d.customerInfo;
-      if (!c || !c.name) return; // 顧客情報がないものはスキップ
+      if (!c || !c.name) return;
 
-      // 電話番号をキーにして名寄せ（無い場合は名前）
       const key = c.phone ? c.phone.replace(/[^0-9]/g, '') : c.name;
       
-      // 合計金額の計算
       const itemPrice = Number(d.itemPrice) || 0;
       const fee = Number(d.calculatedFee) || 0;
       const pickup = Number(d.pickupFee) || 0;
@@ -65,12 +67,10 @@ export default function CustomersPage() {
         };
       }
 
-      // 集計の更新
       cmap[key].orderCount += 1;
       cmap[key].totalSpent += total;
       cmap[key].orders.push({ ...order, computedTotal: total });
 
-      // 最新の注文日と最新の住所情報に更新
       if (new Date(order.created_at) > new Date(cmap[key].lastOrderDate)) {
         cmap[key].lastOrderDate = order.created_at;
         if (c.email) cmap[key].email = c.email;
@@ -83,27 +83,62 @@ export default function CustomersPage() {
     return Object.values(cmap);
   }, [orders]);
 
-  // ★ 検索と並び替え
-  const filteredAndSortedCustomers = useMemo(() => {
-    let result = customers.filter(c => 
-      c.name.includes(searchQuery) || 
-      c.phone.includes(searchQuery) || 
-      c.email.includes(searchQuery)
-    );
+  // ★ 追加: 存在する「注文月」のリストを生成（セレクトボックス用）
+  const availableMonths = useMemo(() => {
+    const months = new Set();
+    orders.forEach(o => {
+      const d = new Date(o.created_at);
+      months.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    });
+    return Array.from(months).sort().reverse();
+  }, [orders]);
 
+  // ★ 変更: 検索 ＋ 月別 ＋ 新規/リピート ＋ 並び替え の複合フィルター
+  const filteredAndSortedCustomers = useMemo(() => {
+    let result = customers.filter(c => {
+      // 1. テキスト検索
+      const matchSearch = c.name.includes(searchQuery) || c.phone.includes(searchQuery) || c.email.includes(searchQuery);
+      if (!matchSearch) return false;
+
+      // 2. 月別フィルター（その月に注文した人だけを残す）
+      if (filterMonth !== 'all') {
+        const orderedInMonth = c.orders.some(o => {
+          const d = new Date(o.created_at);
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === filterMonth;
+        });
+        if (!orderedInMonth) return false;
+      }
+
+      // 3. 新規/リピート フィルター
+      if (filterType === 'new' && c.orderCount > 1) return false;
+      if (filterType === 'repeat' && c.orderCount < 2) return false;
+
+      return true;
+    });
+
+    // 並び替え
     switch (sortOption) {
-      case 'recent': // 最終注文日が新しい順
-        result.sort((a, b) => new Date(b.lastOrderDate) - new Date(a.lastOrderDate));
-        break;
-      case 'frequent': // 注文回数が多い順
-        result.sort((a, b) => b.orderCount - a.orderCount);
-        break;
-      case 'spend': // 累計金額が高い順
-        result.sort((a, b) => b.totalSpent - a.totalSpent);
-        break;
+      case 'recent': result.sort((a, b) => new Date(b.lastOrderDate) - new Date(a.lastOrderDate)); break;
+      case 'frequent': result.sort((a, b) => b.orderCount - a.orderCount); break;
+      case 'spend': result.sort((a, b) => b.totalSpent - a.totalSpent); break;
     }
     return result;
-  }, [customers, searchQuery, sortOption]);
+  }, [customers, searchQuery, sortOption, filterMonth, filterType]);
+
+  // ★ 追加: 円グラフ用のデータ計算
+  const chartData = useMemo(() => {
+    const total = filteredAndSortedCustomers.length;
+    const repeatCount = filteredAndSortedCustomers.filter(c => c.orderCount >= 2).length;
+    const newCount = total - repeatCount;
+    const repeatPercent = total === 0 ? 0 : Math.round((repeatCount / total) * 100);
+    const newPercent = total === 0 ? 0 : 100 - repeatPercent;
+    
+    // SVGの円周計算 (半径40の場合、2 * π * 40 ≈ 251.2)
+    const circumference = 251.2;
+    const repeatDash = (repeatPercent / 100) * circumference;
+
+    return { total, repeatCount, newCount, repeatPercent, newPercent, circumference, repeatDash };
+  }, [filteredAndSortedCustomers]);
 
   const safeFormatDate = (dateString, withTime = false) => {
     try {
@@ -113,7 +148,6 @@ export default function CustomersPage() {
     } catch (e) { return '-'; }
   };
 
-  // 顧客のランク判定（例：3回以上or3万円以上で優良顧客など）
   const getCustomerRank = (c) => {
     if (c.orderCount >= 5 || c.totalSpent >= 50000) return { label: 'VIP顧客', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' };
     if (c.orderCount >= 2) return { label: 'リピーター', color: 'bg-blue-100 text-blue-800 border-blue-200' };
@@ -124,53 +158,107 @@ export default function CustomersPage() {
     <main className="pb-32 font-sans text-left">
       <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] flex flex-col md:flex-row md:items-center justify-between px-6 md:px-8 py-4 sticky top-0 z-10 gap-4">
         <div>
-          <h1 className="text-[18px] md:text-[20px] font-black text-[#2D4B3E] tracking-tight">顧客管理リスト</h1>
-          <p className="text-[11px] font-bold text-[#999] mt-1 tracking-widest">これまでの全注文データから自動集計</p>
+          <h1 className="text-[18px] md:text-[20px] font-black text-[#2D4B3E] tracking-tight">顧客リスト＆分析</h1>
+          <p className="text-[11px] font-bold text-[#999] mt-1 tracking-widest">自動名寄せ・リピート率分析</p>
         </div>
         
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {/* 月別フィルター */}
+          <div className="flex items-center bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl overflow-hidden shadow-sm">
+            <div className="px-3 text-[#999]"><Calendar size={14}/></div>
+            <select 
+              value={filterMonth} 
+              onChange={(e) => setFilterMonth(e.target.value)}
+              className="h-10 pr-4 bg-transparent text-[12px] font-bold text-[#555] outline-none cursor-pointer"
+            >
+              <option value="all">全期間</option>
+              {availableMonths.map(m => <option key={m} value={m}>{m.replace('-', '年')}月</option>)}
+            </select>
+          </div>
+
+          {/* 検索バー */}
           <div className="relative flex-1 md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999]" size={16} />
             <input 
               type="text" 
-              placeholder="名前・電話番号で検索..." 
+              placeholder="名前・電話番号..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-10 pl-10 pr-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] font-bold outline-none focus:border-[#2D4B3E] focus:bg-white transition-all shadow-sm"
             />
           </div>
-          <select 
-            value={sortOption}
-            onChange={(e) => setSortOption(e.target.value)}
-            className="h-10 px-4 bg-white border border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#555] outline-none shadow-sm cursor-pointer"
-          >
-            <option value="recent">最終注文が新しい順</option>
-            <option value="frequent">注文回数が多い順</option>
-            <option value="spend">累計購入額が高い順</option>
-          </select>
         </div>
       </header>
 
       <div className="p-4 md:p-8 max-w-[1200px] mx-auto space-y-6">
         
-        {/* サマリーカード */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm flex flex-col justify-center">
-            <span className="text-[11px] font-bold text-[#999] tracking-widest mb-1">登録顧客総数</span>
-            <span className="text-[24px] font-black text-[#2D4B3E]">{customers.length} <span className="text-[12px] font-bold text-[#999]">人</span></span>
+        {/* ★ 追加: 分析ダッシュボード（円グラフ付き） */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          {/* 円グラフセクション */}
+          <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm flex items-center justify-between col-span-1 md:col-span-2">
+            <div className="space-y-4 flex-1">
+              <h2 className="text-[14px] font-black text-[#2D4B3E] flex items-center gap-2"><PieChart size={18}/> 新規・リピート比率</h2>
+              <div className="flex gap-6">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1 text-[11px] font-bold text-[#999]"><span className="w-2.5 h-2.5 rounded-full bg-[#D97C8F]"></span>新規顧客</div>
+                  <div className="text-[20px] font-black text-[#333]">{chartData.newCount}<span className="text-[12px] font-bold text-[#999]">人</span> <span className="text-[12px] text-[#D97C8F]">({chartData.newPercent}%)</span></div>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1 text-[11px] font-bold text-[#999]"><span className="w-2.5 h-2.5 rounded-full bg-[#2D4B3E]"></span>リピーター</div>
+                  <div className="text-[20px] font-black text-[#333]">{chartData.repeatCount}<span className="text-[12px] font-bold text-[#999]">人</span> <span className="text-[12px] text-[#2D4B3E]">({chartData.repeatPercent}%)</span></div>
+                </div>
+              </div>
+            </div>
+            
+            {/* CSSとSVGで作るドーナツチャート */}
+            <div className="relative w-28 h-28 shrink-0 mr-4">
+              <svg width="100%" height="100%" viewBox="0 0 100 100" className="transform -rotate-90">
+                {/* 背景（新規顧客カラー） */}
+                <circle cx="50" cy="50" r="40" stroke="#fce4e4" strokeWidth="16" fill="transparent" />
+                {/* グラフ部分（リピーターカラー） */}
+                <circle 
+                  cx="50" cy="50" r="40" 
+                  stroke="#2D4B3E" strokeWidth="16" fill="transparent"
+                  strokeDasharray={`${chartData.repeatDash} ${chartData.circumference}`}
+                  className="transition-all duration-1000 ease-out"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-[18px] font-black text-[#2D4B3E] leading-none">{chartData.total}</span>
+                <span className="text-[8px] font-bold text-[#999]">Total</span>
+              </div>
+            </div>
           </div>
-          <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm flex flex-col justify-center">
-            <span className="text-[11px] font-bold text-[#999] tracking-widest mb-1">リピート顧客</span>
-            <span className="text-[24px] font-black text-blue-600">{customers.filter(c => c.orderCount >= 2).length} <span className="text-[12px] font-bold text-[#999]">人</span></span>
+
+          {/* 売上サマリー */}
+          <div className="bg-[#2D4B3E] p-6 rounded-[24px] shadow-md flex flex-col justify-center text-white relative overflow-hidden">
+            <ShoppingBag size={80} className="absolute -right-4 -bottom-4 text-white/10" />
+            <span className="text-[11px] font-bold text-white/70 tracking-widest mb-1 relative z-10">表示中の累計売上</span>
+            <span className="text-[32px] font-black relative z-10">¥{filteredAndSortedCustomers.reduce((sum, c) => sum + c.totalSpent, 0).toLocaleString()}</span>
           </div>
-          <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm flex flex-col justify-center">
-            <span className="text-[11px] font-bold text-[#999] tracking-widest mb-1">総受注件数</span>
-            <span className="text-[24px] font-black text-orange-600">{orders.length} <span className="text-[12px] font-bold text-[#999]">件</span></span>
+        </div>
+
+        {/* 顧客リストの上部ツールバー */}
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-[20px] border border-[#EAEAEA] shadow-sm">
+          <div className="flex items-center gap-2">
+            <Filter size={16} className="text-[#999] ml-2"/>
+            <div className="flex bg-[#FBFAF9] p-1 rounded-xl border border-[#EAEAEA]">
+              <button onClick={() => setFilterType('all')} className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${filterType === 'all' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999]'}`}>すべて</button>
+              <button onClick={() => setFilterType('new')} className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${filterType === 'new' ? 'bg-white shadow-sm text-[#D97C8F]' : 'text-[#999]'}`}>新規のみ</button>
+              <button onClick={() => setFilterType('repeat')} className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${filterType === 'repeat' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999]'}`}>リピートのみ</button>
+            </div>
           </div>
-          <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm flex flex-col justify-center">
-            <span className="text-[11px] font-bold text-[#999] tracking-widest mb-1">累計売上高</span>
-            <span className="text-[20px] font-black text-[#2D4B3E]">¥{customers.reduce((sum, c) => sum + c.totalSpent, 0).toLocaleString()}</span>
-          </div>
+          
+          <select 
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value)}
+            className="h-9 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[11px] font-bold text-[#555] outline-none cursor-pointer"
+          >
+            <option value="recent">最終注文が新しい順</option>
+            <option value="frequent">注文回数が多い順</option>
+            <option value="spend">累計購入額が高い順</option>
+          </select>
         </div>
 
         {/* 顧客リスト */}
@@ -178,7 +266,7 @@ export default function CustomersPage() {
           <div className="p-20 text-center text-[#999] font-bold animate-pulse tracking-widest">顧客データを集計中...</div>
         ) : filteredAndSortedCustomers.length === 0 ? (
           <div className="bg-white rounded-3xl border border-dashed border-[#CCC] p-20 text-center shadow-sm">
-            <p className="text-[14px] font-bold text-[#999]">顧客データが見つかりません</p>
+            <p className="text-[14px] font-bold text-[#999]">条件に一致する顧客データが見つかりません</p>
           </div>
         ) : (
           <div className="bg-white rounded-[24px] border border-[#EAEAEA] shadow-sm overflow-hidden">
