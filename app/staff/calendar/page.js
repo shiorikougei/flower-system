@@ -54,6 +54,16 @@ export default function CalendarPage() {
     return ['未対応', '制作中', '制作完了', '配達中'];
   };
 
+  const updateStatusValue = async (orderId, newStatusValue) => {
+    try {
+      const targetOrder = orders.find(o => o.id === orderId);
+      const updatedData = { ...targetOrder.order_data, currentStatus: newStatusValue, status: newStatusValue };
+      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId);
+      setOrders(orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o));
+      if (selectedOrder?.id === orderId) setSelectedOrder({ ...selectedOrder, order_data: updatedData });
+    } catch (err) { alert('更新に失敗しました。'); }
+  };
+
   // ★ ステータスを履歴付きで更新する新ロジック
   const executeStatusUpdate = async (orderId) => {
     if (!updateForm.staff) {
@@ -242,6 +252,7 @@ export default function CalendarPage() {
         </div>
       `;
 
+      // 立札やメッセージの改行等は元のまま保持
       const renderCardBlock = () => {
         if (d.cardType === '立札' && (d.tatePattern || d.tateInput1 || d.tateInput2 || d.tateInput3)) {
           return `
@@ -261,6 +272,7 @@ export default function CalendarPage() {
         return '';
       };
 
+      // 枠は残し、金額を非表示
       const renderItemsBlock = (hidePrice = false) => `
         <div class="items-area">
           <table class="items-table" style="border-color:${hidePrice ? '#888' : '#444'}">
@@ -275,7 +287,9 @@ export default function CalendarPage() {
               <tr>
                 <td class="item-cell">
                   <div class="item-name">${formatText(d.flowerType) || '未設定'}</div>
-                  <div class="item-detail">用途: ${formatText(d.flowerPurpose) || '-'} / 色: ${formatText(d.flowerColor) || '-'} / イメージ: ${formatText(d.flowerVibe) || '-'}</div>
+                  <div class="item-detail">
+                    用途: ${formatText(d.flowerPurpose) || '-'} / 色: ${formatText(d.flowerColor) || '-'} / イメージ: ${formatText(d.flowerVibe) || '-'}
+                  </div>
                   ${renderCardBlock()}
                   ${d.note ? `<div class="item-detail" style="color:#d97c8f; margin-top:2mm;">備考: ${formatText(d.note)}</div>` : ''}
                 </td>
@@ -289,10 +303,24 @@ export default function CalendarPage() {
         <div style="display:flex; justify-content:flex-end;">
           ${!hidePrice ? `
             <table class="amount-summary">
-              <tr><td class="amount-label">商品代</td><td class="amount-val">${formatPrice(totals.item)}</td></tr>
-              <tr><td class="amount-label">送料・手数料</td><td class="amount-val">${formatPrice(totals.fee + totals.pickup)}</td></tr>
-              <tr><td class="amount-label">消費税(10%)</td><td class="amount-val">${formatPrice(totals.tax)}</td></tr>
-              <tr><td class="amount-label-total">合計</td><td class="amount-val-total">${formatPrice(totals.total)}</td></tr>
+              <tbody>
+                <tr>
+                  <td class="amount-label">商品代</td>
+                  <td class="amount-val">${formatPrice(totals.item)}</td>
+                </tr>
+                <tr>
+                  <td class="amount-label">送料・手数料</td>
+                  <td class="amount-val">${formatPrice(totals.fee + totals.pickup)}</td>
+                </tr>
+                <tr>
+                  <td class="amount-label">消費税(10%)</td>
+                  <td class="amount-val">${formatPrice(totals.tax)}</td>
+                </tr>
+                <tr>
+                  <td class="amount-label-total">合計</td>
+                  <td class="amount-val-total">${formatPrice(totals.total)}</td>
+                </tr>
+              </tbody>
             </table>
           ` : `<div style="height:23.5mm;"></div>`}
         </div>
@@ -349,59 +377,70 @@ export default function CalendarPage() {
           <meta charset="UTF-8" />
           <style>
             @page { size: A4 portrait; margin: 0; }
-            body { margin: 0; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; color: #222; }
+            @media print {
+              body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .page { box-shadow: none !important; margin: 0 !important; page-break-after: always !important; break-after: page !important; }
+              .page:last-child { page-break-after: auto !important; break-after: auto !important; }
+            }
             * { box-sizing: border-box; }
-            .page { width: 210mm; height: 296mm; background: #fff; display: flex; flex-direction: column; position: relative; overflow: hidden; page-break-after: always; margin: 0 auto; }
+            body { margin: 0; background-color: #f3f4f6; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; color: #222; }
+            .page { width: 210mm; height: 296mm; background: #fff; margin: 0 auto 10mm auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; position: relative; overflow: hidden; }
             .slip { width: 100%; height: 148mm; padding: 10mm 15mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
             .slip:first-child { border-bottom: 1px dashed #aaa; }
-            .cutline { position: absolute; top: 148mm; left: 0; right: 0; text-align: center; z-index: 10; transform: translateY(-50%); }
+            .cutline { position: absolute; top: 148mm; left: 10mm; right: 10mm; transform: translateY(-50%); display: flex; justify-content: center; align-items: center; z-index: 10; pointer-events: none; }
             .cutline span { background: #fff; padding: 0 5mm; font-size: 8pt; color: #888; letter-spacing: 0.2em; }
-            .slip-header { display: flex; justify-content: space-between; margin-bottom: 3mm; }
-            .slip-title { font-size: 16pt; font-weight: 800; letter-spacing: 0.3em; }
-            .meta-area { font-size: 8pt; text-align: right; font-weight: bold; line-height: 1.4; }
+            .slip-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3mm; }
+            .slip-title { font-size: 16pt; font-weight: bold; letter-spacing: 0.3em; }
+            .meta-area { font-size: 8pt; text-align: right; line-height: 1.4; font-weight: bold; }
             .info-grid { display: flex; gap: 4mm; height: 24mm; margin-bottom: 4mm; }
-            .info-box { flex: 1; border: 0.5pt solid #444; padding: 2mm; display: flex; flex-direction: column; }
-            .info-title { font-size: 7pt; font-weight: bold; margin-bottom: 1mm; }
+            .info-box { flex: 1; border: 0.5pt solid #444; padding: 2mm; display: flex; flex-direction: column; position: relative; }
+            .info-title { font-size: 7.5pt; font-weight: bold; color: #444; margin-bottom: 1mm; }
             .info-main { font-size: 12pt; font-weight: bold; }
-            .info-sub-bottom { margin-top: auto; font-size: 8pt; line-height: 1.2; }
+            .info-sub-bottom { margin-top: auto; font-size: 8pt; line-height: 1.3; }
             .same-text { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 12pt; color: #888; font-weight: bold; letter-spacing: 0.1em; }
-            .items-area { flex-grow: 1; margin-bottom: 1mm; }
-            .items-table { width: 100%; border-collapse: collapse; border-top: 0.5pt solid #444; border-bottom: 0.5pt solid #444; }
-            .items-table th { font-size: 8pt; padding: 1.5mm 1mm; border-bottom: 0.5pt solid #444; text-align: left; }
+            .items-area { flex-grow: 1; display: flex; flex-direction: column; margin-bottom: 1mm; }
+            .items-table { width: 100%; border-collapse: collapse; }
+            .items-table thead th { font-size: 8pt; border-top: 0.5pt solid #444; border-bottom: 0.5pt solid #444; padding: 1.5mm 1mm; text-align: left; }
             .item-cell { padding: 2mm 1mm; vertical-align: top; }
+            .qty-cell { text-align: center; font-size: 10pt; font-weight: bold; vertical-align: top; padding-top: 2mm; }
+            .price-cell { text-align: right; font-size: 10pt; font-weight: bold; vertical-align: top; padding-top: 2mm; }
             .item-name { font-size: 12pt; font-weight: bold; margin-bottom: 1mm; }
             .item-detail { font-size: 8pt; color: #555; }
             .simple-card-text { font-size: 9pt; font-weight: bold; margin-top: 1.5mm; border-top: 1px dotted #ccc; padding-top: 1mm; line-height: 1.3; }
-            .qty-cell, .price-cell { text-align: center; font-weight: bold; padding-top: 2mm; vertical-align: top; font-size: 10pt; }
-            .price-cell { text-align: right; width: 26mm; }
             .amount-summary { width: 65mm; border-collapse: collapse; font-size: 8.5pt; }
             .amount-summary td { border: 0.5pt solid #999; padding: 1.2mm 2mm; text-align: right; font-weight: bold; height: 23px; }
             .amount-label { background: #f9f9f9; text-align: left !important; width: 50%; color:#666; }
             .amount-label-total { background: #f9f9f9; font-weight: bold; color: #117768; text-align: left !important; }
             .amount-val-total { color: #117768; font-size: 11pt; }
-            .receipt-note { margin: 2mm 0; font-size: 8.5pt; border: 1px solid #eee; padding: 2mm; background: #fdfdfd; }
+            .receipt-note { margin-top: 2mm; margin-bottom: 2mm; font-size: 8.5pt; color: #333; }
             .footer { margin-top: auto; border-top: 0.5pt dashed #bbb; padding-top: 2mm; display: flex; justify-content: space-between; align-items: flex-end; }
+            .shop-block { font-size: 8pt; line-height: 1.4; color: #444; }
             .shop-name { font-size: 12pt; font-weight: 900; color: #222; margin-bottom: 1mm; }
-            .shop-block { font-size: 7.5pt; line-height: 1.4; color: #444; }
             .footer-actions { display: flex; gap: 2mm; }
-            .check-group { display: flex; flex-direction: column; align-items: center; }
-            .check-label { font-size: 6.5pt; color: #666; font-weight: bold; margin-bottom: 0.5mm; }
-            .check-box { border: 0.5pt solid #666; width: 15mm; height: 6.5mm; display: flex; align-items: center; justify-content: center; font-size: 7pt; font-weight: bold; border-radius: 1px; }
+            .check-group { display: flex; flex-direction: column; align-items: center; gap: 0.5mm; }
+            .check-label { font-size: 6.5pt; color: #666; font-weight: bold; }
+            .check-box { border: 0.5pt solid #666; width: 14mm; height: 6mm; display: flex; align-items: center; justify-content: center; font-size: 7pt; font-weight: bold; border-radius: 1px; }
             .check-box.filled { background: #fff; }
           </style>
         </head>
         <body>
           <div class="page">
-            ${renderSlip({ title: '受 注 書 (店舗控)', type: 'order_store', hidePrice: false })}
+            ${renderSlip({ title: '受 注 書 控', type: 'order_store', hidePrice: false })}
+            ${renderSlip({ title: 'お 客 様 控', type: 'customer', hidePrice: false })}
             <div class="cutline"><span>✂ 切り取り線</span></div>
-            ${renderSlip({ title: 'ご 注 文 内 容 (お客様控)', type: 'customer', hidePrice: false })}
           </div>
           <div class="page">
             ${renderSlip({ title: '納 品 書', type: 'delivery', hidePrice: true })}
-            <div class="cutline"><span>✂ 切り取り線</span></div>
             ${renderSlip({ title: '受 領 書', type: 'receipt', hidePrice: true, showReceiptNote: true })}
+            <div class="cutline"><span>✂ 切り取り線</span></div>
           </div>
-          <script>window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 500); };</script>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+              }, 400);
+            };
+          </script>
         </body>
         </html>
       `;
@@ -639,7 +678,10 @@ export default function CalendarPage() {
                     className="h-10 bg-white border border-[#EAEAEA] rounded-xl px-3 text-[12px] font-bold outline-none shadow-sm cursor-pointer"
                   >
                     <option value="">担当スタッフ</option>
-                    {(appSettings?.staffList || []).map(s => <option key={s.id || s} value={s.name || s}>{s.name || s}</option>)}
+                    {(appSettings?.staffList || []).map(s => {
+                      const staffName = typeof s === 'string' ? s : s.name;
+                      return <option key={staffName} value={staffName}>{staffName}</option>;
+                    })}
                   </select>
                   <button onClick={() => executeStatusUpdate(selectedOrder.id)} className="h-10 px-4 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-xl hover:bg-[#1f352b] transition-all shadow-sm">
                     更新
@@ -650,6 +692,7 @@ export default function CalendarPage() {
               {isSagawa ? (
                 <div className="bg-green-50 border-2 border-green-200 p-6 md:p-8 rounded-[24px] flex flex-col md:flex-row items-center gap-6 justify-center text-center shadow-inner relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-bl-[64px] -mr-4 -mt-4"></div>
+                  
                   <div className="space-y-1 relative z-10">
                     <span className="text-[12px] font-bold text-green-700 tracking-widest bg-white/50 px-3 py-1 rounded-full">【箱詰め・集荷】発送予定日</span>
                     <p className="text-[28px] md:text-[36px] font-black text-green-900 flex items-center justify-center gap-2 pt-2">
@@ -657,7 +700,9 @@ export default function CalendarPage() {
                       {modalData.shippingDate ? `${modalData.shippingDate.split('-')[1]}月${modalData.shippingDate.split('-')[2]}日` : '未設定'}
                     </p>
                   </div>
+                  
                   <ChevronRight size={32} className="hidden md:block text-green-300 relative z-10"/>
+                  
                   <div className="space-y-1 relative z-10">
                     <span className="text-[12px] font-bold text-green-700 tracking-widest">お客様 お届け日</span>
                     <p className="text-[18px] md:text-[20px] font-bold text-green-800 flex items-center justify-center gap-2 pt-2">
@@ -693,6 +738,7 @@ export default function CalendarPage() {
                 <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
                   <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><MapPin size={18}/> お届け先情報</h3>
                   <div className="space-y-3 text-[13px]">
+                    
                     {isPickup ? (
                       <div className="bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA]">
                         <p><span className="text-[#999999] text-[10px] block mb-1 tracking-widest">受取店舗</span><span className="font-black text-[16px] text-[#2D4B3E]">{modalData.selectedShop || '未指定'}</span></p>
