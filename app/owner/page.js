@@ -1,6 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { supabase } from '../../utils/supabase';
+import { supabase } from '@/utils/supabase';
+import { 
+  Building2, Mail, ArrowUpCircle, Bot, Lock, Unlock, 
+  CheckCircle, XCircle, RefreshCw, Save, Sparkles, ExternalLink
+} from 'lucide-react';
 
 export default function OwnerDashboard() {
   const [activeTab, setActiveTab] = useState('tenants');
@@ -13,23 +17,31 @@ export default function OwnerDashboard() {
   const [newInviteEmail, setNewInviteEmail] = useState('');
   const [newInvitePlan, setNewInvitePlan] = useState('10000');
   
-  // オーナー用パスワード（実際の運用では強力な認証に切り替えます）
+  // ★ 新規追加データ
+  const [upgradeRequests, setUpgradeRequests] = useState([]);
+  const [aiPrompt, setAiPrompt] = useState('以下のテキストからお花の「価格」「用途」「カラー」「イメージ」をJSON形式で抽出してください。価格はカンマなしの数値で出力してください。');
+
+  // オーナー用パスワード
   const [isAuth, setIsAuth] = useState(false);
   const [password, setPassword] = useState('');
 
   useEffect(() => {
     async function loadOwnerData() {
       try {
-        // id='nocolde_owner' という秘密のキーでSaaS管理データを保存・読み込みします
         const { data, error } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
         if (data && data.settings_data) {
           if (data.settings_data.tenants) setTenants(data.settings_data.tenants);
           if (data.settings_data.invitations) setInvitations(data.settings_data.invitations);
+          if (data.settings_data.upgradeRequests) setUpgradeRequests(data.settings_data.upgradeRequests);
+          if (data.settings_data.aiPrompt) setAiPrompt(data.settings_data.aiPrompt);
         } else {
           // 初回起動時のダミーデータ
           setTenants([
-            { id: 'shop_a', name: '花・花 OHANA!', email: 'info@hana-ohana.example.com', price: 10000, status: 'active', lastPaid: '2026-02-28', requests: 0 },
-            { id: 'shop_b', name: 'お花カフェ (デモ店舗)', email: 'demo@example.com', price: 0, status: 'active', lastPaid: '-', requests: 2 },
+            { id: 'shop_a', name: '花・花 OHANA!', email: 'info@hana-ohana.example.com', price: 10000, status: 'active', lastPaid: '2026-02-28', features: { b2b: false, deliveryOutsource: true } },
+            { id: 'shop_b', name: 'お花カフェ (デモ店舗)', email: 'demo@example.com', price: 0, status: 'active', lastPaid: '-', features: { b2b: true, deliveryOutsource: false } },
+          ]);
+          setUpgradeRequests([
+            { id: 'req_1', tenantId: 'shop_a', tenantName: '花・花 OHANA!', featureKey: 'b2b', featureName: '法人ポータル管理機能', date: '2026-03-15', status: 'pending' }
           ]);
         }
       } catch (err) {
@@ -42,22 +54,30 @@ export default function OwnerDashboard() {
   }, []);
 
   const handleLogin = () => {
-    if (password === 'nocolde2026') { // ★オーナー専用の強力なパスワード
+    if (password === 'nocolde2026') {
       setIsAuth(true);
     } else {
       alert('アクセス権限がありません。');
     }
   };
 
-  const saveOwnerData = async (updatedTenants = tenants, updatedInvitations = invitations) => {
+  // ★ 統合保存ロジック
+  const saveOwnerData = async (updatedTenants = tenants, updatedInvitations = invitations, updatedUpgrades = upgradeRequests, updatedPrompt = aiPrompt) => {
     setIsSaving(true);
     try {
       await supabase.from('app_settings').upsert({ 
         id: 'nocolde_owner', 
-        settings_data: { tenants: updatedTenants, invitations: updatedInvitations } 
+        settings_data: { 
+          tenants: updatedTenants, 
+          invitations: updatedInvitations,
+          upgradeRequests: updatedUpgrades,
+          aiPrompt: updatedPrompt
+        } 
       });
       setTenants(updatedTenants);
       setInvitations(updatedInvitations);
+      setUpgradeRequests(updatedUpgrades);
+      setAiPrompt(updatedPrompt);
     } catch (error) {
       alert('データの保存に失敗しました。');
     } finally {
@@ -65,7 +85,7 @@ export default function OwnerDashboard() {
     }
   };
 
-  // ★アカウント招待URLの発行ロジック
+  // アカウント招待URLの発行ロジック
   const handleInvite = () => {
     if (!newInviteEmail) return;
     const token = Math.random().toString(36).substring(2, 15);
@@ -78,19 +98,18 @@ export default function OwnerDashboard() {
       token: token,
       url: setupUrl,
       date: new Date().toISOString().split('T')[0],
-      status: 'pending' // pending(未登録) -> active(登録済)
+      status: 'pending'
     };
     
     const updated = [newInvite, ...invitations];
-    saveOwnerData(tenants, updated);
+    saveOwnerData(tenants, updated, upgradeRequests, aiPrompt);
     setNewInviteEmail('');
     
-    // クリップボードにコピー
     navigator.clipboard.writeText(`システムのご案内です。以下のURLから初期設定を行ってください。\n${setupUrl}`);
-    alert('招待URLを発行し、クリップボードにコピーしました！そのままお客様にメールで送信できます。');
+    alert('招待URLを発行し、クリップボードにコピーしました！');
   };
 
-  // ★最強の権限：店舗の強制ロック / 解除
+  // 店舗の強制ロック / 解除
   const toggleLock = (tenantId) => {
     const target = tenants.find(t => t.id === tenantId);
     const newStatus = target.status === 'active' ? 'locked' : 'active';
@@ -101,13 +120,55 @@ export default function OwnerDashboard() {
     if (!confirm(confirmMsg)) return;
 
     const updated = tenants.map(t => t.id === tenantId ? { ...t, status: newStatus } : t);
-    saveOwnerData(updated, invitations);
+    saveOwnerData(updated, invitations, upgradeRequests, aiPrompt);
   };
 
+  // 料金の変更
   const updatePrice = (tenantId, newPrice) => {
     const updated = tenants.map(t => t.id === tenantId ? { ...t, price: Number(newPrice) } : t);
-    saveOwnerData(updated, invitations);
+    saveOwnerData(updated, invitations, upgradeRequests, aiPrompt);
   };
+
+  // ★ 新規追加：機能の個別出し分け（トグル切り替え）
+  const toggleFeature = (tenantId, featureKey) => {
+    const updated = tenants.map(t => {
+      if (t.id === tenantId) {
+        const currentFeatures = t.features || { b2b: false, deliveryOutsource: false };
+        return { ...t, features: { ...currentFeatures, [featureKey]: !currentFeatures[featureKey] } };
+      }
+      return t;
+    });
+    saveOwnerData(updated, invitations, upgradeRequests, aiPrompt);
+  };
+
+  // ★ 新規追加：アップグレードの承認
+  const handleApproveUpgrade = (reqId) => {
+    if(!confirm('この機能のアップグレードを承認し、店舗に機能を解放しますか？')) return;
+    
+    const req = upgradeRequests.find(r => r.id === reqId);
+    
+    // 店舗の機能を自動でONにする
+    const updatedTenants = tenants.map(t => {
+      if (t.id === req.tenantId) {
+        const currentFeatures = t.features || { b2b: false, deliveryOutsource: false };
+        return { ...t, features: { ...currentFeatures, [req.featureKey]: true } };
+      }
+      return t;
+    });
+
+    const updatedReqs = upgradeRequests.map(r => r.id === reqId ? { ...r, status: 'approved' } : r);
+    saveOwnerData(updatedTenants, invitations, updatedReqs, aiPrompt);
+    alert('機能を解放しました！');
+  };
+
+  // ★ 新規追加：アップグレードの却下
+  const handleRejectUpgrade = (reqId) => {
+    if(!confirm('この依頼を却下しますか？')) return;
+    const updatedReqs = upgradeRequests.map(r => r.id === reqId ? { ...r, status: 'rejected' } : r);
+    saveOwnerData(tenants, invitations, updatedReqs, aiPrompt);
+  };
+
+  const pendingUpgradesCount = upgradeRequests.filter(r => r.status === 'pending').length;
 
   if (!isAuth) {
     return (
@@ -141,76 +202,103 @@ export default function OwnerDashboard() {
           <span className="text-[9px] font-bold tracking-[0.3em] uppercase text-[#2D4B3E] pt-1">Cloud Control</span>
         </div>
         <nav className="p-4 space-y-2">
-          <button onClick={() => setActiveTab('tenants')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest ${activeTab === 'tenants' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}>🏢 契約店舗の管理</button>
-          <button onClick={() => setActiveTab('invites')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest ${activeTab === 'invites' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}>✉️ アカウント発行</button>
-          <button onClick={() => setActiveTab('requests')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center justify-between ${activeTab === 'requests' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}>
-            <span>💬 要望・修正依頼</span>
-            <span className="bg-red-600 text-white text-[9px] px-2 py-0.5 rounded-full">2</span>
+          <button onClick={() => setActiveTab('tenants')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'tenants' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}>
+            <Building2 size={16}/> 店舗・機能管理
+          </button>
+          <button onClick={() => setActiveTab('invites')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'invites' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}>
+            <Mail size={16}/> アカウント発行
+          </button>
+          <button onClick={() => setActiveTab('upgrades')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center justify-between ${activeTab === 'upgrades' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}>
+            <div className="flex items-center gap-3"><ArrowUpCircle size={16}/> <span>アップグレード依頼</span></div>
+            {pendingUpgradesCount > 0 && <span className="bg-red-600 text-white text-[9px] px-2 py-0.5 rounded-full">{pendingUpgradesCount}</span>}
+          </button>
+          <button onClick={() => setActiveTab('ai')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'ai' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}>
+            <Bot size={16}/> AIプロンプト設定
           </button>
         </nav>
         <div className="absolute bottom-8 left-8 text-[10px] text-gray-600 font-mono">
-          System v1.0.0<br/>Secure Connection
+          System v1.2.0<br/>Secure Connection
         </div>
       </aside>
 
       <main className="flex-1 md:ml-64 p-8 md:p-12">
-        <header className="flex justify-between items-center mb-12">
-          <h2 className="text-2xl font-bold text-white tracking-widest">
+        <header className="flex justify-between items-center mb-10 border-b border-[#222222] pb-6">
+          <h2 className="text-xl font-bold text-white tracking-widest">
             {activeTab === 'tenants' && 'TENANT MANAGEMENT'}
             {activeTab === 'invites' && 'ISSUE INVITATION'}
-            {activeTab === 'requests' && 'CLIENT REQUESTS'}
+            {activeTab === 'upgrades' && 'UPGRADE REQUESTS'}
+            {activeTab === 'ai' && 'AI PROMPT CONTROL'}
           </h2>
-          {isSaving && <span className="text-[#2D4B3E] text-sm animate-pulse font-mono">Syncing to Cloud...</span>}
+          {isSaving && <span className="text-[#2D4B3E] text-sm animate-pulse font-mono flex items-center gap-2"><RefreshCw size={14} className="animate-spin"/> Syncing...</span>}
         </header>
 
-        {/* 1. 契約店舗・料金・ロック管理 */}
+        {/* 1. 契約店舗・料金・機能・ロック管理 */}
         {activeTab === 'tenants' && (
           <div className="space-y-6 animate-in fade-in">
-            <div className="bg-[#111111] rounded-2xl border border-[#222222] overflow-hidden shadow-2xl">
-              <table className="w-full text-left">
+            <div className="bg-[#111111] rounded-2xl border border-[#222222] overflow-x-auto shadow-2xl">
+              <table className="w-full text-left min-w-[800px]">
                 <thead className="bg-[#1a1a1a] border-b border-[#333333] text-[10px] font-bold text-gray-400 tracking-widest uppercase">
                   <tr>
-                    <th className="px-6 py-4">店舗名 (テナントID)</th>
-                    <th className="px-6 py-4">月額料金設定</th>
-                    <th className="px-6 py-4">最終入金確認</th>
+                    <th className="px-6 py-4">店舗名 (ID)</th>
+                    <th className="px-6 py-4">月額料金</th>
+                    <th className="px-6 py-4">機能の個別解放</th>
                     <th className="px-6 py-4 text-center">ステータス</th>
                     <th className="px-6 py-4 text-right">強制操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#222222] text-[13px]">
-                  {tenants.map(t => (
-                    <tr key={t.id} className="hover:bg-[#1a1a1a] transition-all">
-                      <td className="px-6 py-5">
-                        <div className="font-bold text-white">{t.name}</div>
-                        <div className="text-[10px] text-gray-500 font-mono mt-1">{t.id}</div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-500">¥</span>
-                          <input 
-                            type="number" 
-                            value={t.price} 
-                            onChange={(e) => updatePrice(t.id, e.target.value)} 
-                            className="bg-black border border-[#333333] rounded px-3 py-1.5 w-24 text-white outline-none focus:border-[#2D4B3E]" 
-                          />
-                        </div>
-                      </td>
-                      <td className="px-6 py-5 font-mono text-gray-400">{t.lastPaid}</td>
-                      <td className="px-6 py-5 text-center">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-widest ${t.status === 'active' ? 'bg-[#2D4B3E]/20 text-green-400 border border-[#2D4B3E]/50' : 'bg-red-900/20 text-red-500 border border-red-900/50'}`}>
-                          {t.status === 'active' ? 'ACTIVE' : 'LOCKED'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-5 text-right">
-                        <button 
-                          onClick={() => toggleLock(t.id)}
-                          className={`px-4 py-2 rounded-lg text-[10px] font-bold tracking-widest transition-all ${t.status === 'active' ? 'bg-red-600/10 text-red-500 hover:bg-red-600 hover:text-white border border-red-900' : 'bg-[#2D4B3E]/10 text-[#2D4B3E] hover:bg-[#2D4B3E] hover:text-white border border-[#2D4B3E]'}`}
-                        >
-                          {t.status === 'active' ? '利用停止(ロック)' : 'ロック解除'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {tenants.map(t => {
+                    const f = t.features || { b2b: false, deliveryOutsource: false };
+                    return (
+                      <tr key={t.id} className="hover:bg-[#1a1a1a] transition-all">
+                        <td className="px-6 py-5">
+                          <div className="font-bold text-white text-[14px]">{t.name}</div>
+                          <div className="text-[10px] text-gray-500 font-mono mt-1">{t.id}</div>
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-500">¥</span>
+                            <input 
+                              type="number" 
+                              value={t.price} 
+                              onChange={(e) => updatePrice(t.id, e.target.value)} 
+                              className="bg-black border border-[#333333] rounded px-3 py-1.5 w-24 text-white outline-none focus:border-[#2D4B3E]" 
+                            />
+                          </div>
+                        </td>
+                        <td className="px-6 py-5">
+                          {/* ★ 機能トグル */}
+                          <div className="flex flex-col gap-3">
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                              <div onClick={() => toggleFeature(t.id, 'b2b')} className={`w-9 h-5 rounded-full transition-all flex items-center px-0.5 ${f.b2b ? 'bg-[#2D4B3E]' : 'bg-[#333333]'}`}>
+                                <div className={`w-4 h-4 bg-white rounded-full transition-all shadow-sm ${f.b2b ? 'translate-x-4' : ''}`}></div>
+                              </div>
+                              <span className={`text-[11px] font-bold tracking-widest transition-colors ${f.b2b ? 'text-white' : 'text-gray-600 group-hover:text-gray-400'}`}>法人管理ポータル</span>
+                            </label>
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                              <div onClick={() => toggleFeature(t.id, 'deliveryOutsource')} className={`w-9 h-5 rounded-full transition-all flex items-center px-0.5 ${f.deliveryOutsource ? 'bg-[#2D4B3E]' : 'bg-[#333333]'}`}>
+                                <div className={`w-4 h-4 bg-white rounded-full transition-all shadow-sm ${f.deliveryOutsource ? 'translate-x-4' : ''}`}></div>
+                              </div>
+                              <span className={`text-[11px] font-bold tracking-widest transition-colors ${f.deliveryOutsource ? 'text-white' : 'text-gray-600 group-hover:text-gray-400'}`}>配達業務委託</span>
+                            </label>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5 text-center">
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-widest flex items-center justify-center gap-1 w-fit mx-auto ${t.status === 'active' ? 'bg-[#2D4B3E]/20 text-green-400 border border-[#2D4B3E]/50' : 'bg-red-900/20 text-red-500 border border-red-900/50'}`}>
+                            {t.status === 'active' ? <><Unlock size={10}/> ACTIVE</> : <><Lock size={10}/> LOCKED</>}
+                          </span>
+                        </td>
+                        <td className="px-6 py-5 text-right">
+                          <button 
+                            onClick={() => toggleLock(t.id)}
+                            className={`px-4 py-2 rounded-lg text-[10px] font-bold tracking-widest transition-all ${t.status === 'active' ? 'bg-red-600/10 text-red-500 hover:bg-red-600 hover:text-white border border-red-900' : 'bg-[#2D4B3E]/10 text-[#2D4B3E] hover:bg-[#2D4B3E] hover:text-white border border-[#2D4B3E]'}`}
+                          >
+                            {t.status === 'active' ? 'システムロック' : 'ロック解除'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -242,15 +330,18 @@ export default function OwnerDashboard() {
               <h3 className="text-sm font-bold text-gray-500 tracking-widest border-b border-[#222222] pb-2">発行済みのアカウントURL一覧</h3>
               <div className="grid gap-4">
                 {invitations.map(inv => (
-                  <div key={inv.id} className="bg-[#111111] p-6 rounded-xl border border-[#222222] flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-white">{inv.email}</p>
+                  <div key={inv.id} className="bg-[#111111] p-6 rounded-xl border border-[#222222] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <p className="font-bold text-white text-[15px]">{inv.email}</p>
                       <p className="text-[11px] text-gray-500 mt-1 font-mono">発行日: {inv.date} | 設定料金: ¥{Number(inv.price).toLocaleString()}</p>
-                      <input type="text" value={inv.url} readOnly className="mt-3 w-96 bg-black text-[#2D4B3E] border border-[#333333] text-[10px] p-2 rounded outline-none font-mono" />
+                      <div className="mt-3 flex items-center gap-2">
+                        <input type="text" value={inv.url} readOnly className="w-full max-w-md bg-black text-[#2D4B3E] border border-[#333333] text-[11px] p-2.5 rounded-lg outline-none font-mono" />
+                        <button onClick={() => {navigator.clipboard.writeText(inv.url); alert('URLをコピーしました！')}} className="text-xs bg-[#222222] hover:bg-[#333333] text-gray-300 px-3 py-2.5 rounded-lg transition-all whitespace-nowrap">コピー</button>
+                      </div>
                     </div>
                     <div>
-                      <span className={`px-3 py-1 rounded text-[10px] font-bold tracking-widest ${inv.status === 'pending' ? 'bg-orange-900/30 text-orange-500 border border-orange-900/50' : 'bg-[#2D4B3E]/20 text-[#2D4B3E] border border-[#2D4B3E]/50'}`}>
-                        {inv.status === 'pending' ? '未設定 (URL送付済)' : '本登録完了'}
+                      <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest ${inv.status === 'pending' ? 'bg-orange-900/30 text-orange-500 border border-orange-900/50' : 'bg-[#2D4B3E]/20 text-[#2D4B3E] border border-[#2D4B3E]/50'}`}>
+                        {inv.status === 'pending' ? '未登録 (招待済)' : '本登録完了'}
                       </span>
                     </div>
                   </div>
@@ -261,27 +352,76 @@ export default function OwnerDashboard() {
           </div>
         )}
 
-        {/* 3. 要望・修正管理 */}
-        {activeTab === 'requests' && (
-          <div className="space-y-4 animate-in fade-in">
-            <div className="bg-[#111111] p-6 rounded-xl border border-[#222222] border-l-4 border-l-[#2D4B3E]">
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-[10px] bg-[#2D4B3E] text-white px-2 py-0.5 rounded font-bold tracking-widest">NEW</span>
-                <span className="text-[10px] text-gray-500 font-mono">2026.03.10 | お花カフェ</span>
+        {/* 3. アップグレードの依頼確認画面 */}
+        {activeTab === 'upgrades' && (
+          <div className="space-y-6 animate-in fade-in">
+            {upgradeRequests.length === 0 ? (
+              <div className="text-center py-20 text-gray-600 font-mono tracking-widest border border-dashed border-[#333333] rounded-2xl">
+                NO PENDING REQUESTS.
               </div>
-              <h4 className="font-bold text-white text-sm mb-2">設定画面に「配送料の自動計算オフ」ボタンを追加してほしい</h4>
-              <p className="text-xs text-gray-400">いつもお世話になっております。店頭で直接送料を交渉することが多いので、自動計算を一時的にオフにできる機能があると助かります。</p>
-              <div className="mt-4 flex gap-2">
-                <button className="text-[10px] border border-[#333333] text-white px-4 py-1.5 rounded hover:bg-[#222222] transition-all">対応済みにする</button>
-                <button className="text-[10px] border border-[#333333] text-gray-400 px-4 py-1.5 rounded hover:bg-[#222222] transition-all">返信</button>
+            ) : (
+              upgradeRequests.map(req => (
+                <div key={req.id} className={`bg-[#111111] p-6 md:p-8 rounded-2xl border ${req.status === 'pending' ? 'border-[#2D4B3E] shadow-[0_0_15px_rgba(45,75,62,0.3)]' : 'border-[#222222] opacity-60'} flex flex-col md:flex-row justify-between items-start md:items-center gap-6 transition-all`}>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <span className={`text-[9px] px-2 py-0.5 rounded font-bold tracking-widest ${req.status === 'pending' ? 'bg-[#2D4B3E] text-white' : req.status === 'approved' ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400'}`}>
+                        {req.status === 'pending' ? 'NEW REQUEST' : req.status === 'approved' ? 'APPROVED' : 'REJECTED'}
+                      </span>
+                      <span className="text-[11px] text-gray-500 font-mono">{req.date}</span>
+                    </div>
+                    <h4 className="font-bold text-white text-[18px]"><span className="text-emerald-400">{req.featureName}</span> の利用申請</h4>
+                    <p className="text-[13px] text-gray-400 flex items-center gap-2"><Building2 size={14}/> 申請元テナント: {req.tenantName}</p>
+                  </div>
+
+                  {req.status === 'pending' && (
+                    <div className="flex gap-3 w-full md:w-auto">
+                      <button 
+                        onClick={() => handleRejectUpgrade(req.id)}
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 border border-[#333333] text-gray-400 text-[12px] font-bold rounded-xl hover:bg-[#222222] hover:text-white transition-all"
+                      >
+                        <XCircle size={16}/> 却下する
+                      </button>
+                      <button 
+                        onClick={() => handleApproveUpgrade(req.id)}
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-xl hover:bg-[#1f352b] transition-all shadow-lg shadow-[#2D4B3E]/20"
+                      >
+                        <CheckCircle size={16}/> 承認・機能を解放
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* 4. AIプロンプトの設定 */}
+        {activeTab === 'ai' && (
+          <div className="space-y-6 animate-in fade-in">
+            <div className="bg-[#111111] p-8 rounded-2xl border border-[#222222] shadow-2xl space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2"><Sparkles size={18}/> AI 画像解析プロンプト (システム全体設定)</h3>
+                <p className="text-[12px] text-gray-500 leading-relaxed">
+                  テナントが「過去分登録 (URL取込)」を使用した際に、AIに対してどのようにテキストを解析させるかの指示文（プロンプト）です。抽出精度を上げるためにここで調整できます。
+                </p>
               </div>
-            </div>
-            <div className="bg-[#111111] p-6 rounded-xl border border-[#222222] opacity-60">
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-[10px] border border-gray-600 text-gray-400 px-2 py-0.5 rounded font-bold tracking-widest">対応完了</span>
-                <span className="text-[10px] text-gray-500 font-mono">2026.02.15 | 花・花 OHANA!</span>
+
+              <textarea 
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                className="w-full h-64 bg-black border border-[#333333] rounded-xl p-6 text-[13px] text-emerald-50 outline-none resize-none font-mono leading-relaxed focus:border-[#2D4B3E] transition-colors"
+                placeholder="AIへの指示を記述..."
+              />
+
+              <div className="flex justify-end">
+                <button 
+                  onClick={() => saveOwnerData(tenants, invitations, upgradeRequests, aiPrompt)}
+                  disabled={isSaving}
+                  className="flex items-center gap-2 bg-[#2D4B3E] text-white px-8 py-3.5 rounded-xl font-bold text-[13px] tracking-widest hover:bg-[#1f352b] transition-all disabled:opacity-50"
+                >
+                  <Save size={16}/> {isSaving ? 'SAVING...' : 'SAVE PROMPT'}
+                </button>
               </div>
-              <h4 className="font-bold text-gray-300 text-sm mb-2">立札の縦書きレイアウトの微調整</h4>
             </div>
           </div>
         )}
