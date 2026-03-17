@@ -4,7 +4,7 @@ import { supabase } from '@/utils/supabase';
 import { 
   Building2, Mail, ArrowUpCircle, Bot, Lock, Unlock, 
   CheckCircle, XCircle, RefreshCw, Save, Sparkles, Store,
-  MessageSquare
+  MessageSquare, Trash2, AlertTriangle // ★ Trash2 と AlertTriangle を追加
 } from 'lucide-react';
 
 const DEFAULT_AI_PROMPT = '以下のテキストからお花の「価格」「用途」「カラー」「イメージ」をJSON形式で抽出してください。価格はカンマなしの数値で出力してください。';
@@ -21,7 +21,7 @@ export default function OwnerDashboard() {
   const [newInvitePlan, setNewInvitePlan] = useState('10000');
   
   const [upgradeRequests, setUpgradeRequests] = useState([]);
-  const [clientRequests, setClientRequests] = useState([]); // ★ 新規: フィードバック/バグ報告用
+  const [clientRequests, setClientRequests] = useState([]); 
 
   // オーナー用パスワード
   const [isAuth, setIsAuth] = useState(false);
@@ -90,7 +90,6 @@ export default function OwnerDashboard() {
     }
   };
 
-  // アカウント招待URLの発行ロジック
   const handleInvite = () => {
     if (!newInviteEmail) return;
     const token = Math.random().toString(36).substring(2, 15);
@@ -114,7 +113,6 @@ export default function OwnerDashboard() {
     alert('招待URLを発行し、クリップボードにコピーしました！');
   };
 
-  // 店舗の強制ロック / 解除
   const toggleLock = (tenantId) => {
     const target = tenants.find(t => t.id === tenantId);
     const newStatus = target.status === 'active' ? 'locked' : 'active';
@@ -128,13 +126,11 @@ export default function OwnerDashboard() {
     saveOwnerData(updated, invitations, upgradeRequests, clientRequests);
   };
 
-  // 料金の変更
   const updatePrice = (tenantId, newPrice) => {
     const updated = tenants.map(t => t.id === tenantId ? { ...t, price: Number(newPrice) } : t);
     saveOwnerData(updated, invitations, upgradeRequests, clientRequests);
   };
 
-  // 機能の個別出し分け
   const toggleFeature = (tenantId, featureKey) => {
     const updated = tenants.map(t => {
       if (t.id === tenantId) {
@@ -146,13 +142,11 @@ export default function OwnerDashboard() {
     saveOwnerData(updated, invitations, upgradeRequests, clientRequests);
   };
 
-  // AIプロンプトの個別更新（入力中）
   const updateTenantPrompt = (tenantId, newPrompt) => {
     const updated = tenants.map(t => t.id === tenantId ? { ...t, aiPrompt: newPrompt } : t);
     setTenants(updated);
   };
 
-  // アップグレードの承認
   const handleApproveUpgrade = (reqId) => {
     if(!confirm('この機能のアップグレードを承認し、店舗に機能を解放しますか？')) return;
     const req = upgradeRequests.find(r => r.id === reqId);
@@ -170,17 +164,62 @@ export default function OwnerDashboard() {
     alert('機能を解放しました！');
   };
 
-  // アップグレードの却下
   const handleRejectUpgrade = (reqId) => {
     if(!confirm('この依頼を却下しますか？')) return;
     const updatedReqs = upgradeRequests.map(r => r.id === reqId ? { ...r, status: 'rejected' } : r);
     saveOwnerData(tenants, invitations, updatedReqs, clientRequests);
   };
 
-  // フィードバックの対応完了
   const handleCompleteFeedback = (fbId) => {
     const updatedFbs = clientRequests.map(fb => fb.id === fbId ? { ...fb, status: 'completed' } : fb);
     saveOwnerData(tenants, invitations, upgradeRequests, updatedFbs);
+  };
+
+  // ★ 新規: テナントの完全削除
+  const handleDeleteTenant = async (tenantId) => {
+    const target = tenants.find(t => t.id === tenantId);
+    const confirmMsg = `【超危険】テナント「${target.name}」を完全に削除しますか？\nこの操作は取り消せません。\n※現在Supabase上にある関連設定データ等も削除されます。`;
+    if (!confirm(confirmMsg)) return;
+
+    setIsSaving(true);
+    try {
+      // 該当テナントの設定データ（あれば）を削除
+      await supabase.from('app_settings').delete().eq('id', tenantId);
+      
+      const updatedTenants = tenants.filter(t => t.id !== tenantId);
+      await saveOwnerData(updatedTenants, invitations, upgradeRequests, clientRequests);
+      alert(`${target.name} を削除しました。`);
+    } catch (e) {
+      console.error(e);
+      alert('削除中にエラーが発生しました。');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ★ 新規: すべてのテスト注文データを削除
+  const handleClearAllOrders = async () => {
+    if (!confirm(`【超危険】\nこれまでにテストで入力した『すべての注文データ』を完全に削除します。\n本当によろしいですか？`)) return;
+    
+    const finalConfirm = prompt('確認のため、半角大文字で「DELETE」と入力してください。');
+    if (finalConfirm !== 'DELETE') {
+      alert('キャンセルしました。');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // idがnullではないデータ（つまり全件）を削除
+      const { error } = await supabase.from('orders').delete().not('id', 'is', null);
+      if (error) throw error;
+      
+      alert('すべての注文データをクリーンアップしました！');
+    } catch (e) {
+      console.error(e);
+      alert('注文データのクリーンアップに失敗しました。\n(Supabaseのポリシー設定によってはAPIからの全件削除がブロックされる場合があります。その場合はSupabaseのTable Editorから直接削除してください)');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const pendingUpgradesCount = upgradeRequests.filter(r => r.status === 'pending').length;
@@ -235,6 +274,13 @@ export default function OwnerDashboard() {
           <button onClick={() => setActiveTab('ai')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'ai' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}>
             <Bot size={16}/> AIプロンプト設定
           </button>
+
+          {/* ★ 新規: データ初期化・デンジャーゾーン */}
+          <div className="pt-8 pb-4">
+            <button onClick={() => setActiveTab('danger')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'danger' ? 'bg-red-900/30 text-red-500 border border-red-900/50' : 'text-gray-500 hover:bg-red-900/10 hover:text-red-500'}`}>
+              <AlertTriangle size={16}/> 危険な操作・初期化
+            </button>
+          </div>
         </nav>
         <div className="absolute bottom-8 left-8 text-[10px] text-gray-600 font-mono">
           System v1.4.0<br/>Secure Connection
@@ -249,6 +295,7 @@ export default function OwnerDashboard() {
             {activeTab === 'upgrades' && 'UPGRADE REQUESTS'}
             {activeTab === 'feedbacks' && 'CLIENT FEEDBACKS'}
             {activeTab === 'ai' && 'AI PROMPT SETTINGS'}
+            {activeTab === 'danger' && 'DANGER ZONE'}
           </h2>
           {isSaving && <span className="text-[#2D4B3E] text-sm animate-pulse font-mono flex items-center gap-2"><RefreshCw size={14} className="animate-spin"/> Syncing...</span>}
         </header>
@@ -309,12 +356,22 @@ export default function OwnerDashboard() {
                           </span>
                         </td>
                         <td className="px-6 py-5 text-right">
-                          <button 
-                            onClick={() => toggleLock(t.id)}
-                            className={`px-4 py-2 rounded-lg text-[10px] font-bold tracking-widest transition-all ${t.status === 'active' ? 'bg-red-600/10 text-red-500 hover:bg-red-600 hover:text-white border border-red-900' : 'bg-[#2D4B3E]/10 text-[#2D4B3E] hover:bg-[#2D4B3E] hover:text-white border border-[#2D4B3E]'}`}
-                          >
-                            {t.status === 'active' ? 'システムロック' : 'ロック解除'}
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button 
+                              onClick={() => toggleLock(t.id)}
+                              className={`px-4 py-2 rounded-lg text-[10px] font-bold tracking-widest transition-all ${t.status === 'active' ? 'bg-orange-600/10 text-orange-500 hover:bg-orange-600 hover:text-white border border-orange-900' : 'bg-[#2D4B3E]/10 text-[#2D4B3E] hover:bg-[#2D4B3E] hover:text-white border border-[#2D4B3E]'}`}
+                            >
+                              {t.status === 'active' ? 'ロックする' : 'ロック解除'}
+                            </button>
+                            {/* ★ 新規: 削除ボタン */}
+                            <button 
+                              onClick={() => handleDeleteTenant(t.id)}
+                              className="p-2 rounded-lg text-gray-500 hover:bg-red-900/30 hover:text-red-500 transition-all border border-transparent hover:border-red-900/50"
+                              title="テナントを削除"
+                            >
+                              <Trash2 size={16}/>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -485,6 +542,31 @@ export default function OwnerDashboard() {
                 className="flex items-center justify-center w-full md:w-auto gap-2 bg-[#2D4B3E] text-white px-10 py-4 rounded-xl font-bold text-[13px] tracking-widest hover:bg-[#1f352b] transition-all disabled:opacity-50 shadow-lg shadow-[#2D4B3E]/20"
               >
                 <Save size={16}/> {isSaving ? 'SAVING...' : 'SAVE ALL PROMPTS'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ★ 新規: データ初期化・デンジャーゾーン */}
+        {activeTab === 'danger' && (
+          <div className="space-y-6 animate-in fade-in">
+            <header className="mb-6 space-y-2">
+               <h3 className="text-[16px] font-bold text-red-500 flex items-center gap-2"><AlertTriangle size={18}/> 危険な操作 (データ初期化)</h3>
+               <p className="text-[12px] text-gray-500 leading-relaxed">
+                 システムの本稼働前などに、不要なテストデータを一括で消去するためのメニューです。<br/>一度削除したデータは復元できません。
+               </p>
+            </header>
+            
+            <div className="bg-[#1a1111] p-8 rounded-2xl border border-red-900/50 shadow-xl space-y-4">
+              <h4 className="text-white font-bold text-[14px]">すべてのテスト注文データを削除する</h4>
+              <p className="text-[12px] text-gray-400">現在データベースに登録されている、すべての店舗の「注文データ（履歴・伝票）」を完全に消去し、真っ新な状態に戻します。（店舗の設定は消えません）</p>
+              
+              <button 
+                onClick={handleClearAllOrders}
+                disabled={isSaving}
+                className="mt-4 flex items-center justify-center gap-2 bg-red-600 text-white px-8 py-3 rounded-xl font-bold text-[13px] tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-900/50 disabled:opacity-50"
+              >
+                <Trash2 size={16}/> 注文データを全件削除
               </button>
             </div>
           </div>
