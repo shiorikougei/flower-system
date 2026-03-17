@@ -2,7 +2,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
-import { Calendar, Package, ChevronRight, Store, Truck, Building2 } from 'lucide-react';
+// ★ AlertCircle を追加インポート
+import { Calendar, Package, ChevronRight, Store, Truck, Building2, AlertCircle } from 'lucide-react';
+// ★ 共通コンポーネントをインポート
+import TatefudaPreview from '@/components/TatefudaPreview';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 const GALLERY_CACHE_KEY = 'florix_gallery_cache';
@@ -37,7 +40,7 @@ export default function CorporateOrderPage() {
   
   const [itemPrice, setItemPrice] = useState('');
   const [flowerPurpose, setFlowerPurpose] = useState('');
-  const [flowerColor, setFlowerColor] = useState(''); // ★ これが不足していました
+  const [flowerColor, setFlowerColor] = useState(''); 
   const [flowerVibe, setFlowerVibe] = useState('');
   const [otherPurpose, setOtherPurpose] = useState('');
   const [otherVibe, setOtherVibe] = useState('');
@@ -138,8 +141,8 @@ export default function CorporateOrderPage() {
   ];
   const selectedTateOpt = tateOptions.find(opt => opt.id === tatePattern);
   const tateNeeds = selectedTateOpt?.needs || [];
-  const topPrefixText = isOsonae ? '御供' : '祝';
 
+  // ★設定データから「最低額」「最大額」「刻み幅」を使ってオプションを生成
   const getPriceOptions = () => {
     if (!flowerType) return [];
     let min = 2000, max = 50000, stepSize = 1000;
@@ -266,16 +269,20 @@ export default function CorporateOrderPage() {
           setShippingDate('');
         }
 
-        let size = selectedItemSettings?.defaultBoxSize || appSettings?.shippingSizes?.[0] || '80';
-        baseFee = Number(rateData['fee' + size]) || 0;
-
-        if (appSettings?.boxFeeConfig?.type === 'flat') {
-          boxFee = Number(appSettings.boxFeeConfig.flatFee) || 0;
-        } else if (appSettings?.boxFeeConfig?.type === 'price_based') {
-          const tiers = appSettings.boxFeeConfig.priceTiers || [];
-          const matchedTier = [...tiers].sort((a, b) => b.minPrice - a.minPrice).find(t => Number(itemPrice) >= t.minPrice);
-          boxFee = matchedTier ? Number(matchedTier.fee) : 0;
+        let size = selectedItemSettings?.defaultBoxSize;
+        if (!size) {
+          size = appSettings?.shippingSizes?.[0] || '80';
+          if (appSettings?.boxFeeConfig?.type === 'flat') {
+            boxFee = Number(appSettings.boxFeeConfig.flatFee) || 0;
+          } else if (appSettings?.boxFeeConfig?.type === 'price_based') {
+            const tiers = appSettings.boxFeeConfig.priceTiers || [];
+            const sortedTiers = [...tiers].sort((a, b) => b.minPrice - a.minPrice);
+            const matchedTier = sortedTiers.find(t => Number(itemPrice) >= t.minPrice);
+            boxFee = matchedTier ? Number(matchedTier.fee) : 0;
+          }
         }
+
+        baseFee = Number(rateData['fee' + size]) || 0;
 
         if (appSettings?.boxFeeConfig?.freeShippingThresholdEnabled && Number(itemPrice) >= (appSettings.boxFeeConfig.freeShippingThreshold || 15000)) {
           baseFee = 0; 
@@ -284,7 +291,8 @@ export default function CorporateOrderPage() {
         if (!selectedItemSettings?.excludeCoolBin && appSettings?.boxFeeConfig?.coolBinEnabled && selectedDate) {
           const dateObj = new Date(selectedDate);
           const mmdd = String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + String(dateObj.getDate()).padStart(2, '0');
-          const isCool = (appSettings.boxFeeConfig.coolBinPeriods || []).some(p => mmdd >= p.start && mmdd <= p.end);
+          const periods = appSettings.boxFeeConfig.coolBinPeriods || [];
+          const isCool = periods.some(p => mmdd >= p.start && mmdd <= p.end);
           if (isCool) coolFee = Number(rateData['cool' + size]) || 0;
         }
 
@@ -323,7 +331,6 @@ export default function CorporateOrderPage() {
   const tax = Math.floor(subTotal * 0.1);
   const totalAmount = subTotal + tax;
 
-  // ★ どの項目が未入力かを出力する賢いバリデーション
   const missingFields = useMemo(() => {
     const missing = [];
     if (step === 1) {
@@ -332,7 +339,7 @@ export default function CorporateOrderPage() {
     }
     if (step === 3) {
       if (!flowerPurpose) missing.push('ご用途');
-      if (!flowerColor) missing.push('カラー'); // ★追加
+      if (!flowerColor) missing.push('カラー'); 
       if (!flowerVibe) missing.push('イメージ');
       if (!itemPrice) missing.push('ご予算');
       if (cardType === 'メッセージカード' && !cardMessage) missing.push('メッセージ内容');
@@ -381,6 +388,18 @@ export default function CorporateOrderPage() {
     }
   };
 
+  // ★ 注意書きを店舗ごとに切り替えるためのデータ取得
+  const targetShopData = useMemo(() => {
+    if (selectedShop) {
+      return appSettings?.shops?.find(s => s.name === selectedShop) || appSettings?.shops?.[0] || {};
+    }
+    return appSettings?.shops?.[0] || {};
+  }, [selectedShop, appSettings]);
+
+  const pickupNote = targetShopData.pickupNote || 'ご来店予定日時に店舗までお越しください。';
+  const deliveryNote = targetShopData.deliveryNote || '交通状況により配達時間が前後する場合がございます。';
+  const shippingNote = targetShopData.shippingNote || '発送準備期間＋配送日数がかかります。交通状況により遅延する場合がございます。';
+
   if (isLoading) return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-sans"><div className="text-[#2D4B3E] font-bold tracking-widest animate-pulse">読み込み中...</div></div>;
 
   return (
@@ -410,6 +429,7 @@ export default function CorporateOrderPage() {
             <div className="space-y-6">
               <select className="w-full h-16 px-5 bg-white border border-[#EAEAEA] rounded-[20px] outline-none focus:border-[#2D4B3E] transition-all text-[15px] font-bold appearance-none shadow-sm" value={flowerType} onChange={(e) => { setFlowerType(e.target.value); setItemPrice(''); setIsBring('shop'); }}>
                 <option value="">種類を選択してください</option>
+                {/* ★ 店舗による商品の絞り込み（法人ポータルは基本的に全店舗の全商品が見える想定） */}
                 {appSettings?.flowerItems?.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
               </select>
 
@@ -466,7 +486,6 @@ export default function CorporateOrderPage() {
                 {flowerPurpose === 'その他' && <input type="text" placeholder="詳細を入力..." value={otherPurpose} onChange={(e) => setOtherPurpose(e.target.value)} className="w-full h-10 mt-2 bg-[#FBFAF9] px-4 rounded-lg outline-none text-sm border border-[#EAEAEA]" />}
               </div>
               
-              {/* ★ 追加: カラーの選択欄 */}
               <div className="space-y-3">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">カラー</label>
                 <select value={flowerColor} onChange={(e) => setFlowerColor(e.target.value)} className="w-full h-12 border-b border-[#EAEAEA] bg-transparent outline-none font-bold focus:border-[#2D4B3E] transition-all">
@@ -523,21 +542,18 @@ export default function CorporateOrderPage() {
                       {tateNeeds.includes('3a') && <input type="text" placeholder="③-1 会社名" value={tateInput3a} onChange={(e) => setTateInput3a(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       {tateNeeds.includes('3b') && <input type="text" placeholder="③-2 役職・氏名" value={tateInput3b} onChange={(e) => setTateInput3b(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       
-                      <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4">仕上がりプレビュー</p>
-                      <div className={`relative mx-auto border border-[#EAEAEA] shadow-lg bg-white flex flex-col items-center font-serif ${selectedTateOpt?.layout === 'horizontal' ? 'aspect-[1.414/1] w-full justify-center p-6' : 'aspect-[1/1.414] h-[300px] pt-6 px-4'}`}>
-                         <div className={`font-black ${isOsonae ? 'text-gray-500' : 'text-red-600'} ${selectedTateOpt?.layout === 'horizontal' ? 'text-[28px] mb-4' : 'text-[40px] mb-6 leading-none'}`}>
-                           {topPrefixText}
-                         </div>
-                         <div className={`flex w-full font-bold text-gray-900 ${selectedTateOpt?.layout === 'horizontal' ? 'flex-col items-center gap-2 text-[16px]' : 'flex-row-reverse justify-center gap-6 text-[18px]'}`}>
-                           {tatePattern.includes('p6') || tatePattern.includes('p8') ? (
-                             <><div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput2 || '宛名'}様</div>{!isOsonae && <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput1 || '内容'}</div>}<div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3 || '贈り主'}</div></>
-                           ) : tatePattern.includes('p4') ? (
-                             <><div className={`tracking-[0.3em] ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3a || '会社名'}</div><div className={`tracking-[0.3em] font-normal ${selectedTateOpt?.layout === 'horizontal' ? 'mt-4 text-[14px]' : 'mt-6 text-[14px] [writing-mode:vertical-rl]'}`}>{tateInput3b || '役職・氏名'}</div></>
-                           ) : (
-                             <>{!isOsonae && <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput1 || '内容'}</div>}<div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3 || '贈り主'}</div></>
-                           )}
-                         </div>
-                      </div>
+                      <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4 mb-2">仕上がりプレビュー</p>
+                      {/* ★ 立札の共通コンポーネントを呼び出す */}
+                      <TatefudaPreview 
+                        tatePattern={tatePattern}
+                        layout={selectedTateOpt?.layout}
+                        isOsonae={isOsonae}
+                        input1={tateInput1}
+                        input2={tateInput2}
+                        input3={tateInput3}
+                        input3a={tateInput3a}
+                        input3b={tateInput3b}
+                      />
                     </div>
                   )}
                 </div>
@@ -618,6 +634,12 @@ export default function CorporateOrderPage() {
                           <span className="font-bold">¥{parsedFee.toLocaleString()}</span>
                         </div>
                       )}
+                      {parsedPickupFee > 0 && (
+                        <div className="flex justify-between text-orange-600">
+                          <span>後日回収費:</span>
+                          <span className="font-bold">¥{parsedPickupFee.toLocaleString()}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between border-t border-[#EAEAEA] pt-3 mt-1">
                         <span className="text-[#2D4B3E]">消費税 (10%):</span>
                         <span className="font-bold text-[#2D4B3E]">¥{tax.toLocaleString()}</span>
@@ -634,10 +656,34 @@ export default function CorporateOrderPage() {
                 </div>
               </div>
 
+              {/* ★ 店舗ごとの注意書きを動的に表示 */}
               <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] font-sans space-y-4 mt-6">
-                <div className="flex items-center gap-3">
-                  <input type="checkbox" id="methodAgreed" checked={methodAgreed} onChange={(e) => setMethodAgreed(e.target.checked)} className="w-5 h-5 accent-[#2D4B3E] cursor-pointer rounded-md" />
-                  <label htmlFor="methodAgreed" className="text-[13px] font-bold underline cursor-pointer text-[#111111]">注文内容と注意事項に同意する</label>
+                <p className="text-[11px] font-bold text-[#111111] tracking-widest border-b border-[#EAEAEA] pb-2 flex items-center gap-1.5">
+                  <AlertCircle size={14}/>
+                  {receiveMethod === 'pickup' ? '店頭受取に関する注意事項' : receiveMethod === 'delivery' ? '自社配達に関する注意事項' : '配送に関する注意事項'}
+                </p>
+                <div className="text-[12px] text-[#555555] space-y-3 leading-relaxed font-medium whitespace-pre-wrap">
+                  {receiveMethod === 'pickup' && <p>{pickupNote}</p>}
+                  
+                  {receiveMethod === 'delivery' && (
+                    <>
+                      <p>{deliveryNote}</p>
+                      {parsedPickupFee > 0 && <p className="font-bold text-orange-600">※ご注文の商品には回収が必要な器（スタンド等）が含まれているため、回収費用(¥{parsedPickupFee.toLocaleString()})が加算されています。</p>}
+                    </>
+                  )}
+                  
+                  {receiveMethod === 'sagawa' && (
+                    <>
+                      <p>{shippingNote}</p>
+                      <div className="space-y-1 mt-4 pt-4 border-t border-[#EAEAEA]"><p className="font-bold text-[#111111]">■ 配送時の事故について</p><p>配送中の事故につきましては、当店では補償いたしかねます。商品到着時に不具合等が確認された場合は、直接業者へご連絡くださいますようお願いいたします。</p></div>
+                      <div className="space-y-1 pt-2"><p className="font-bold text-[#111111]">■ 日付・時間指定について</p><p>天候や離島への配送などの事情により、ご希望の日時に到着しない場合がございます。到着日指定の際は、日数に余裕をもってご注文ください。</p></div>
+                    </>
+                  )}
+                  
+                  <div className="flex items-center gap-3 mt-4 pt-4 border-t border-[#EAEAEA]">
+                    <input type="checkbox" id="methodAgreed" checked={methodAgreed} onChange={(e) => setMethodAgreed(e.target.checked)} className="w-5 h-5 accent-[#2D4B3E] cursor-pointer rounded-md" />
+                    <label htmlFor="methodAgreed" className="text-[13px] font-bold underline cursor-pointer text-[#111111]">上記の内容に同意する</label>
+                  </div>
                 </div>
               </div>
 
@@ -649,7 +695,6 @@ export default function CorporateOrderPage() {
         <div className="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-md border-t border-[#EAEAEA] py-4 px-6 z-50">
           <div className="max-w-[600px] mx-auto flex flex-col gap-2">
             
-            {/* ★ 強化されたナビゲーション（未入力項目の表示） */}
             {missingFields.length > 0 && (
               <div className="text-[10px] font-bold text-red-500 text-center animate-pulse">
                 未入力項目があります: {missingFields.join('、')}
