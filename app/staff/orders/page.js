@@ -1,12 +1,16 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
-// ★ アイコンに Printer, FileText, Send などを追加！
+// アイコン
 import { 
   MapPin, Calendar, ChevronRight, X, Clock, Truck, Store, Package, 
   CreditCard, MessageSquare, AlertCircle, ListChecks, User, Tag, 
   Printer, FileText, Send 
 } from 'lucide-react';
+
+// ★ キャッシュ用のキーを定義
+const ORDERS_CACHE_KEY = 'florix_orders_cache';
+const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -15,33 +19,59 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState(null); // モーダル用
   const [appSettings, setAppSettings] = useState(null);
 
-  // データ取得
+  // ★ キャッシュ対応のデータ取得ロジック
   useEffect(() => {
-    fetchOrders();
-    fetchSettings();
+    async function initData() {
+      // 1. まずは sessionStorage (キャッシュ) から復元して高速表示
+      const cachedOrders = sessionStorage.getItem(ORDERS_CACHE_KEY);
+      const cachedSettings = sessionStorage.getItem(SETTINGS_CACHE_KEY);
+
+      if (cachedOrders) {
+        try {
+          setOrders(JSON.parse(cachedOrders));
+          setIsLoading(false); // キャッシュがあれば即座にローディング解除
+        } catch (e) {
+          console.error("注文キャッシュのパース失敗", e);
+        }
+      }
+      if (cachedSettings) {
+        try {
+          setAppSettings(JSON.parse(cachedSettings));
+        } catch (e) {
+          console.error("設定キャッシュのパース失敗", e);
+        }
+      }
+
+      // 2. バックグラウンドで最新データを一括取得
+      try {
+        const [ordersRes, settingsRes] = await Promise.all([
+          supabase.from('orders').select('*').order('created_at', { ascending: false }),
+          supabase.from('app_settings').select('settings_data').eq('id', 'default').single()
+        ]);
+
+        if (ordersRes.error) throw ordersRes.error;
+        if (settingsRes.error && settingsRes.error.code !== 'PGRST116') throw settingsRes.error;
+
+        // 最新の注文データをセット＆キャッシュ更新
+        if (ordersRes.data) {
+          setOrders(ordersRes.data);
+          sessionStorage.setItem(ORDERS_CACHE_KEY, JSON.stringify(ordersRes.data));
+        }
+        
+        // 最新の設定データをセット＆キャッシュ更新
+        if (settingsRes.data?.settings_data) {
+          setAppSettings(settingsRes.data.settings_data);
+          sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(settingsRes.data.settings_data));
+        }
+      } catch (error) {
+        console.error('データ取得エラー:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    initData();
   }, []);
-
-  const fetchOrders = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
-      if (error) throw error;
-      setOrders(data || []);
-    } catch (error) {
-      console.error('受注データの取得に失敗しました', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchSettings = async () => {
-    try {
-      const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
-      if (data) setAppSettings(data.settings_data);
-    } catch (error) {
-      console.error('設定の取得に失敗しました', error);
-    }
-  };
 
   // ステータス更新処理
   const updateOrderStatus = async (id, newStatus) => {
@@ -54,7 +84,13 @@ export default function OrdersPage() {
       const { error } = await supabase.from('orders').update({ order_data: updatedData }).eq('id', id);
       if (error) throw error;
 
-      setOrders(orders.map(o => o.id === id ? { ...o, order_data: updatedData } : o));
+      // Stateを更新
+      const newOrders = orders.map(o => o.id === id ? { ...o, order_data: updatedData } : o);
+      setOrders(newOrders);
+      
+      // ★ 変更をキャッシュにも即座に同期（別ページ遷移からの戻りを速くするため）
+      sessionStorage.setItem(ORDERS_CACHE_KEY, JSON.stringify(newOrders));
+
       if (selectedOrder && selectedOrder.id === id) {
         setSelectedOrder({ ...selectedOrder, order_data: updatedData });
       }
@@ -176,7 +212,7 @@ export default function OrdersPage() {
                       </span>
                       {getReceiveMethodBadge(d.receiveMethod)}
 
-                      {/* ★ 一覧カードに発送日バッジを追加！ */}
+                      {/* 発送日バッジ */}
                       {d.receiveMethod === 'sagawa' && d.shippingDate && (
                         <span className="flex items-center gap-1 bg-green-50 text-green-700 px-3 py-1.5 rounded-lg text-[11px] font-bold border border-green-200 shadow-sm">
                           <Package size={12}/> 発送日: {d.shippingDate.split('-')[1]}/{d.shippingDate.split('-')[2]}
@@ -216,7 +252,7 @@ export default function OrdersPage() {
           
           <div className="bg-[#FBFAF9] w-full max-w-[800px] max-h-[90vh] rounded-[32px] shadow-2xl relative flex flex-col overflow-hidden">
             
-            {/* モーダルヘッダー（伝票ボタン追加） */}
+            {/* モーダルヘッダー */}
             <div className="bg-white border-b border-[#EAEAEA] p-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 z-10">
               <div>
                 <h2 className="text-[20px] font-black text-[#2D4B3E]">注文詳細</h2>
@@ -259,7 +295,7 @@ export default function OrdersPage() {
                 </select>
               </div>
 
-              {/* ★ 巨大な発送日パネル（業者配送の場合） */}
+              {/* 巨大な発送日パネル（業者配送の場合） */}
               {modalData.receiveMethod === 'sagawa' ? (
                 <div className="bg-green-50 border-2 border-green-200 p-6 md:p-8 rounded-[24px] flex flex-col md:flex-row items-center gap-6 justify-center text-center shadow-inner relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-bl-[64px] -mr-4 -mt-4"></div>
