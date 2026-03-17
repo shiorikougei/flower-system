@@ -18,8 +18,9 @@ export default function SettingsPage() {
   const [adminPassword, setAdminPassword] = useState('');
 
   // --- 1. 基本設定 ---
+  // ★ systemPassword（管理者パスワード）を追加（初期値は7777）
   const [generalConfig, setGeneralConfig] = useState({ 
-    appName: 'FLORIX', logoUrl: '', logoSize: 100, logoTransparent: false, slipBgUrl: '', slipBgOpacity: 50 
+    appName: 'FLORIX', logoUrl: '', logoSize: 100, logoTransparent: false, slipBgUrl: '', slipBgOpacity: 50, systemPassword: '7777'
   });
 
   // --- 2. ステータス設定 ---
@@ -41,7 +42,7 @@ export default function SettingsPage() {
     freeShippingThresholdEnabled: false, freeShippingThreshold: 15000, isBundleDiscount: true
   });
   
-  // 新規追加：時間帯枠の設定
+  // 時間帯枠の設定
   const [timeSlots, setTimeSlots] = useState({
     pickup: ['10:00-12:00', '12:00-15:00', '15:00-18:00'],
     delivery: ['9:00-12:00', '12:00-15:00', '15:00-18:00', '18:00-21:00'],
@@ -98,18 +99,15 @@ export default function SettingsPage() {
   useEffect(() => {
     async function loadSettings() {
       try {
-        // 1. まずは sessionStorage (キャッシュ) から復元して高速表示
         const cached = sessionStorage.getItem(SETTINGS_CACHE_KEY);
         if (cached) {
           applySettings(JSON.parse(cached));
         }
 
-        // 2. DBから最新データを取得（他の端末からの変更を検知するため）
         const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
         if (data?.settings_data) {
           const s = data.settings_data;
           applySettings(s);
-          // キャッシュを最新化
           sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(s));
         }
       } catch (e) { 
@@ -119,8 +117,10 @@ export default function SettingsPage() {
     loadSettings();
   }, []);
 
+  // ★ ログイン時のパスワードチェックをDBの設定値と照合するように変更
   const handleLogin = () => {
-    if (adminPassword === '7777') setIsAdmin(true);
+    const correctPassword = generalConfig.systemPassword || '7777';
+    if (adminPassword === correctPassword) setIsAdmin(true);
     else alert('パスワードが違います');
   };
 
@@ -131,9 +131,7 @@ export default function SettingsPage() {
       const payload = { generalConfig, statusConfig, shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReply, staffOrderConfig, timeSlots };
       await supabase.from('app_settings').upsert({ id: 'default', settings_data: payload });
       
-      // 保存成功時にキャッシュも更新する
       sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(payload));
-      
       alert('すべての設定を完璧に保存しました！');
     } catch (e) { 
       alert('保存失敗'); 
@@ -170,9 +168,12 @@ export default function SettingsPage() {
     <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 animate-in fade-in">
       <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Image size={20}/> 基本情報・ロゴ・伝票</h2>
       <div className="space-y-6">
-        <div className="space-y-1"><label className="text-[11px] font-bold text-[#999999]">アプリ名</label><input type="text" value={generalConfig.appName} onChange={(e)=>setGeneralConfig({...generalConfig, appName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 font-bold outline-none"/></div>
+        <div className="space-y-1">
+          <label className="text-[11px] font-bold text-[#999999]">アプリ名</label>
+          <input type="text" value={generalConfig.appName} onChange={(e)=>setGeneralConfig({...generalConfig, appName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E] transition-colors"/>
+        </div>
         
-        <div className="space-y-4 pt-4 border-t">
+        <div className="space-y-4 pt-4 border-t border-[#EAEAEA]">
           <label className="text-[11px] font-bold text-[#999999]">ロゴ画像</label>
           <input type="file" accept="image/*" onChange={(e)=>handleImg(e, 'logoUrl')} className="block w-full text-xs" />
           {generalConfig.logoUrl && (
@@ -184,7 +185,7 @@ export default function SettingsPage() {
           )}
         </div>
 
-        <div className="space-y-4 pt-4 border-t">
+        <div className="space-y-4 pt-4 border-t border-[#EAEAEA]">
           <label className="text-[11px] font-bold text-[#999999]">伝票用 背景（透かし柄）画像</label>
           <input type="file" accept="image/*" onChange={(e)=>handleImg(e, 'slipBgUrl')} className="block w-full text-xs" />
           {generalConfig.slipBgUrl && (
@@ -193,6 +194,27 @@ export default function SettingsPage() {
               <div className="flex justify-center border-t pt-4"><div className="relative w-48 h-32 bg-white border shadow-sm overflow-hidden flex flex-col justify-between p-2"><div className="absolute inset-0 z-0 grayscale-[30%] pointer-events-none" style={{ backgroundImage: `url(${generalConfig.slipBgUrl})`, backgroundSize: 'cover', opacity: generalConfig.slipBgOpacity / 100 }} /><span className="relative z-10 text-[10px] font-bold text-green-700">受 注 書</span></div></div>
             </div>
           )}
+        </div>
+
+        {/* ★ 追加：管理者パスワードの設定エリア */}
+        <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
+          <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><ShieldCheck size={16}/> システムセキュリティ</h3>
+          <div className="bg-red-50 p-6 rounded-2xl border border-red-100 space-y-3">
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-red-800">管理者パスワード (設定変更・注文削除用)</label>
+              <input 
+                type="text" 
+                value={generalConfig.systemPassword || ''} 
+                onChange={(e)=>setGeneralConfig({...generalConfig, systemPassword: e.target.value})} 
+                placeholder="7777"
+                className="w-full max-w-[240px] h-12 bg-white border border-red-200 rounded-xl px-4 font-bold outline-none focus:border-red-400 text-red-700 tracking-widest"
+              />
+            </div>
+            <p className="text-[10px] text-red-600 font-bold leading-relaxed">
+              ※初期値は「7777」です。<br/>
+              ※このパスワードを忘れると設定画面に入れなくなるため、変更した場合は必ず控えておいてください。
+            </p>
+          </div>
         </div>
 
       </div>
@@ -285,10 +307,8 @@ export default function SettingsPage() {
     <div className="space-y-8 animate-in fade-in">
       {flowerItems.map(item => (
         <div key={item.id} className="bg-white rounded-[32px] border p-8 shadow-sm relative space-y-6 text-left">
-          {/* ★ ゴミ箱アイコンを独立して配置 */}
           <button onClick={()=>setFlowerItems(flowerItems.filter(i=>i.id!==item.id))} className="absolute top-6 right-6 p-2 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"><Trash2 size={18}/></button>
           
-          {/* ★ 右側に余白（pr-12）を持たせてゴミ箱と被らないように修正 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-10 md:pr-12 pt-2">
             <input type="text" value={item.name} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, name:e.target.value}:i))} className="w-full h-12 bg-transparent border-b-2 text-[20px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="商品名" />
             <div className="flex items-center gap-2 justify-start md:justify-end">
@@ -654,6 +674,7 @@ export default function SettingsPage() {
         {activeTab === 'message' && renderMessageTab()}
       </main>
 
+      {/* ★ 注文ページで使っているのと同じ明朝体フォントやスクロールバー非表示のスタイルを適用 */}
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&display=swap');
         .font-serif { font-family: 'Noto Serif JP', serif; }
