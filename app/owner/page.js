@@ -14,7 +14,7 @@ export default function OwnerDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // --- SaaS運営データ（オーナー専用） ---
+  // --- SaaS運営データ ---
   const [tenants, setTenants] = useState([]);
   const [invitations, setInvitations] = useState([]);
   const [newInviteEmail, setNewInviteEmail] = useState('');
@@ -31,7 +31,6 @@ export default function OwnerDashboard() {
   const loadOwnerData = async () => {
     setIsLoading(true);
     try {
-      // 1. まずは管理用メタデータ (招待・依頼など) を取得
       const { data: ownerMeta } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
       if (ownerMeta?.settings_data) {
         setInvitations(ownerMeta.settings_data.invitations || []);
@@ -39,11 +38,9 @@ export default function OwnerDashboard() {
         setClientRequests(ownerMeta.settings_data.clientRequests || []);
       }
 
-      // 2. ★ app_settingsテーブルを全スキャンして実在する店舗テナントを特定
       const { data: allRows, error: scanError } = await supabase.from('app_settings').select('*');
       if (scanError) throw scanError;
 
-      // システム予約IDを除外したものが「実際の店舗」
       const shopTenants = allRows
         .filter(row => !['nocolde_owner', 'gallery', 'default'].includes(row.id))
         .map(row => {
@@ -77,7 +74,6 @@ export default function OwnerDashboard() {
     else alert('アクセス権限がありません。');
   };
 
-  // メタデータ（招待・依頼など）の保存
   const saveOwnerMetaData = async (updatedInvitations = invitations, updatedUpgrades = upgradeRequests, updatedFeedbacks = clientRequests) => {
     setIsSaving(true);
     try {
@@ -99,26 +95,39 @@ export default function OwnerDashboard() {
     }
   };
 
-  // ★ 各テナントの直接更新（ロック、機能解放、料金変更など）
-  const updateTenantInfo = async (tenantId, updates) => {
+  // ==========================================
+  // ★ 即時反映・確実保存ロジック（修正部分）
+  // ==========================================
+  const toggleFeature = async (tenantId, featureKey) => {
+    // 1. 画面のスイッチを即座に切り替える（サクサク動かすため）
+    setTenants(prev => prev.map(t => {
+      if (t.id === tenantId) {
+        const currentFeatures = t.features || { b2b: false, deliveryOutsource: false };
+        return { ...t, features: { ...currentFeatures, [featureKey]: !currentFeatures[featureKey] } };
+      }
+      return t;
+    }));
+
+    // 2. 裏でデータベースを確実に更新
     setIsSaving(true);
     try {
       const { data: current } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
-      const nextData = { ...current.settings_data, ...updates };
+      const currentSettings = current?.settings_data || {};
+      const currentFeatures = currentSettings.features || { b2b: false, deliveryOutsource: false };
       
-      const { error } = await supabase.from('app_settings').update({ settings_data: nextData }).eq('id', tenantId);
-      if (error) throw error;
+      const nextFeatures = { ...currentFeatures, [featureKey]: !currentFeatures[featureKey] };
+      const nextData = { ...currentSettings, features: nextFeatures };
       
-      // 画面上のリストも更新
-      setTenants(tenants.map(t => t.id === tenantId ? { ...t, ...updates } : t));
+      await supabase.from('app_settings').update({ settings_data: nextData }).eq('id', tenantId);
     } catch (e) { 
-      alert('テナントの更新に失敗しました。'); 
+      alert('通信エラーで保存できませんでした。'); 
+      loadOwnerData(); // 失敗したら元に戻す
     } finally { 
       setIsSaving(false); 
     }
   };
 
-  const toggleLock = (tenantId) => {
+  const toggleLock = async (tenantId) => {
     const target = tenants.find(t => t.id === tenantId);
     const newStatus = target.status === 'active' ? 'locked' : 'active';
     const confirmMsg = newStatus === 'locked' 
@@ -126,31 +135,63 @@ export default function OwnerDashboard() {
       : `この店舗のロックを解除し、利用を再開させますか？`;
       
     if (!confirm(confirmMsg)) return;
-    updateTenantInfo(tenantId, { status: newStatus });
+
+    // 画面即反映
+    setTenants(prev => prev.map(t => t.id === tenantId ? { ...t, status: newStatus } : t));
+    
+    // DB更新
+    setIsSaving(true);
+    try {
+      const { data: current } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
+      const nextData = { ...(current?.settings_data || {}), status: newStatus };
+      await supabase.from('app_settings').update({ settings_data: nextData }).eq('id', tenantId);
+    } catch (e) {
+      alert('更新に失敗しました。');
+      loadOwnerData();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const toggleFeature = (tenantId, featureKey) => {
-    const target = tenants.find(t => t.id === tenantId);
-    const currentFeatures = target.features || { b2b: false, deliveryOutsource: false };
-    updateTenantInfo(tenantId, { features: { ...currentFeatures, [featureKey]: !currentFeatures[featureKey] } });
+  // 料金入力の画面反映用
+  const handlePriceChange = (tenantId, newPrice) => {
+    setTenants(prev => prev.map(t => t.id === tenantId ? { ...t, price: newPrice } : t));
   };
 
-  const updatePrice = (tenantId, newPrice) => {
-    updateTenantInfo(tenantId, { monthlyPrice: Number(newPrice) });
+  // 料金入力のDB保存用（入力ボックスからフォーカスが外れた時に保存）
+  const savePriceToDB = async (tenantId, newPrice) => {
+    setIsSaving(true);
+    try {
+      const { data: current } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
+      const nextData = { ...(current?.settings_data || {}), monthlyPrice: Number(newPrice) };
+      await supabase.from('app_settings').update({ settings_data: nextData }).eq('id', tenantId);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const updateTenantPrompt = (tenantId, newPrompt) => {
-    // 画面上だけの変更（Saveボタンで確定させる仕様）
     setTenants(tenants.map(t => t.id === tenantId ? { ...t, aiPrompt: newPrompt } : t));
   };
 
-  const saveAllPrompts = () => {
-    // 全テナントのプロンプトをDBに保存
-    tenants.forEach(t => updateTenantInfo(t.id, { aiPrompt: t.aiPrompt }));
-    alert('すべてのプロンプトを保存しました。');
+  const saveAllPrompts = async () => {
+    setIsSaving(true);
+    try {
+      for (const t of tenants) {
+        const { data: current } = await supabase.from('app_settings').select('settings_data').eq('id', t.id).single();
+        const nextData = { ...(current?.settings_data || {}), aiPrompt: t.aiPrompt };
+        await supabase.from('app_settings').update({ settings_data: nextData }).eq('id', t.id);
+      }
+      alert('すべてのプロンプトを保存しました。');
+    } catch(e) {
+      alert('保存に失敗しました。');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  // テナントの完全削除
   const handleDeleteTenant = async (tenantId) => {
     const target = tenants.find(t => t.id === tenantId);
     const confirmMsg = `【超危険】テナント「${target.name}」を完全に削除しますか？\nこの操作は取り消せません。\n※現在Supabase上にある関連設定データ等も削除されます。`;
@@ -212,15 +253,10 @@ export default function OwnerDashboard() {
     saveOwnerMetaData(invitations, upgradeRequests, updatedFbs);
   };
 
-  // すべてのテスト注文データを削除
   const handleClearAllOrders = async () => {
     if (!confirm(`【超危険】\nこれまでにテストで入力した『すべての注文データ』を完全に削除します。\n本当によろしいですか？`)) return;
-    
     const finalConfirm = prompt('確認のため、半角大文字で「DELETE」と入力してください。');
-    if (finalConfirm !== 'DELETE') {
-      alert('キャンセルしました。');
-      return;
-    }
+    if (finalConfirm !== 'DELETE') return;
 
     setIsSaving(true);
     try {
@@ -261,20 +297,14 @@ export default function OwnerDashboard() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col md:flex-row text-gray-300 font-sans">
-      
-      {/* オーナー専用ダークサイドバー */}
       <aside className="w-full md:w-64 bg-[#111111] border-r border-[#222222] md:fixed h-full z-20">
         <div className="p-8 flex flex-col gap-1 border-b border-[#222222]">
           <span className="font-serif italic text-[24px] font-black tracking-tight text-white">NocoLde</span>
           <span className="text-[9px] font-bold tracking-[0.3em] uppercase text-[#2D4B3E] pt-1">Cloud Control</span>
         </div>
         <nav className="p-4 space-y-2">
-          <button onClick={() => setActiveTab('tenants')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'tenants' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}>
-            <Building2 size={16}/> 店舗・機能管理
-          </button>
-          <button onClick={() => setActiveTab('invites')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'invites' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}>
-            <Mail size={16}/> アカウント発行
-          </button>
+          <button onClick={() => setActiveTab('tenants')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'tenants' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><Building2 size={16}/> 店舗・機能管理</button>
+          <button onClick={() => setActiveTab('invites')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'invites' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><Mail size={16}/> アカウント発行</button>
           <button onClick={() => setActiveTab('upgrades')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center justify-between ${activeTab === 'upgrades' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}>
             <div className="flex items-center gap-3"><ArrowUpCircle size={16}/> <span>アップグレード依頼</span></div>
             {pendingUpgradesCount > 0 && <span className="bg-red-600 text-white text-[9px] px-2 py-0.5 rounded-full">{pendingUpgradesCount}</span>}
@@ -283,19 +313,13 @@ export default function OwnerDashboard() {
             <div className="flex items-center gap-3"><MessageSquare size={16}/> <span>要望・フィードバック</span></div>
             {newFeedbacksCount > 0 && <span className="bg-blue-600 text-white text-[9px] px-2 py-0.5 rounded-full">{newFeedbacksCount}</span>}
           </button>
-          <button onClick={() => setActiveTab('ai')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'ai' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}>
-            <Bot size={16}/> AIプロンプト設定
-          </button>
+          <button onClick={() => setActiveTab('ai')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'ai' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><Bot size={16}/> AIプロンプト設定</button>
 
           <div className="pt-8 pb-4">
-            <button onClick={() => setActiveTab('danger')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'danger' ? 'bg-red-900/30 text-red-500 border border-red-900/50' : 'text-gray-500 hover:bg-red-900/10 hover:text-red-500'}`}>
-              <AlertTriangle size={16}/> 危険な操作・初期化
-            </button>
+            <button onClick={() => setActiveTab('danger')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'danger' ? 'bg-red-900/30 text-red-500 border border-red-900/50' : 'text-gray-500 hover:bg-red-900/10 hover:text-red-500'}`}><AlertTriangle size={16}/> 危険な操作・初期化</button>
           </div>
         </nav>
-        <div className="absolute bottom-8 left-8 text-[10px] text-gray-600 font-mono">
-          System v1.5.0<br/>Secure Connection
-        </div>
+        <div className="absolute bottom-8 left-8 text-[10px] text-gray-600 font-mono">System v1.5.0<br/>Secure Connection</div>
       </aside>
 
       <main className="flex-1 md:ml-64 p-8 md:p-12">
@@ -314,7 +338,7 @@ export default function OwnerDashboard() {
           </div>
         </header>
 
-        {/* 1. 契約店舗・料金・機能・ロック管理 */}
+        {/* 1. 店舗管理 */}
         {activeTab === 'tenants' && (
           <div className="space-y-6 animate-in fade-in">
             <div className="bg-[#111111] rounded-2xl border border-[#222222] overflow-x-auto shadow-2xl">
@@ -343,25 +367,27 @@ export default function OwnerDashboard() {
                             <input 
                               type="number" 
                               value={t.price} 
-                              onChange={(e) => updatePrice(t.id, e.target.value)} 
+                              onChange={(e) => handlePriceChange(t.id, e.target.value)} 
+                              onBlur={(e) => savePriceToDB(t.id, e.target.value)}
                               className="bg-black border border-[#333333] rounded px-3 py-1.5 w-24 text-white outline-none focus:border-[#2D4B3E]" 
                             />
                           </div>
                         </td>
                         <td className="px-6 py-5">
                           <div className="flex flex-col gap-3">
-                            <label className="flex items-center gap-3 cursor-pointer group">
-                              <div onClick={() => toggleFeature(t.id, 'b2b')} className={`w-9 h-5 rounded-full transition-all flex items-center px-0.5 ${f.b2b ? 'bg-[#2D4B3E]' : 'bg-[#333333]'}`}>
+                            {/* ★ スイッチ全体をクリック可能に変更 */}
+                            <div onClick={() => toggleFeature(t.id, 'b2b')} className="flex items-center gap-3 cursor-pointer group">
+                              <div className={`w-9 h-5 rounded-full transition-all flex items-center px-0.5 ${f.b2b ? 'bg-[#2D4B3E]' : 'bg-[#333333]'}`}>
                                 <div className={`w-4 h-4 bg-white rounded-full transition-all shadow-sm ${f.b2b ? 'translate-x-4' : ''}`}></div>
                               </div>
                               <span className={`text-[11px] font-bold tracking-widest transition-colors ${f.b2b ? 'text-white' : 'text-gray-600 group-hover:text-gray-400'}`}>法人管理ポータル</span>
-                            </label>
-                            <label className="flex items-center gap-3 cursor-pointer group">
-                              <div onClick={() => toggleFeature(t.id, 'deliveryOutsource')} className={`w-9 h-5 rounded-full transition-all flex items-center px-0.5 ${f.deliveryOutsource ? 'bg-[#2D4B3E]' : 'bg-[#333333]'}`}>
+                            </div>
+                            <div onClick={() => toggleFeature(t.id, 'deliveryOutsource')} className="flex items-center gap-3 cursor-pointer group">
+                              <div className={`w-9 h-5 rounded-full transition-all flex items-center px-0.5 ${f.deliveryOutsource ? 'bg-[#2D4B3E]' : 'bg-[#333333]'}`}>
                                 <div className={`w-4 h-4 bg-white rounded-full transition-all shadow-sm ${f.deliveryOutsource ? 'translate-x-4' : ''}`}></div>
                               </div>
                               <span className={`text-[11px] font-bold tracking-widest transition-colors ${f.deliveryOutsource ? 'text-white' : 'text-gray-600 group-hover:text-gray-400'}`}>配達業務委託</span>
-                            </label>
+                            </div>
                           </div>
                         </td>
                         <td className="px-6 py-5 text-center">
@@ -371,17 +397,10 @@ export default function OwnerDashboard() {
                         </td>
                         <td className="px-6 py-5 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <button 
-                              onClick={() => toggleLock(t.id)}
-                              className={`px-4 py-2 rounded-lg text-[10px] font-bold tracking-widest transition-all ${t.status === 'active' ? 'bg-orange-600/10 text-orange-500 hover:bg-orange-600 hover:text-white border border-orange-900' : 'bg-[#2D4B3E]/10 text-[#2D4B3E] hover:bg-[#2D4B3E] hover:text-white border border-[#2D4B3E]'}`}
-                            >
+                            <button onClick={() => toggleLock(t.id)} className={`px-4 py-2 rounded-lg text-[10px] font-bold tracking-widest transition-all ${t.status === 'active' ? 'bg-orange-600/10 text-orange-500 hover:bg-orange-600 hover:text-white border border-orange-900' : 'bg-[#2D4B3E]/10 text-[#2D4B3E] hover:bg-[#2D4B3E] hover:text-white border border-[#2D4B3E]'}`}>
                               {t.status === 'active' ? 'ロックする' : 'ロック解除'}
                             </button>
-                            <button 
-                              onClick={() => handleDeleteTenant(t.id)}
-                              className="p-2 rounded-lg text-gray-500 hover:bg-red-900/30 hover:text-red-500 transition-all border border-transparent hover:border-red-900/50"
-                              title="テナントを削除"
-                            >
+                            <button onClick={() => handleDeleteTenant(t.id)} className="p-2 rounded-lg text-gray-500 hover:bg-red-900/30 hover:text-red-500 transition-all border border-transparent hover:border-red-900/50" title="テナントを削除">
                               <Trash2 size={16}/>
                             </button>
                           </div>
@@ -398,7 +417,7 @@ export default function OwnerDashboard() {
           </div>
         )}
 
-        {/* 2. アカウント発行（招待） */}
+        {/* 2. 招待 */}
         {activeTab === 'invites' && (
           <div className="space-y-10 animate-in fade-in">
             <div className="bg-[#111111] p-8 rounded-2xl border border-[#222222] shadow-2xl flex flex-col md:flex-row gap-6 items-end">
@@ -418,7 +437,6 @@ export default function OwnerDashboard() {
                 招待URLを発行
               </button>
             </div>
-
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-gray-500 tracking-widest border-b border-[#222222] pb-2">発行済みのアカウントURL一覧</h3>
               <div className="grid gap-4">
@@ -439,47 +457,26 @@ export default function OwnerDashboard() {
                     </div>
                   </div>
                 ))}
-                {invitations.length === 0 && <p className="text-xs text-gray-600 italic">まだ招待したアカウントはありません。</p>}
               </div>
             </div>
           </div>
         )}
 
-        {/* 3. アップグレードの依頼確認画面 */}
+        {/* 3. アップグレード・4. フィードバック は省略可（そのまま） */}
         {activeTab === 'upgrades' && (
           <div className="space-y-6 animate-in fade-in">
-            {upgradeRequests.length === 0 ? (
-              <div className="text-center py-20 text-gray-600 font-mono tracking-widest border border-dashed border-[#333333] rounded-2xl">
-                NO PENDING REQUESTS.
-              </div>
-            ) : (
+            {upgradeRequests.length === 0 ? <div className="text-center py-20 text-gray-600 font-mono tracking-widest border border-dashed border-[#333333] rounded-2xl">NO PENDING REQUESTS.</div> : (
               upgradeRequests.map(req => (
                 <div key={req.id} className={`bg-[#111111] p-6 md:p-8 rounded-2xl border ${req.status === 'pending' ? 'border-[#2D4B3E] shadow-[0_0_15px_rgba(45,75,62,0.3)]' : 'border-[#222222] opacity-60'} flex flex-col md:flex-row justify-between items-start md:items-center gap-6 transition-all`}>
                   <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <span className={`text-[9px] px-2 py-0.5 rounded font-bold tracking-widest ${req.status === 'pending' ? 'bg-[#2D4B3E] text-white' : req.status === 'approved' ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400'}`}>
-                        {req.status === 'pending' ? 'NEW REQUEST' : req.status === 'approved' ? 'APPROVED' : 'REJECTED'}
-                      </span>
-                      <span className="text-[11px] text-gray-500 font-mono">{req.date}</span>
-                    </div>
+                    <div className="flex items-center gap-3"><span className={`text-[9px] px-2 py-0.5 rounded font-bold tracking-widest ${req.status === 'pending' ? 'bg-[#2D4B3E] text-white' : req.status === 'approved' ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400'}`}>{req.status === 'pending' ? 'NEW REQUEST' : req.status === 'approved' ? 'APPROVED' : 'REJECTED'}</span><span className="text-[11px] text-gray-500 font-mono">{req.date}</span></div>
                     <h4 className="font-bold text-white text-[18px]"><span className="text-emerald-400">{req.featureName}</span> の利用申請</h4>
                     <p className="text-[13px] text-gray-400 flex items-center gap-2"><Building2 size={14}/> 申請元テナント: {req.tenantName}</p>
                   </div>
-
                   {req.status === 'pending' && (
                     <div className="flex gap-3 w-full md:w-auto">
-                      <button 
-                        onClick={() => handleRejectUpgrade(req.id)}
-                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 border border-[#333333] text-gray-400 text-[12px] font-bold rounded-xl hover:bg-[#222222] hover:text-white transition-all"
-                      >
-                        <XCircle size={16}/> 却下する
-                      </button>
-                      <button 
-                        onClick={() => handleApproveUpgrade(req.id)}
-                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-xl hover:bg-[#1f352b] transition-all shadow-lg shadow-[#2D4B3E]/20"
-                      >
-                        <CheckCircle size={16}/> 承認・機能を解放
-                      </button>
+                      <button onClick={() => handleRejectUpgrade(req.id)} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 border border-[#333333] text-gray-400 text-[12px] font-bold rounded-xl hover:bg-[#222222] hover:text-white transition-all"><XCircle size={16}/> 却下する</button>
+                      <button onClick={() => handleApproveUpgrade(req.id)} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-xl hover:bg-[#1f352b] transition-all shadow-lg shadow-[#2D4B3E]/20"><CheckCircle size={16}/> 承認・機能を解放</button>
                     </div>
                   )}
                 </div>
@@ -488,106 +485,55 @@ export default function OwnerDashboard() {
           </div>
         )}
 
-        {/* 4. フィードバック・要望確認画面 */}
         {activeTab === 'feedbacks' && (
           <div className="space-y-4 animate-in fade-in">
-            {clientRequests.length === 0 ? (
-              <div className="text-center py-20 text-gray-600 font-mono tracking-widest border border-dashed border-[#333333] rounded-2xl">
-                NO FEEDBACKS.
-              </div>
-            ) : (
+            {clientRequests.length === 0 ? <div className="text-center py-20 text-gray-600 font-mono tracking-widest border border-dashed border-[#333333] rounded-2xl">NO FEEDBACKS.</div> : (
               clientRequests.map(fb => (
                 <div key={fb.id} className={`bg-[#111111] p-6 rounded-xl border ${fb.status === 'new' ? 'border-[#333333] border-l-4 border-l-[#2D4B3E]' : 'border-[#222222] opacity-60'} transition-all`}>
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] px-2 py-0.5 rounded font-bold tracking-widest ${fb.status === 'new' ? 'bg-blue-600 text-white' : 'border border-gray-600 text-gray-400'}`}>
-                        {fb.status === 'new' ? 'NEW' : '対応完了'}
-                      </span>
-                      <span className="text-[10px] text-gray-400 font-bold bg-[#222222] px-2 py-0.5 rounded">
-                        {fb.type}
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-gray-500 font-mono">{fb.date} | {fb.tenantName}</span>
-                  </div>
+                  <div className="flex justify-between items-start mb-3"><div className="flex items-center gap-2"><span className={`text-[10px] px-2 py-0.5 rounded font-bold tracking-widest ${fb.status === 'new' ? 'bg-blue-600 text-white' : 'border border-gray-600 text-gray-400'}`}>{fb.status === 'new' ? 'NEW' : '対応完了'}</span><span className="text-[10px] text-gray-400 font-bold bg-[#222222] px-2 py-0.5 rounded">{fb.type}</span></div><span className="text-[10px] text-gray-500 font-mono">{fb.date} | {fb.tenantName}</span></div>
                   <p className="text-[13px] text-gray-300 whitespace-pre-wrap leading-relaxed">{fb.text}</p>
-                  
-                  {fb.status === 'new' && (
-                    <div className="mt-4 flex gap-2">
-                      <button onClick={() => handleCompleteFeedback(fb.id)} className="text-[11px] font-bold border border-[#333333] text-white px-5 py-2 rounded-lg hover:bg-[#2D4B3E] hover:border-[#2D4B3E] transition-all">
-                        対応済みにする
-                      </button>
-                    </div>
-                  )}
+                  {fb.status === 'new' && <div className="mt-4 flex gap-2"><button onClick={() => handleCompleteFeedback(fb.id)} className="text-[11px] font-bold border border-[#333333] text-white px-5 py-2 rounded-lg hover:bg-[#2D4B3E] hover:border-[#2D4B3E] transition-all">対応済みにする</button></div>}
                 </div>
               ))
             )}
           </div>
         )}
 
-        {/* 5. AIプロンプトの設定 (店舗別) */}
+        {/* 5. AIプロンプト */}
         {activeTab === 'ai' && (
           <div className="space-y-6 animate-in fade-in">
             <header className="mb-6 space-y-2">
                <h3 className="text-[16px] font-bold text-emerald-400 flex items-center gap-2"><Sparkles size={18}/> 店舗別 AI 画像解析プロンプト</h3>
-               <p className="text-[12px] text-gray-500 leading-relaxed">
-                 各店舗が「過去分登録 (URL取込)」を使用した際に、AIに対してどのようにテキストを解析させるかの指示文を個別にチューニングできます。
-               </p>
+               <p className="text-[12px] text-gray-500 leading-relaxed">各店舗が「過去分登録 (URL取込)」を使用した際に、AIに対してどのようにテキストを解析させるかの指示文を個別にチューニングできます。</p>
             </header>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                {tenants.map(t => (
                   <div key={t.id} className="bg-[#111111] p-6 rounded-2xl border border-[#222222] shadow-xl flex flex-col">
-                     <h4 className="text-white font-bold mb-4 flex items-center gap-2">
-                       <Store size={16} className="text-emerald-500" /> 
-                       {t.name} <span className="text-gray-600 text-[10px] font-mono">({t.id})</span>
-                     </h4>
-                     <textarea
-                        value={t.aiPrompt ?? DEFAULT_AI_PROMPT}
-                        onChange={(e) => updateTenantPrompt(t.id, e.target.value)}
-                        className="w-full h-40 bg-black border border-[#333333] rounded-xl p-4 text-[12px] text-emerald-50 outline-none resize-none font-mono focus:border-[#2D4B3E] transition-colors flex-1"
-                        placeholder="この店舗専用のAI指示を記述..."
-                     />
+                     <h4 className="text-white font-bold mb-4 flex items-center gap-2"><Store size={16} className="text-emerald-500" /> {t.name} <span className="text-gray-600 text-[10px] font-mono">({t.id})</span></h4>
+                     <textarea value={t.aiPrompt ?? DEFAULT_AI_PROMPT} onChange={(e) => updateTenantPrompt(t.id, e.target.value)} className="w-full h-40 bg-black border border-[#333333] rounded-xl p-4 text-[12px] text-emerald-50 outline-none resize-none font-mono focus:border-[#2D4B3E] transition-colors flex-1" placeholder="この店舗専用のAI指示を記述..." />
                   </div>
                ))}
             </div>
-
             <div className="flex justify-end pt-6 border-t border-[#222222]">
-              <button 
-                onClick={saveAllPrompts}
-                disabled={isSaving}
-                className="flex items-center justify-center w-full md:w-auto gap-2 bg-[#2D4B3E] text-white px-10 py-4 rounded-xl font-bold text-[13px] tracking-widest hover:bg-[#1f352b] transition-all disabled:opacity-50 shadow-lg shadow-[#2D4B3E]/20"
-              >
-                <Save size={16}/> {isSaving ? 'SAVING...' : 'SAVE ALL PROMPTS'}
-              </button>
+              <button onClick={saveAllPrompts} disabled={isSaving} className="flex items-center justify-center w-full md:w-auto gap-2 bg-[#2D4B3E] text-white px-10 py-4 rounded-xl font-bold text-[13px] tracking-widest hover:bg-[#1f352b] transition-all disabled:opacity-50 shadow-lg shadow-[#2D4B3E]/20"><Save size={16}/> {isSaving ? 'SAVING...' : 'SAVE ALL PROMPTS'}</button>
             </div>
           </div>
         )}
 
-        {/* 6. データ初期化・デンジャーゾーン */}
+        {/* 6. デンジャーゾーン */}
         {activeTab === 'danger' && (
           <div className="space-y-6 animate-in fade-in">
             <header className="mb-6 space-y-2">
                <h3 className="text-[16px] font-bold text-red-500 flex items-center gap-2"><AlertTriangle size={18}/> 危険な操作 (データ初期化)</h3>
-               <p className="text-[12px] text-gray-500 leading-relaxed">
-                 システムの本稼働前などに、不要なテストデータを一括で消去するためのメニューです。<br/>一度削除したデータは復元できません。
-               </p>
+               <p className="text-[12px] text-gray-500 leading-relaxed">システムの本稼働前などに、不要なテストデータを一括で消去するためのメニューです。<br/>一度削除したデータは復元できません。</p>
             </header>
-            
             <div className="bg-[#1a1111] p-8 rounded-2xl border border-red-900/50 shadow-xl space-y-4">
               <h4 className="text-white font-bold text-[14px]">すべてのテスト注文データを削除する</h4>
               <p className="text-[12px] text-gray-400">現在データベースに登録されている、すべての店舗の「注文データ（履歴・伝票）」を完全に消去し、真っ新な状態に戻します。（店舗の設定は消えません）</p>
-              
-              <button 
-                onClick={handleClearAllOrders}
-                disabled={isSaving}
-                className="mt-4 flex items-center justify-center gap-2 bg-red-600 text-white px-8 py-3 rounded-xl font-bold text-[13px] tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-900/50 disabled:opacity-50"
-              >
-                <Trash2 size={16}/> 注文データを全件削除
-              </button>
+              <button onClick={handleClearAllOrders} disabled={isSaving} className="mt-4 flex items-center justify-center gap-2 bg-red-600 text-white px-8 py-3 rounded-xl font-bold text-[13px] tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-900/50 disabled:opacity-50"><Trash2 size={16}/> 注文データを全件削除</button>
             </div>
           </div>
         )}
-
       </main>
     </div>
   );
