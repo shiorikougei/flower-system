@@ -27,7 +27,10 @@ export default function OwnerDashboard() {
   const [isAuth, setIsAuth] = useState(false);
   const [password, setPassword] = useState('');
 
-  // ★ データベースから「実在する全てのテナント」を取得する関数
+  // ★ 料金保存中のローディング状態を管理
+  const [savingPriceId, setSavingPriceId] = useState(null);
+
+  // ★ データベースから「実在する全てのテナント」を取得
   const loadOwnerData = async () => {
     setIsLoading(true);
     try {
@@ -95,11 +98,7 @@ export default function OwnerDashboard() {
     }
   };
 
-  // ==========================================
-  // ★ 即時反映・確実保存ロジック（修正部分）
-  // ==========================================
   const toggleFeature = async (tenantId, featureKey) => {
-    // 1. 画面のスイッチを即座に切り替える（サクサク動かすため）
     setTenants(prev => prev.map(t => {
       if (t.id === tenantId) {
         const currentFeatures = t.features || { b2b: false, deliveryOutsource: false };
@@ -108,7 +107,6 @@ export default function OwnerDashboard() {
       return t;
     }));
 
-    // 2. 裏でデータベースを確実に更新
     setIsSaving(true);
     try {
       const { data: current } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
@@ -121,7 +119,7 @@ export default function OwnerDashboard() {
       await supabase.from('app_settings').update({ settings_data: nextData }).eq('id', tenantId);
     } catch (e) { 
       alert('通信エラーで保存できませんでした。'); 
-      loadOwnerData(); // 失敗したら元に戻す
+      loadOwnerData();
     } finally { 
       setIsSaving(false); 
     }
@@ -136,10 +134,8 @@ export default function OwnerDashboard() {
       
     if (!confirm(confirmMsg)) return;
 
-    // 画面即反映
     setTenants(prev => prev.map(t => t.id === tenantId ? { ...t, status: newStatus } : t));
     
-    // DB更新
     setIsSaving(true);
     try {
       const { data: current } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
@@ -153,22 +149,24 @@ export default function OwnerDashboard() {
     }
   };
 
-  // 料金入力の画面反映用
+  // ★ 料金の画面入力用
   const handlePriceChange = (tenantId, newPrice) => {
     setTenants(prev => prev.map(t => t.id === tenantId ? { ...t, price: newPrice } : t));
   };
 
-  // 料金入力のDB保存用（入力ボックスからフォーカスが外れた時に保存）
-  const savePriceToDB = async (tenantId, newPrice) => {
-    setIsSaving(true);
+  // ★ 「更新」ボタンを押したときのデータベース保存用
+  const handleSavePrice = async (tenantId, newPrice) => {
+    setSavingPriceId(tenantId);
     try {
       const { data: current } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
       const nextData = { ...(current?.settings_data || {}), monthlyPrice: Number(newPrice) };
       await supabase.from('app_settings').update({ settings_data: nextData }).eq('id', tenantId);
+      alert('月額料金を更新しました！');
     } catch (e) {
       console.error(e);
+      alert('料金の更新に失敗しました。');
     } finally {
-      setIsSaving(false);
+      setSavingPriceId(null);
     }
   };
 
@@ -236,7 +234,7 @@ export default function OwnerDashboard() {
     if(!confirm('この機能のアップグレードを承認し、店舗に機能を解放しますか？')) return;
     const req = upgradeRequests.find(r => r.id === reqId);
     
-    toggleFeature(req.tenantId, req.featureKey); // 機能解放
+    toggleFeature(req.tenantId, req.featureKey);
     const updatedReqs = upgradeRequests.map(r => r.id === reqId ? { ...r, status: 'approved' } : r);
     saveOwnerMetaData(invitations, updatedReqs, clientRequests);
     alert('機能を解放しました！');
@@ -276,18 +274,16 @@ export default function OwnerDashboard() {
   if (!isAuth) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center font-sans">
-        <div className="bg-[#111111] p-10 rounded-2xl border border-[#333333] shadow-2xl w-96 space-y-6">
-          <div className="text-center space-y-2">
-            <h1 className="text-2xl font-black text-white tracking-widest font-serif italic">NocoLde</h1>
-            <p className="text-[10px] text-[#2D4B3E] tracking-[0.3em]">SUPER ADMIN CONSOLE</p>
-          </div>
+        <div className="bg-[#111111] p-10 rounded-2xl border border-[#333333] shadow-2xl w-96 space-y-6 text-center">
+          <h1 className="text-2xl font-black text-white tracking-widest font-serif italic">NocoLde</h1>
+          <p className="text-[10px] text-[#2D4B3E] tracking-[0.3em]">SUPER ADMIN</p>
           <input 
             type="password" 
-            placeholder="ACCESS KEY" 
             value={password} 
             onChange={(e) => setPassword(e.target.value)} 
-            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-            className="w-full bg-black border border-[#333333] rounded-lg px-4 py-3 text-white font-mono text-center tracking-widest focus:border-[#2D4B3E] outline-none transition-all"
+            onKeyDown={(e)=>e.key==='Enter'&&handleLogin()} 
+            className="w-full bg-black border border-[#333333] rounded-lg px-4 py-3 text-white text-center outline-none focus:border-[#2D4B3E]" 
+            placeholder="PASSWORD" 
           />
           <button onClick={handleLogin} className="w-full bg-[#2D4B3E] hover:bg-[#1f352b] text-white font-bold py-3 rounded-lg tracking-widest transition-all">LOGIN</button>
         </div>
@@ -319,7 +315,6 @@ export default function OwnerDashboard() {
             <button onClick={() => setActiveTab('danger')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'danger' ? 'bg-red-900/30 text-red-500 border border-red-900/50' : 'text-gray-500 hover:bg-red-900/10 hover:text-red-500'}`}><AlertTriangle size={16}/> 危険な操作・初期化</button>
           </div>
         </nav>
-        <div className="absolute bottom-8 left-8 text-[10px] text-gray-600 font-mono">System v1.5.0<br/>Secure Connection</div>
       </aside>
 
       <main className="flex-1 md:ml-64 p-8 md:p-12">
@@ -338,15 +333,14 @@ export default function OwnerDashboard() {
           </div>
         </header>
 
-        {/* 1. 店舗管理 */}
         {activeTab === 'tenants' && (
           <div className="space-y-6 animate-in fade-in">
             <div className="bg-[#111111] rounded-2xl border border-[#222222] overflow-x-auto shadow-2xl">
-              <table className="w-full text-left min-w-[800px]">
+              <table className="w-full text-left min-w-[850px]">
                 <thead className="bg-[#1a1a1a] border-b border-[#333333] text-[10px] font-bold text-gray-400 tracking-widest uppercase">
                   <tr>
                     <th className="px-6 py-4">店舗名 (ID)</th>
-                    <th className="px-6 py-4">月額料金</th>
+                    <th className="px-6 py-4">月額料金設定</th>
                     <th className="px-6 py-4">機能の個別解放</th>
                     <th className="px-6 py-4 text-center">ステータス</th>
                     <th className="px-6 py-4 text-right">強制操作</th>
@@ -362,20 +356,26 @@ export default function OwnerDashboard() {
                           <div className="text-[10px] text-gray-500 font-mono mt-1">{t.id}</div>
                         </td>
                         <td className="px-6 py-5">
+                          {/* ★ 金額変更 ＋ 更新ボタン */}
                           <div className="flex items-center gap-2">
                             <span className="text-gray-500">¥</span>
                             <input 
                               type="number" 
                               value={t.price} 
                               onChange={(e) => handlePriceChange(t.id, e.target.value)} 
-                              onBlur={(e) => savePriceToDB(t.id, e.target.value)}
-                              className="bg-black border border-[#333333] rounded px-3 py-1.5 w-24 text-white outline-none focus:border-[#2D4B3E]" 
+                              className="bg-black border border-[#333333] rounded px-3 py-1.5 w-24 text-white outline-none focus:border-[#2D4B3E] font-mono" 
                             />
+                            <button 
+                              onClick={() => handleSavePrice(t.id, t.price)}
+                              disabled={savingPriceId === t.id}
+                              className="px-3 py-1.5 bg-[#2D4B3E] text-white text-[10px] font-bold rounded hover:bg-[#1f352b] transition-all disabled:opacity-50"
+                            >
+                              {savingPriceId === t.id ? '更新中...' : '更新'}
+                            </button>
                           </div>
                         </td>
                         <td className="px-6 py-5">
                           <div className="flex flex-col gap-3">
-                            {/* ★ スイッチ全体をクリック可能に変更 */}
                             <div onClick={() => toggleFeature(t.id, 'b2b')} className="flex items-center gap-3 cursor-pointer group">
                               <div className={`w-9 h-5 rounded-full transition-all flex items-center px-0.5 ${f.b2b ? 'bg-[#2D4B3E]' : 'bg-[#333333]'}`}>
                                 <div className={`w-4 h-4 bg-white rounded-full transition-all shadow-sm ${f.b2b ? 'translate-x-4' : ''}`}></div>
@@ -397,10 +397,17 @@ export default function OwnerDashboard() {
                         </td>
                         <td className="px-6 py-5 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <button onClick={() => toggleLock(t.id)} className={`px-4 py-2 rounded-lg text-[10px] font-bold tracking-widest transition-all ${t.status === 'active' ? 'bg-orange-600/10 text-orange-500 hover:bg-orange-600 hover:text-white border border-orange-900' : 'bg-[#2D4B3E]/10 text-[#2D4B3E] hover:bg-[#2D4B3E] hover:text-white border border-[#2D4B3E]'}`}>
+                            <button 
+                              onClick={() => toggleLock(t.id)}
+                              className={`px-4 py-2 rounded-lg text-[10px] font-bold tracking-widest transition-all ${t.status === 'active' ? 'bg-orange-600/10 text-orange-500 hover:bg-orange-600 hover:text-white border border-orange-900' : 'bg-[#2D4B3E]/10 text-[#2D4B3E] hover:bg-[#2D4B3E] hover:text-white border border-[#2D4B3E]'}`}
+                            >
                               {t.status === 'active' ? 'ロックする' : 'ロック解除'}
                             </button>
-                            <button onClick={() => handleDeleteTenant(t.id)} className="p-2 rounded-lg text-gray-500 hover:bg-red-900/30 hover:text-red-500 transition-all border border-transparent hover:border-red-900/50" title="テナントを削除">
+                            <button 
+                              onClick={() => handleDeleteTenant(t.id)}
+                              className="p-2 rounded-lg text-gray-500 hover:bg-red-900/30 hover:text-red-500 transition-all border border-transparent hover:border-red-900/50"
+                              title="テナントを削除"
+                            >
                               <Trash2 size={16}/>
                             </button>
                           </div>
@@ -409,7 +416,7 @@ export default function OwnerDashboard() {
                     );
                   })}
                   {tenants.length === 0 && !isLoading && (
-                    <tr><td colSpan="5" className="px-6 py-12 text-center text-gray-600 italic">登録されている店舗はありません。</td></tr>
+                    <tr><td colSpan="5" className="px-6 py-12 text-center text-gray-600 italic font-mono">No tenants found in database.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -457,6 +464,7 @@ export default function OwnerDashboard() {
                     </div>
                   </div>
                 ))}
+                {invitations.length === 0 && <p className="text-xs text-gray-600 italic">まだ招待したアカウントはありません。</p>}
               </div>
             </div>
           </div>
