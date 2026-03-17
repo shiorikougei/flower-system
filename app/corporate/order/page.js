@@ -1,20 +1,20 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/utils/supabase'; // パスは適宜調整してください
+import { useRouter, useParams } from 'next/navigation';
+import { supabase } from '../../../utils/supabase'; // パス階層に合わせて適宜調整してください
 import { Calendar, Package, ChevronRight, Store, Truck, Building2, AlertCircle } from 'lucide-react';
 
-// ★ 共通コンポーネントをインポート
+// ★ 相対パスで共通コンポーネントをインポート
 import TatefudaPreview from '../../../components/TatefudaPreview';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 const GALLERY_CACHE_KEY = 'florix_gallery_cache';
 
 export default function CorporateOrderPage() {
-  const params = useParams();
   const router = useRouter();
-  
-  // ★ テナントID（URLから取得できなければ 'default'）
+  const params = useParams();
+
+  // ★ URLに tenantId が含まれている場合は取得、なければ 'default'
   const tenantId = params?.tenantId || 'default';
 
   const myCompany = {
@@ -109,9 +109,8 @@ export default function CorporateOrderPage() {
           setIsLoading(false);
         }
 
-        // ★ DBからは対象テナントIDのデータを取得する（今は 'default' として取得）
         const [settingsRes, galleryRes] = await Promise.all([
-          supabase.from('app_settings').select('settings_data').eq('id', 'default').single(),
+          supabase.from('app_settings').select('settings_data').eq('id', tenantId).single(),
           supabase.from('app_settings').select('settings_data').eq('id', 'gallery').single()
         ]);
 
@@ -129,7 +128,7 @@ export default function CorporateOrderPage() {
       }
     }
     fetchSettings();
-  }, [tenantId]); // tenantId が変わったら再取得
+  }, [tenantId]);
 
   const selectedItemSettings = useMemo(() => appSettings?.flowerItems?.find(i => i.name === flowerType) || {}, [flowerType, appSettings]);
 
@@ -374,11 +373,15 @@ export default function CorporateOrderPage() {
         isCorporateOrder: true
       };
 
-      const { error } = await supabase.from('orders').insert([{ order_data: orderPayload }]);
+      // ★ 修正箇所：テナントIDを明示的にセットしてDBに保存
+      const { error } = await supabase.from('orders').insert([
+        { tenant_id: tenantId, order_data: orderPayload }
+      ]);
+      
       if (error) throw error;
 
       alert('ご注文を承りました！ポータル画面へ戻ります。');
-      router.push(`/corporate/${tenantId}`); // 完了後はポータルに戻る
+      router.push(`/corporate/${tenantId}`);
       
     } catch (error) {
       console.error('注文エラー:', error.message);
@@ -387,7 +390,6 @@ export default function CorporateOrderPage() {
     }
   };
 
-  // ★ 注意書きを店舗ごとに切り替えるためのデータ取得
   const targetShopData = useMemo(() => {
     if (selectedShop) {
       return appSettings?.shops?.find(s => s.name === selectedShop) || appSettings?.shops?.[0] || {};
@@ -399,10 +401,6 @@ export default function CorporateOrderPage() {
   const deliveryNote = targetShopData.deliveryNote || '交通状況により配達時間が前後する場合がございます。';
   const shippingNote = targetShopData.shippingNote || '発送準備期間＋配送日数がかかります。交通状況により遅延する場合がございます。';
   const absenceInstruction = targetShopData.absenceInstruction || '生花のため、ご不在時は原則として置き配または宅配ボックスへのお届けとなります。ご希望の対応をお選びください。';
-
-  const generalConfig = appSettings?.generalConfig || {};
-  const appName = generalConfig.appName || 'FLORIX';
-  const logoUrl = generalConfig.logoUrl || '';
 
   if (isLoading) return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-sans"><div className="text-[#2D4B3E] font-bold tracking-widest animate-pulse">読み込み中...</div></div>;
 
@@ -525,10 +523,6 @@ export default function CorporateOrderPage() {
                 ))}
               </div>
 
-              {cardType === 'メッセージカード' && (
-                 <textarea value={cardMessage} onChange={(e) => setCardMessage(e.target.value)} placeholder="カードのメッセージをご入力ください" className="w-full h-32 p-4 bg-white border border-[#EAEAEA] rounded-[24px] text-[13px] resize-none outline-none focus:border-[#2D4B3E] shadow-sm animate-in zoom-in-95"></textarea>
-              )}
-
               {cardType === '立札' && (
                 <div className="space-y-6 bg-white p-6 rounded-[28px] border border-[#EAEAEA] shadow-sm animate-in zoom-in-95 duration-300">
                   <select value={tatePattern} onChange={(e) => setTatePattern(e.target.value)} className="w-full h-14 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none font-bold text-[13px] focus:border-[#2D4B3E]">
@@ -550,8 +544,6 @@ export default function CorporateOrderPage() {
                       {tateNeeds.includes('3b') && <input type="text" placeholder="③-2 役職・氏名" value={tateInput3b} onChange={(e) => setTateInput3b(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       
                       <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4 mb-2">仕上がりプレビュー</p>
-                      
-                      {/* ★ 共通コンポーネントを呼び出し */}
                       <TatefudaPreview 
                         tatePattern={tatePattern}
                         layout={selectedTateOpt?.layout}
@@ -562,7 +554,6 @@ export default function CorporateOrderPage() {
                         input3a={tateInput3a}
                         input3b={tateInput3b}
                       />
-                      
                     </div>
                   )}
                 </div>
@@ -576,7 +567,7 @@ export default function CorporateOrderPage() {
           <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div>
               <h1 className="text-[20px] font-bold mb-2 text-[#2D4B3E]">お届け・お客様情報</h1>
-              <p className="text-[12px] text-[#555555]">お届け希望日と、お客様の情報をご入力ください。</p>
+              <p className="text-[12px] text-[#555555]">お届け希望日と、お届け先の情報をご入力ください。</p>
             </div>
 
             <div className="space-y-6">
@@ -618,7 +609,6 @@ export default function CorporateOrderPage() {
                 </div>
               </div>
 
-              {/* 支払い方法の選択（請求書払いをデフォルト・強調） */}
               <div className="bg-white p-6 rounded-[24px] border-2 border-[#2D4B3E]/20 shadow-sm mt-6">
                  <label className="text-[11px] font-bold text-[#2D4B3E] tracking-widest block mb-4">お支払い方法</label>
                  <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="w-full h-14 px-5 bg-[#2D4B3E]/5 border border-[#2D4B3E]/20 rounded-xl outline-none font-bold text-[#2D4B3E] focus:border-[#2D4B3E] transition-all text-[14px]">
@@ -665,7 +655,6 @@ export default function CorporateOrderPage() {
                 </div>
               </div>
 
-              {/* ★ 店舗ごとの注意書きを動的に表示 */}
               <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] font-sans space-y-4 mt-6">
                 <p className="text-[11px] font-bold text-[#111111] tracking-widest border-b border-[#EAEAEA] pb-2 flex items-center gap-1.5">
                   <AlertCircle size={14}/>
@@ -677,9 +666,7 @@ export default function CorporateOrderPage() {
                   {receiveMethod === 'delivery' && (
                     <>
                       <p>{deliveryNote}</p>
-                      {/* ★ 置き配に関する案内を追加 */}
                       <p className="text-[#2D4B3E] font-bold">{absenceInstruction}</p>
-                      
                       {parsedPickupFee > 0 && <p className="font-bold text-orange-600">※ご注文の商品には回収が必要な器（スタンド等）が含まれているため、回収費用(¥{parsedPickupFee.toLocaleString()})が加算されています。</p>}
                     </>
                   )}
@@ -703,7 +690,6 @@ export default function CorporateOrderPage() {
           </div>
         )}
 
-        {/* ナビゲーション */}
         <div className="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-md border-t border-[#EAEAEA] py-4 px-6 z-50">
           <div className="max-w-[600px] mx-auto flex flex-col gap-2">
             
