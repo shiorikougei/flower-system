@@ -15,7 +15,7 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // ★ パスワードの表示/非表示
+  const [showPassword, setShowPassword] = useState(false); 
 
   // --- 1. 基本設定 ---
   const [generalConfig, setGeneralConfig] = useState({ 
@@ -65,7 +65,7 @@ export default function SettingsPage() {
   const [newStaffStore, setNewStaffStore] = useState('all');
   const [staffOrderConfig, setStaffOrderConfig] = useState({ ignoreLeadTime: true, allowCustomPrice: true, paymentMethods: ['店頭支払い(済)', '銀行振込(請求書)', '代金引換'], sendAutoReply: false });
   
-  // ★ 通知メール設定を複数持てるように配列化
+  // ★ 通知メール設定
   const [autoReplyTemplates, setAutoReplyTemplates] = useState([
     { id: 't1', trigger: '注文受付時', subject: 'ご注文ありがとうございます', body: '{CustomerName} 様\n\nご注文ありがとうございます。' }
   ]);
@@ -148,6 +148,20 @@ export default function SettingsPage() {
     r.readAsDataURL(file);
   };
 
+  const handleTimeSlotChange = (method, index, value) => {
+    setTimeSlots(prev => {
+      const newSlots = { ...prev };
+      newSlots[method][index] = value;
+      return newSlots;
+    });
+  };
+  const addTimeSlot = (method) => {
+    setTimeSlots(prev => ({ ...prev, [method]: [...prev[method], ''] }));
+  };
+  const removeTimeSlot = (method, index) => {
+    setTimeSlots(prev => ({ ...prev, [method]: prev[method].filter((_, i) => i !== index) }));
+  };
+
   // --- タブのレンダリングコンポーネント ---
 
   const renderGeneralTab = () => (
@@ -159,7 +173,6 @@ export default function SettingsPage() {
           <input type="text" value={generalConfig.appName} onChange={(e)=>setGeneralConfig({...generalConfig, appName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E] transition-colors"/>
         </div>
         
-        {/* ★ ロゴ画像 */}
         <div className="space-y-4 pt-4 border-t border-[#EAEAEA]">
           <label className="text-[11px] font-bold text-[#999999]">ロゴ画像</label>
           {!generalConfig.logoUrl && <input type="file" accept="image/*" onChange={(e)=>handleImg(e, 'logoUrl')} className="block w-full text-xs" />}
@@ -173,7 +186,6 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* ★ 伝票背景画像 */}
         <div className="space-y-4 pt-4 border-t border-[#EAEAEA]">
           <label className="text-[11px] font-bold text-[#999999]">伝票用 背景（透かし柄）画像</label>
           {!generalConfig.slipBgUrl && <input type="file" accept="image/*" onChange={(e)=>handleImg(e, 'slipBgUrl')} className="block w-full text-xs" />}
@@ -199,7 +211,6 @@ export default function SettingsPage() {
                   placeholder="7777"
                   className="w-full h-12 bg-white border border-red-200 rounded-xl px-4 font-bold outline-none focus:border-red-400 text-red-700 tracking-widest pr-10"
                 />
-                {/* ★ パスワード表示トグル */}
                 <button 
                   type="button" 
                   onClick={() => setShowPassword(!showPassword)} 
@@ -229,7 +240,6 @@ export default function SettingsPage() {
         ))}
       </div>
       
-      {/* ★ 標準を選択した場合も、今の項目を表示する（編集不可） */}
       {statusConfig.type === 'template' ? (
         <div className="space-y-3">
           {['未対応', '制作中', '制作完了', '配達中'].map((l, i) => (
@@ -272,11 +282,9 @@ export default function SettingsPage() {
           
           <div className="pt-4 border-t border-[#FBFAF9] space-y-4">
             <h3 className="text-[14px] font-bold text-[#2D4B3E]">振込先情報</h3>
-            {/* ★ 決済URLを削除 */}
             <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">振込先口座情報 (請求書払いのお客様向け)</label><textarea value={shop.bankInfo || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, bankInfo:e.target.value}:s))} className="w-full h-24 bg-[#FBFAF9] border rounded-xl p-3 text-[12px] outline-none resize-none focus:border-[#2D4B3E]" placeholder="銀行名 支店名..."/></div>
           </div>
 
-          {/* ★ 特別日の設定を大幅アップデート */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-[#FBFAF9]">
             
             {/* 店舗（ご来店）の特別日 */}
@@ -326,6 +334,14 @@ export default function SettingsPage() {
                       </select>
                       <input type="text" placeholder="理由やメモ (例: 定休日)" value={sh.note || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, specialHours:s.specialHours.map(h=>h.id===sh.id?{...h, note:e.target.value}:h)}:s))} className="flex-1 border rounded p-1.5 outline-none"/>
                     </div>
+                    
+                    {/* ★ 時間変更の場合の入力欄 */}
+                    {sh.type === 'changed' && (
+                      <div className="flex gap-2 items-center bg-white p-2 rounded border border-orange-100 mt-1">
+                        <span className="text-[10px] font-bold text-orange-600">変更後:</span>
+                        <input type="time" value={sh.changedOpenTime || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, specialHours:s.specialHours.map(h=>h.id===sh.id?{...h, changedOpenTime:e.target.value}:h)}:s))} className="border rounded p-1 text-xs outline-none"/><span>〜</span><input type="time" value={sh.changedCloseTime || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, specialHours:s.specialHours.map(h=>h.id===sh.id?{...h, changedCloseTime:e.target.value}:h)}:s))} className="border rounded p-1 text-xs outline-none"/>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -379,6 +395,14 @@ export default function SettingsPage() {
                       </select>
                       <input type="text" placeholder="理由やメモ" value={sh.note || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:s.deliverySpecialHours.map(h=>h.id===sh.id?{...h, note:e.target.value}:h)}:s))} className="flex-1 border border-[#D97C8F]/30 rounded p-1.5 outline-none"/>
                     </div>
+
+                    {/* ★ 時間変更の場合の入力欄 */}
+                    {sh.type === 'changed' && (
+                      <div className="flex gap-2 items-center bg-white p-2 rounded border border-orange-100 mt-1">
+                        <span className="text-[10px] font-bold text-orange-600">変更後:</span>
+                        <input type="time" value={sh.changedOpenTime || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:s.deliverySpecialHours.map(h=>h.id===sh.id?{...h, changedOpenTime:e.target.value}:h)}:s))} className="border border-[#D97C8F]/30 rounded p-1 text-xs outline-none"/><span>〜</span><input type="time" value={sh.changedCloseTime || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:s.deliverySpecialHours.map(h=>h.id===sh.id?{...h, changedCloseTime:e.target.value}:h)}:s))} className="border border-[#D97C8F]/30 rounded p-1 text-xs outline-none"/>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -715,7 +739,6 @@ export default function SettingsPage() {
     </div>
   );
 
-  // ★ 通知メール設定を複数持てるように大幅アップデート
   const renderMessageTab = () => (
     <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-6 animate-in fade-in text-left">
       <div className="flex justify-between items-center border-b border-[#EAEAEA] pb-4">
