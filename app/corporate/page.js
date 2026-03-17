@@ -377,7 +377,8 @@ export default function CorporateDashboardPage() {
                             onClick={() => handleQuickOrder('omakase', ev)}
                             className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#2D4B3E] text-white rounded-xl text-[11px] font-bold hover:bg-[#1f352b] transition-all shadow-sm active:scale-[0.98]"
                           >
-                            <Zap size={14}/> 種類と予算を決めて完全おまかせ
+                            {/* ★ ボタンテキストを修正 */}
+                            <Zap size={14}/> 種類と予算を決めておまかせ注文
                           </button>
                           
                           {ev.lastOrder ? (
