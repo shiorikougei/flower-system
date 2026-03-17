@@ -19,14 +19,13 @@ export default function CorporateDashboardPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   
-  // ★ デモ用の会社名をリセット（本来はログイン時の情報から取得します）
-  const [companyName, setCompanyName] = useState('ゲスト法人'); 
+  // ★ 初期値を空にしておき、あとでログイン情報から上書きします
+  const [companyName, setCompanyName] = useState(''); 
   const [appSettings, setAppSettings] = useState(null);
 
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  // ★ 架空の請求データをリセット（最初は未入金なし）
   const [billingInfo, setBillingInfo] = useState({
     hasUnpaid: false,
     unpaidMonth: '',
@@ -35,7 +34,6 @@ export default function CorporateDashboardPage() {
     currentMonthAmount: 0
   });
 
-  // ★ 架空の行事データをリセット（最初は空っぽ）
   const [events, setEvents] = useState([]);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [newEvent, setNewEvent] = useState({ title: '', date: '', target: '', repeat: '今年のみ', zip: '', address1: '', address2: '' });
@@ -44,6 +42,19 @@ export default function CorporateDashboardPage() {
 
   useEffect(() => {
     async function initData() {
+      // ★ 1. ログイン中のユーザー情報を取得して法人名をセット！
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session && session.user && session.user.user_metadata) {
+        // 登録時に入力した「company_name」を画面に表示
+        setCompanyName(session.user.user_metadata.company_name || 'ゲスト法人');
+      } else {
+        // もしログインせずに直接URLを開こうとしたら、ログイン画面に強制送還する（セキュリティ）
+        router.push('/corporate/login');
+        return;
+      }
+
+      // 2. キャッシュの確認
       const cachedOrders = sessionStorage.getItem(CORPORATE_ORDERS_CACHE_KEY);
       const cachedSettings = sessionStorage.getItem(SETTINGS_CACHE_KEY);
       
@@ -53,10 +64,8 @@ export default function CorporateDashboardPage() {
       if (cachedSettings) {
         try { setAppSettings(JSON.parse(cachedSettings)); } catch (e) {}
       }
-      if (cachedOrders && cachedSettings) {
-        setIsLoading(false);
-      }
 
+      // 3. データベースから最新情報を取得
       try {
         const [ordersRes, settingsRes] = await Promise.all([
           supabase.from('orders').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
@@ -78,10 +87,11 @@ export default function CorporateDashboardPage() {
       }
     }
     initData();
-  }, [tenantId]);
+  }, [tenantId, router]);
 
   const handleLogout = async () => {
-    router.push(`/corporate/login`); 
+    await supabase.auth.signOut(); // ★ ログアウト処理も確実に追加
+    router.push('/corporate/login'); 
   };
 
   const fetchAddress = async (zip) => {
@@ -159,6 +169,8 @@ export default function CorporateDashboardPage() {
 
   const shopName = appSettings?.generalConfig?.appName || 'FLORIX';
 
+  if (isLoading) return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-sans"><div className="text-[#2D4B3E] font-bold tracking-widest animate-pulse">読み込み中...</div></div>;
+
   return (
     <div className="min-h-screen bg-[#FBFAF9] font-sans text-[#111111] pb-32">
       
@@ -181,22 +193,6 @@ export default function CorporateDashboardPage() {
 
       <main className="max-w-[1000px] mx-auto p-6 md:p-8 space-y-8 pt-8">
 
-        {/* 未入金アラートバナー */}
-        {billingInfo.hasUnpaid && (
-          <div className="bg-red-50 border border-red-200 p-5 rounded-[24px] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={24} />
-              <div>
-                <p className="text-[15px] font-black text-red-800">未入金の請求書があります</p>
-                <p className="text-[12px] font-bold text-red-600 mt-1">{billingInfo.unpaidMonth}ご利用分 (¥{billingInfo.unpaidAmount.toLocaleString()}) のお支払いが確認できておりません。至急ご確認をお願いいたします。</p>
-              </div>
-            </div>
-            <button className="shrink-0 flex items-center justify-center gap-2 text-[12px] font-bold text-white bg-red-500 px-5 py-2.5 rounded-xl hover:bg-red-600 transition-all shadow-sm">
-              <Download size={16}/> 請求書をダウンロード
-            </button>
-          </div>
-        )}
-        
         {/* ウェルカム＆クイックアクション */}
         <div className="bg-[#2D4B3E] rounded-[32px] p-8 md:p-10 shadow-lg text-white relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="absolute -right-20 -top-20 opacity-10 pointer-events-none">
@@ -235,9 +231,7 @@ export default function CorporateDashboardPage() {
                 </h2>
               </div>
 
-              {isLoading ? (
-                <div className="text-center py-20 text-[#2D4B3E] font-bold animate-pulse">読み込み中...</div>
-              ) : orders.length === 0 ? (
+              {orders.length === 0 ? (
                 <div className="text-center py-10 bg-white rounded-[24px] border border-dashed border-[#EAEAEA] text-[#999999] font-bold">
                   ご注文履歴はありません。
                 </div>
