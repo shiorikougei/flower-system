@@ -1,590 +1,682 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
-import { 
-  Building2, Calendar, ShoppingBag, FileText, 
-  ChevronRight, Plus, CreditCard, LogOut, Gift, ArrowRight, Download, Package,
-  MapPin, Clock, Truck, Store, MessageSquare, AlertCircle, User, Tag, ListChecks, X, Trash2, RefreshCw, Zap, Repeat
-} from 'lucide-react';
-import Link from 'next/link';
+import { Calendar, Package, ChevronRight, Store, Truck, Building2 } from 'lucide-react';
 
-// ★ キャッシュ用のキーを定義（法人の注文履歴用）
-const CORPORATE_ORDERS_CACHE_KEY = 'florix_corporate_orders_cache';
+// ★ キャッシュ用のキー
+const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
+const GALLERY_CACHE_KEY = 'florix_gallery_cache';
 
-export default function CorporateDashboardPage() {
+export default function CorporateOrderPage() {
   const router = useRouter();
+
+  // --- 法人ログインユーザーのダミーデータ（※本番ではSupabase Authから取得） ---
+  const myCompany = {
+    companyName: '株式会社 グローバルIT',
+    contactName: '山田 太郎',
+    phone: '03-1234-5678',
+    email: 'info@global-it.example.com',
+    zip: '100-0001',
+    address1: '東京都千代田区',
+    address2: '千代田1-1-1 グローバルビル5F',
+  };
+
+  const [appSettings, setAppSettings] = useState(null);
+  const [portfolioImages, setPortfolioImages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [companyName, setCompanyName] = useState('株式会社 グローバルIT');
 
-  // --- 注文データ関連 ---
-  const [orders, setOrders] = useState([]);
-  const [selectedOrder, setSelectedOrder] = useState(null);
+  // --- 状態管理 ---
+  const [step, setStep] = useState(1);
+  const [flowerType, setFlowerType] = useState('');
+  const [isBring, setIsBring] = useState('shop');
+  const [receiveMethod, setReceiveMethod] = useState('');
+  const [selectedShop, setSelectedShop] = useState(null);
+  const [agreed, setAgreed] = useState(false);
+  const [methodAgreed, setMethodAgreed] = useState(false);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedTime, setSelectedTime] = useState('');
+  const [shippingDate, setShippingDate] = useState('');
+  
+  const [itemPrice, setItemPrice] = useState('');
+  const [flowerPurpose, setFlowerPurpose] = useState('');
+  const [flowerColor, setFlowerColor] = useState('');
+  const [flowerVibe, setFlowerVibe] = useState('');
+  const [otherPurpose, setOtherPurpose] = useState('');
+  const [otherVibe, setOtherVibe] = useState('');
+  const [selectedImage, setSelectedImage] = useState(null); 
 
-  // ★ ダミーデータ：請求・未入金ステータス
-  const [billingInfo, setBillingInfo] = useState({
-    hasUnpaid: true,
-    unpaidMonth: '2026年2月',
-    unpaidAmount: 33000,
-    dueDate: '2026-03-31',
-    currentMonthAmount: 49500
+  const [absenceAction, setAbsenceAction] = useState('持ち戻り'); 
+  const [absenceNote, setAbsenceNote] = useState(''); 
+
+  const [cardType, setCardType] = useState('なし');
+  const [cardMessage, setCardMessage] = useState('');
+  // ★ 立札の「贈り主」に初期値として自社名をセットしておく
+  const [tatePattern, setTatePattern] = useState('');
+  const [tateInput1, setTateInput1] = useState(''); 
+  const [tateInput2, setTateInput2] = useState(''); 
+  const [tateInput3, setTateInput3] = useState(myCompany.companyName); 
+  const [tateInput3a, setTateInput3a] = useState(myCompany.companyName); 
+  const [tateInput3b, setTateInput3b] = useState(`代表取締役 ${myCompany.contactName}`); 
+
+  // ★ 注文者情報に初期値として自社情報をフルセットしておく
+  const [customerInfo, setCustomerInfo] = useState({ 
+    name: `${myCompany.companyName} ${myCompany.contactName}`, 
+    phone: myCompany.phone, 
+    email: myCompany.email, 
+    zip: myCompany.zip, 
+    address1: myCompany.address1, 
+    address2: myCompany.address2 
   });
+  
+  // 法人は他社へ送る（お届け先が異なる）ケースが圧倒的に多いので、初期状態をtrueに
+  const [isRecipientDifferent, setIsRecipientDifferent] = useState(true);
+  const [recipientInfo, setRecipientInfo] = useState({ name: '', phone: '', zip: '', address1: '', address2: '' });
+  
+  const [calculatedFee, setCalculatedFee] = useState(null);
+  const [pickupFee, setPickupFee] = useState(0); 
+  const [areaError, setAreaError] = useState('');
+  
+  // ★ 支払い方法（法人は請求書払いをデフォルトにする）
+  const [paymentMethod, setPaymentMethod] = useState('請求書払い (月末締め 翌月末払い)');
 
-  // --- イベント（行事）データ関連 ---
-  const [events, setEvents] = useState([
-    { 
-      id: 1, title: '代表取締役 就任記念', date: '2026-04-01', target: '山田 社長', repeat: '毎年',
-      zip: '100-0001', address: '東京都千代田区千代田1-1',
-      lastOrder: { item: '特選 胡蝶蘭 3本立ち', price: 30000 }
-    },
-    { 
-      id: 2, title: '創立記念日', date: '2026-05-10', target: '自社', repeat: '毎年',
-      zip: '', address: '', lastOrder: null
-    },
-  ]);
-  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
-  const [newEvent, setNewEvent] = useState({ title: '', date: '', target: '', repeat: '今年のみ', zip: '', address1: '', address2: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ★ キャッシュ対応のデータ取得ロジック
+  const defaultTimeSlots = {
+    pickup: ['10:00-12:00', '12:00-15:00', '15:00-18:00'],
+    delivery: ['9:00-12:00', '12:00-15:00', '15:00-18:00', '18:00-21:00'],
+    shipping: ['午前中', '14:00-16:00', '16:00-18:00', '18:00-20:00', '19:00-21:00']
+  };
+  const [timeSlots, setTimeSlots] = useState(defaultTimeSlots);
+
+  // ★ キャッシュ化ロジック
   useEffect(() => {
-    async function fetchMyOrders() {
-      // 1. まずは sessionStorage (キャッシュ) から復元して高速表示
-      const cachedOrders = sessionStorage.getItem(CORPORATE_ORDERS_CACHE_KEY);
-      if (cachedOrders) {
-        try {
-          setOrders(JSON.parse(cachedOrders));
-          setIsLoading(false); // キャッシュがあれば即座にローディング解除
-        } catch (e) {
-          console.error("注文キャッシュのパース失敗", e);
-        }
-      } else {
-        setIsLoading(true); // キャッシュがない初回のみローディングを表示
+    let isFirstLoad = true;
+    const applyDataToState = (settingsData, galleryData) => {
+      if (settingsData) {
+        setAppSettings(settingsData);
+        if (settingsData.timeSlots) setTimeSlots(settingsData.timeSlots);
       }
+      if (galleryData?.images) setPortfolioImages(galleryData.images);
+    };
 
-      // 2. バックグラウンドで最新データをDBから取得
+    async function fetchSettings() {
       try {
-        const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
-        if (error) throw error;
-        
-        // ※実際は法人のID等でフィルターします
-        const fetchedOrders = data || [];
-        setOrders(fetchedOrders);
-        
-        // キャッシュを最新データで上書き保存
-        sessionStorage.setItem(CORPORATE_ORDERS_CACHE_KEY, JSON.stringify(fetchedOrders));
-      } catch (error) {
-        console.error('注文データの取得に失敗しました', error);
+        // 1. キャッシュから即時復元
+        const cachedSettings = sessionStorage.getItem(SETTINGS_CACHE_KEY);
+        const cachedGallery = sessionStorage.getItem(GALLERY_CACHE_KEY);
+
+        if (cachedSettings) {
+          applyDataToState(JSON.parse(cachedSettings), cachedGallery ? JSON.parse(cachedGallery) : null);
+          isFirstLoad = false;
+          setIsLoading(false); // 画面を即時表示
+        }
+
+        // 2. バックグラウンドで最新データを取得
+        const [settingsRes, galleryRes] = await Promise.all([
+          supabase.from('app_settings').select('settings_data').eq('id', 'default').single(),
+          supabase.from('app_settings').select('settings_data').eq('id', 'gallery').single()
+        ]);
+
+        if (settingsRes.data?.settings_data) {
+          applyDataToState(settingsRes.data.settings_data, galleryRes.data?.settings_data);
+          // 最新データをキャッシュに上書き保存
+          sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(settingsRes.data.settings_data));
+          if (galleryRes.data?.settings_data) {
+            sessionStorage.setItem(GALLERY_CACHE_KEY, JSON.stringify(galleryRes.data.settings_data));
+          }
+        }
+      } catch (err) {
+        console.error('設定読込エラー:', err.message);
       } finally {
         setIsLoading(false);
       }
     }
-    fetchMyOrders();
+    fetchSettings();
   }, []);
 
-  const handleLogout = async () => {
-    router.push('/corporate/login');
+  const selectedItemSettings = useMemo(() => appSettings?.flowerItems?.find(i => i.name === flowerType) || {}, [flowerType, appSettings]);
+
+  const matchingImages = useMemo(() => {
+    if (!portfolioImages || portfolioImages.length === 0) return [];
+    return portfolioImages.filter(img => {
+      let match = true;
+      if (flowerPurpose && flowerPurpose !== 'その他' && img.purpose && img.purpose !== flowerPurpose) match = false;
+      if (flowerColor && flowerColor !== 'おまかせ' && img.color && img.color !== flowerColor) match = false;
+      if (flowerVibe && flowerVibe !== 'その他' && flowerVibe !== 'おまかせ' && img.vibe && img.vibe !== flowerVibe) match = false;
+      return match;
+    });
+  }, [portfolioImages, flowerPurpose, flowerColor, flowerVibe]);
+
+  const handleSelectImage = (img) => {
+    if (selectedImage?.id === img.id) {
+      setSelectedImage(null); 
+    } else {
+      setSelectedImage(img);
+      if (img.price > 0) setItemPrice(String(img.price));
+      if (img.purpose) setFlowerPurpose(img.purpose);
+      if (img.color) setFlowerColor(img.color);
+      if (img.vibe) setFlowerVibe(img.vibe);
+    }
   };
 
-  // 郵便番号から住所を自動検索（行事登録用）
-  const fetchAddress = async (zip) => {
+  const isOsonae = flowerPurpose === 'お供え';
+  const tateOptions = isOsonae ? [
+    { id: 'p1', label: '① 御供｜横型 (背景あり)', needs: ['3'], layout: 'horizontal' },
+    { id: 'p3', label: '② 御供｜縦型 (シンプル)', needs: ['3'], layout: 'vertical' },
+    { id: 'p4', label: '③ 御供｜縦型 (会社名入)', needs: ['3a', '3b'], layout: 'vertical' }
+  ] : [
+    { id: 'p5', label: '⑤ 祝｜横型 (スタンダード)', needs: ['1', '3'], layout: 'horizontal' },
+    { id: 'p6', label: '⑥ 祝｜横型 (様へ構成)', needs: ['1', '2', '3'], layout: 'horizontal' },
+    { id: 'p7', label: '⑦ 祝｜縦型 (二列構成)', needs: ['1', '3'], layout: 'vertical' },
+    { id: 'p8', label: '⑧ 祝｜縦型 (三列完成版)', needs: ['1', '2', '3'], layout: 'vertical' }
+  ];
+  const selectedTateOpt = tateOptions.find(opt => opt.id === tatePattern);
+  const tateNeeds = selectedTateOpt?.needs || [];
+  const topPrefixText = isOsonae ? '御供' : '祝';
+
+  const getPriceOptions = () => {
+    if (!flowerType) return [];
+    let min = 2000, max = 50000, stepSize = 1000;
+    if (selectedItemSettings.minPrice) {
+      min = Number(selectedItemSettings.minPrice);
+      max = Number(selectedItemSettings.maxPrice);
+      stepSize = Number(selectedItemSettings.stepPrice);
+    }
+    if ((receiveMethod === 'delivery' || receiveMethod === 'sagawa') && min < 3000) min = 3000;
+    const options = [];
+    for (let i = min; i <= max; i += stepSize) options.push(i);
+    return options;
+  };
+
+  const transitDays = useMemo(() => {
+    if (receiveMethod !== 'sagawa') return 0;
+    const targetInfo = isRecipientDifferent ? recipientInfo : customerInfo;
+    const rawAddress = ((targetInfo.address1 || '') + (targetInfo.address2 || '')).replace(/[\s　]+/g, '');
+    const prefMatch = rawAddress.match(/^(北海道|東京都|(?:京都|大阪)府|.{2,3}県)/);
+    
+    if (prefMatch && appSettings?.shippingRates) {
+      const targetPref = prefMatch[1].replace(/(都|府|県)$/, ''); 
+      const searchPref = targetPref === '北海' ? '北海道' : targetPref;
+      let rateData = appSettings.shippingRates.find(r => r.prefs && r.prefs.includes(searchPref));
+      if (!rateData) rateData = appSettings.shippingRates.find(r => r.region && r.region.includes(searchPref));
+      if (rateData) return Number(rateData.leadDays) || 1;
+    }
+    return 1;
+  }, [receiveMethod, customerInfo.address1, recipientInfo.address1, isRecipientDifferent, appSettings]);
+
+  const minDateLimit = useMemo(() => {
+    const base = new Date();
+    let prepDays = 0;
+    if (receiveMethod === 'sagawa') {
+      prepDays = Number(selectedItemSettings?.shippingLeadDays) || 0;
+    } else {
+      prepDays = Number(selectedItemSettings?.normalLeadDays) || 0;
+    }
+    if (isBring === 'bring') {
+      const fLead = Number(selectedItemSettings?.canBringFlowersLeadDays) || 0;
+      const vLead = Number(selectedItemSettings?.canBringVaseLeadDays) || 0;
+      if (selectedItemSettings?.canBringFlowers && fLead > prepDays) prepDays = fLead;
+      if (selectedItemSettings?.canBringVase && vLead > prepDays) prepDays = vLead;
+    }
+    const d = new Date(base);
+    d.setDate(d.getDate() + prepDays + transitDays);
+    return d.toISOString().split('T')[0];
+  }, [flowerType, isBring, receiveMethod, selectedItemSettings, transitDays]);
+
+  const normalizeAddressText = (text) => {
+    if (!text) return '';
+    let res = text.replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+    const kMap = {'一':'1','二':'2','三':'3','四':'4','五':'5','六':'6','七':'7','八':'8','九':'9'};
+    res = res.replace(/三十([一二三四五六七八九])/g, (m, p1) => '3' + kMap[p1]);
+    res = res.replace(/二十([一二三四五六七八九])/g, (m, p1) => '2' + kMap[p1]);
+    res = res.replace(/十([一二三四五六七八九])/g, (m, p1) => '1' + kMap[p1]);
+    res = res.replace(/三十/g, '30'); res = res.replace(/二十/g, '20'); res = res.replace(/十/g, '10');
+    res = res.replace(/[一二三四五六七八九〇]/g, m => ({...kMap, '〇':'0'})[m] || m);
+    return res;
+  };
+
+  useEffect(() => {
+    if (!receiveMethod || receiveMethod === 'pickup' || !itemPrice) { 
+      setCalculatedFee(null); setPickupFee(0); setAreaError(''); setShippingDate(''); return; 
+    }
+    
+    const targetInfo = isRecipientDifferent ? recipientInfo : customerInfo;
+    const rawAddress = ((targetInfo.address1 || '') + (targetInfo.address2 || '')).replace(/[\s　]+/g, '');
+    if (!rawAddress) { 
+      setCalculatedFee(null); setPickupFee(0); setAreaError(''); setShippingDate(''); return; 
+    }
+
+    let baseFee = 0, boxFee = 0, coolFee = 0, pickupFeeAmt = 0;
+
+    if (receiveMethod === 'delivery') {
+      setShippingDate(''); 
+      const normalizedAddress = normalizeAddressText(rawAddress);
+      const northPatterns = ["23", "24", "25", "26", "27"]; const westPatterns = ["3", "4", "5"];
+      let isFreeArea = false;
+      for (const n of northPatterns) { for (const w of westPatterns) { if (normalizedAddress.includes(`北${n}条西${w}`)) { isFreeArea = true; break; } } if (isFreeArea) break; }
+      
+      let matchedFee = null;
+      if (isFreeArea) { matchedFee = 0; } 
+      else if (appSettings?.deliveryAreas?.length > 0) {
+        for (const area of appSettings.deliveryAreas) {
+          const keywords = (area.name||'').split(',').map(k => k.trim()).filter(k => k);
+          if (keywords.some(keyword => rawAddress.includes(keyword) || normalizedAddress.includes(keyword))) { matchedFee = Number(area.fee); break; }
+        }
+      } 
+      
+      if (matchedFee === null) {
+        if (normalizedAddress.includes("厚別区") || normalizedAddress.includes("清田区") || normalizedAddress.includes("南区")) matchedFee = 1000;
+        else if (normalizedAddress.includes("白石区") || normalizedAddress.includes("豊平区") || normalizedAddress.includes("手稲区") || normalizedAddress.includes("石狩市")) matchedFee = 800;
+        else if (normalizedAddress.includes("北区") || normalizedAddress.includes("中央区") || normalizedAddress.includes("東区") || normalizedAddress.includes("西区")) matchedFee = 500;
+      }
+
+      if (matchedFee !== null) { 
+        baseFee = matchedFee;
+        if (selectedItemSettings?.hasReturn) {
+          const returnType = appSettings?.boxFeeConfig?.returnFeeType || 'flat';
+          const returnVal = Number(appSettings?.boxFeeConfig?.returnFeeValue) || 0;
+          if (returnType === 'flat') pickupFeeAmt = returnVal;
+          else if (returnType === 'percent') pickupFeeAmt = Math.floor(baseFee * (returnVal / 100));
+        }
+        setCalculatedFee(baseFee); setPickupFee(pickupFeeAmt); setAreaError(''); 
+      } else { 
+        setCalculatedFee(null); setPickupFee(0); setAreaError('自社配達エリア外です。配送をご利用ください。'); 
+      }
+    } else if (receiveMethod === 'sagawa') {
+      const prefMatch = rawAddress.match(/^(北海道|東京都|(?:京都|大阪)府|.{2,3}県)/);
+      if (!prefMatch) { setCalculatedFee(null); setAreaError('都道府県が判別できません。'); setShippingDate(''); return; }
+      const targetPref = prefMatch[1].replace(/(都|府|県)$/, ''); 
+      const searchPref = targetPref === '北海' ? '北海道' : targetPref;
+      
+      let rateData = appSettings?.shippingRates?.find(r => r.prefs && r.prefs.includes(searchPref));
+      if (!rateData) rateData = appSettings?.shippingRates?.find(r => r.region && r.region.includes(searchPref));
+
+      if (rateData) { 
+        if (selectedDate) {
+          const dDate = new Date(selectedDate);
+          dDate.setDate(dDate.getDate() - transitDays);
+          setShippingDate(dDate.toISOString().split('T')[0]);
+        } else {
+          setShippingDate('');
+        }
+
+        let size = selectedItemSettings?.defaultBoxSize || appSettings?.shippingSizes?.[0] || '80';
+        baseFee = Number(rateData['fee' + size]) || 0;
+
+        if (appSettings?.boxFeeConfig?.type === 'flat') {
+          boxFee = Number(appSettings.boxFeeConfig.flatFee) || 0;
+        } else if (appSettings?.boxFeeConfig?.type === 'price_based') {
+          const tiers = appSettings.boxFeeConfig.priceTiers || [];
+          const matchedTier = [...tiers].sort((a, b) => b.minPrice - a.minPrice).find(t => Number(itemPrice) >= t.minPrice);
+          boxFee = matchedTier ? Number(matchedTier.fee) : 0;
+        }
+
+        if (appSettings?.boxFeeConfig?.freeShippingThresholdEnabled && Number(itemPrice) >= (appSettings.boxFeeConfig.freeShippingThreshold || 15000)) {
+          baseFee = 0; 
+        }
+
+        if (!selectedItemSettings?.excludeCoolBin && appSettings?.boxFeeConfig?.coolBinEnabled && selectedDate) {
+          const dateObj = new Date(selectedDate);
+          const mmdd = String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + String(dateObj.getDate()).padStart(2, '0');
+          const isCool = (appSettings.boxFeeConfig.coolBinPeriods || []).some(p => mmdd >= p.start && mmdd <= p.end);
+          if (isCool) coolFee = Number(rateData['cool' + size]) || 0;
+        }
+
+        setCalculatedFee(baseFee + boxFee + coolFee); setPickupFee(0); setAreaError(''); 
+      } else {
+        setCalculatedFee(null); setShippingDate(''); setAreaError('該当する地域の送料設定が見つかりません。');
+      }
+    }
+  }, [customerInfo, recipientInfo, isRecipientDifferent, receiveMethod, flowerType, itemPrice, selectedDate, appSettings, selectedItemSettings, transitDays]);
+
+  const fetchAddress = async (zip, target) => {
     if (zip.length !== 7) return;
     try {
       const res = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${zip}`);
       const data = await res.json();
       if (data.results) {
         const fullAddr = `${data.results[0].address1}${data.results[0].address2}${data.results[0].address3}`;
-        setNewEvent(prev => ({ ...prev, address1: fullAddr }));
+        if (target === 'customer') setCustomerInfo(prev => ({ ...prev, address1: fullAddr }));
+        else setRecipientInfo(prev => ({ ...prev, address1: fullAddr }));
       }
     } catch (error) {}
   };
 
-  const handleAddEvent = (e) => {
-    e.preventDefault();
-    if (!newEvent.title || !newEvent.date) return;
-    setEvents([...events, { id: Date.now(), ...newEvent, address: `${newEvent.address1} ${newEvent.address2}`.trim() }]);
-    setNewEvent({ title: '', date: '', target: '', repeat: '今年のみ', zip: '', address1: '', address2: '' });
-    setIsEventModalOpen(false);
+  const getTimeOptions = () => {
+    if (!selectedDate) return [];
+    if (receiveMethod === 'pickup') return timeSlots.pickup;
+    if (receiveMethod === 'delivery') return timeSlots.delivery;
+    if (receiveMethod === 'sagawa') return timeSlots.shipping;
+    return [];
   };
 
-  const handleDeleteEvent = (id) => {
-    if (confirm('この行事を削除してもよろしいですか？')) {
-      setEvents(events.filter(ev => ev.id !== id));
+  const parsedItemPrice = Number(itemPrice) || 0;
+  const parsedFee = calculatedFee || 0;
+  const parsedPickupFee = pickupFee || 0;
+  const subTotal = parsedItemPrice + parsedFee + parsedPickupFee;
+  const tax = Math.floor(subTotal * 0.1);
+  const totalAmount = subTotal + tax;
+
+  const isFormInvalid = () => {
+    if (step === 3) {
+      if (!flowerPurpose || !flowerColor || !flowerVibe || !itemPrice) return true;
+      if (cardType === 'メッセージカード' && !cardMessage) return true;
+      if (cardType === '立札' && !tatePattern) return true;
     }
-  };
-
-  // 究極の簡単注文アクション
-  const handleQuickOrder = (type, event) => {
-    if (type === 'repeat') {
-      if (confirm(`前回と全く同じ内容（${event.lastOrder.item} / ¥${event.lastOrder.price.toLocaleString()}）で注文を確定しますか？`)) {
-        alert('注文が完了しました！\n※実際のシステムではここでバックエンドに送信されます');
-      }
-    } else if (type === 'omakase') {
-      const budget = prompt(`${event.title} のご予算（税抜）を入力してください。\n用途に合わせて当店が最適なアレンジメントをお作りします！\n\n例: 15000`, '15000');
-      if (budget && !isNaN(budget)) {
-        alert(`ご予算 ¥${Number(budget).toLocaleString()} でおまかせ注文を承りました！`);
-      }
+    if (step === 4) {
+      if (!customerInfo.name || !customerInfo.phone || !customerInfo.email || !selectedDate || !selectedTime || !methodAgreed) return true;
+      if (selectedDate && selectedDate < minDateLimit) return true;
+      if ((receiveMethod === 'delivery' || receiveMethod === 'sagawa') && areaError) return true;
+      if (receiveMethod === 'delivery' && absenceAction === '置き配' && !absenceNote) return true;
+      if (isRecipientDifferent && (!recipientInfo.name || !recipientInfo.phone || !recipientInfo.zip || !recipientInfo.address1 || !recipientInfo.address2)) return true;
     }
+    return false;
   };
 
-  const safeFormatDate = (dateString, withTime = false) => {
+  const handleSubmitOrder = async () => {
+    setIsSubmitting(true);
     try {
-      if (!dateString) return '日時不明';
-      const d = new Date(dateString);
-      if (isNaN(d.getTime())) return '日時不明';
-      return withTime ? d.toLocaleString('ja-JP') : d.toLocaleDateString('ja-JP');
-    } catch (e) { return '日時不明'; }
-  };
+      const orderPayload = {
+        shopId: 'default', flowerType, isBring, receiveMethod, selectedShop,
+        selectedDate, selectedTime, shippingDate,
+        itemPrice, calculatedFee, pickupFee,
+        absenceAction, absenceNote,
+        flowerPurpose, flowerColor, flowerVibe, otherPurpose, otherVibe,
+        cardType, cardMessage, tatePattern,
+        tateInput1, tateInput2, tateInput3, tateInput3a, tateInput3b,
+        customerInfo, isRecipientDifferent, recipientInfo,
+        paymentMethod, // 法人用の支払方法
+        referenceImage: selectedImage ? selectedImage.url : null,
+        status: 'new',
+        isCorporateOrder: true // 法人からの注文フラグ
+      };
 
-  const getReceiveMethodBadge = (method) => {
-    switch (method) {
-      case 'pickup': return <span className="flex items-center gap-1 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm border border-orange-200"><Store size={14}/> 店頭受取</span>;
-      case 'delivery': return <span className="flex items-center gap-1 bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm border border-blue-200"><Truck size={14}/> 自社配達</span>;
-      case 'sagawa': return <span className="flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm border border-green-200"><Package size={14}/> 業者配送</span>;
-      default: return <span className="flex items-center gap-1 bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm border border-gray-200">未定</span>;
+      const { error } = await supabase.from('orders').insert([{ order_data: orderPayload }]);
+      if (error) throw error;
+
+      // 送信完了後、法人ポータルへ戻る（完了メッセージなどを出すと親切）
+      alert('ご注文を承りました！ポータル画面へ戻ります。');
+      router.push('/corporate');
+      
+    } catch (error) {
+      console.error('注文エラー:', error.message);
+      alert('注文の送信に失敗しました。');
+      setIsSubmitting(false);
     }
   };
 
-  const getTotals = (orderData) => {
-    if (!orderData || typeof orderData !== 'object') return { item: 0, fee: 0, pickup: 0, subTotal: 0, tax: 0, total: 0 };
-    const item = Number(orderData.itemPrice) || 0;
-    const fee = Number(orderData.calculatedFee) || 0;
-    const pickup = Number(orderData.pickupFee) || 0;
-    const subTotal = item + fee + pickup;
-    const tax = Math.floor(subTotal * 0.1);
-    return { item, fee, pickup, subTotal, tax, total: subTotal + tax };
-  };
-
-  const modalData = selectedOrder?.order_data || {};
-  const modalTargetInfo = modalData.isRecipientDifferent ? (modalData.recipientInfo || {}) : (modalData.customerInfo || {});
+  if (isLoading) return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-sans"><div className="text-[#2D4B3E] font-bold tracking-widest animate-pulse">読み込み中...</div></div>;
 
   return (
     <div className="min-h-screen bg-[#FBFAF9] font-sans text-[#111111] pb-32">
-      
-      {/* ヘッダー */}
-      <header className="h-16 bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] sticky top-0 z-40 px-6 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <span className="font-serif italic text-[20px] font-black tracking-tight text-[#2D4B3E]">FLORIX</span>
-          <span className="hidden sm:inline-block w-[1px] h-4 bg-[#EAEAEA]"></span>
-          <span className="hidden sm:inline-block text-[11px] font-bold tracking-widest text-[#999999] uppercase">Corporate Portal</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-[12px] font-bold text-[#555555]">
-            <Building2 size={16} className="text-[#2D4B3E]" />
-            <span className="hidden sm:inline-block">{companyName} 様</span>
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-[#EAEAEA]">
+        <div className="max-w-[600px] mx-auto h-16 px-6 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-[#2D4B3E]">
+            <Building2 size={18}/>
+            <span className="font-bold tracking-tight text-[14px]">法人専用オーダー</span>
           </div>
-          <button onClick={handleLogout} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#FBFAF9] border border-[#EAEAEA] text-[#999999] hover:text-[#111111] hover:bg-[#EAEAEA] transition-all">
-            <LogOut size={14} />
-          </button>
+          <div className="text-[10px] font-bold tracking-widest text-[#999999]">ステップ {step} / 4</div>
+        </div>
+        <div className="h-0.5 w-full bg-[#FBFAF9]">
+          <div className="h-full transition-all duration-500 ease-out bg-[#2D4B3E]" style={{ width: `${(step / 4) * 100}%` }}></div>
         </div>
       </header>
 
-      <main className="max-w-[1000px] mx-auto p-6 md:p-8 space-y-8 pt-8">
+      <main className="max-w-[600px] mx-auto px-6 pt-10">
 
-        {/* 未入金アラートバナー */}
-        {billingInfo.hasUnpaid && (
-          <div className="bg-red-50 border border-red-200 p-5 rounded-[24px] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={24} />
-              <div>
-                <p className="text-[15px] font-black text-red-800">未入金の請求書があります</p>
-                <p className="text-[12px] font-bold text-red-600 mt-1">{billingInfo.unpaidMonth}ご利用分 (¥{billingInfo.unpaidAmount.toLocaleString()}) のお支払いが確認できておりません。至急ご確認をお願いいたします。</p>
-              </div>
+        {/* --- STEP 1: お花の種類 --- */}
+        {step === 1 && (
+          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div>
+              <h1 className="text-[20px] font-bold mb-2 text-[#2D4B3E]">商品を選ぶ</h1>
+              <p className="text-[12px] text-[#555555]">ご希望のアイテムをお選びください。</p>
             </div>
-            <button className="shrink-0 flex items-center justify-center gap-2 text-[12px] font-bold text-white bg-red-500 px-5 py-2.5 rounded-xl hover:bg-red-600 transition-all shadow-sm">
-              <Download size={16}/> 請求書をダウンロード
-            </button>
+            <div className="space-y-6">
+              <select className="w-full h-16 px-5 bg-white border border-[#EAEAEA] rounded-[20px] outline-none focus:border-[#2D4B3E] transition-all text-[15px] font-bold appearance-none shadow-sm" value={flowerType} onChange={(e) => { setFlowerType(e.target.value); setItemPrice(''); setIsBring('shop'); }}>
+                <option value="">種類を選択してください</option>
+                {appSettings?.flowerItems?.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
+              </select>
+
+              {flowerType ? (
+                <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] space-y-4 animate-in fade-in">
+                  <p className="text-[11px] font-bold text-[#111111] tracking-widest border-b border-[#EAEAEA] pb-2">納期に関する注意事項</p>
+                  <div className="space-y-2 text-[12px] text-[#555555] font-medium">
+                    {selectedItemSettings.normalLeadDays && <div className="flex justify-between"><span>通常納期 (配達)</span><span className="font-bold">{selectedItemSettings.normalLeadDays}日後以降</span></div>}
+                    {selectedItemSettings.shippingLeadDays && <div className="flex justify-between text-[#2D4B3E]"><span>業者配送 納期</span><span className="font-bold">発送準備 {selectedItemSettings.shippingLeadDays}日 ＋ 配送リードタイム</span></div>}
+                  </div>
+                  <label className="flex items-center gap-3 pt-4 cursor-pointer border-t border-[#EAEAEA]">
+                    <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="w-5 h-5 accent-[#2D4B3E] rounded-md cursor-pointer" />
+                    <span className="text-[13px] font-bold text-[#111111] underline underline-offset-4">内容を確認し、同意します</span>
+                  </label>
+                </div>
+              ) : (
+                <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] text-center border-dashed">
+                   <p className="text-[12px] text-[#999999] font-bold">種類を選択すると納期が表示されます</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
-        
-        {/* ウェルカム＆クイックアクション */}
-        <div className="bg-[#2D4B3E] rounded-[32px] p-8 md:p-10 shadow-lg text-white relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="absolute -right-20 -top-20 opacity-10 pointer-events-none">
-            <Gift size={240} />
-          </div>
-          
-          <div className="relative z-10 space-y-2">
-            <h1 className="text-[24px] md:text-[28px] font-black tracking-tight leading-tight">
-              いつもご利用ありがとうございます。<br />
-              <span className="text-emerald-300">{companyName}</span> 様
-            </h1>
-            <p className="text-[13px] text-white/80 font-medium pt-2">
-              ご請求書のダウンロードや、次回のお祝い花のオーダーをこちらから行えます。
-            </p>
-          </div>
-          
-          <div className="relative z-10 shrink-0">
-            <Link 
-              href="/corporate/order" 
-              className="group flex items-center justify-center gap-2 bg-white text-[#2D4B3E] px-8 py-4 rounded-2xl font-black text-[15px] shadow-xl hover:scale-105 transition-all active:scale-95"
-            >
-              <Plus size={20} />
-              新しいお花を注文する
-              <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform ml-1" />
-            </Link>
-          </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
-          {/* 左側：メインコンテンツ（2カラム分） */}
-          <div className="md:col-span-2 space-y-8">
-            
-            {/* 注文履歴 */}
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-[16px] font-black text-[#2D4B3E] flex items-center gap-2">
-                  <ShoppingBag size={20} /> 最近のご注文履歴
-                </h2>
+        {/* --- STEP 2: お受け取り方法 --- */}
+        {step === 2 && (
+          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div>
+              <h1 className="text-[20px] font-bold mb-2 text-[#2D4B3E]">お届け方法を選ぶ</h1>
+              <p className="text-[12px] text-[#555555]">お花のお届け方法をお選びください。</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {selectedItemSettings.canDelivery !== false && (<button onClick={() => { setReceiveMethod('delivery'); setStep(3); }} className="p-6 rounded-[24px] bg-[#FBFAF9] border border-[#EAEAEA] font-bold text-[14px] hover:bg-white hover:border-[#2D4B3E] transition-all text-[#555555] hover:text-[#2D4B3E]">自社配達<br/><span className="text-[10px] font-normal text-[#999]">(近隣エリア向け)</span></button>)}
+              {selectedItemSettings.canShipping !== false && (<button onClick={() => { setReceiveMethod('sagawa'); setStep(3); }} className="p-6 rounded-[24px] bg-[#FBFAF9] border border-[#EAEAEA] font-bold text-[14px] hover:bg-white hover:border-[#2D4B3E] transition-all text-[#555555] hover:text-[#2D4B3E]">業者配送<br/><span className="text-[10px] font-normal text-[#999]">(全国対応)</span></button>)}
+            </div>
+          </div>
+        )}
+
+        {/* --- STEP 3: デザイン詳細と画像提案 --- */}
+        {step === 3 && (
+          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div>
+              <h1 className="text-[20px] font-bold mb-2 text-[#2D4B3E]">デザイン・詳細設定</h1>
+              <p className="text-[12px] text-[#555555]">お花のイメージと、立札の内容を入力してください。</p>
+            </div>
+
+            <div className="space-y-8 bg-white p-8 rounded-[28px] border border-[#EAEAEA] shadow-sm transition-all duration-500">
+              
+              <div className="space-y-3">
+                <label className="text-[11px] font-bold text-[#999999] tracking-widest">ご用途</label>
+                <select value={flowerPurpose} onChange={(e) => setFlowerPurpose(e.target.value)} className="w-full h-12 border-b border-[#EAEAEA] bg-transparent outline-none font-bold focus:border-[#2D4B3E] transition-all">
+                  <option value="">選択...</option><option value="就任・昇進祝い">就任・昇進祝い</option><option value="開店・開業祝い">開店・開業祝い</option><option value="移転祝い">移転祝い</option><option value="お供え">お供え</option><option value="その他">その他</option>
+                </select>
+                {flowerPurpose === 'その他' && <input type="text" placeholder="詳細を入力..." value={otherPurpose} onChange={(e) => setOtherPurpose(e.target.value)} className="w-full h-10 mt-2 bg-[#FBFAF9] px-4 rounded-lg outline-none text-sm border border-[#EAEAEA]" />}
+              </div>
+              <div className="space-y-3">
+                <label className="text-[11px] font-bold text-[#999999] tracking-widest">イメージ / ご要望</label>
+                <select value={flowerVibe} onChange={(e) => setFlowerVibe(e.target.value)} className="w-full h-12 border-b border-[#EAEAEA] bg-transparent outline-none font-bold focus:border-[#2D4B3E] transition-all">
+                  <option value="">選択...</option><option value="おまかせ (用途に合わせる)">おまかせ (用途に合わせる)</option><option value="華やか・豪華">華やか・豪華</option><option value="上品・落ち着いた雰囲気">上品・落ち着いた雰囲気</option><option value="その他">その他</option>
+                </select>
+                {flowerVibe === 'その他' && <input type="text" placeholder="イメージの詳細をご入力ください" value={otherVibe} onChange={(e) => setOtherVibe(e.target.value)} className="w-full h-10 mt-2 bg-[#FBFAF9] px-4 rounded-lg outline-none text-sm border border-[#EAEAEA]" />}
+              </div>
+              <div className="space-y-3 pt-4">
+                <label className="text-[11px] font-bold text-[#999999] tracking-widest">ご予算 (税抜)</label>
+                <select value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} className="w-full h-14 border rounded-xl px-4 bg-[#FBFAF9] outline-none font-bold text-[16px] transition-all border-[#EAEAEA] focus:border-[#2D4B3E]">
+                  <option value="">選択...</option>
+                  {getPriceOptions().map(price => (<option key={price} value={price}>¥{price.toLocaleString()}</option>))}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <p className="text-[11px] font-bold text-[#999999] tracking-widest text-center">メッセージ・立札</p>
+              <div className="flex gap-2 p-1 bg-white rounded-2xl border border-[#EAEAEA]">
+                {['なし', 'メッセージカード', '立札'].map(t => (
+                  <button key={t} onClick={() => setCardType(t)} className={`flex-1 py-3 text-[12px] font-bold rounded-xl transition-all ${cardType === t ? 'bg-[#2D4B3E] text-white shadow-md' : 'text-[#555555]'}`}>{t}</button>
+                ))}
               </div>
 
-              {isLoading ? (
-                <div className="text-center py-20 text-[#2D4B3E] font-bold animate-pulse">読み込み中...</div>
-              ) : orders.length === 0 ? (
-                <div className="text-center py-10 bg-white rounded-[24px] border border-dashed border-[#EAEAEA] text-[#999999] font-bold">
-                  ご注文履歴はありません。
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4">
-                  {orders.slice(0, 5).map(order => {
-                    const d = order?.order_data || {};
-                    return (
-                      <div 
-                        key={order.id} 
-                        onClick={() => setSelectedOrder(order)}
-                        className="bg-white p-5 md:p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm hover:shadow-md hover:border-[#2D4B3E]/30 cursor-pointer transition-all flex flex-col md:flex-row md:items-center gap-4 group"
-                      >
-                        <div className="flex-1 space-y-3">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[11px] font-bold text-white bg-[#2D4B3E] px-3 py-1.5 rounded-lg tracking-wider shadow-sm">
-                              {safeFormatDate(order.created_at)} 注文
-                            </span>
-                            {getReceiveMethodBadge(d.receiveMethod)}
-                            <span className="text-[11px] font-bold text-[#555555] border border-[#EAEAEA] px-3 py-1.5 rounded-lg bg-[#FBFAF9] shadow-sm">
-                              {d.status === 'new' ? '受付完了' : (d.status || '対応中')}
-                            </span>
-                          </div>
-                          <div className="text-[16px] md:text-[18px] font-black text-[#111111] group-hover:text-[#2D4B3E] transition-colors">
-                            {d.flowerType || '商品未設定'}
-                          </div>
-                          <div className="text-[13px] font-bold text-[#D97C8F] flex items-center gap-1.5">
-                            <Calendar size={16} /> お届け: {d.selectedDate || '未指定'} {d.selectedTime && `(${d.selectedTime})`}
-                          </div>
-                        </div>
-                        
-                        <div className="flex flex-col md:items-end justify-between border-t md:border-t-0 md:border-l border-[#EAEAEA] pt-4 md:pt-0 md:pl-6">
-                          <p className="text-[11px] text-[#999999] font-bold mb-1">合計金額(税込)</p>
-                          <p className="text-[24px] font-black text-[#2D4B3E]">¥{getTotals(d).total.toLocaleString()}</p>
-                          <div className="flex items-center gap-1 text-[11px] font-bold text-blue-600 mt-2 bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 group-hover:bg-blue-500 group-hover:text-white transition-all">
-                            詳細を見る <ChevronRight size={14}/>
-                          </div>
-                        </div>
+              {cardType === '立札' && (
+                <div className="space-y-6 bg-white p-6 rounded-[28px] border border-[#EAEAEA] shadow-sm animate-in zoom-in-95 duration-300">
+                  <select value={tatePattern} onChange={(e) => setTatePattern(e.target.value)} className="w-full h-14 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none font-bold text-[13px] focus:border-[#2D4B3E]">
+                    <option value="">レイアウトを選択</option>
+                    {tateOptions.map(opt => (<option key={opt.id} value={opt.id}>{opt.label}</option>))}
+                  </select>
+                  
+                  {tatePattern && (
+                    <div className="space-y-3">
+                      {tateNeeds.includes('1') && <input type="text" placeholder="① 内容 (例: 御開店)" value={tateInput1} onChange={(e) => setTateInput1(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
+                      {tateNeeds.includes('2') && <input type="text" placeholder="② 宛名 (例: 〇〇様)" value={tateInput2} onChange={(e) => setTateInput2(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
+                      
+                      <div className="pt-2 pb-1 border-t border-[#FBFAF9]">
+                        <span className="text-[10px] font-bold text-[#2D4B3E] bg-[#2D4B3E]/10 px-2 py-1 rounded">※贈り主情報は自社データから自動入力されています</span>
                       </div>
-                    );
-                  })}
+
+                      {tateNeeds.includes('3') && <input type="text" placeholder="③ 贈り主 (例: 株式会社〇〇)" value={tateInput3} onChange={(e) => setTateInput3(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
+                      {tateNeeds.includes('3a') && <input type="text" placeholder="③-1 会社名" value={tateInput3a} onChange={(e) => setTateInput3a(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
+                      {tateNeeds.includes('3b') && <input type="text" placeholder="③-2 役職・氏名" value={tateInput3b} onChange={(e) => setTateInput3b(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
+                      
+                      <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4">仕上がりプレビュー</p>
+                      <div className={`relative mx-auto border border-[#EAEAEA] shadow-lg bg-white flex flex-col items-center font-serif ${selectedTateOpt?.layout === 'horizontal' ? 'aspect-[1.414/1] w-full justify-center p-6' : 'aspect-[1/1.414] h-[300px] pt-6 px-4'}`}>
+                         <div className={`font-black ${isOsonae ? 'text-gray-500' : 'text-red-600'} ${selectedTateOpt?.layout === 'horizontal' ? 'text-[28px] mb-4' : 'text-[40px] mb-6 leading-none'}`}>
+                           {topPrefixText}
+                         </div>
+                         <div className={`flex w-full font-bold text-gray-900 ${selectedTateOpt?.layout === 'horizontal' ? 'flex-col items-center gap-2 text-[16px]' : 'flex-row-reverse justify-center gap-6 text-[18px]'}`}>
+                           {tatePattern.includes('p6') || tatePattern.includes('p8') ? (
+                             <><div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput2 || '宛名'}様</div>{!isOsonae && <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput1 || '内容'}</div>}<div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3 || '贈り主'}</div></>
+                           ) : tatePattern.includes('p4') ? (
+                             <><div className={`tracking-[0.3em] ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3a || '会社名'}</div><div className={`tracking-[0.3em] font-normal ${selectedTateOpt?.layout === 'horizontal' ? 'mt-4 text-[14px]' : 'mt-6 text-[14px] [writing-mode:vertical-rl]'}`}>{tateInput3b || '役職・氏名'}</div></>
+                           ) : (
+                             <>{!isOsonae && <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput1 || '内容'}</div>}<div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3 || '贈り主'}</div></>
+                           )}
+                         </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
-            </section>
+            </div>
           </div>
+        )}
 
-          {/* 右側：サイドコンテンツ（1カラム分） */}
-          <div className="space-y-8">
-            
-            {/* 請求関連のサマリー */}
-            <section className="bg-[#FBFAF9] p-6 rounded-[24px] border border-[#EAEAEA]">
-              <h2 className="text-[13px] font-black text-[#555555] flex items-center gap-2 mb-4">
-                <CreditCard size={16} /> 請求・お支払い情報
-              </h2>
-              <div className="space-y-4">
-                <div className="flex items-end justify-between">
-                  <span className="text-[11px] font-bold text-[#999999]">当月ご利用額</span>
-                  <span className="text-[20px] font-black text-[#111111]">¥{orders.reduce((sum, o) => sum + getTotals(o.order_data).total, 0).toLocaleString()}</span>
-                </div>
-                <div className="flex items-end justify-between">
-                  <span className="text-[11px] font-bold text-[#999999]">お支払い期限</span>
-                  <span className="text-[13px] font-bold text-[#111111]">翌月末日</span>
-                </div>
-                <button 
-                  onClick={() => alert('今月分の請求書PDFを生成してダウンロードします。')}
-                  className="w-full mt-2 py-3 bg-white border border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#2D4B3E] hover:border-[#2D4B3E] transition-all flex items-center justify-center gap-2 shadow-sm"
-                >
-                  <FileText size={16} /> 今月の請求書を発行する
-                </button>
-              </div>
-            </section>
+        {/* --- STEP 4: お届け・お客様情報 --- */}
+        {step === 4 && (
+          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div>
+              <h1 className="text-[20px] font-bold mb-2 text-[#2D4B3E]">お届け・お客様情報</h1>
+              <p className="text-[12px] text-[#555555]">お届け希望日と、お届け先の情報をご入力ください。</p>
+            </div>
 
-            {/* 今後のイベント・行事 */}
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-[16px] font-black text-[#2D4B3E] flex items-center gap-2">
-                  <Calendar size={20} /> 今後の行事・お祝い
-                </h2>
-                <button 
-                  onClick={() => setIsEventModalOpen(true)}
-                  className="text-[11px] font-bold bg-[#2D4B3E] text-white px-3 py-1.5 rounded-full hover:bg-[#1f352b] transition-all flex items-center gap-1 shadow-sm"
-                >
-                  <Plus size={14}/> 追加
-                </button>
+            <div className="space-y-6">
+              
+              {/* ご注文者情報はリードオンリー表示 */}
+              <div className="space-y-4 bg-gray-50 p-6 rounded-[24px] border border-gray-200 shadow-sm opacity-80">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-[11px] font-bold text-gray-500 tracking-widest flex items-center gap-1.5"><Building2 size={14}/> ご注文者情報 (自動入力)</label>
+                </div>
+                <div className="text-[13px] font-bold text-gray-700 space-y-2">
+                  <p>{customerInfo.name}</p>
+                  <p>{customerInfo.phone} / {customerInfo.email}</p>
+                  <p>〒{customerInfo.zip} {customerInfo.address1}{customerInfo.address2}</p>
+                </div>
               </div>
 
-              <div className="space-y-4">
-                {events.length === 0 ? (
-                  <div className="text-center p-6 bg-[#FBFAF9] border border-[#EAEAEA] rounded-[20px] text-[12px] font-bold text-[#999999]">登録されている行事はありません</div>
-                ) : (
-                  events.sort((a, b) => new Date(a.date) - new Date(b.date)).map(ev => (
-                    <div key={ev.id} className="bg-white p-5 rounded-[20px] border border-[#EAEAEA] shadow-sm relative overflow-hidden group hover:border-[#D97C8F] transition-all">
-                      <div className="absolute top-0 left-0 w-1 h-full bg-[#D97C8F]"></div>
-                      
-                      <div className="flex justify-between items-start pl-2">
-                        <div className="space-y-2 w-full">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[11px] font-bold bg-[#D97C8F]/10 text-[#D97C8F] px-2 py-0.5 rounded font-mono">{ev.date}</span>
-                            <span className="text-[10px] font-bold text-[#999999] bg-[#FBFAF9] px-2 py-0.5 rounded border border-[#EAEAEA] flex items-center gap-1">
-                              {ev.repeat === '毎年' ? <RefreshCw size={10}/> : null} {ev.repeat}
-                            </span>
-                          </div>
-                          <p className="text-[14px] font-black text-[#111111] leading-tight">{ev.title}</p>
-                          <div className="flex items-center justify-between">
-                            <p className="text-[11px] font-bold text-[#555555]">{ev.target || '対象者なし'}</p>
-                            <button onClick={() => handleDeleteEvent(ev.id)} className="text-[#EAEAEA] hover:text-red-500 transition-colors p-1"><Trash2 size={14}/></button>
-                          </div>
-                          {ev.address && (
-                            <p className="text-[10px] font-bold text-[#999999] flex items-center gap-1 truncate"><MapPin size={10}/> {ev.address}</p>
-                          )}
-                        </div>
-                      </div>
+              {isRecipientDifferent && (
+                <div className="space-y-4 bg-white p-8 rounded-[28px] border border-[#2D4B3E]/20 shadow-sm">
+                  <label className="text-[11px] font-bold text-[#2D4B3E] tracking-widest">お届け先情報をご入力ください</label>
+                  <input type="text" placeholder="お届け先 会社名・お名前" value={recipientInfo.name} onChange={(e) => setRecipientInfo({...recipientInfo, name: e.target.value})} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px] font-bold" />
+                  <input type="tel" placeholder="お届け先 電話番号" value={recipientInfo.phone} onChange={(e) => setRecipientInfo({...recipientInfo, phone: e.target.value})} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]" />
+                  <input type="text" placeholder="郵便番号 (7桁)" value={recipientInfo.zip} onChange={(e) => { setRecipientInfo({...recipientInfo, zip: e.target.value}); if(e.target.value.length === 7) fetchAddress(e.target.value, 'recipient'); }} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]" />
+                  <input type="text" placeholder="都道府県・市区町村 (自動入力)" value={recipientInfo.address1} className="w-full h-14 px-5 bg-[#EAEAEA]/30 rounded-xl outline-none text-[#999999] text-[14px]" readOnly />
+                  <input type="text" placeholder="番地・建物名" value={recipientInfo.address2} onChange={(e) => setRecipientInfo({...recipientInfo, address2: e.target.value})} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]" />
+                </div>
+              )}
 
-                      {/* 簡単注文アクションパネル */}
-                      <div className="mt-4 pt-4 border-t border-[#F7F7F7] space-y-2 pl-2">
-                        <p className="text-[10px] font-bold text-[#999999] mb-2 tracking-widest">この行事のご注文</p>
-                        
-                        <div className="flex flex-col gap-2">
-                          <button 
-                            onClick={() => handleQuickOrder('omakase', ev)}
-                            className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#2D4B3E] text-white rounded-xl text-[11px] font-bold hover:bg-[#1f352b] transition-all shadow-sm active:scale-[0.98]"
-                          >
-                            <Zap size={14}/> 予算だけ決めて完全おまかせ
-                          </button>
-                          
-                          {ev.lastOrder ? (
-                            <button 
-                              onClick={() => handleQuickOrder('repeat', ev)}
-                              className="w-full flex items-center justify-center gap-2 py-2.5 bg-white border border-[#EAEAEA] text-[#2D4B3E] rounded-xl text-[11px] font-bold hover:bg-[#F7F7F7] hover:border-[#2D4B3E]/30 transition-all active:scale-[0.98]"
-                            >
-                              <Repeat size={14}/> 前回と全く同じ内容で注文
-                            </button>
-                          ) : (
-                            <Link href="/corporate/order" className="w-full flex items-center justify-center gap-2 py-2.5 bg-white border border-[#EAEAEA] text-[#555555] rounded-xl text-[11px] font-bold hover:bg-[#F7F7F7] transition-all active:scale-[0.98]">
-                              オーダーフォームを開く <ChevronRight size={12}/>
-                            </Link>
-                          )}
-                        </div>
-                      </div>
+              <div className="grid grid-cols-2 gap-4 mt-6">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-[#999999] tracking-widest">お届け希望日</label>
+                  <input type="date" min={minDateLimit} value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full h-14 px-4 bg-white border border-[#EAEAEA] rounded-[16px] outline-none font-bold text-[#555555] focus:border-[#2D4B3E] shadow-sm" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-[#999999] tracking-widest">希望時間</label>
+                  <select value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)} className="w-full h-14 px-4 bg-white border border-[#EAEAEA] rounded-[16px] outline-none font-bold text-[#555555] focus:border-[#2D4B3E] shadow-sm">
+                    <option value="">選択...</option>
+                    {getTimeOptions().map(t => (<option key={t} value={t}>{t}</option>))}
+                  </select>
+                </div>
+              </div>
 
+              {/* 支払い方法の選択（請求書払いをデフォルト・強調） */}
+              <div className="bg-white p-6 rounded-[24px] border-2 border-[#2D4B3E]/20 shadow-sm mt-6">
+                 <label className="text-[11px] font-bold text-[#2D4B3E] tracking-widest block mb-4">お支払い方法</label>
+                 <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="w-full h-14 px-5 bg-[#2D4B3E]/5 border border-[#2D4B3E]/20 rounded-xl outline-none font-bold text-[#2D4B3E] focus:border-[#2D4B3E] transition-all text-[14px]">
+                   <option value="請求書払い (月末締め 翌月末払い)">請求書払い (月末締め 翌月末払い)</option>
+                   <option value="クレジットカード決済 (オンライン)">クレジットカード決済 (オンライン)</option>
+                   <option value="銀行振込 (前払い)">銀行振込 (前払い)</option>
+                 </select>
+              </div>
+
+              <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm mt-8">
+                <div className="flex flex-col items-center justify-center gap-6">
+                  <div className="w-full">
+                    <p className="text-[11px] font-bold text-[#999999] tracking-widest text-center mb-2">お見積り金額</p>
+                    <div className="bg-[#FBFAF9] p-5 rounded-2xl space-y-3 text-[13px] text-[#555555] font-medium w-full">
+                      <div className="flex justify-between">
+                        <span>商品代 (税抜):</span>
+                        <span className="font-bold text-[#111111]">¥{parsedItemPrice.toLocaleString()}</span>
+                      </div>
+                      {parsedFee > 0 && (
+                        <div className="flex justify-between text-blue-700">
+                          <span>配送料 (箱代・クール等含):</span>
+                          <span className="font-bold">¥{parsedFee.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between border-t border-[#EAEAEA] pt-3 mt-1">
+                        <span className="text-[#2D4B3E]">消費税 (10%):</span>
+                        <span className="font-bold text-[#2D4B3E]">¥{tax.toLocaleString()}</span>
+                      </div>
                     </div>
-                  ))
-                )}
+                    {areaError && <p className="text-red-500 text-[11px] font-bold mt-2 text-center">{areaError}</p>}
+                  </div>
+                  <div className="text-center w-full border-t border-[#EAEAEA] pt-6">
+                    <p className="text-[12px] font-bold text-[#2D4B3E] tracking-widest mb-1">合計金額 (税込)</p>
+                    <div className="text-[44px] font-black text-[#2D4B3E] font-sans leading-none">
+                      ¥{totalAmount.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </section>
 
+              <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] font-sans space-y-4 mt-6">
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" id="methodAgreed" checked={methodAgreed} onChange={(e) => setMethodAgreed(e.target.checked)} className="w-5 h-5 accent-[#2D4B3E] cursor-pointer rounded-md" />
+                  <label htmlFor="methodAgreed" className="text-[13px] font-bold underline cursor-pointer text-[#111111]">注文内容と注意事項に同意する</label>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* ナビゲーション */}
+        <div className="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-md border-t border-[#EAEAEA] py-4 px-6 z-50">
+          <div className="max-w-[600px] mx-auto flex gap-4">
+            {step > 1 && (
+              <button onClick={() => setStep(step - 1)} className="px-6 h-14 shrink-0 rounded-[16px] bg-white border border-[#EAEAEA] text-[#555555] font-bold text-[14px] hover:bg-[#F7F7F7] transition-all">戻る</button>
+            )}
+            <button 
+              disabled={isFormInvalid() || (step === 1 && !agreed) || isSubmitting} 
+              onClick={() => step < 4 ? setStep(step + 1) : handleSubmitOrder()} 
+              className={`flex-1 h-14 rounded-[16px] bg-[#2D4B3E] text-white font-bold text-[15px] tracking-widest shadow-md transition-all active:scale-[0.98] disabled:opacity-40 disabled:active:scale-100 hover:bg-[#1f352b]`}
+            >
+              {step === 4 ? (isSubmitting ? '送信中...' : '注文を確定する') : '次へ進む'}
+            </button>
           </div>
         </div>
+
       </main>
 
-      {/* --- 詳細モーダル (法人用) --- */}
-      {selectedOrder && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
-          <div className="absolute inset-0 bg-[#111111]/40 backdrop-blur-sm" onClick={() => setSelectedOrder(null)}></div>
-          
-          <div className="bg-[#FBFAF9] w-full max-w-[800px] max-h-[90vh] rounded-[32px] shadow-2xl relative flex flex-col overflow-hidden">
-            
-            <div className="bg-white border-b border-[#EAEAEA] p-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 z-10">
-              <div>
-                <h2 className="text-[20px] font-black text-[#2D4B3E]">注文詳細</h2>
-                <p className="text-[11px] text-[#999999] font-bold mt-1">注文日: {safeFormatDate(selectedOrder.created_at, true)} | 注文番号: {selectedOrder.id}</p>
-              </div>
-              
-              <div className="flex flex-wrap items-center gap-2">
-                <button className="flex items-center gap-1.5 px-4 py-2 bg-white border border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#2D4B3E] hover:border-[#2D4B3E] transition-all shadow-sm">
-                  <Download size={14} /> 領収書・納品書 (PDF)
-                </button>
-                <button onClick={() => setSelectedOrder(null)} className="w-10 h-10 ml-2 bg-[#FBFAF9] rounded-full flex items-center justify-center text-[#999999] hover:text-[#111111] transition-colors border border-[#EAEAEA] hover:bg-[#EAEAEA]">
-                  <X size={20} />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-8 hide-scrollbar">
-              
-              <div className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] shadow-sm flex items-center justify-between gap-4">
-                <span className="text-[13px] font-bold text-[#555555] flex items-center gap-2"><ListChecks size={18}/> 現在の状況</span>
-                <span className="px-4 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[14px] font-bold text-[#2D4B3E]">
-                  {modalData.status === 'new' ? '受付完了・手配中' : (modalData.status || '手配中')}
-                </span>
-              </div>
-
-              {modalData.receiveMethod === 'sagawa' ? (
-                <div className="bg-green-50 border border-green-200 p-6 md:p-8 rounded-[24px] flex flex-col md:flex-row items-center gap-6 justify-center text-center shadow-inner">
-                  <div className="space-y-1">
-                    <span className="text-[12px] font-bold text-green-700 tracking-widest bg-white/50 px-3 py-1 rounded-full">当店発送予定日</span>
-                    <p className="text-[20px] font-black text-green-900 pt-2">
-                      {modalData.shippingDate ? `${modalData.shippingDate.split('-')[1]}月${modalData.shippingDate.split('-')[2]}日` : '未設定'}
-                    </p>
-                  </div>
-                  <ChevronRight size={24} className="hidden md:block text-green-300"/>
-                  <div className="space-y-1">
-                    <span className="text-[12px] font-bold text-green-700 tracking-widest">お届け予定日</span>
-                    <p className="text-[24px] font-black text-green-800 flex items-center justify-center gap-2 pt-1">
-                      <Calendar size={20} className="text-green-600"/> 
-                      {modalData.selectedDate ? `${modalData.selectedDate.split('-')[1]}月${modalData.selectedDate.split('-')[2]}日` : '未指定'}
-                    </p>
-                    <p className="text-[12px] font-bold text-green-700">{modalData.selectedTime || '時間指定なし'}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-[#FBFAF9] border border-[#EAEAEA] p-6 rounded-[24px] flex flex-col items-center justify-center text-center shadow-inner">
-                   <span className="text-[12px] font-bold text-[#999999] tracking-widest mb-1">
-                     {modalData.receiveMethod === 'pickup' ? 'ご来店予定日' : 'お届け予定日'}
-                   </span>
-                   <p className="text-[28px] font-black text-[#2D4B3E] flex items-center gap-2">
-                     <Calendar size={24}/> {modalData.selectedDate ? `${modalData.selectedDate.split('-')[1]}月${modalData.selectedDate.split('-')[2]}日` : '未設定'}
-                   </p>
-                   <p className="text-[14px] font-bold text-[#D97C8F] mt-2">{modalData.selectedTime || '時間指定なし'}</p>
-                </div>
-              )}
-
-              <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
-                <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><MapPin size={18}/> お届け先情報</h3>
-                <div className="space-y-3 text-[13px]">
-                  <div className="flex gap-2 items-center mb-4 bg-[#FBFAF9] p-3 rounded-xl border border-[#EAEAEA] w-fit">
-                    {getReceiveMethodBadge(modalData.receiveMethod)}
-                  </div>
-                  {modalData.receiveMethod === 'pickup' ? (
-                    <div className="bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA]">
-                      <p><span className="text-[#999999] text-[10px] block mb-1 tracking-widest">受取店舗</span><span className="font-black text-[16px] text-[#2D4B3E]">{modalData.selectedShop || '未指定'}</span></p>
-                    </div>
-                  ) : (
-                    <div className="bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA] space-y-3">
-                      <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">宛名</span><span className="font-black text-[16px]">{modalTargetInfo?.name || '未設定'} 様</span></p>
-                      <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">住所</span><span className="font-bold text-[14px] block leading-relaxed">〒{modalTargetInfo?.zip}<br/>{modalTargetInfo?.address1} {modalTargetInfo?.address2}</span></p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
-                <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><Tag size={18}/> ご注文内容</h3>
-                <div className="flex flex-col sm:flex-row gap-6">
-                  {modalData.referenceImage ? (
-                    <img src={modalData.referenceImage} alt="参考" className="w-32 h-32 object-cover rounded-2xl border border-[#EAEAEA] shadow-sm shrink-0" />
-                  ) : (
-                    <div className="w-32 h-32 bg-[#FBFAF9] border border-[#EAEAEA] rounded-2xl flex items-center justify-center text-[#999999] text-[11px] font-bold shrink-0">画像なし</div>
-                  )}
-                  <div className="flex-1 grid grid-cols-2 gap-4 text-[13px]">
-                    <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block tracking-widest mb-1">種類</span><span className="font-black text-[#2D4B3E] text-[14px]">{modalData.flowerType || '未設定'}</span></div>
-                    <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block tracking-widest mb-1">用途</span><span className="font-bold">{modalData.flowerPurpose} {modalData.otherPurpose && `(${modalData.otherPurpose})`}</span></div>
-                    <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block tracking-widest mb-1">カラー</span><span className="font-bold">{modalData.flowerColor}</span></div>
-                    <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block tracking-widest mb-1">イメージ</span><span className="font-bold">{modalData.flowerVibe} {modalData.otherVibe && `(${modalData.otherVibe})`}</span></div>
-                  </div>
-                </div>
-              </div>
-
-              {modalData.cardType !== 'なし' && (
-                <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
-                  <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><MessageSquare size={18}/> {modalData.cardType}</h3>
-                  {modalData.cardType === 'メッセージカード' && (
-                    <div className="bg-[#FBFAF9] p-6 rounded-2xl text-[14px] font-bold whitespace-pre-wrap border border-[#EAEAEA] text-[#333333] leading-relaxed">
-                      {modalData.cardMessage}
-                    </div>
-                  )}
-                  {modalData.cardType === '立札' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[13px] bg-[#FBFAF9] p-6 rounded-2xl border border-[#EAEAEA]">
-                      {modalData.tateInput1 && <p><span className="text-[#999999] text-[10px] block tracking-widest mb-0.5">① 内容</span><span className="font-black text-[15px]">{modalData.tateInput1}</span></p>}
-                      {modalData.tateInput2 && <p><span className="text-[#999999] text-[10px] block tracking-widest mb-0.5">② 宛名</span><span className="font-black text-[15px]">{modalData.tateInput2} 様</span></p>}
-                      {modalData.tateInput3 && <p><span className="text-[#999999] text-[10px] block tracking-widest mb-0.5">③ 贈り主</span><span className="font-black text-[15px]">{modalData.tateInput3}</span></p>}
-                      {modalData.tateInput3a && <p><span className="text-[#999999] text-[10px] block tracking-widest mb-0.5">③-1 会社名</span><span className="font-black text-[15px]">{modalData.tateInput3a}</span></p>}
-                      {modalData.tateInput3b && <p><span className="text-[#999999] text-[10px] block tracking-widest mb-0.5">③-2 役職・氏名</span><span className="font-black text-[15px]">{modalData.tateInput3b}</span></p>}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="bg-white p-8 rounded-[32px] border-2 border-[#2D4B3E]/20 shadow-md space-y-6">
-                <h3 className="text-[16px] font-black text-[#2D4B3E] border-b border-[#EAEAEA] pb-3 flex items-center gap-2"><CreditCard size={20}/> ご請求額</h3>
-                <div className="space-y-3 text-[14px] font-medium text-[#555555]">
-                  <div className="flex justify-between items-center"><span>商品代 (税抜):</span><span className="font-black text-[#111111] text-[16px]">¥{getTotals(modalData).item.toLocaleString()}</span></div>
-                  {getTotals(modalData).fee > 0 && <div className="flex justify-between items-center text-[#555555]"><span>配送料:</span><span className="font-bold text-[16px]">¥{getTotals(modalData).fee.toLocaleString()}</span></div>}
-                  {getTotals(modalData).pickup > 0 && <div className="flex justify-between items-center text-[#555555]"><span>回収・返却費:</span><span className="font-bold text-[16px]">¥{getTotals(modalData).pickup.toLocaleString()}</span></div>}
-                  <div className="flex justify-between items-center border-t border-[#EAEAEA] pt-3 text-[#2D4B3E]"><span>消費税 (10%):</span><span className="font-bold text-[16px]">¥{getTotals(modalData).tax.toLocaleString()}</span></div>
-                  
-                  <div className="flex justify-between border-t-2 border-[#2D4B3E]/20 pt-4 mt-2 items-end">
-                    <span className="text-[13px] font-bold text-[#2D4B3E] tracking-widest mb-1">合計 (税込)</span>
-                    <span className="text-[36px] font-black text-[#2D4B3E] leading-none">¥{getTotals(modalData).total.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- 行事登録モーダル --- */}
-      {isEventModalOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
-          <div className="absolute inset-0 bg-[#111111]/40 backdrop-blur-sm" onClick={() => setIsEventModalOpen(false)}></div>
-          <div className="bg-[#FBFAF9] w-full max-w-[500px] rounded-[32px] shadow-2xl relative flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 max-h-[90vh]">
-            
-            <div className="p-6 border-b border-[#EAEAEA] flex justify-between items-center bg-white z-10 shrink-0">
-              <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Calendar size={20}/> 行事を登録</h2>
-              <button onClick={() => setIsEventModalOpen(false)} className="text-[#999999] hover:text-[#111111] p-2 bg-[#FBFAF9] rounded-full border border-[#EAEAEA] shadow-sm"><X size={18}/></button>
-            </div>
-            
-            <form onSubmit={handleAddEvent} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-6 space-y-6 overflow-y-auto flex-1 hide-scrollbar">
-                
-                <div className="space-y-4 bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm">
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-[#999999] tracking-widest">行事・イベント名 (必須)</label>
-                    <input type="text" required value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} placeholder="例: 社長の誕生日、創立記念日" className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold focus:border-[#2D4B3E] outline-none" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-[#999999] tracking-widest">日付 (必須)</label>
-                    <input type="date" required value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold focus:border-[#2D4B3E] outline-none" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-[#999999] tracking-widest">対象者 (任意)</label>
-                    <input type="text" value={newEvent.target} onChange={e => setNewEvent({...newEvent, target: e.target.value})} placeholder="例: 山田社長、自社、取引先A社" className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold focus:border-[#2D4B3E] outline-none" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-[#999999] tracking-widest">繰り返しの設定</label>
-                    <div className="flex gap-2 p-1 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA]">
-                      <button type="button" onClick={() => setNewEvent({...newEvent, repeat: '今年のみ'})} className={`flex-1 py-2.5 text-[12px] font-bold rounded-lg transition-all ${newEvent.repeat === '今年のみ' ? 'bg-white text-[#2D4B3E] shadow-sm border border-[#EAEAEA]' : 'text-[#999999]'}`}>今年のみ</button>
-                      <button type="button" onClick={() => setNewEvent({...newEvent, repeat: '毎年'})} className={`flex-1 py-2.5 text-[12px] font-bold rounded-lg transition-all ${newEvent.repeat === '毎年' ? 'bg-[#2D4B3E] text-white shadow-sm' : 'text-[#999999]'}`}>毎年繰り返す</button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4 bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm">
-                  <label className="text-[11px] font-bold text-[#2D4B3E] tracking-widest flex items-center gap-1.5"><MapPin size={14}/> お届け先情報の登録 (任意)</label>
-                  <p className="text-[10px] text-[#999999] leading-relaxed">ここに住所を登録しておくと、お花を注文する際に入力の手間が省けます。</p>
-                  <input type="text" placeholder="郵便番号 (7桁・ハイフンなし)" value={newEvent.zip} onChange={(e) => { setNewEvent({...newEvent, zip: e.target.value}); if(e.target.value.length === 7) fetchAddress(e.target.value); }} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
-                  <input type="text" placeholder="都道府県・市区町村 (自動入力)" value={newEvent.address1} className="w-full h-12 bg-[#EAEAEA]/30 border border-[#EAEAEA] rounded-xl px-4 text-[13px] text-[#555555] outline-none" readOnly />
-                  <input type="text" placeholder="番地・建物名" value={newEvent.address2} onChange={(e) => setNewEvent({...newEvent, address2: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
-                </div>
-
-              </div>
-              
-              <div className="p-6 bg-white border-t border-[#EAEAEA] shrink-0">
-                <button type="submit" className="w-full h-14 bg-[#2D4B3E] text-white rounded-2xl font-bold text-[15px] hover:bg-[#1f352b] transition-all shadow-md active:scale-[0.98]">
-                  行事を登録する
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap');
+        .font-serif { font-family: 'Noto Serif JP', serif; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
