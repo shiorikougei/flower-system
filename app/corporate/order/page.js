@@ -32,7 +32,7 @@ export default function CorporateDashboardPage() {
     { 
       id: 1, title: '代表取締役 就任記念', date: '2026-04-01', target: '山田 社長', repeat: '毎年',
       zip: '100-0001', address: '東京都千代田区千代田1-1',
-      lastOrder: { item: '特選 胡蝶蘭 3本立ち', price: 30000 } // 過去の注文履歴がある場合
+      lastOrder: { item: '特選 胡蝶蘭 3本立ち', price: 30000 }
     },
     { 
       id: 2, title: '創立記念日', date: '2026-05-10', target: '自社', repeat: '毎年',
@@ -273,17 +273,14 @@ export default function CorporateDashboardPage() {
               </h2>
               <div className="space-y-4">
                 <div className="flex items-end justify-between">
-                  <span className="text-[11px] font-bold text-[#999999]">当月ご利用額 (3月分)</span>
-                  <span className="text-[20px] font-black text-[#111111]">¥{billingInfo.currentMonthAmount.toLocaleString()}</span>
+                  <span className="text-[11px] font-bold text-[#999999]">当月ご利用額</span>
+                  <span className="text-[20px] font-black text-[#111111]">¥{orders.reduce((sum, o) => sum + getTotals(o.order_data).total, 0).toLocaleString()}</span>
                 </div>
                 <div className="flex items-end justify-between">
                   <span className="text-[11px] font-bold text-[#999999]">お支払い期限</span>
                   <span className="text-[13px] font-bold text-[#111111]">翌月末日</span>
                 </div>
-                <button 
-                  onClick={() => alert('今月分の請求書PDFを生成してダウンロードします。')}
-                  className="w-full mt-2 py-3 bg-white border border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#2D4B3E] hover:border-[#2D4B3E] transition-all flex items-center justify-center gap-2 shadow-sm"
-                >
+                <button className="w-full mt-2 py-3 bg-white border border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#2D4B3E] hover:border-[#2D4B3E] transition-all flex items-center justify-center gap-2 shadow-sm">
                   <FileText size={16} /> 今月の請求書を発行する
                 </button>
               </div>
@@ -330,7 +327,7 @@ export default function CorporateDashboardPage() {
                         </div>
                       </div>
 
-                      {/* ★ 簡単注文アクションパネル */}
+                      {/* 簡単注文アクションパネル */}
                       <div className="mt-4 pt-4 border-t border-[#F7F7F7] space-y-2 pl-2">
                         <p className="text-[10px] font-bold text-[#999999] mb-2 tracking-widest">この行事のご注文</p>
                         
@@ -374,6 +371,7 @@ export default function CorporateDashboardPage() {
           
           <div className="bg-[#FBFAF9] w-full max-w-[800px] max-h-[90vh] rounded-[32px] shadow-2xl relative flex flex-col overflow-hidden">
             
+            {/* モーダルヘッダー */}
             <div className="bg-white border-b border-[#EAEAEA] p-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 z-10">
               <div>
                 <h2 className="text-[20px] font-black text-[#2D4B3E]">注文詳細</h2>
@@ -390,6 +388,7 @@ export default function CorporateDashboardPage() {
               </div>
             </div>
 
+            {/* モーダルコンテンツ (スクロール) */}
             <div className="flex-1 overflow-y-auto p-6 space-y-8 hide-scrollbar">
               
               {/* ステータス表示（変更不可） */}
@@ -400,6 +399,7 @@ export default function CorporateDashboardPage() {
                 </span>
               </div>
 
+              {/* 日程パネル */}
               {modalData.receiveMethod === 'sagawa' ? (
                 <div className="bg-green-50 border border-green-200 p-6 md:p-8 rounded-[24px] flex flex-col md:flex-row items-center gap-6 justify-center text-center shadow-inner">
                   <div className="space-y-1">
@@ -515,44 +515,53 @@ export default function CorporateDashboardPage() {
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
           <div className="absolute inset-0 bg-[#111111]/40 backdrop-blur-sm" onClick={() => setIsEventModalOpen(false)}></div>
           <div className="bg-[#FBFAF9] w-full max-w-[500px] rounded-[32px] shadow-2xl relative flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 max-h-[90vh]">
-            <div className="p-6 border-b border-[#EAEAEA] flex justify-between items-center bg-white z-10 sticky top-0">
+            
+            {/* ヘッダー */}
+            <div className="p-6 border-b border-[#EAEAEA] flex justify-between items-center bg-white z-10 shrink-0">
               <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Calendar size={20}/> 行事を登録</h2>
               <button onClick={() => setIsEventModalOpen(false)} className="text-[#999999] hover:text-[#111111] p-2 bg-[#FBFAF9] rounded-full border border-[#EAEAEA] shadow-sm"><X size={18}/></button>
             </div>
             
-            <form onSubmit={handleAddEvent} className="p-6 space-y-6 overflow-y-auto">
-              <div className="space-y-4 bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm">
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-[#999999] tracking-widest">行事・イベント名 (必須)</label>
-                  <input type="text" required value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} placeholder="例: 社長の誕生日、創立記念日" className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold focus:border-[#2D4B3E] outline-none" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-[#999999] tracking-widest">日付 (必須)</label>
-                  <input type="date" required value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold focus:border-[#2D4B3E] outline-none" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-[#999999] tracking-widest">対象者 (任意)</label>
-                  <input type="text" value={newEvent.target} onChange={e => setNewEvent({...newEvent, target: e.target.value})} placeholder="例: 山田社長、自社、取引先A社" className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold focus:border-[#2D4B3E] outline-none" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-[#999999] tracking-widest">繰り返しの設定</label>
-                  <div className="flex gap-2 p-1 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA]">
-                    <button type="button" onClick={() => setNewEvent({...newEvent, repeat: '今年のみ'})} className={`flex-1 py-2.5 text-[12px] font-bold rounded-lg transition-all ${newEvent.repeat === '今年のみ' ? 'bg-white text-[#2D4B3E] shadow-sm border border-[#EAEAEA]' : 'text-[#999999]'}`}>今年のみ</button>
-                    <button type="button" onClick={() => setNewEvent({...newEvent, repeat: '毎年'})} className={`flex-1 py-2.5 text-[12px] font-bold rounded-lg transition-all ${newEvent.repeat === '毎年' ? 'bg-[#2D4B3E] text-white shadow-sm' : 'text-[#999999]'}`}>毎年繰り返す</button>
+            {/* コンテンツ（スクロール領域） */}
+            <form onSubmit={handleAddEvent} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-6 space-y-6 overflow-y-auto flex-1 hide-scrollbar">
+                
+                {/* 基本情報 */}
+                <div className="space-y-4 bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm">
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-[#999999] tracking-widest">行事・イベント名 (必須)</label>
+                    <input type="text" required value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} placeholder="例: 社長の誕生日、創立記念日" className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold focus:border-[#2D4B3E] outline-none" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-[#999999] tracking-widest">日付 (必須)</label>
+                    <input type="date" required value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold focus:border-[#2D4B3E] outline-none" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-[#999999] tracking-widest">対象者 (任意)</label>
+                    <input type="text" value={newEvent.target} onChange={e => setNewEvent({...newEvent, target: e.target.value})} placeholder="例: 山田社長、自社、取引先A社" className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold focus:border-[#2D4B3E] outline-none" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-[#999999] tracking-widest">繰り返しの設定</label>
+                    <div className="flex gap-2 p-1 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA]">
+                      <button type="button" onClick={() => setNewEvent({...newEvent, repeat: '今年のみ'})} className={`flex-1 py-2.5 text-[12px] font-bold rounded-lg transition-all ${newEvent.repeat === '今年のみ' ? 'bg-white text-[#2D4B3E] shadow-sm border border-[#EAEAEA]' : 'text-[#999999]'}`}>今年のみ</button>
+                      <button type="button" onClick={() => setNewEvent({...newEvent, repeat: '毎年'})} className={`flex-1 py-2.5 text-[12px] font-bold rounded-lg transition-all ${newEvent.repeat === '毎年' ? 'bg-[#2D4B3E] text-white shadow-sm' : 'text-[#999999]'}`}>毎年繰り返す</button>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* ★ 新規追加：住所の事前登録 */}
-              <div className="space-y-4 bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm">
-                <label className="text-[11px] font-bold text-[#2D4B3E] tracking-widest flex items-center gap-1.5"><MapPin size={14}/> お届け先情報の登録 (任意)</label>
-                <p className="text-[10px] text-[#999999] leading-relaxed">ここに住所を登録しておくと、お花を注文する際に入力の手間が省けます。</p>
-                <input type="text" placeholder="郵便番号 (7桁・ハイフンなし)" value={newEvent.zip} onChange={(e) => { setNewEvent({...newEvent, zip: e.target.value}); if(e.target.value.length === 7) fetchAddress(e.target.value); }} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
-                <input type="text" placeholder="都道府県・市区町村 (自動入力)" value={newEvent.address1} className="w-full h-12 bg-[#EAEAEA]/30 border border-[#EAEAEA] rounded-xl px-4 text-[13px] text-[#555555] outline-none" readOnly />
-                <input type="text" placeholder="番地・建物名" value={newEvent.address2} onChange={(e) => setNewEvent({...newEvent, address2: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
-              </div>
+                {/* 住所情報 */}
+                <div className="space-y-4 bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm">
+                  <label className="text-[11px] font-bold text-[#2D4B3E] tracking-widest flex items-center gap-1.5"><MapPin size={14}/> お届け先情報の登録 (任意)</label>
+                  <p className="text-[10px] text-[#999999] leading-relaxed">ここに住所を登録しておくと、お花を注文する際に入力の手間が省けます。</p>
+                  <input type="text" placeholder="郵便番号 (7桁・ハイフンなし)" value={newEvent.zip} onChange={(e) => { setNewEvent({...newEvent, zip: e.target.value}); if(e.target.value.length === 7) fetchAddress(e.target.value); }} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
+                  <input type="text" placeholder="都道府県・市区町村 (自動入力)" value={newEvent.address1} className="w-full h-12 bg-[#EAEAEA]/30 border border-[#EAEAEA] rounded-xl px-4 text-[13px] text-[#555555] outline-none" readOnly />
+                  <input type="text" placeholder="番地・建物名" value={newEvent.address2} onChange={(e) => setNewEvent({...newEvent, address2: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
+                </div>
 
-              <div className="pt-2 sticky bottom-0 bg-[#FBFAF9] pb-6">
+              </div>
+              
+              {/* フッター（ボタン固定） */}
+              <div className="p-6 bg-white border-t border-[#EAEAEA] shrink-0">
                 <button type="submit" className="w-full h-14 bg-[#2D4B3E] text-white rounded-2xl font-bold text-[15px] hover:bg-[#1f352b] transition-all shadow-md active:scale-[0.98]">
                   行事を登録する
                 </button>
