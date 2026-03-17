@@ -1,8 +1,11 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../../utils/supabase';
+import { supabase } from '@/utils/supabase';
 import { Store, AlertCircle, Calendar, ChevronRight, Package } from 'lucide-react';
+
+// ★ 先ほど作った共通コンポーネントをインポート！
+import TatefudaPreview from '@/components/TatefudaPreview';
 
 // ★ キャッシュ用のキーを定義（設定ページと共有）
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
@@ -171,7 +174,6 @@ export default function StaffNewOrderPage() {
   ];
   const selectedTateOpt = tateOptions.find(opt => opt.id === tatePattern);
   const tateNeeds = selectedTateOpt?.needs || [];
-  const topPrefixText = isOsonae ? (prefixFormat === 'hiragana' ? 'お供え' : '御供') : (prefixFormat === 'hiragana' ? 'お祝い' : '祝');
 
   const transitDays = useMemo(() => {
     if (receiveMethod !== 'sagawa') return 0;
@@ -216,11 +218,14 @@ export default function StaffNewOrderPage() {
     return properMinDate;
   }, [staffConfig.ignoreLeadTime, properMinDate]);
 
+  // ★設定データから「最低額」「最大額」「刻み幅」を使ってオプションを生成
   const getPriceOptions = () => {
     if (!flowerType) return [];
-    let min = 2000, max = 20000, stepSize = 1000;
+    let min = 2000, max = 50000, stepSize = 1000;
     if (selectedItemSettings.minPrice) {
-      min = Number(selectedItemSettings.minPrice); max = Number(selectedItemSettings.maxPrice); stepSize = Number(selectedItemSettings.stepPrice);
+      min = Number(selectedItemSettings.minPrice); 
+      max = Number(selectedItemSettings.maxPrice); 
+      stepSize = Number(selectedItemSettings.stepPrice);
     }
     const options = [];
     for (let i = min; i <= max; i += stepSize) options.push(i);
@@ -353,19 +358,6 @@ export default function StaffNewOrderPage() {
     }
   }, [customerInfo.address1, customerInfo.address2, recipientInfo.address1, recipientInfo.address2, isRecipientDifferent, receiveMethod, flowerType, itemPrice, selectedDate, appSettings, selectedItemSettings, transitDays]);
 
-  const fetchAddress = async (zip, target) => {
-    if (zip.length !== 7) return;
-    try {
-      const res = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${zip}`);
-      const data = await res.json();
-      if (data.results) {
-        const fullAddr = `${data.results[0].address1}${data.results[0].address2}${data.results[0].address3}`;
-        if (target === 'customer') setCustomerInfo(prev => ({ ...prev, address1: fullAddr }));
-        else setRecipientInfo(prev => ({ ...prev, address1: fullAddr }));
-      }
-    } catch (error) { console.error("住所検索エラー"); }
-  };
-
   const parsedItemPrice = Number(itemPrice) || 0;
   const parsedFee = calculatedFee || 0;
   const parsedPickupFee = pickupFee || 0;
@@ -484,7 +476,12 @@ export default function StaffNewOrderPage() {
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">お花の種類</label>
                 <select value={flowerType} onChange={(e) => { setFlowerType(e.target.value); setItemPrice(''); }} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
                   <option value="">選択してください</option>
-                  {appSettings?.flowerItems?.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
+                  {appSettings?.flowerItems?.filter(item => {
+                    // ★ 選択した店舗（shopId）で絞り込み
+                    if (!shopId) return true;
+                    if (!item.targetShops || item.targetShops === 'all') return true;
+                    return item.targetShops.includes(Number(shopId));
+                  }).map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
@@ -561,7 +558,7 @@ export default function StaffNewOrderPage() {
               </div>
               <div className="space-y-2 col-span-2">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">メインカラー</label>
-                <select value={flowerColor} onChange={(e) => setFlowerColor(e.target.value)} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none"><option value="">カラー...</option><option value="暖色系">暖色系</option><option value="寒色系">寒色系</option><option value="おまかせ">おまかせ</option></select>
+                <select value={flowerColor} onChange={(e) => setFlowerColor(e.target.value)} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none"><option value="">カラー...</option><option value="暖色系">暖色系</option><option value="寒色系">寒色系</option><option value="ホワイト・グリーン系">ホワイト・グリーン系</option><option value="おまかせ">おまかせ</option></select>
               </div>
             </div>
             
@@ -614,27 +611,29 @@ export default function StaffNewOrderPage() {
                 
                 {tatePattern && (
                   <div className="space-y-3">
-                    {tateNeeds.includes('1') && <input type="text" placeholder="① 内容 (例: 御開店)" value={tateInput1} onChange={(e) => setTateInput1(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
-                    {tateNeeds.includes('2') && <input type="text" placeholder="② 宛名 (例: 〇〇様)" value={tateInput2} onChange={(e) => setTateInput2(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
-                    {tateNeeds.includes('3') && <input type="text" placeholder="③ 贈り主 (例: 株式会社〇〇)" value={tateInput3} onChange={(e) => setTateInput3(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
-                    {tateNeeds.includes('3a') && <input type="text" placeholder="③-1 会社名" value={tateInput3a} onChange={(e) => setTateInput3a(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
-                    {tateNeeds.includes('3b') && <input type="text" placeholder="③-2 役職・氏名" value={tateInput3b} onChange={(e) => setTateInput3b(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
+                    {tateNeeds.includes('1') && <input type="text" placeholder="① 内容 (例: 御開店)" value={tateInput1} onChange={(e) => setTateInput1(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
+                    {tateNeeds.includes('2') && <input type="text" placeholder="② 宛名 (例: 〇〇様)" value={tateInput2} onChange={(e) => setTateInput2(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                     
-                    <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4">仕上がりプレビュー</p>
-                    <div className={`relative mx-auto border border-[#EAEAEA] shadow-lg bg-white flex flex-col items-center font-serif ${selectedTateOpt?.layout === 'horizontal' ? 'aspect-[1.414/1] w-full justify-center p-6' : 'aspect-[1/1.414] h-[300px] pt-6 px-4'}`}>
-                       <div className={`font-black ${isOsonae ? 'text-gray-500' : 'text-red-600'} ${selectedTateOpt?.layout === 'horizontal' ? 'text-[28px] mb-4' : 'text-[40px] mb-6 leading-none'}`}>
-                         {topPrefixText}
-                       </div>
-                       <div className={`flex w-full font-bold text-gray-900 ${selectedTateOpt?.layout === 'horizontal' ? 'flex-col items-center gap-2 text-[16px]' : 'flex-row-reverse justify-center gap-6 text-[18px]'}`}>
-                         {tatePattern.includes('p6') || tatePattern.includes('p8') ? (
-                           <><div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput2 || '宛名'}様</div>{!isOsonae && <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput1 || '内容'}</div>}<div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3 || '贈り主'}</div></>
-                         ) : tatePattern.includes('p4') ? (
-                           <><div className={`tracking-[0.3em] ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3a || '会社名'}</div><div className={`tracking-[0.3em] font-normal ${selectedTateOpt?.layout === 'horizontal' ? 'mt-4 text-[14px]' : 'mt-6 text-[14px] [writing-mode:vertical-rl]'}`}>{tateInput3b || '役職・氏名'}</div></>
-                         ) : (
-                           <>{!isOsonae && <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput1 || '内容'}</div>}<div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3 || '贈り主'}</div></>
-                         )}
-                       </div>
+                    <div className="pt-2 pb-1 border-t border-[#FBFAF9]">
+                      <span className="text-[10px] font-bold text-[#2D4B3E] bg-[#2D4B3E]/10 px-2 py-1 rounded">※贈り主情報は自社データから自動入力されています</span>
                     </div>
+
+                    {tateNeeds.includes('3') && <input type="text" placeholder="③ 贈り主 (例: 株式会社〇〇)" value={tateInput3} onChange={(e) => setTateInput3(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
+                    {tateNeeds.includes('3a') && <input type="text" placeholder="③-1 会社名" value={tateInput3a} onChange={(e) => setTateInput3a(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
+                    {tateNeeds.includes('3b') && <input type="text" placeholder="③-2 役職・氏名" value={tateInput3b} onChange={(e) => setTateInput3b(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
+                    
+                    <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4 mb-2">仕上がりプレビュー</p>
+                    {/* ★ ここで共通コンポーネントを呼び出す */}
+                    <TatefudaPreview 
+                      tatePattern={tatePattern}
+                      layout={selectedTateOpt?.layout}
+                      isOsonae={isOsonae}
+                      input1={tateInput1}
+                      input2={tateInput2}
+                      input3={tateInput3}
+                      input3a={tateInput3a}
+                      input3b={tateInput3b}
+                    />
                   </div>
                 )}
               </div>
