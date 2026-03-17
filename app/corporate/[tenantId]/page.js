@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation'; // ★ useParams を追加
+import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { 
   Building2, Calendar, ShoppingBag, FileText, 
@@ -11,51 +11,39 @@ import Link from 'next/link';
 
 export default function CorporateDashboardPage() {
   const router = useRouter();
-  const params = useParams(); // ★ URLからテナントIDを取得
+  const params = useParams();
   const tenantId = params?.tenantId || 'default';
 
-  // ★ キャッシュ用のキーをテナントごとに分ける
   const CORPORATE_ORDERS_CACHE_KEY = `florix_corporate_orders_cache_${tenantId}`;
   const SETTINGS_CACHE_KEY = `florix_app_settings_cache_${tenantId}`;
 
   const [isLoading, setIsLoading] = useState(true);
-  const [companyName, setCompanyName] = useState('株式会社 グローバルIT'); // ※本来はログインセッションから取得
+  
+  // ★ デモ用の会社名をリセット（本来はログイン時の情報から取得します）
+  const [companyName, setCompanyName] = useState('ゲスト法人'); 
   const [appSettings, setAppSettings] = useState(null);
 
-  // --- 注文データ関連 ---
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  // ダミーデータ：請求・未入金ステータス
+  // ★ 架空の請求データをリセット（最初は未入金なし）
   const [billingInfo, setBillingInfo] = useState({
-    hasUnpaid: true,
-    unpaidMonth: '2026年2月',
-    unpaidAmount: 33000,
-    dueDate: '2026-03-31',
-    currentMonthAmount: 49500
+    hasUnpaid: false,
+    unpaidMonth: '',
+    unpaidAmount: 0,
+    dueDate: '',
+    currentMonthAmount: 0
   });
 
-  // --- イベント（行事）データ関連 ---
-  const [events, setEvents] = useState([
-    { 
-      id: 1, title: '代表取締役 就任記念', date: '2026-04-01', target: '山田 社長', repeat: '毎年',
-      zip: '100-0001', address: '東京都千代田区千代田1-1',
-      lastOrder: { item: '特選 胡蝶蘭 3本立ち', price: 30000 }
-    },
-    { 
-      id: 2, title: '創立記念日', date: '2026-05-10', target: '自社', repeat: '毎年',
-      zip: '', address: '', lastOrder: null
-    },
-  ]);
+  // ★ 架空の行事データをリセット（最初は空っぽ）
+  const [events, setEvents] = useState([]);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [newEvent, setNewEvent] = useState({ title: '', date: '', target: '', repeat: '今年のみ', zip: '', address1: '', address2: '' });
 
   const [omakaseModal, setOmakaseModal] = useState({ isOpen: false, event: null, flowerType: '', budget: '' });
 
-  // キャッシュ対応＆SaaS仕様のデータ取得ロジック
   useEffect(() => {
     async function initData() {
-      // 1. キャッシュから復元して高速表示
       const cachedOrders = sessionStorage.getItem(CORPORATE_ORDERS_CACHE_KEY);
       const cachedSettings = sessionStorage.getItem(SETTINGS_CACHE_KEY);
       
@@ -69,7 +57,6 @@ export default function CorporateDashboardPage() {
         setIsLoading(false);
       }
 
-      // 2. バックグラウンドで最新データを取得（★ テナントIDで絞り込み！）
       try {
         const [ordersRes, settingsRes] = await Promise.all([
           supabase.from('orders').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
@@ -77,7 +64,6 @@ export default function CorporateDashboardPage() {
         ]);
 
         if (ordersRes.data) {
-          // ※ 本来はここで更に "自社（ログイン中の法人）の注文のみ" に絞り込みます
           setOrders(ordersRes.data);
           sessionStorage.setItem(CORPORATE_ORDERS_CACHE_KEY, JSON.stringify(ordersRes.data));
         }
@@ -92,10 +78,10 @@ export default function CorporateDashboardPage() {
       }
     }
     initData();
-  }, [tenantId]); // tenantId を依存配列に追加
+  }, [tenantId]);
 
   const handleLogout = async () => {
-    router.push(`/corporate/login`); // 必要に応じてテナント付きURLにするか検討
+    router.push(`/corporate/login`); 
   };
 
   const fetchAddress = async (zip) => {
@@ -171,13 +157,11 @@ export default function CorporateDashboardPage() {
   const modalData = selectedOrder?.order_data || {};
   const modalTargetInfo = modalData.isRecipientDifferent ? (modalData.recipientInfo || {}) : (modalData.customerInfo || {});
 
-  // ★ 花屋さんの店舗名を取得
   const shopName = appSettings?.generalConfig?.appName || 'FLORIX';
 
   return (
     <div className="min-h-screen bg-[#FBFAF9] font-sans text-[#111111] pb-32">
       
-      {/* ヘッダー */}
       <header className="h-16 bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] sticky top-0 z-40 px-6 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
           <span className="font-serif italic text-[20px] font-black tracking-tight text-[#2D4B3E]">{shopName}</span>
@@ -230,9 +214,8 @@ export default function CorporateDashboardPage() {
           </div>
           
           <div className="relative z-10 shrink-0">
-            {/* ★ その店舗専用のオーダーフォームへのリンクに変更 */}
             <Link 
-              href={`/order/${tenantId}/default`} 
+              href={`/corporate/order/${tenantId}`} 
               className="group flex items-center justify-center gap-2 bg-white text-[#2D4B3E] px-8 py-4 rounded-2xl font-black text-[15px] shadow-xl hover:scale-105 transition-all active:scale-95"
             >
               <Plus size={20} />
@@ -244,10 +227,7 @@ export default function CorporateDashboardPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           
-          {/* 左側：メインコンテンツ（2カラム分） */}
           <div className="md:col-span-2 space-y-8">
-            
-            {/* 注文履歴 */}
             <section className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-[16px] font-black text-[#2D4B3E] flex items-center gap-2">
@@ -304,10 +284,7 @@ export default function CorporateDashboardPage() {
             </section>
           </div>
 
-          {/* 右側：サイドコンテンツ（1カラム分） */}
           <div className="space-y-8">
-            
-            {/* 請求関連のサマリー */}
             <section className="bg-[#FBFAF9] p-6 rounded-[24px] border border-[#EAEAEA]">
               <h2 className="text-[13px] font-black text-[#555555] flex items-center gap-2 mb-4">
                 <CreditCard size={16} /> 請求・お支払い情報
@@ -330,7 +307,6 @@ export default function CorporateDashboardPage() {
               </div>
             </section>
 
-            {/* 今後のイベント・行事 */}
             <section className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-[16px] font-black text-[#2D4B3E] flex items-center gap-2">
@@ -371,7 +347,6 @@ export default function CorporateDashboardPage() {
                         </div>
                       </div>
 
-                      {/* 簡単注文アクションパネル */}
                       <div className="mt-4 pt-4 border-t border-[#F7F7F7] space-y-2 pl-2">
                         <p className="text-[10px] font-bold text-[#999999] mb-2 tracking-widest">この行事のご注文</p>
                         
@@ -391,19 +366,17 @@ export default function CorporateDashboardPage() {
                               <Repeat size={14}/> 前回と全く同じ内容で注文
                             </button>
                           ) : (
-                            <Link href={`/order/${tenantId}/default`} className="w-full flex items-center justify-center gap-2 py-2.5 bg-white border border-[#EAEAEA] text-[#555555] rounded-xl text-[11px] font-bold hover:bg-[#F7F7F7] transition-all active:scale-[0.98]">
+                            <Link href={`/corporate/order/${tenantId}`} className="w-full flex items-center justify-center gap-2 py-2.5 bg-white border border-[#EAEAEA] text-[#555555] rounded-xl text-[11px] font-bold hover:bg-[#F7F7F7] transition-all active:scale-[0.98]">
                               オーダーフォームを開く <ChevronRight size={12}/>
                             </Link>
                           )}
                         </div>
                       </div>
-
                     </div>
                   ))
                 )}
               </div>
             </section>
-
           </div>
         </div>
       </main>
