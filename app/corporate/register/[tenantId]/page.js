@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, useParams } from 'next/navigation'; // ★ useParamsを追加
 import { supabase } from '@/utils/supabase';
 import { Building2, Mail, Lock, User, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -8,12 +8,16 @@ import Link from 'next/link';
 // URLを読み取る処理（useSearchParams）を含むメインコンテンツを分離
 function RegisterContent() {
   const router = useRouter();
+  const params = useParams(); // ★ URLからテナントIDを取得
   const searchParams = useSearchParams();
-  const token = searchParams.get('token'); // URLから招待トークンを取得
+  
+  const tenantId = params?.tenantId || 'default';
+  const token = searchParams.get('token'); 
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [shopName, setShopName] = useState('FLORIX'); // ★ 店舗名表示用
 
   const [formData, setFormData] = useState({
     companyName: '',
@@ -22,12 +26,21 @@ function RegisterContent() {
     password: '',
   });
 
-  // ※ 本来はここで招待トークンが有効かどうかの検証をAPIで行います
+  // ★ URLのテナントIDに合わせて、設定から店舗名を引っ張ってくる
   useEffect(() => {
-    if (!token) {
-      // setError('招待URLが無効です。担当者から発行された正しいURLからアクセスしてください。');
+    async function fetchShopName() {
+      if (!tenantId || tenantId === 'default') return;
+      try {
+        const { data } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
+        if (data?.settings_data?.generalConfig?.appName) {
+          setShopName(data.settings_data.generalConfig.appName);
+        }
+      } catch (err) {
+        console.error("店舗名取得エラー");
+      }
     }
-  }, [token]);
+    fetchShopName();
+  }, [tenantId]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -39,7 +52,7 @@ function RegisterContent() {
     setIsLoading(true);
 
     try {
-      /* // ▼ 実際のSupabase連携時のコード（認証機能）
+      // ★ 本物のSupabase認証処理を有効化＆SaaS仕様に！
       const { data, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -48,24 +61,23 @@ function RegisterContent() {
             role: 'corporate', // 権限を「法人」に設定
             company_name: formData.companyName,
             contact_name: formData.contactName,
+            tenant_id: tenantId // ★ 超重要：どのお店の顧客かを紐付け！
           }
         }
       });
+      
       if (authError) throw authError;
-      */
-
-      // 今回はUIの動作確認用に擬似的なローディングを入れています
-      await new Promise(resolve => setTimeout(resolve, 1500));
 
       setIsSuccess(true);
       
-      // 3秒後に法人専用ログイン画面へ自動遷移
+      // 3秒後に、そのお店専用の法人ポータルへ自動遷移
       setTimeout(() => {
-        router.push('/corporate/login');
+        router.push(`/corporate/${tenantId}`);
       }, 3000);
 
     } catch (err) {
-      setError('登録に失敗しました。メールアドレスが既に使用されている可能性があります。');
+      console.error('法人登録エラー:', err.message);
+      setError('登録に失敗しました。メールアドレスが既に使用されているか、パスワードが短すぎる可能性があります。');
     } finally {
       setIsLoading(false);
     }
@@ -73,9 +85,9 @@ function RegisterContent() {
 
   return (
     <>
-      {/* ヘッダーロゴ部分 */}
+      {/* ヘッダーロゴ部分（店舗名が自動で入ります！） */}
       <div className="mb-8 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <h1 className="font-serif italic text-[36px] font-black tracking-tight text-[#2D4B3E] leading-none">FLORIX</h1>
+        <h1 className="font-serif italic text-[32px] md:text-[36px] font-black tracking-tight text-[#2D4B3E] leading-none">{shopName}</h1>
         <p className="text-[11px] font-bold tracking-[0.2em] text-[#999999] mt-2 uppercase">Corporate Portal</p>
       </div>
 
@@ -180,7 +192,7 @@ function RegisterContent() {
               <div className="pt-6">
                 <button 
                   type="submit" 
-                  disabled={isLoading || !token}
+                  disabled={isLoading}
                   className="w-full h-14 bg-[#2D4B3E] text-white rounded-[16px] font-bold text-[15px] tracking-widest shadow-md hover:bg-[#1f352b] transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center gap-2 group"
                 >
                   {isLoading ? '登録処理中...' : 'アカウントを作成する'}
@@ -189,7 +201,8 @@ function RegisterContent() {
               </div>
               
               <div className="text-center pt-4">
-                <Link href="/corporate/login" className="text-[12px] font-bold text-[#999999] hover:text-[#2D4B3E] underline underline-offset-4">
+                {/* ★ ログインページもそのお店専用のURLに変更 */}
+                <Link href={`/corporate/${tenantId}`} className="text-[12px] font-bold text-[#999999] hover:text-[#2D4B3E] underline underline-offset-4">
                   すでにアカウントをお持ちの方はこちら
                 </Link>
               </div>

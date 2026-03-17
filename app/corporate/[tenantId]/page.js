@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation'; // ★ useParams を追加
 import { supabase } from '@/utils/supabase';
 import { 
   Building2, Calendar, ShoppingBag, FileText, 
@@ -9,15 +9,18 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-// ★ キャッシュ用のキーを定義
-const CORPORATE_ORDERS_CACHE_KEY = 'florix_corporate_orders_cache';
-const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
-
 export default function CorporateDashboardPage() {
   const router = useRouter();
+  const params = useParams(); // ★ URLからテナントIDを取得
+  const tenantId = params?.tenantId || 'default';
+
+  // ★ キャッシュ用のキーをテナントごとに分ける
+  const CORPORATE_ORDERS_CACHE_KEY = `florix_corporate_orders_cache_${tenantId}`;
+  const SETTINGS_CACHE_KEY = `florix_app_settings_cache_${tenantId}`;
+
   const [isLoading, setIsLoading] = useState(true);
-  const [companyName, setCompanyName] = useState('株式会社 グローバルIT');
-  const [appSettings, setAppSettings] = useState(null); // ★ 商品リスト読み込み用
+  const [companyName, setCompanyName] = useState('株式会社 グローバルIT'); // ※本来はログインセッションから取得
+  const [appSettings, setAppSettings] = useState(null);
 
   // --- 注文データ関連 ---
   const [orders, setOrders] = useState([]);
@@ -47,10 +50,9 @@ export default function CorporateDashboardPage() {
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [newEvent, setNewEvent] = useState({ title: '', date: '', target: '', repeat: '今年のみ', zip: '', address1: '', address2: '' });
 
-  // ★ 新規追加：おまかせ注文専用モーダルの状態管理
   const [omakaseModal, setOmakaseModal] = useState({ isOpen: false, event: null, flowerType: '', budget: '' });
 
-  // キャッシュ対応のデータ取得ロジック
+  // キャッシュ対応＆SaaS仕様のデータ取得ロジック
   useEffect(() => {
     async function initData() {
       // 1. キャッシュから復元して高速表示
@@ -67,14 +69,15 @@ export default function CorporateDashboardPage() {
         setIsLoading(false);
       }
 
-      // 2. バックグラウンドで最新データを取得
+      // 2. バックグラウンドで最新データを取得（★ テナントIDで絞り込み！）
       try {
         const [ordersRes, settingsRes] = await Promise.all([
-          supabase.from('orders').select('*').order('created_at', { ascending: false }),
-          supabase.from('app_settings').select('settings_data').eq('id', 'default').single()
+          supabase.from('orders').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
+          supabase.from('app_settings').select('settings_data').eq('id', tenantId).single()
         ]);
 
         if (ordersRes.data) {
+          // ※ 本来はここで更に "自社（ログイン中の法人）の注文のみ" に絞り込みます
           setOrders(ordersRes.data);
           sessionStorage.setItem(CORPORATE_ORDERS_CACHE_KEY, JSON.stringify(ordersRes.data));
         }
@@ -89,13 +92,12 @@ export default function CorporateDashboardPage() {
       }
     }
     initData();
-  }, []);
+  }, [tenantId]); // tenantId を依存配列に追加
 
   const handleLogout = async () => {
-    router.push('/corporate/login');
+    router.push(`/corporate/login`); // 必要に応じてテナント付きURLにするか検討
   };
 
-  // 郵便番号から住所を自動検索
   const fetchAddress = async (zip) => {
     if (zip.length !== 7) return;
     try {
@@ -122,19 +124,16 @@ export default function CorporateDashboardPage() {
     }
   };
 
-  // 簡単注文アクションのハンドリング
   const handleQuickOrder = (type, event) => {
     if (type === 'repeat') {
       if (confirm(`前回と全く同じ内容（${event.lastOrder.item} / ¥${event.lastOrder.price.toLocaleString()}）で注文を確定しますか？`)) {
         alert('注文が完了しました！\n※実際のシステムではここでバックエンドに送信されます');
       }
     } else if (type === 'omakase') {
-      // 専用モーダルを開く
       setOmakaseModal({ isOpen: true, event: event, flowerType: '', budget: '' });
     }
   };
 
-  // ★ おまかせ注文の確定処理
   const submitOmakaseOrder = (e) => {
     e.preventDefault();
     alert(`【${omakaseModal.event.title}】\n種類: ${omakaseModal.flowerType}\nご予算: ¥${Number(omakaseModal.budget).toLocaleString()}\nでおまかせ注文を承りました！`);
@@ -172,13 +171,16 @@ export default function CorporateDashboardPage() {
   const modalData = selectedOrder?.order_data || {};
   const modalTargetInfo = modalData.isRecipientDifferent ? (modalData.recipientInfo || {}) : (modalData.customerInfo || {});
 
+  // ★ 花屋さんの店舗名を取得
+  const shopName = appSettings?.generalConfig?.appName || 'FLORIX';
+
   return (
     <div className="min-h-screen bg-[#FBFAF9] font-sans text-[#111111] pb-32">
       
       {/* ヘッダー */}
       <header className="h-16 bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] sticky top-0 z-40 px-6 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
-          <span className="font-serif italic text-[20px] font-black tracking-tight text-[#2D4B3E]">FLORIX</span>
+          <span className="font-serif italic text-[20px] font-black tracking-tight text-[#2D4B3E]">{shopName}</span>
           <span className="hidden sm:inline-block w-[1px] h-4 bg-[#EAEAEA]"></span>
           <span className="hidden sm:inline-block text-[11px] font-bold tracking-widest text-[#999999] uppercase">Corporate Portal</span>
         </div>
@@ -228,8 +230,9 @@ export default function CorporateDashboardPage() {
           </div>
           
           <div className="relative z-10 shrink-0">
+            {/* ★ その店舗専用のオーダーフォームへのリンクに変更 */}
             <Link 
-              href="/corporate/order" 
+              href={`/order/${tenantId}/default`} 
               className="group flex items-center justify-center gap-2 bg-white text-[#2D4B3E] px-8 py-4 rounded-2xl font-black text-[15px] shadow-xl hover:scale-105 transition-all active:scale-95"
             >
               <Plus size={20} />
@@ -377,7 +380,6 @@ export default function CorporateDashboardPage() {
                             onClick={() => handleQuickOrder('omakase', ev)}
                             className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#2D4B3E] text-white rounded-xl text-[11px] font-bold hover:bg-[#1f352b] transition-all shadow-sm active:scale-[0.98]"
                           >
-                            {/* ★ ボタンテキストを修正 */}
                             <Zap size={14}/> 種類と予算を決めておまかせ注文
                           </button>
                           
@@ -389,7 +391,7 @@ export default function CorporateDashboardPage() {
                               <Repeat size={14}/> 前回と全く同じ内容で注文
                             </button>
                           ) : (
-                            <Link href="/corporate/order" className="w-full flex items-center justify-center gap-2 py-2.5 bg-white border border-[#EAEAEA] text-[#555555] rounded-xl text-[11px] font-bold hover:bg-[#F7F7F7] transition-all active:scale-[0.98]">
+                            <Link href={`/order/${tenantId}/default`} className="w-full flex items-center justify-center gap-2 py-2.5 bg-white border border-[#EAEAEA] text-[#555555] rounded-xl text-[11px] font-bold hover:bg-[#F7F7F7] transition-all active:scale-[0.98]">
                               オーダーフォームを開く <ChevronRight size={12}/>
                             </Link>
                           )}
