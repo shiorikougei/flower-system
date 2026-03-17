@@ -2,7 +2,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../utils/supabase';
-import { Calendar, Package, ChevronRight, Store, Truck } from 'lucide-react';
+// ★ AlertCircle を追加インポート
+import { Calendar, Package, ChevronRight, Store, Truck, AlertCircle } from 'lucide-react';
+// ★ 共通コンポーネントのインポート
+import TatefudaPreview from '@/components/TatefudaPreview';
 
 // ★ キャッシュ用のキーを定義
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
@@ -171,7 +174,6 @@ export default function OrderPage() {
   ];
   const selectedTateOpt = tateOptions.find(opt => opt.id === tatePattern);
   const tateNeeds = selectedTateOpt?.needs || [];
-  const topPrefixText = isOsonae ? (prefixFormat === 'hiragana' ? 'お供え' : '御供') : (prefixFormat === 'hiragana' ? 'お祝い' : '祝');
 
   const getPriceOptions = () => {
     if (!flowerType) return [];
@@ -413,6 +415,22 @@ export default function OrderPage() {
     }
   };
 
+  // ★ 注意書きを店舗ごとに切り替えるためのデータ取得
+  const targetShopData = useMemo(() => {
+    if (selectedShop) {
+      return appSettings?.shops?.find(s => s.name === selectedShop) || appSettings?.shops?.[0] || {};
+    }
+    if (shopId && shopId !== 'default') {
+      return appSettings?.shops?.find(s => String(s.id) === String(shopId)) || appSettings?.shops?.[0] || {};
+    }
+    return appSettings?.shops?.[0] || {};
+  }, [selectedShop, shopId, appSettings]);
+
+  // 設定されたテキストがない場合のデフォルトフォールバック
+  const pickupNote = targetShopData.pickupNote || 'ご来店予定日時に店舗までお越しください。';
+  const deliveryNote = targetShopData.deliveryNote || '交通状況により配達時間が前後する場合がございます。';
+  const shippingNote = targetShopData.shippingNote || '発送準備期間＋配送日数がかかります。交通状況により遅延する場合がございます。';
+
   if (isLoading) return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-sans"><div className="text-[#2D4B3E] font-bold tracking-widest animate-pulse">読み込み中...</div></div>;
 
   return (
@@ -441,7 +459,12 @@ export default function OrderPage() {
             <div className="space-y-6">
               <select className="w-full h-16 px-5 bg-white border border-[#EAEAEA] rounded-[20px] outline-none focus:border-[#2D4B3E] transition-all text-[15px] font-bold appearance-none shadow-sm" value={flowerType} onChange={(e) => { setFlowerType(e.target.value); setItemPrice(''); setIsBring('shop'); }}>
                 <option value="">種類を選択してください</option>
-                {appSettings?.flowerItems?.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
+                {/* ★ 店舗による商品の絞り込みを反映 */}
+                {appSettings?.flowerItems?.filter(item => {
+                  if (!shopId || shopId === 'default') return true;
+                  if (!item.targetShops || item.targetShops === 'all') return true;
+                  return item.targetShops.includes(Number(shopId));
+                }).map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
               </select>
 
               {flowerType && selectedItemSettings.canBringFlowers && (
@@ -599,26 +622,27 @@ export default function OrderPage() {
                     <div className="space-y-3">
                       {tateNeeds.includes('1') && <input type="text" placeholder="① 内容 (例: 御開店)" value={tateInput1} onChange={(e) => setTateInput1(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       {tateNeeds.includes('2') && <input type="text" placeholder="② 宛名 (例: 〇〇様)" value={tateInput2} onChange={(e) => setTateInput2(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
+                      
+                      <div className="pt-2 pb-1 border-t border-[#FBFAF9]">
+                        <span className="text-[10px] font-bold text-[#2D4B3E] bg-[#2D4B3E]/10 px-2 py-1 rounded">※贈り主情報は会員データから自動入力されます</span>
+                      </div>
+
                       {tateNeeds.includes('3') && <input type="text" placeholder="③ 贈り主 (例: 株式会社〇〇)" value={tateInput3} onChange={(e) => setTateInput3(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       {tateNeeds.includes('3a') && <input type="text" placeholder="③-1 会社名" value={tateInput3a} onChange={(e) => setTateInput3a(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       {tateNeeds.includes('3b') && <input type="text" placeholder="③-2 役職・氏名" value={tateInput3b} onChange={(e) => setTateInput3b(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       
-                      <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4">仕上がりプレビュー</p>
-                      {/* ★ 立札プレビューのUI（設定ページと同期用） */}
-                      <div className={`relative mx-auto border border-[#EAEAEA] shadow-lg bg-white flex flex-col items-center font-serif ${selectedTateOpt?.layout === 'horizontal' ? 'aspect-[1.414/1] w-full justify-center p-6' : 'aspect-[1/1.414] h-[300px] pt-6 px-4'}`}>
-                         <div className={`font-black ${isOsonae ? 'text-gray-500' : 'text-red-600'} ${selectedTateOpt?.layout === 'horizontal' ? 'text-[28px] mb-4' : 'text-[40px] mb-6 leading-none'}`}>
-                           {topPrefixText}
-                         </div>
-                         <div className={`flex w-full font-bold text-gray-900 ${selectedTateOpt?.layout === 'horizontal' ? 'flex-col items-center gap-2 text-[16px]' : 'flex-row-reverse justify-center gap-6 text-[18px]'}`}>
-                           {tatePattern.includes('p6') || tatePattern.includes('p8') ? (
-                             <><div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput2 || '宛名'}様</div>{!isOsonae && <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput1 || '内容'}</div>}<div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3 || '贈り主'}</div></>
-                           ) : tatePattern.includes('p4') ? (
-                             <><div className={`tracking-[0.3em] ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3a || '会社名'}</div><div className={`tracking-[0.3em] font-normal ${selectedTateOpt?.layout === 'horizontal' ? 'mt-4 text-[14px]' : 'mt-6 text-[14px] [writing-mode:vertical-rl]'}`}>{tateInput3b || '役職・氏名'}</div></>
-                           ) : (
-                             <>{!isOsonae && <div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput1 || '内容'}</div>}<div className={`tracking-widest ${selectedTateOpt?.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>{tateInput3 || '贈り主'}</div></>
-                           )}
-                         </div>
-                      </div>
+                      <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4 mb-2">仕上がりプレビュー</p>
+                      {/* ★ 立札の共通コンポーネント呼び出し */}
+                      <TatefudaPreview 
+                        tatePattern={tatePattern}
+                        layout={selectedTateOpt?.layout}
+                        isOsonae={isOsonae}
+                        input1={tateInput1}
+                        input2={tateInput2}
+                        input3={tateInput3}
+                        input3a={tateInput3a}
+                        input3b={tateInput3b}
+                      />
                     </div>
                   )}
                 </div>
@@ -646,7 +670,9 @@ export default function OrderPage() {
                   
                   {receiveMethod !== 'pickup' && (
                     <>
-                      <input type="text" placeholder="郵便番号 (7桁・ハイフンなし)" value={customerInfo.zip} onChange={(e) => { setCustomerInfo({...customerInfo, zip: e.target.value}); if(e.target.value.length === 7) fetchAddress(e.target.value, 'customer'); }} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]" />
+                      <div className="flex gap-2">
+                        <input type="text" placeholder="郵便番号 (7桁・ハイフンなし)" value={customerInfo.zip} onChange={(e) => { setCustomerInfo({...customerInfo, zip: e.target.value}); if(e.target.value.length === 7) fetchAddress(e.target.value, 'customer'); }} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]" />
+                      </div>
                       <input type="text" placeholder="住所が自動入力されます" value={customerInfo.address1} className="w-full h-14 px-5 bg-[#EAEAEA]/30 rounded-xl outline-none text-[#999999] text-[14px]" readOnly />
                       <input type="text" placeholder="番地・建物名など" value={customerInfo.address2} onChange={(e) => setCustomerInfo({...customerInfo, address2: e.target.value})} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]" />
                     </>
@@ -688,6 +714,7 @@ export default function OrderPage() {
                 </div>
               </div>
 
+              {/* ★ 発送予定日の自動表示パネル */}
               {receiveMethod === 'sagawa' && selectedDate && shippingDate && (
                 <div className="mt-4 p-5 bg-green-50 border border-green-200 rounded-2xl flex flex-col gap-3 animate-in fade-in shadow-sm">
                   <p className="text-[11px] font-bold text-green-700 tracking-widest">配送スケジュール</p>
@@ -703,6 +730,7 @@ export default function OrderPage() {
                 </div>
               )}
 
+              {/* 置き配設定（自社配達の時だけ） */}
               {receiveMethod === 'delivery' && (
                 <div className="p-8 bg-white rounded-[28px] border border-[#EAEAEA] shadow-sm space-y-4 animate-in fade-in mt-6">
                   <div className="space-y-2">
@@ -748,7 +776,7 @@ export default function OrderPage() {
                       )}
                       {parsedPickupFee > 0 && (
                         <div className="flex justify-between text-orange-600">
-                          <span>器回収・返却費用:</span>
+                          <span>後日回収費:</span>
                           <span className="font-bold">¥{parsedPickupFee.toLocaleString()}</span>
                         </div>
                       )}
@@ -768,24 +796,30 @@ export default function OrderPage() {
                 </div>
               </div>
 
+              {/* ★ 店舗ごとの注意書きを動的に表示 */}
               <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] font-sans space-y-4 mt-6">
-                <p className="text-[11px] font-bold text-[#111111] tracking-widest border-b border-[#EAEAEA] pb-2">
+                <p className="text-[11px] font-bold text-[#111111] tracking-widest border-b border-[#EAEAEA] pb-2 flex items-center gap-1.5">
+                  <AlertCircle size={14}/>
                   {receiveMethod === 'pickup' ? '店頭受取に関する注意事項' : receiveMethod === 'delivery' ? '自社配達に関する注意事項' : '配送に関する注意事項'}
                 </p>
-                <div className="text-[12px] text-[#555555] space-y-3 leading-relaxed font-medium">
-                  {receiveMethod === 'pickup' && <p>お受け取り予定日にご来店いただけない場合や、遅れる場合は、必ず事前に店舗までご連絡をお願いいたします。</p>}
+                <div className="text-[12px] text-[#555555] space-y-3 leading-relaxed font-medium whitespace-pre-wrap">
+                  {receiveMethod === 'pickup' && <p>{pickupNote}</p>}
+                  
                   {receiveMethod === 'delivery' && (
                     <>
-                      <p>・配達可能エリア外への配達をご希望の場合は、お電話にて直接お問い合わせください。</p>
+                      <p>{deliveryNote}</p>
                       {parsedPickupFee > 0 && <p className="font-bold text-orange-600">※ご注文の商品には回収が必要な器（スタンド等）が含まれているため、回収費用(¥{parsedPickupFee.toLocaleString()})が加算されています。</p>}
                     </>
                   )}
+                  
                   {receiveMethod === 'sagawa' && (
                     <>
-                      <div className="space-y-1"><p className="font-bold text-[#111111]">■ 配送時の事故について</p><p>配送中の事故につきましては、当店では補償いたしかねます。商品到着時に不具合等が確認された場合は、直接業者へご連絡くださいますようお願いいたします。</p></div>
+                      <p>{shippingNote}</p>
+                      <div className="space-y-1 mt-4 pt-4 border-t border-[#EAEAEA]"><p className="font-bold text-[#111111]">■ 配送時の事故について</p><p>配送中の事故につきましては、当店では補償いたしかねます。商品到着時に不具合等が確認された場合は、直接業者へご連絡くださいますようお願いいたします。</p></div>
                       <div className="space-y-1 pt-2"><p className="font-bold text-[#111111]">■ 日付・時間指定について</p><p>天候や離島への配送などの事情により、ご希望の日時に到着しない場合がございます。到着日指定の際は、日数に余裕をもってご注文ください。</p></div>
                     </>
                   )}
+                  
                   <div className="flex items-center gap-3 mt-4 pt-4 border-t border-[#EAEAEA]">
                     <input type="checkbox" id="methodAgreed" checked={methodAgreed} onChange={(e) => setMethodAgreed(e.target.checked)} className="w-5 h-5 accent-[#2D4B3E] cursor-pointer rounded-md" />
                     <label htmlFor="methodAgreed" className="text-[13px] font-bold underline cursor-pointer text-[#111111]">上記の内容に同意する</label>
