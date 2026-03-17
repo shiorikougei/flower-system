@@ -9,9 +9,12 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+// ★ キャッシュ用のキーを定義（法人の注文履歴用）
+const CORPORATE_ORDERS_CACHE_KEY = 'florix_corporate_orders_cache';
+
 export default function CorporateDashboardPage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [companyName, setCompanyName] = useState('株式会社 グローバルIT');
 
   // --- 注文データ関連 ---
@@ -42,13 +45,33 @@ export default function CorporateDashboardPage() {
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [newEvent, setNewEvent] = useState({ title: '', date: '', target: '', repeat: '今年のみ', zip: '', address1: '', address2: '' });
 
+  // ★ キャッシュ対応のデータ取得ロジック
   useEffect(() => {
     async function fetchMyOrders() {
-      setIsLoading(true);
+      // 1. まずは sessionStorage (キャッシュ) から復元して高速表示
+      const cachedOrders = sessionStorage.getItem(CORPORATE_ORDERS_CACHE_KEY);
+      if (cachedOrders) {
+        try {
+          setOrders(JSON.parse(cachedOrders));
+          setIsLoading(false); // キャッシュがあれば即座にローディング解除
+        } catch (e) {
+          console.error("注文キャッシュのパース失敗", e);
+        }
+      } else {
+        setIsLoading(true); // キャッシュがない初回のみローディングを表示
+      }
+
+      // 2. バックグラウンドで最新データをDBから取得
       try {
         const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
         if (error) throw error;
-        setOrders(data || []);
+        
+        // ※実際は法人のID等でフィルターします
+        const fetchedOrders = data || [];
+        setOrders(fetchedOrders);
+        
+        // キャッシュを最新データで上書き保存
+        sessionStorage.setItem(CORPORATE_ORDERS_CACHE_KEY, JSON.stringify(fetchedOrders));
       } catch (error) {
         console.error('注文データの取得に失敗しました', error);
       } finally {
@@ -89,7 +112,7 @@ export default function CorporateDashboardPage() {
     }
   };
 
-  // ★ 究極の簡単注文アクション
+  // 究極の簡単注文アクション
   const handleQuickOrder = (type, event) => {
     if (type === 'repeat') {
       if (confirm(`前回と全く同じ内容（${event.lastOrder.item} / ¥${event.lastOrder.price.toLocaleString()}）で注文を確定しますか？`)) {
@@ -157,7 +180,7 @@ export default function CorporateDashboardPage() {
 
       <main className="max-w-[1000px] mx-auto p-6 md:p-8 space-y-8 pt-8">
 
-        {/* ★ 未入金アラートバナー */}
+        {/* 未入金アラートバナー */}
         {billingInfo.hasUnpaid && (
           <div className="bg-red-50 border border-red-200 p-5 rounded-[24px] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
             <div className="flex items-start gap-3">
@@ -280,7 +303,10 @@ export default function CorporateDashboardPage() {
                   <span className="text-[11px] font-bold text-[#999999]">お支払い期限</span>
                   <span className="text-[13px] font-bold text-[#111111]">翌月末日</span>
                 </div>
-                <button className="w-full mt-2 py-3 bg-white border border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#2D4B3E] hover:border-[#2D4B3E] transition-all flex items-center justify-center gap-2 shadow-sm">
+                <button 
+                  onClick={() => alert('今月分の請求書PDFを生成してダウンロードします。')}
+                  className="w-full mt-2 py-3 bg-white border border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#2D4B3E] hover:border-[#2D4B3E] transition-all flex items-center justify-center gap-2 shadow-sm"
+                >
                   <FileText size={16} /> 今月の請求書を発行する
                 </button>
               </div>
@@ -371,7 +397,6 @@ export default function CorporateDashboardPage() {
           
           <div className="bg-[#FBFAF9] w-full max-w-[800px] max-h-[90vh] rounded-[32px] shadow-2xl relative flex flex-col overflow-hidden">
             
-            {/* モーダルヘッダー */}
             <div className="bg-white border-b border-[#EAEAEA] p-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 z-10">
               <div>
                 <h2 className="text-[20px] font-black text-[#2D4B3E]">注文詳細</h2>
@@ -388,10 +413,8 @@ export default function CorporateDashboardPage() {
               </div>
             </div>
 
-            {/* モーダルコンテンツ (スクロール) */}
             <div className="flex-1 overflow-y-auto p-6 space-y-8 hide-scrollbar">
               
-              {/* ステータス表示（変更不可） */}
               <div className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] shadow-sm flex items-center justify-between gap-4">
                 <span className="text-[13px] font-bold text-[#555555] flex items-center gap-2"><ListChecks size={18}/> 現在の状況</span>
                 <span className="px-4 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[14px] font-bold text-[#2D4B3E]">
@@ -399,7 +422,6 @@ export default function CorporateDashboardPage() {
                 </span>
               </div>
 
-              {/* 日程パネル */}
               {modalData.receiveMethod === 'sagawa' ? (
                 <div className="bg-green-50 border border-green-200 p-6 md:p-8 rounded-[24px] flex flex-col md:flex-row items-center gap-6 justify-center text-center shadow-inner">
                   <div className="space-y-1">
@@ -430,7 +452,6 @@ export default function CorporateDashboardPage() {
                 </div>
               )}
 
-              {/* お届け先情報 */}
               <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
                 <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><MapPin size={18}/> お届け先情報</h3>
                 <div className="space-y-3 text-[13px]">
@@ -450,7 +471,6 @@ export default function CorporateDashboardPage() {
                 </div>
               </div>
 
-              {/* 商品詳細 */}
               <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
                 <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><Tag size={18}/> ご注文内容</h3>
                 <div className="flex flex-col sm:flex-row gap-6">
@@ -468,7 +488,6 @@ export default function CorporateDashboardPage() {
                 </div>
               </div>
 
-              {/* メッセージ・立札 */}
               {modalData.cardType !== 'なし' && (
                 <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
                   <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><MessageSquare size={18}/> {modalData.cardType}</h3>
@@ -489,7 +508,6 @@ export default function CorporateDashboardPage() {
                 </div>
               )}
 
-              {/* お支払い内訳 */}
               <div className="bg-white p-8 rounded-[32px] border-2 border-[#2D4B3E]/20 shadow-md space-y-6">
                 <h3 className="text-[16px] font-black text-[#2D4B3E] border-b border-[#EAEAEA] pb-3 flex items-center gap-2"><CreditCard size={20}/> ご請求額</h3>
                 <div className="space-y-3 text-[14px] font-medium text-[#555555]">
@@ -516,17 +534,14 @@ export default function CorporateDashboardPage() {
           <div className="absolute inset-0 bg-[#111111]/40 backdrop-blur-sm" onClick={() => setIsEventModalOpen(false)}></div>
           <div className="bg-[#FBFAF9] w-full max-w-[500px] rounded-[32px] shadow-2xl relative flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 max-h-[90vh]">
             
-            {/* ヘッダー */}
             <div className="p-6 border-b border-[#EAEAEA] flex justify-between items-center bg-white z-10 shrink-0">
               <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Calendar size={20}/> 行事を登録</h2>
               <button onClick={() => setIsEventModalOpen(false)} className="text-[#999999] hover:text-[#111111] p-2 bg-[#FBFAF9] rounded-full border border-[#EAEAEA] shadow-sm"><X size={18}/></button>
             </div>
             
-            {/* コンテンツ（スクロール領域） */}
             <form onSubmit={handleAddEvent} className="flex flex-col flex-1 overflow-hidden">
               <div className="p-6 space-y-6 overflow-y-auto flex-1 hide-scrollbar">
                 
-                {/* 基本情報 */}
                 <div className="space-y-4 bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm">
                   <div className="space-y-2">
                     <label className="text-[11px] font-bold text-[#999999] tracking-widest">行事・イベント名 (必須)</label>
@@ -549,7 +564,6 @@ export default function CorporateDashboardPage() {
                   </div>
                 </div>
 
-                {/* 住所情報 */}
                 <div className="space-y-4 bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm">
                   <label className="text-[11px] font-bold text-[#2D4B3E] tracking-widest flex items-center gap-1.5"><MapPin size={14}/> お届け先情報の登録 (任意)</label>
                   <p className="text-[10px] text-[#999999] leading-relaxed">ここに住所を登録しておくと、お花を注文する際に入力の手間が省けます。</p>
@@ -560,7 +574,6 @@ export default function CorporateDashboardPage() {
 
               </div>
               
-              {/* フッター（ボタン固定） */}
               <div className="p-6 bg-white border-t border-[#EAEAEA] shrink-0">
                 <button type="submit" className="w-full h-14 bg-[#2D4B3E] text-white rounded-2xl font-bold text-[15px] hover:bg-[#1f352b] transition-all shadow-md active:scale-[0.98]">
                   行事を登録する
