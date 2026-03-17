@@ -1,11 +1,11 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/utils/supabase'; // ★確実な絶対パスに変更
+import { supabase } from '../../../../utils/supabase'; // パス階層に合わせて適宜調整してください
 import { Calendar, Package, ChevronRight, Store, Truck, AlertCircle } from 'lucide-react';
 
-// ★正しい相対パス（3つ戻って components フォルダへ）
-import TatefudaPreview from '../../../components/TatefudaPreview';
+// ★ 相対パスで共通コンポーネントをインポート
+import TatefudaPreview from '../../../../components/TatefudaPreview';
 
 // キャッシュ用のキーを定義
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
@@ -45,7 +45,7 @@ export default function OrderPage() {
   const [absenceAction, setAbsenceAction] = useState('持ち戻り'); 
   const [absenceNote, setAbsenceNote] = useState(''); 
 
-  // 立札・メッセージ
+  // 立札・メッセージ (一般客は空からスタート)
   const [cardType, setCardType] = useState('なし');
   const [cardMessage, setCardMessage] = useState('');
   const [tatePattern, setTatePattern] = useState('');
@@ -65,6 +65,7 @@ export default function OrderPage() {
 
   const [areaError, setAreaError] = useState('');
   const [note, setNote] = useState('');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const defaultTimeSlots = {
@@ -91,8 +92,8 @@ export default function OrderPage() {
 
     async function fetchSettings() {
       try {
-        const cachedSettings = sessionStorage.getItem(`${SETTINGS_CACHE_KEY}_${tenantId}`);
-        const cachedGallery = sessionStorage.getItem(`${GALLERY_CACHE_KEY}_${tenantId}`);
+        const cachedSettings = sessionStorage.getItem(SETTINGS_CACHE_KEY);
+        const cachedGallery = sessionStorage.getItem(GALLERY_CACHE_KEY);
 
         if (cachedSettings) {
           applyDataToState(JSON.parse(cachedSettings), cachedGallery ? JSON.parse(cachedGallery) : null);
@@ -100,10 +101,9 @@ export default function OrderPage() {
           setIsLoading(false);
         }
 
-        // URLから取得した「テナントID」を使ってデータベースから設定を引っ張ってくる！
         const [settingsRes, galleryRes] = await Promise.all([
           supabase.from('app_settings').select('settings_data').eq('id', tenantId).single(),
-          supabase.from('app_settings').select('settings_data').eq('id', `${tenantId}_gallery`).single()
+          supabase.from('app_settings').select('settings_data').eq('id', 'gallery').single()
         ]);
 
         const newSettings = settingsRes.data?.settings_data;
@@ -111,9 +111,9 @@ export default function OrderPage() {
 
         if (newSettings) {
           applyDataToState(newSettings, newGallery);
-          sessionStorage.setItem(`${SETTINGS_CACHE_KEY}_${tenantId}`, JSON.stringify(newSettings));
+          sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(newSettings));
           if (newGallery) {
-            sessionStorage.setItem(`${GALLERY_CACHE_KEY}_${tenantId}`, JSON.stringify(newGallery));
+            sessionStorage.setItem(GALLERY_CACHE_KEY, JSON.stringify(newGallery));
           }
         }
       } catch (err) {
@@ -401,14 +401,13 @@ export default function OrderPage() {
         status: 'new' 
       };
 
-      // ★ テナントIDとデータを紐付けて保存
+      // ★ 修正箇所：テナントIDを明示的にセットしてDBに保存
       const { error } = await supabase.from('orders').insert([
         { tenant_id: tenantId, order_data: orderPayload }
       ]);
       
       if (error) throw error;
 
-      // ★ 正しいサンクスページのURL（/order/[tenantId]/[shopId]/thanks）に遷移
       router.push(`/order/${tenantId}/${shopId}/thanks`);
       
     } catch (error) {
