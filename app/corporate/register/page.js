@@ -1,11 +1,12 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { Building2, Mail, Lock, User, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
-export default function CorporateRegisterPage() {
+// URLを読み取る処理（useSearchParams）を含むメインコンテンツを分離
+function RegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token'); // URLから招待トークンを取得
@@ -71,8 +72,7 @@ export default function CorporateRegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FBFAF9] flex flex-col justify-center items-center p-6 font-sans text-[#111111]">
-      
+    <>
       {/* ヘッダーロゴ部分 */}
       <div className="mb-8 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
         <h1 className="font-serif italic text-[36px] font-black tracking-tight text-[#2D4B3E] leading-none">FLORIX</h1>
@@ -197,7 +197,17 @@ export default function CorporateRegisterPage() {
           </>
         )}
       </div>
+    </>
+  );
+}
 
+// ★ 大元のコンポーネント。ここでSuspenseを使ってエラーを回避します
+export default function CorporateRegisterPage() {
+  return (
+    <div className="min-h-screen bg-[#FBFAF9] flex flex-col justify-center items-center p-6 font-sans text-[#111111]">
+      <Suspense fallback={<div className="text-[#2D4B3E] font-bold animate-pulse">読み込み中...</div>}>
+        <RegisterContent />
+      </Suspense>
     </div>
   );
 }
