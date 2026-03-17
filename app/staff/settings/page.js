@@ -5,7 +5,7 @@ import {
   Settings as SettingsIcon, ListChecks, Store, Tag, Truck, User, Mail, 
   Trash2, Plus, Clock, ShieldCheck, RotateCcw, Image as ImageIcon, Ruler, 
   ChevronRight, Calendar as CalendarIcon, Box, MapPin, X,
-  LayoutTemplate, Package, Eye, EyeOff, Sparkles, AlertCircle, Link as LinkIcon
+  LayoutTemplate, Package, Eye, EyeOff, Sparkles, AlertCircle, Link as LinkIcon, Building2 
 } from 'lucide-react';
 
 import TatefudaPreview from '@/components/TatefudaPreview';
