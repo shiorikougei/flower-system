@@ -41,7 +41,7 @@ export default function SettingsPage() {
     freeShippingThresholdEnabled: false, freeShippingThreshold: 15000, isBundleDiscount: true
   });
   
-  // ★ 新規追加：時間帯枠の設定
+  // 新規追加：時間帯枠の設定
   const [timeSlots, setTimeSlots] = useState({
     pickup: ['10:00-12:00', '12:00-15:00', '15:00-18:00'],
     delivery: ['9:00-12:00', '12:00-15:00', '15:00-18:00', '18:00-21:00'],
@@ -79,7 +79,7 @@ export default function SettingsPage() {
     { id: 'message', label: '通知メール', icon: Mail },
   ];
 
-  // ★ 取得したデータを各Stateに適用する共通関数
+  // 取得したデータを各Stateに適用する共通関数
   const applySettings = (s) => {
     if (s.generalConfig) setGeneralConfig(prev => ({...prev, ...s.generalConfig}));
     if (s.statusConfig) setStatusConfig(s.statusConfig);
@@ -131,7 +131,7 @@ export default function SettingsPage() {
       const payload = { generalConfig, statusConfig, shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReply, staffOrderConfig, timeSlots };
       await supabase.from('app_settings').upsert({ id: 'default', settings_data: payload });
       
-      // ★ 保存成功時にキャッシュも更新する
+      // 保存成功時にキャッシュも更新する
       sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(payload));
       
       alert('すべての設定を完璧に保存しました！');
@@ -490,53 +490,63 @@ export default function SettingsPage() {
     </div>
   );
 
-  const renderRulesTab = () => (
-    <div className="space-y-8 animate-in fade-in">
-      <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 text-left">
-        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><LayoutTemplate size={20}/> 立札デザイン・店舗紐付け</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          <div className="space-y-4">
-            <label className="text-[12px] font-bold text-[#999999]">店舗ごとの使用テンプレート選択</label>
-            {shops.length === 0 ? <p className="text-sm text-[#999999]">店舗を登録してください</p> : shops.map(shop => (
-              <div key={shop.id} className="bg-[#FBFAF9] p-4 rounded-2xl border space-y-2">
-                <span className="font-bold text-[13px] text-[#2D4B3E]">{shop.name}</span>
-                <div className="flex flex-col gap-1">
-                  {tateMaster.map(tate => (
-                    <label key={tate.id} className="flex items-center gap-2 cursor-pointer bg-white p-2 rounded-lg border hover:border-[#2D4B3E] transition-all">
-                      <input type="checkbox" checked={(shop.enabledTatePatterns || []).includes(tate.id)} onChange={(e)=>{
-                        const current = shop.enabledTatePatterns || [];
-                        const next = e.target.checked ? [...current, tate.id] : current.filter(p=>p!==tate.id);
-                        setShops(shops.map(s=>s.id===shop.id?{...s, enabledTatePatterns:next}:s));
-                      }} className="accent-[#2D4B3E]"/>
-                      <span className="text-[11px] font-bold flex-1">{tate.label}</span>
-                      <button onClick={(e)=>{e.preventDefault(); setSelectedPreviewTate(tate)}} className="text-[9px] bg-[#F7F7F7] px-2 py-1 rounded text-[#555555]">プレビュー</button>
-                    </label>
-                  ))}
+  // ★ 注文ページと同じ美しい立札プレビューUIを反映した設定タブ
+  const renderRulesTab = () => {
+    const isOsonae = ['p1', 'p3', 'p4'].includes(selectedPreviewTate.id);
+    const topPrefixText = isOsonae ? (selectedPreviewTate.id === 'p1' ? '御供' : '御供') : '祝'; 
+
+    return (
+      <div className="space-y-8 animate-in fade-in">
+        <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 text-left">
+          <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><LayoutTemplate size={20}/> 立札デザイン・店舗紐付け</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div className="space-y-4">
+              <label className="text-[12px] font-bold text-[#999999]">店舗ごとの使用テンプレート選択</label>
+              {shops.length === 0 ? <p className="text-sm text-[#999999]">店舗を登録してください</p> : shops.map(shop => (
+                <div key={shop.id} className="bg-[#FBFAF9] p-4 rounded-2xl border space-y-2">
+                  <span className="font-bold text-[13px] text-[#2D4B3E]">{shop.name}</span>
+                  <div className="flex flex-col gap-1">
+                    {tateMaster.map(tate => (
+                      <label key={tate.id} className="flex items-center gap-2 cursor-pointer bg-white p-2 rounded-lg border hover:border-[#2D4B3E] transition-all">
+                        <input type="checkbox" checked={(shop.enabledTatePatterns || []).includes(tate.id)} onChange={(e)=>{
+                          const current = shop.enabledTatePatterns || [];
+                          const next = e.target.checked ? [...current, tate.id] : current.filter(p=>p!==tate.id);
+                          setShops(shops.map(s=>s.id===shop.id?{...s, enabledTatePatterns:next}:s));
+                        }} className="accent-[#2D4B3E]"/>
+                        <span className="text-[11px] font-bold flex-1">{tate.label}</span>
+                        <button onClick={(e)=>{e.preventDefault(); setSelectedPreviewTate(tate)}} className="text-[9px] bg-[#F7F7F7] px-2 py-1 rounded text-[#555555]">プレビュー</button>
+                      </label>
+                    ))}
+                  </div>
                 </div>
+              ))}
+            </div>
+            
+            <div className="sticky top-24 h-fit bg-[#FBFAF9] p-8 rounded-[32px] border shadow-inner text-center space-y-4">
+              <span className="text-[10px] font-bold text-[#999999] tracking-widest block">プレビュー ({selectedPreviewTate.label})</span>
+              
+              {/* ★ 注文ページと完全同一の立札プレビューUI（明朝体・白銀比） */}
+              <div className={`relative mx-auto border border-[#EAEAEA] shadow-lg bg-white flex flex-col items-center font-serif ${selectedPreviewTate.layout === 'horizontal' ? 'aspect-[1.414/1] w-full justify-center p-6' : 'aspect-[1/1.414] h-[300px] pt-6 px-4'}`}>
+                 <div className={`font-black ${isOsonae ? 'text-gray-500' : 'text-red-600'} ${selectedPreviewTate.layout === 'horizontal' ? 'text-[28px] mb-4' : 'text-[40px] mb-6 leading-none'}`}>
+                   {topPrefixText}
+                 </div>
+                 <div className={`flex w-full font-bold text-gray-900 ${selectedPreviewTate.layout === 'horizontal' ? 'flex-col items-center gap-2 text-[16px]' : 'flex-row-reverse justify-center gap-6 text-[18px]'}`}>
+                   {selectedPreviewTate.id.includes('p6') || selectedPreviewTate.id.includes('p8') ? (
+                     <><div className={`tracking-widest ${selectedPreviewTate.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>山田太郎 様</div>{!isOsonae && <div className={`tracking-widest ${selectedPreviewTate.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>御開店</div>}<div className={`tracking-widest ${selectedPreviewTate.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>株式会社〇〇</div></>
+                   ) : selectedPreviewTate.id.includes('p4') ? (
+                     <><div className={`tracking-[0.3em] ${selectedPreviewTate.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>株式会社〇〇</div><div className={`tracking-[0.3em] font-normal ${selectedPreviewTate.layout === 'horizontal' ? 'mt-4 text-[14px]' : 'mt-6 text-[14px] [writing-mode:vertical-rl]'}`}>代表 山田太郎</div></>
+                   ) : (
+                     <>{!isOsonae && <div className={`tracking-widest ${selectedPreviewTate.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>御開店</div>}<div className={`tracking-widest ${selectedPreviewTate.layout === 'vertical' ? '[writing-mode:vertical-rl]' : ''}`}>株式会社〇〇</div></>
+                   )}
+                 </div>
               </div>
-            ))}
-          </div>
-          <div className="sticky top-24 h-fit bg-[#FBFAF9] p-8 rounded-[32px] border shadow-inner text-center space-y-4">
-            <span className="text-[10px] font-bold text-[#999999] tracking-widest block">プレビュー ({selectedPreviewTate.label})</span>
-            <div className={`relative bg-white shadow-xl mx-auto border overflow-hidden flex flex-col items-center ${selectedPreviewTate.layout==='horizontal'?'aspect-[1.414/1] h-[200px] justify-center p-6':'aspect-[9/16] h-[340px] pt-8 px-4'}`}>
-              <div className={`font-bold ${selectedPreviewTate.color==='red'?'text-red-600':'text-gray-800'} ${selectedPreviewTate.layout==='horizontal'?'text-[24px] mb-3':'text-[32px] mb-6'}`}>
-                {['p1', 'p3', 'p4'].includes(selectedPreviewTate.id) ? (selectedPreviewTate.id==='p1'?'御供':'供') : '祝'}
-              </div>
-              <div className={`flex w-full font-bold text-gray-900 ${selectedPreviewTate.layout==='horizontal'?'flex-col items-center gap-1 text-[14px]':'flex-row-reverse justify-center gap-4 text-[16px]'}`}>
-                {selectedPreviewTate.id.includes('p6') || selectedPreviewTate.id.includes('p8') ? (
-                  <><div className={`${selectedPreviewTate.layout==='vertical'?'[writing-mode:vertical-rl]':''}`}>株式会社〇〇様</div><div className={`${selectedPreviewTate.layout==='vertical'?'[writing-mode:vertical-rl]':''}`}>御開店</div><div className={`${selectedPreviewTate.layout==='vertical'?'[writing-mode:vertical-rl]':''}`}>代表 山田太郎</div></>
-                ) : selectedPreviewTate.id.includes('p4') ? (
-                  <><div className={`tracking-widest ${selectedPreviewTate.layout==='vertical'?'[writing-mode:vertical-rl]':''}`}>株式会社〇〇</div><div className={`text-[12px] font-normal ${selectedPreviewTate.layout==='horizontal'?'mt-2':'mt-4 [writing-mode:vertical-rl]'}`}>代表 山田太郎</div></>
-                ) : (
-                  <><div className={`${selectedPreviewTate.layout==='vertical'?'[writing-mode:vertical-rl]':''}`}>御開店</div><div className={`${selectedPreviewTate.layout==='vertical'?'[writing-mode:vertical-rl]':''}`}>代表 山田太郎</div></>
-                )}
-              </div>
+              
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderStaffOrderTab = () => (
     <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 animate-in fade-in text-left">
@@ -627,6 +637,14 @@ export default function SettingsPage() {
         {activeTab === 'staff' && renderStaffTab()}
         {activeTab === 'message' && renderMessageTab()}
       </main>
+
+      {/* ★ 注文ページで使っているのと同じ明朝体フォントやスクロールバー非表示のスタイルを適用 */}
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&display=swap');
+        .font-serif { font-family: 'Noto Serif JP', serif; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
     </div>
   );
 }
