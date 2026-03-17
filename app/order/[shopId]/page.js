@@ -1,19 +1,19 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '../../../utils/supabase';
-// ★ AlertCircle を追加インポート
+import { supabase } from '@/utils/supabase';
 import { Calendar, Package, ChevronRight, Store, Truck, AlertCircle } from 'lucide-react';
 // ★ 共通コンポーネントのインポート
 import TatefudaPreview from '@/components/TatefudaPreview';
 
-// ★ キャッシュ用のキーを定義
+// キャッシュ用のキーを定義
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 const GALLERY_CACHE_KEY = 'florix_gallery_cache';
 
 export default function OrderPage() {
   const params = useParams();
   const router = useRouter();
+  const tenantId = params?.tenantId || 'default';
   const shopId = params?.shopId || 'default';
 
   const [appSettings, setAppSettings] = useState(null);
@@ -44,10 +44,9 @@ export default function OrderPage() {
   const [absenceAction, setAbsenceAction] = useState('持ち戻り'); 
   const [absenceNote, setAbsenceNote] = useState(''); 
 
-  // 立札・メッセージ
+  // 立札・メッセージ (一般客は空からスタート)
   const [cardType, setCardType] = useState('なし');
   const [cardMessage, setCardMessage] = useState('');
-  const [prefixFormat, setPrefixFormat] = useState('kanji'); 
   const [tatePattern, setTatePattern] = useState('');
   const [tateInput1, setTateInput1] = useState(''); 
   const [tateInput2, setTateInput2] = useState(''); 
@@ -59,6 +58,7 @@ export default function OrderPage() {
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', email: '', zip: '', address1: '', address2: '' });
   const [isRecipientDifferent, setIsRecipientDifferent] = useState(false);
   const [recipientInfo, setRecipientInfo] = useState({ name: '', phone: '', zip: '', address1: '', address2: '' });
+  
   const [calculatedFee, setCalculatedFee] = useState(null);
   const [pickupFee, setPickupFee] = useState(0); 
 
@@ -75,7 +75,7 @@ export default function OrderPage() {
   };
   const [timeSlots, setTimeSlots] = useState(defaultTimeSlots);
 
-  // ★ キャッシュ化のロジック
+  // キャッシュ化のロジック
   useEffect(() => {
     let isFirstLoad = true;
 
@@ -93,17 +93,15 @@ export default function OrderPage() {
 
     async function fetchSettings() {
       try {
-        // 1. キャッシュから即時読み込み
         const cachedSettings = sessionStorage.getItem(SETTINGS_CACHE_KEY);
         const cachedGallery = sessionStorage.getItem(GALLERY_CACHE_KEY);
 
         if (cachedSettings) {
           applyDataToState(JSON.parse(cachedSettings), cachedGallery ? JSON.parse(cachedGallery) : null);
           isFirstLoad = false;
-          setIsLoading(false); // 即座に画面を表示
+          setIsLoading(false);
         }
 
-        // 2. バックグラウンドでDBから最新取得
         const [settingsRes, galleryRes] = await Promise.all([
           supabase.from('app_settings').select('settings_data').eq('id', 'default').single(),
           supabase.from('app_settings').select('settings_data').eq('id', 'gallery').single()
@@ -114,7 +112,6 @@ export default function OrderPage() {
 
         if (newSettings) {
           applyDataToState(newSettings, newGallery);
-          // キャッシュを更新
           sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(newSettings));
           if (newGallery) {
             sessionStorage.setItem(GALLERY_CACHE_KEY, JSON.stringify(newGallery));
@@ -128,7 +125,7 @@ export default function OrderPage() {
       }
     }
     fetchSettings();
-  }, []);
+  }, [tenantId]);
 
   const generalConfig = appSettings?.generalConfig || {};
   const appName = generalConfig.appName || 'FLORIX';
@@ -177,7 +174,7 @@ export default function OrderPage() {
 
   const getPriceOptions = () => {
     if (!flowerType) return [];
-    let min = 2000, max = 20000, stepSize = 1000;
+    let min = 2000, max = 50000, stepSize = 1000;
     if (selectedItemSettings.minPrice) {
       min = Number(selectedItemSettings.minPrice);
       max = Number(selectedItemSettings.maxPrice);
@@ -189,7 +186,6 @@ export default function OrderPage() {
     return options;
   };
 
-  // 住所から「配送リードタイム」を自動判定
   const transitDays = useMemo(() => {
     if (receiveMethod !== 'sagawa') return 0;
     const targetInfo = isRecipientDifferent ? recipientInfo : customerInfo;
@@ -201,32 +197,26 @@ export default function OrderPage() {
       const searchPref = targetPref === '北海' ? '北海道' : targetPref;
       let rateData = appSettings.shippingRates.find(r => r.prefs && r.prefs.includes(searchPref));
       if (!rateData) rateData = appSettings.shippingRates.find(r => r.region && r.region.includes(searchPref));
-      
       if (rateData) return Number(rateData.leadDays) || 1;
     }
-    return 1; // 住所が未入力の場合は最低1日とする
+    return 1;
   }, [receiveMethod, customerInfo.address1, recipientInfo.address1, isRecipientDifferent, appSettings]);
 
-  // 最短納期の計算（準備日数 ＋ 配送リードタイム）
   const minDateLimit = useMemo(() => {
     const base = new Date();
     let prepDays = 0;
-    
     if (receiveMethod === 'sagawa') {
       prepDays = Number(selectedItemSettings?.shippingLeadDays) || 0;
     } else {
       prepDays = Number(selectedItemSettings?.normalLeadDays) || 0;
     }
-
     if (isBring === 'bring') {
       const fLead = Number(selectedItemSettings?.canBringFlowersLeadDays) || 0;
       const vLead = Number(selectedItemSettings?.canBringVaseLeadDays) || 0;
       if (selectedItemSettings?.canBringFlowers && fLead > prepDays) prepDays = fLead;
       if (selectedItemSettings?.canBringVase && vLead > prepDays) prepDays = vLead;
     }
-    
     const d = new Date(base);
-    // 準備日数 ＋ 配送にかかる日数を足して最短日を算出
     d.setDate(d.getDate() + prepDays + transitDays);
     return d.toISOString().split('T')[0];
   }, [flowerType, isBring, receiveMethod, selectedItemSettings, transitDays]);
@@ -243,7 +233,6 @@ export default function OrderPage() {
     return res;
   };
 
-  // 送料と発送日の自動計算
   useEffect(() => {
     if (!receiveMethod || receiveMethod === 'pickup' || !itemPrice) { 
       setCalculatedFee(null); setPickupFee(0); setAreaError(''); setShippingDate(''); return; 
@@ -301,7 +290,6 @@ export default function OrderPage() {
       if (!rateData) rateData = appSettings?.shippingRates?.find(r => r.region && r.region.includes(searchPref));
 
       if (rateData) { 
-        // 発送日の逆算（お届け日 - 配送日数）
         if (selectedDate) {
           const dDate = new Date(selectedDate);
           dDate.setDate(dDate.getDate() - transitDays);
@@ -342,7 +330,7 @@ export default function OrderPage() {
         setCalculatedFee(null); setShippingDate(''); setAreaError('該当する地域の送料設定が見つかりません。');
       }
     }
-  }, [customerInfo.address1, customerInfo.address2, recipientInfo.address1, recipientInfo.address2, isRecipientDifferent, receiveMethod, flowerType, itemPrice, selectedDate, appSettings, selectedItemSettings, transitDays]);
+  }, [customerInfo, recipientInfo, isRecipientDifferent, receiveMethod, flowerType, itemPrice, selectedDate, appSettings, selectedItemSettings, transitDays]);
 
   const fetchAddress = async (zip, target) => {
     if (zip.length !== 7) return;
@@ -354,7 +342,7 @@ export default function OrderPage() {
         if (target === 'customer') setCustomerInfo(prev => ({ ...prev, address1: fullAddr }));
         else setRecipientInfo(prev => ({ ...prev, address1: fullAddr }));
       }
-    } catch (error) { console.error("住所検索エラー"); }
+    } catch (error) {}
   };
 
   const getTimeOptions = () => {
@@ -372,20 +360,31 @@ export default function OrderPage() {
   const tax = Math.floor(subTotal * 0.1);
   const totalAmount = subTotal + tax;
 
-  const isFormInvalid = () => {
+  const missingFields = useMemo(() => {
+    const missing = [];
+    if (step === 1) {
+      if (!flowerType) missing.push('商品');
+      if (flowerType && !agreed) missing.push('注意事項の同意');
+    }
     if (step === 3) {
-      if (!flowerPurpose || !flowerColor || !flowerVibe || !itemPrice) return true;
-      if (cardType === 'メッセージカード' && !cardMessage) return true;
-      if (cardType === '立札' && !tatePattern) return true;
+      if (!flowerPurpose) missing.push('ご用途');
+      if (!flowerColor) missing.push('カラー');
+      if (!flowerVibe) missing.push('イメージ');
+      if (!itemPrice) missing.push('ご予算');
+      if (cardType === 'メッセージカード' && !cardMessage) missing.push('メッセージ内容');
+      if (cardType === '立札' && !tatePattern) missing.push('立札のレイアウト');
     }
     if (step === 4) {
-      if (!customerInfo.name || !customerInfo.phone || !customerInfo.email || !selectedDate || !selectedTime || !methodAgreed) return true;
-      if (selectedDate && selectedDate < minDateLimit) return true;
-      if ((receiveMethod === 'delivery' || receiveMethod === 'sagawa') && areaError) return true;
-      if (receiveMethod === 'delivery' && absenceAction === '置き配' && !absenceNote) return true;
+      if (!customerInfo.name || !customerInfo.phone || !customerInfo.email) missing.push('ご注文者情報');
+      if (isRecipientDifferent && (!recipientInfo.name || !recipientInfo.phone || !recipientInfo.address1)) missing.push('お届け先情報');
+      if (!selectedDate) missing.push('お届け希望日');
+      if (!selectedTime) missing.push('希望時間');
+      if ((receiveMethod === 'delivery' || receiveMethod === 'sagawa') && areaError) missing.push('配送エリアの確認');
+      if (receiveMethod === 'delivery' && absenceAction === '置き配' && !absenceNote) missing.push('置き配の指定場所');
+      if (!methodAgreed) missing.push('注文内容の同意');
     }
-    return false;
-  };
+    return missing;
+  }, [step, flowerType, agreed, flowerPurpose, flowerColor, flowerVibe, itemPrice, cardType, cardMessage, tatePattern, customerInfo, isRecipientDifferent, recipientInfo, selectedDate, selectedTime, methodAgreed, areaError, receiveMethod, absenceAction, absenceNote]);
 
   const handleSubmitOrder = async () => {
     setIsSubmitting(true);
@@ -406,7 +405,7 @@ export default function OrderPage() {
       const { error } = await supabase.from('orders').insert([{ order_data: orderPayload }]);
       if (error) throw error;
 
-      router.push(`/order/${shopId}/thanks`);
+      router.push(`/order/${tenantId}/${shopId}/thanks`);
       
     } catch (error) {
       console.error('注文エラー:', error.message);
@@ -415,21 +414,20 @@ export default function OrderPage() {
     }
   };
 
-  // ★ 注意書きを店舗ごとに切り替えるためのデータ取得
   const targetShopData = useMemo(() => {
-    if (selectedShop) {
-      return appSettings?.shops?.find(s => s.name === selectedShop) || appSettings?.shops?.[0] || {};
-    }
     if (shopId && shopId !== 'default') {
       return appSettings?.shops?.find(s => String(s.id) === String(shopId)) || appSettings?.shops?.[0] || {};
+    }
+    if (selectedShop) {
+      return appSettings?.shops?.find(s => s.name === selectedShop) || appSettings?.shops?.[0] || {};
     }
     return appSettings?.shops?.[0] || {};
   }, [selectedShop, shopId, appSettings]);
 
-  // 設定されたテキストがない場合のデフォルトフォールバック
   const pickupNote = targetShopData.pickupNote || 'ご来店予定日時に店舗までお越しください。';
   const deliveryNote = targetShopData.deliveryNote || '交通状況により配達時間が前後する場合がございます。';
   const shippingNote = targetShopData.shippingNote || '発送準備期間＋配送日数がかかります。交通状況により遅延する場合がございます。';
+  const absenceInstruction = targetShopData.absenceInstruction || '生花のため、ご不在時は原則として置き配または宅配ボックスへのお届けとなります。ご希望の対応をお選びください。';
 
   if (isLoading) return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-sans"><div className="text-[#2D4B3E] font-bold tracking-widest animate-pulse">読み込み中...</div></div>;
 
@@ -459,7 +457,6 @@ export default function OrderPage() {
             <div className="space-y-6">
               <select className="w-full h-16 px-5 bg-white border border-[#EAEAEA] rounded-[20px] outline-none focus:border-[#2D4B3E] transition-all text-[15px] font-bold appearance-none shadow-sm" value={flowerType} onChange={(e) => { setFlowerType(e.target.value); setItemPrice(''); setIsBring('shop'); }}>
                 <option value="">種類を選択してください</option>
-                {/* ★ 店舗による商品の絞り込みを反映 */}
                 {appSettings?.flowerItems?.filter(item => {
                   if (!shopId || shopId === 'default') return true;
                   if (!item.targetShops || item.targetShops === 'all') return true;
@@ -481,8 +478,8 @@ export default function OrderPage() {
                 <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] space-y-4 animate-in fade-in">
                   <p className="text-[11px] font-bold text-[#111111] tracking-widest border-b border-[#EAEAEA] pb-2">納期に関する注意事項</p>
                   <div className="space-y-2 text-[12px] text-[#555555] font-medium">
-                    {selectedItemSettings.normalLeadDays && <div className="flex justify-between"><span>通常納期 (店頭/配達)</span><span className="font-bold">{selectedItemSettings.normalLeadDays}日後以降</span></div>}
-                    {selectedItemSettings.shippingLeadDays && <div className="flex justify-between text-[#2D4B3E]"><span>業者配送 納期</span><span className="font-bold">発送準備 {selectedItemSettings.shippingLeadDays}日 ＋ 配送リードタイム(最短1日〜)</span></div>}
+                    {selectedItemSettings.normalLeadDays !== undefined && <div className="flex justify-between"><span>通常納期 (店頭/配達)</span><span className="font-bold">{selectedItemSettings.normalLeadDays}日後以降</span></div>}
+                    {selectedItemSettings.shippingLeadDays !== undefined && <div className="flex justify-between text-[#2D4B3E]"><span>業者配送 納期</span><span className="font-bold">発送準備 {selectedItemSettings.shippingLeadDays}日 ＋ 配送リードタイム(最短1日〜)</span></div>}
                     {isBring === 'bring' && (selectedItemSettings.canBringFlowersLeadDays || selectedItemSettings.canBringVaseLeadDays) && <div className="flex justify-between text-[#2D4B3E] pt-1"><span>お持ち込み時 (通常より延長)</span><span className="font-bold">{Math.max(Number(selectedItemSettings.canBringFlowersLeadDays)||0, Number(selectedItemSettings.canBringVaseLeadDays)||0)}日後以降</span></div>}
                   </div>
                   <label className="flex items-center gap-3 pt-4 cursor-pointer border-t border-[#EAEAEA]">
@@ -508,7 +505,7 @@ export default function OrderPage() {
             </div>
             <div className="space-y-4">
               {selectedItemSettings.canPickup !== false && appSettings?.shops?.length > 0 ? (
-                appSettings.shops.map(shop => (
+                appSettings.shops.filter(s => shopId === 'default' || String(s.id) === String(shopId)).map(shop => (
                   <button key={shop.id} onClick={() => { setReceiveMethod('pickup'); setSelectedShop(shop.name); setStep(3); }} className="w-full p-8 rounded-[24px] bg-white border border-[#EAEAEA] shadow-sm hover:border-[#2D4B3E] transition-all text-left group">
                     <span className="block font-bold text-[16px] mb-1 group-hover:text-[#2D4B3E]">{shop.name}で受取</span>
                     <span className="block text-[12px] text-[#999999]">{shop.address}</span>
@@ -623,16 +620,14 @@ export default function OrderPage() {
                       {tateNeeds.includes('1') && <input type="text" placeholder="① 内容 (例: 御開店)" value={tateInput1} onChange={(e) => setTateInput1(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       {tateNeeds.includes('2') && <input type="text" placeholder="② 宛名 (例: 〇〇様)" value={tateInput2} onChange={(e) => setTateInput2(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       
-                      <div className="pt-2 pb-1 border-t border-[#FBFAF9]">
-                        <span className="text-[10px] font-bold text-[#2D4B3E] bg-[#2D4B3E]/10 px-2 py-1 rounded">※贈り主情報は会員データから自動入力されます</span>
-                      </div>
+                      {/* ★ 一般のお客様用なので、「自動入力されます」のアナウンスを削除しました！ */}
 
                       {tateNeeds.includes('3') && <input type="text" placeholder="③ 贈り主 (例: 株式会社〇〇)" value={tateInput3} onChange={(e) => setTateInput3(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       {tateNeeds.includes('3a') && <input type="text" placeholder="③-1 会社名" value={tateInput3a} onChange={(e) => setTateInput3a(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       {tateNeeds.includes('3b') && <input type="text" placeholder="③-2 役職・氏名" value={tateInput3b} onChange={(e) => setTateInput3b(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       
                       <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4 mb-2">仕上がりプレビュー</p>
-                      {/* ★ 立札の共通コンポーネント呼び出し */}
+                      {/* ★ 共通コンポーネントの呼び出し */}
                       <TatefudaPreview 
                         tatePattern={tatePattern}
                         layout={selectedTateOpt?.layout}
@@ -692,7 +687,7 @@ export default function OrderPage() {
               {isRecipientDifferent && receiveMethod !== 'pickup' && (
                 <div className="space-y-4 bg-white p-8 rounded-[28px] border border-[#2D4B3E]/20 shadow-sm animate-in fade-in zoom-in-95">
                   <label className="text-[11px] font-bold text-[#2D4B3E] tracking-widest">お届け先情報</label>
-                  <input type="text" placeholder="お届け先 お名前" value={recipientInfo.name} onChange={(e) => setRecipientInfo({...recipientInfo, name: e.target.value})} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]" />
+                  <input type="text" placeholder="お届け先 お名前" value={recipientInfo.name} onChange={(e) => setRecipientInfo({...recipientInfo, name: e.target.value})} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px] font-bold" />
                   <input type="tel" placeholder="お届け先 電話番号" value={recipientInfo.phone} onChange={(e) => setRecipientInfo({...recipientInfo, phone: e.target.value})} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]" />
                   <input type="text" placeholder="郵便番号 (7桁)" value={recipientInfo.zip} onChange={(e) => { setRecipientInfo({...recipientInfo, zip: e.target.value}); if(e.target.value.length === 7) fetchAddress(e.target.value, 'recipient'); }} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]" />
                   <input type="text" placeholder="都道府県・市区町村 (自動入力)" value={recipientInfo.address1} className="w-full h-14 px-5 bg-[#EAEAEA]/30 rounded-xl outline-none text-[#999999] text-[14px]" readOnly />
@@ -702,7 +697,7 @@ export default function OrderPage() {
 
               <div className="grid grid-cols-2 gap-4 mt-6">
                 <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-[#999999] tracking-widest">お届け・受取希望日</label>
+                  <label className="text-[11px] font-bold text-[#999999] tracking-widest">お届け希望日</label>
                   <input type="date" min={minDateLimit} value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full h-14 px-4 bg-white border border-[#EAEAEA] rounded-[16px] outline-none font-bold text-[#555555] focus:border-[#2D4B3E] shadow-sm" />
                 </div>
                 <div className="space-y-2">
@@ -716,7 +711,7 @@ export default function OrderPage() {
 
               {/* ★ 発送予定日の自動表示パネル */}
               {receiveMethod === 'sagawa' && selectedDate && shippingDate && (
-                <div className="mt-4 p-5 bg-green-50 border border-green-200 rounded-2xl flex flex-col gap-3 animate-in fade-in shadow-sm">
+                <div className="mt-4 p-5 bg-green-50 border border-green-200 rounded-2xl flex flex-col sm:flex-row sm:items-center gap-3 animate-in fade-in shadow-sm">
                   <p className="text-[11px] font-bold text-green-700 tracking-widest">配送スケジュール</p>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                     <div className="flex items-center gap-2 text-green-900 font-black text-[15px] bg-white px-3 py-2 rounded-lg shadow-sm border border-green-100">
@@ -762,7 +757,7 @@ export default function OrderPage() {
               <div className="bg-white p-8 rounded-[32px] border-2 border-[#2D4B3E]/30 shadow-md mt-8">
                 <div className="flex flex-col items-center justify-center gap-6">
                   <div className="w-full">
-                    <p className="text-[11px] font-bold text-[#999999] tracking-widest text-center mb-2">お支払い内訳</p>
+                    <p className="text-[11px] font-bold text-[#999999] tracking-widest text-center mb-2">お見積り金額</p>
                     <div className="bg-[#FBFAF9] p-5 rounded-2xl space-y-3 text-[13px] text-[#555555] font-medium w-full">
                       <div className="flex justify-between">
                         <span>商品代 (税抜):</span>
@@ -808,6 +803,7 @@ export default function OrderPage() {
                   {receiveMethod === 'delivery' && (
                     <>
                       <p>{deliveryNote}</p>
+                      <p className="text-[#2D4B3E] font-bold">{absenceInstruction}</p>
                       {parsedPickupFee > 0 && <p className="font-bold text-orange-600">※ご注文の商品には回収が必要な器（スタンド等）が含まれているため、回収費用(¥{parsedPickupFee.toLocaleString()})が加算されています。</p>}
                     </>
                   )}
@@ -833,17 +829,26 @@ export default function OrderPage() {
 
         {/* ナビゲーション */}
         <div className="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-md border-t border-[#EAEAEA] py-4 px-6 z-50">
-          <div className="max-w-[600px] mx-auto flex gap-4">
-            {step > 1 && (
-              <button onClick={() => setStep(step - 1)} className="px-6 h-14 shrink-0 rounded-[16px] bg-white border border-[#EAEAEA] text-[#555555] font-bold text-[14px] hover:bg-[#F7F7F7] transition-all">戻る</button>
+          <div className="max-w-[600px] mx-auto flex flex-col gap-2">
+            
+            {missingFields.length > 0 && (
+              <div className="text-[10px] font-bold text-red-500 text-center animate-pulse">
+                未入力項目があります: {missingFields.join('、')}
+              </div>
             )}
-            <button 
-              disabled={isFormInvalid() || (step === 1 && !agreed) || isSubmitting} 
-              onClick={() => step < 4 ? setStep(step + 1) : handleSubmitOrder()} 
-              className={`flex-1 h-14 rounded-[16px] bg-[#2D4B3E] text-white font-bold text-[15px] tracking-widest shadow-md transition-all active:scale-[0.98] disabled:opacity-40 disabled:active:scale-100 hover:bg-[#1f352b]`}
-            >
-              {step === 4 ? (isSubmitting ? '送信中...' : '注文を確定する') : '次へ進む'}
-            </button>
+            
+            <div className="flex gap-4">
+              {step > 1 && (
+                <button onClick={() => setStep(step - 1)} className="px-6 h-14 shrink-0 rounded-[16px] bg-white border border-[#EAEAEA] text-[#555555] font-bold text-[14px] hover:bg-[#F7F7F7] transition-all">戻る</button>
+              )}
+              <button 
+                disabled={missingFields.length > 0 || isSubmitting} 
+                onClick={() => step < 4 ? setStep(step + 1) : handleSubmitOrder()} 
+                className={`flex-1 h-14 rounded-[16px] bg-[#2D4B3E] text-white font-bold text-[15px] tracking-widest shadow-md transition-all active:scale-[0.98] disabled:opacity-40 disabled:active:scale-100 hover:bg-[#1f352b]`}
+              >
+                {step === 4 ? (isSubmitting ? '送信中...' : '注文を確定する') : '次へ進む'}
+              </button>
+            </div>
           </div>
         </div>
 
