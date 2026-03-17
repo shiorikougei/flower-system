@@ -8,7 +8,7 @@ export default function TatefudaPreview({ tatePattern, layout, isOsonae, input1,
 
   // ★ 縦書き時の文字サイズ自動調整ヘルパー関数
   const getTextStyle = (text, defaultSize) => {
-    if (layout !== 'vertical') return {}; // 横型はTailwindに任せる
+    if (layout !== 'vertical') return {}; // 横型はそのまま
     
     const len = (text || '').length || 4;
     const availableHeight = 200; // プレビュー枠内の縦の利用可能スペース（px）
