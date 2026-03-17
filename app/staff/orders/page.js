@@ -1,16 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/utils/supabase';
-// アイコン (Trash2を追加)
+import { supabase } from '../../../utils/supabase'; // ★ パス階層を修正
 import { 
   MapPin, Calendar, ChevronRight, X, Clock, Truck, Store, Package, 
   CreditCard, MessageSquare, AlertCircle, ListChecks, User, Tag, 
   Printer, FileText, Send, Trash2
 } from 'lucide-react';
-
-// ★ キャッシュ用のキーを定義
-const ORDERS_CACHE_KEY = 'florix_orders_cache';
-const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -19,34 +14,55 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState(null); // モーダル用
   const [appSettings, setAppSettings] = useState(null);
 
-  // ★ キャッシュ対応のデータ取得ロジック
+  // ★ 新規: ログイン中のテナントIDを保持する
+  const [currentTenantId, setCurrentTenantId] = useState(null);
+
+  // ★ キャッシュ対応＆SaaS仕様のデータ取得ロジック
   useEffect(() => {
     async function initData() {
-      // 1. まずは sessionStorage (キャッシュ) から復元して高速表示
-      const cachedOrders = sessionStorage.getItem(ORDERS_CACHE_KEY);
-      const cachedSettings = sessionStorage.getItem(SETTINGS_CACHE_KEY);
-
-      if (cachedOrders) {
-        try {
-          setOrders(JSON.parse(cachedOrders));
-          setIsLoading(false); // キャッシュがあれば即座にローディング解除
-        } catch (e) {
-          console.error("注文キャッシュのパース失敗", e);
-        }
-      }
-      if (cachedSettings) {
-        try {
-          setAppSettings(JSON.parse(cachedSettings));
-        } catch (e) {
-          console.error("設定キャッシュのパース失敗", e);
-        }
-      }
-
-      // 2. バックグラウンドで最新データを一括取得
       try {
+        // 1. ログインチェック
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          window.location.href = '/staff/login';
+          return;
+        }
+
+        // 2. プロフィールからテナントIDを取得
+        const { data: profile, error: profileError } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
+        if (profileError) throw profileError;
+        
+        const tId = profile.tenant_id;
+        setCurrentTenantId(tId);
+
+        // テナント専用のキャッシュキーを生成
+        const CACHE_KEY_ORDERS = `florix_orders_cache_${tId}`;
+        const CACHE_KEY_SETTINGS = `florix_settings_cache_${tId}`;
+
+        // 3. まずは sessionStorage (キャッシュ) から復元して高速表示
+        const cachedOrders = sessionStorage.getItem(CACHE_KEY_ORDERS);
+        const cachedSettings = sessionStorage.getItem(CACHE_KEY_SETTINGS);
+
+        if (cachedOrders) {
+          try {
+            setOrders(JSON.parse(cachedOrders));
+            setIsLoading(false); // キャッシュがあれば即座にローディング解除
+          } catch (e) {
+            console.error("注文キャッシュのパース失敗", e);
+          }
+        }
+        if (cachedSettings) {
+          try {
+            setAppSettings(JSON.parse(cachedSettings));
+          } catch (e) {
+            console.error("設定キャッシュのパース失敗", e);
+          }
+        }
+
+        // 4. バックグラウンドで最新データを一括取得 (RLSにより自動的に自店舗のデータのみ取得される)
         const [ordersRes, settingsRes] = await Promise.all([
           supabase.from('orders').select('*').order('created_at', { ascending: false }),
-          supabase.from('app_settings').select('settings_data').eq('id', 'default').single()
+          supabase.from('app_settings').select('settings_data').eq('id', tId).single()
         ]);
 
         if (ordersRes.error) throw ordersRes.error;
@@ -55,13 +71,13 @@ export default function OrdersPage() {
         // 最新の注文データをセット＆キャッシュ更新
         if (ordersRes.data) {
           setOrders(ordersRes.data);
-          sessionStorage.setItem(ORDERS_CACHE_KEY, JSON.stringify(ordersRes.data));
+          sessionStorage.setItem(CACHE_KEY_ORDERS, JSON.stringify(ordersRes.data));
         }
         
         // 最新の設定データをセット＆キャッシュ更新
         if (settingsRes.data?.settings_data) {
           setAppSettings(settingsRes.data.settings_data);
-          sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(settingsRes.data.settings_data));
+          sessionStorage.setItem(CACHE_KEY_SETTINGS, JSON.stringify(settingsRes.data.settings_data));
         }
       } catch (error) {
         console.error('データ取得エラー:', error);
@@ -88,8 +104,8 @@ export default function OrdersPage() {
       const newOrders = orders.map(o => o.id === id ? { ...o, order_data: updatedData } : o);
       setOrders(newOrders);
       
-      // ★ 変更をキャッシュにも即座に同期（別ページ遷移からの戻りを速くするため）
-      sessionStorage.setItem(ORDERS_CACHE_KEY, JSON.stringify(newOrders));
+      // ★ 変更をキャッシュにも即座に同期
+      sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders));
 
       if (selectedOrder && selectedOrder.id === id) {
         setSelectedOrder({ ...selectedOrder, order_data: updatedData });
@@ -121,7 +137,7 @@ export default function OrdersPage() {
       // 画面とキャッシュから削除
       const newOrders = orders.filter(o => o.id !== id);
       setOrders(newOrders);
-      sessionStorage.setItem(ORDERS_CACHE_KEY, JSON.stringify(newOrders));
+      sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders));
       setSelectedOrder(null); // モーダルを閉じる
       alert('注文を削除しました。');
     } catch (error) {
@@ -394,7 +410,8 @@ export default function OrdersPage() {
                         <p><span className="text-[#999999] text-[10px] block mb-1 tracking-widest">受取店舗</span><span className="font-black text-[16px] text-[#2D4B3E]">{modalData.selectedShop || '未指定'}</span></p>
                       </div>
                     ) : (
-                      <div className="bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA] space-y-3">
+                      <div className="bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA] space-y-3 relative overflow-hidden">
+                        {modalData.isRecipientDifferent && <div className="absolute top-0 right-0 bg-[#2D4B3E] text-white text-[9px] font-bold px-2 py-0.5 rounded-bl-lg">注文者と別住所</div>}
                         <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">宛名</span><span className="font-black text-[16px]">{modalTargetInfo?.name || '未設定'} 様</span></p>
                         <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">お届け先住所</span><span className="font-bold text-[14px] block leading-relaxed">〒{modalTargetInfo?.zip}<br/>{modalTargetInfo?.address1} {modalTargetInfo?.address2}</span></p>
                         

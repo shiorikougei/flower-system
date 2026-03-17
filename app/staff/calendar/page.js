@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { supabase } from '@/utils/supabase';
+import { supabase } from '../../../utils/supabase'; // パス階層に合わせて適宜調整
 import { 
   ChevronLeft, ChevronRight, RefreshCw, X, Calendar as CalendarIcon, 
   User, MapPin, Tag, FileText, Smartphone, Archive, RotateCcw, 
@@ -14,6 +14,9 @@ export default function CalendarPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // ★ 新規: ログイン中のテナントIDを保持する
+  const [currentTenantId, setCurrentTenantId] = useState(null);
 
   // ステータス更新用のフォーム状態
   const [updateForm, setUpdateForm] = useState({ status: 'new', staff: '' });
@@ -33,35 +36,54 @@ export default function CalendarPage() {
   }, [selectedOrder]);
 
   const fetchData = async (forceRefresh = false) => {
-    // キャッシュがあるか確認し、初回ロード以外（forceRefreshがfalse）ならそれを使う
-    if (!forceRefresh) {
-      const cachedOrders = sessionStorage.getItem('florix_orders_cache');
-      const cachedSettings = sessionStorage.getItem('florix_settings_cache');
-      
-      if (cachedOrders && cachedSettings) {
-        setOrders(JSON.parse(cachedOrders));
-        setAppSettings(JSON.parse(cachedSettings));
-        setIsLoading(false);
-        // 裏で静かに最新データを取得してキャッシュを更新しておく
-        fetchLatestDataSilently();
-        return;
-      }
-    }
-
     setIsLoading(true);
     try {
-      const { data: settings } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
-      if (settings) {
-        setAppSettings(settings.settings_data);
-        sessionStorage.setItem('florix_settings_cache', JSON.stringify(settings.settings_data));
+      // 1. ログインチェック
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = '/staff/login';
+        return;
       }
 
-      const { data: ordersData, error } = await supabase.from('orders').select('*');
+      // 2. プロフィールからテナントIDを取得
+      const { data: profile, error: profileError } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
+      if (profileError) throw profileError;
+      
+      const tId = profile.tenant_id;
+      setCurrentTenantId(tId);
+
+      // キャッシュがあるか確認し、初回ロード以外（forceRefreshがfalse）ならそれを使う
+      const CACHE_KEY_ORDERS = `florix_orders_cache_${tId}`;
+      const CACHE_KEY_SETTINGS = `florix_settings_cache_${tId}`;
+
+      if (!forceRefresh) {
+        const cachedOrders = sessionStorage.getItem(CACHE_KEY_ORDERS);
+        const cachedSettings = sessionStorage.getItem(CACHE_KEY_SETTINGS);
+        
+        if (cachedOrders && cachedSettings) {
+          setOrders(JSON.parse(cachedOrders));
+          setAppSettings(JSON.parse(cachedSettings));
+          setIsLoading(false);
+          // 裏で静かに最新データを取得してキャッシュを更新しておく
+          fetchLatestDataSilently(tId, CACHE_KEY_ORDERS);
+          return;
+        }
+      }
+
+      // 3. テナント固有の設定データを取得
+      const { data: settings } = await supabase.from('app_settings').select('settings_data').eq('id', tId).single();
+      if (settings) {
+        setAppSettings(settings.settings_data);
+        sessionStorage.setItem(CACHE_KEY_SETTINGS, JSON.stringify(settings.settings_data));
+      }
+
+      // 4. 注文データを取得（★RLSがかかっているので自動的に自店舗のデータだけが取れます！）
+      const { data: ordersData, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       
       const latestOrders = ordersData || [];
       setOrders(latestOrders);
-      sessionStorage.setItem('florix_orders_cache', JSON.stringify(latestOrders));
+      sessionStorage.setItem(CACHE_KEY_ORDERS, JSON.stringify(latestOrders));
       
     } catch (error) {
       console.error('取得エラー:', error.message);
@@ -71,12 +93,12 @@ export default function CalendarPage() {
   };
 
   // 裏でこっそり最新データを取得する関数
-  const fetchLatestDataSilently = async () => {
+  const fetchLatestDataSilently = async (tId, cacheKey) => {
     try {
-      const { data: ordersData } = await supabase.from('orders').select('*');
+      const { data: ordersData } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
       if (ordersData) {
         setOrders(ordersData);
-        sessionStorage.setItem('florix_orders_cache', JSON.stringify(ordersData));
+        sessionStorage.setItem(cacheKey, JSON.stringify(ordersData));
       }
     } catch (error) {
       console.error('バックグラウンド更新エラー:', error.message);
@@ -116,7 +138,7 @@ export default function CalendarPage() {
       
       const newOrders = orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o);
       setOrders(newOrders);
-      sessionStorage.setItem('florix_orders_cache', JSON.stringify(newOrders)); // キャッシュも更新
+      sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders)); 
       
       setSelectedOrder({ ...targetOrder, order_data: updatedData });
     } catch (err) { 
@@ -134,7 +156,7 @@ export default function CalendarPage() {
       
       const newOrders = orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o);
       setOrders(newOrders);
-      sessionStorage.setItem('florix_orders_cache', JSON.stringify(newOrders)); // キャッシュも更新
+      sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders));
       
       setSelectedOrder(null);
     } catch (err) { alert('更新失敗'); }
@@ -162,7 +184,7 @@ export default function CalendarPage() {
       // 画面とキャッシュから削除
       const newOrders = orders.filter(o => o.id !== id);
       setOrders(newOrders);
-      sessionStorage.setItem('florix_orders_cache', JSON.stringify(newOrders));
+      sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders));
       setSelectedOrder(null); // モーダルを閉じる
       alert('注文を削除しました。');
     } catch (error) {
@@ -214,7 +236,7 @@ export default function CalendarPage() {
       if (!info) return '#';
       const address = `${info.address1 || ''} ${info.address2 || ''}`.trim();
       if (!address) return '#';
-      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+      return `https://google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
     } catch (e) {
       return '#';
     }
@@ -283,8 +305,8 @@ export default function CalendarPage() {
 
       const renderHeaderMeta = () => `
         <div class="meta-area">
-          <div>伝票：${safeId}    受付：${safeFormatDate(selectedOrder.created_at, false)}</div>
-          <div>お渡し：${receiveMethodStr}    希望日：${datePart}</div>
+          <div>伝票：${safeId}    受付：${safeFormatDate(selectedOrder.created_at, false)}</div>
+          <div>お渡し：${receiveMethodStr}    希望日：${datePart}</div>
           <div>入金状況：${paymentStatus}</div>
         </div>
       `;
@@ -413,7 +435,7 @@ export default function CalendarPage() {
           </div>
           ${renderClientBoxes(hidePrice)}
           ${renderItemsBlock(hidePrice)}
-          ${showReceiptNote ? `<div class="receipt-note">上記の商品を確かに受領いたしました。     受領日：    年    月    日      サインまたは印</div>` : ''}
+          ${showReceiptNote ? `<div class="receipt-note">上記の商品を確かに受領いたしました。     受領日：    年    月    日      サインまたは印</div>` : ''}
           ${renderFooter(type, hidePrice)}
         </div>
       `;
