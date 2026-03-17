@@ -222,7 +222,7 @@ export default function SettingsPage() {
     <div className="space-y-8 animate-in fade-in">
       {shops.map(shop => (
         <div key={shop.id} className="bg-white rounded-[32px] border p-8 shadow-sm relative space-y-8 text-left">
-          <button onClick={()=>setShops(shops.filter(s=>s.id!==shop.id))} className="absolute top-6 right-6 text-red-300 hover:text-red-500"><Trash2 size={20}/></button>
+          <button onClick={()=>setShops(shops.filter(s=>s.id!==shop.id))} className="absolute top-6 right-6 p-2 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"><Trash2 size={20}/></button>
           <div className="flex items-center gap-3">
             <input type="checkbox" checked={shop.isActive} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, isActive:e.target.checked}:s))} className="w-6 h-6 accent-[#2D4B3E]"/>
             <h2 className="text-[18px] font-bold text-[#2D4B3E]">{shop.name || '名称未設定'}</h2>
@@ -285,20 +285,21 @@ export default function SettingsPage() {
     <div className="space-y-8 animate-in fade-in">
       {flowerItems.map(item => (
         <div key={item.id} className="bg-white rounded-[32px] border p-8 shadow-sm relative space-y-6 text-left">
-          <button onClick={()=>setFlowerItems(flowerItems.filter(i=>i.id!==item.id))} className="absolute top-8 right-8 text-red-300"><Trash2 size={20}/></button>
+          {/* ★ ゴミ箱アイコンを独立して配置 */}
+          <button onClick={()=>setFlowerItems(flowerItems.filter(i=>i.id!==item.id))} className="absolute top-6 right-6 p-2 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"><Trash2 size={18}/></button>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* ★ 右側に余白（pr-12）を持たせてゴミ箱と被らないように修正 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-10 md:pr-12 pt-2">
             <input type="text" value={item.name} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, name:e.target.value}:i))} className="w-full h-12 bg-transparent border-b-2 text-[20px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="商品名" />
-            <div className="flex items-center gap-2 justify-end">
+            <div className="flex items-center gap-2 justify-start md:justify-end">
               <span className="text-[11px] font-bold text-[#999999]">配送サイズ (箱):</span>
-              <select value={item.defaultBoxSize || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, defaultBoxSize:e.target.value}:i))} className="h-10 bg-[#FBFAF9] border rounded-xl px-3 font-bold text-[13px] outline-none">
+              <select value={item.defaultBoxSize || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, defaultBoxSize:e.target.value}:i))} className="h-10 bg-[#FBFAF9] border rounded-xl px-3 font-bold text-[13px] outline-none hover:border-[#2D4B3E] transition-colors">
                 <option value="">未設定</option>
                 {shippingSizes.map(s => <option key={s} value={s}>{s}サイズ</option>)}
               </select>
             </div>
           </div>
 
-          {/* ★ 追加：受取方法の制限設定 */}
           <div className="pt-4 pb-2 border-t border-[#FBFAF9]">
             <p className="text-[12px] font-bold text-[#2D4B3E] mb-3 flex items-center gap-2"><Store size={16}/> 対応可能な受取方法</p>
             <div className="flex flex-wrap gap-3">
@@ -653,7 +654,6 @@ export default function SettingsPage() {
         {activeTab === 'message' && renderMessageTab()}
       </main>
 
-      {/* ★ 注文ページで使っているのと同じ明朝体フォントやスクロールバー非表示のスタイルを適用 */}
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&display=swap');
         .font-serif { font-family: 'Noto Serif JP', serif; }
