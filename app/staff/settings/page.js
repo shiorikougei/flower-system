@@ -5,7 +5,7 @@ import {
   Settings as SettingsIcon, ListChecks, Store, Tag, Truck, User, Mail, 
   Trash2, Plus, Clock, ShieldCheck, RotateCcw, Image as ImageIcon, Ruler, 
   ChevronRight, Calendar as CalendarIcon, Box, MapPin, X,
-  LayoutTemplate, Package, Eye, EyeOff
+  LayoutTemplate, Package, Eye, EyeOff, Sparkles, Building2
 } from 'lucide-react';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
@@ -19,20 +19,11 @@ export default function SettingsPage() {
 
   // --- 1. 基本設定 ---
   const [generalConfig, setGeneralConfig] = useState({ 
-    appName: 'FLORIX', 
-    logoUrl: '', 
-    logoSize: 100, 
-    logoTransparent: false, 
-    slipBgUrl: '', 
-    slipBgOpacity: 50, 
-    systemPassword: '7777'
+    appName: 'FLORIX', logoUrl: '', logoSize: 100, logoTransparent: false, slipBgUrl: '', slipBgOpacity: 50, systemPassword: '7777'
   });
 
   // --- 2. ステータス設定 ---
-  const [statusConfig, setStatusConfig] = useState({ 
-    type: 'template', 
-    customLabels: ['未対応', '制作中', '制作完了', '配達中'] 
-  });
+  const [statusConfig, setStatusConfig] = useState({ type: 'template', customLabels: ['未対応', '制作中', '制作完了', '配達中'] });
 
   // --- 3. 店舗管理 ---
   const [shops, setShops] = useState([]); 
@@ -45,17 +36,9 @@ export default function SettingsPage() {
   const [shippingSizes, setShippingSizes] = useState(['80', '100', '120']);
   const [shippingRates, setShippingRates] = useState([]); 
   const [boxFeeConfig, setBoxFeeConfig] = useState({ 
-    type: 'flat', 
-    flatFee: 500, 
-    priceTiers: [{ minPrice: 0, fee: 300 }, { minPrice: 10000, fee: 0 }], 
-    itemFees: {},
-    returnFeeType: 'flat', 
-    returnFeeValue: 1000, 
-    coolBinEnabled: true, 
-    coolBinPeriods: [],
-    freeShippingThresholdEnabled: false, 
-    freeShippingThreshold: 15000, 
-    isBundleDiscount: true
+    type: 'flat', flatFee: 500, priceTiers: [{ minPrice: 0, fee: 300 }, { minPrice: 10000, fee: 0 }], itemFees: {},
+    returnFeeType: 'flat', returnFeeValue: 1000, coolBinEnabled: true, coolBinPeriods: [],
+    freeShippingThresholdEnabled: false, freeShippingThreshold: 15000, isBundleDiscount: true
   });
   
   const [timeSlots, setTimeSlots] = useState({
@@ -80,13 +63,9 @@ export default function SettingsPage() {
   const [staffList, setStaffList] = useState([]);
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffStore, setNewStaffStore] = useState('all');
-  const [staffOrderConfig, setStaffOrderConfig] = useState({ 
-    ignoreLeadTime: true, 
-    allowCustomPrice: true, 
-    paymentMethods: ['店頭支払い(済)', '銀行振込(請求書)', '代金引換'], 
-    sendAutoReply: false 
-  });
+  const [staffOrderConfig, setStaffOrderConfig] = useState({ ignoreLeadTime: true, allowCustomPrice: true, paymentMethods: ['店頭支払い(済)', '銀行振込(請求書)', '代金引換'], sendAutoReply: false });
   
+  // 通知メールテンプレート
   const [autoReplyTemplates, setAutoReplyTemplates] = useState([
     { id: 't1', trigger: '注文受付時', subject: 'ご注文ありがとうございます', body: '{CustomerName} 様\n\nご注文ありがとうございます。' }
   ]);
@@ -122,17 +101,14 @@ export default function SettingsPage() {
     async function loadSettings() {
       try {
         const cached = sessionStorage.getItem(SETTINGS_CACHE_KEY);
-        if (cached) { 
-          applySettings(JSON.parse(cached)); 
-        }
+        if (cached) { applySettings(JSON.parse(cached)); }
         const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
         if (data?.settings_data) {
-          applySettings(data.settings_data);
-          sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(data.settings_data));
+          const s = data.settings_data;
+          applySettings(s);
+          sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(s));
         }
-      } catch (e) { 
-        console.error('読込失敗', e); 
-      }
+      } catch (e) { console.error('読込失敗', e); }
     }
     loadSettings();
   }, []);
@@ -147,19 +123,11 @@ export default function SettingsPage() {
     if (!isAdmin) return;
     setIsSaving(true);
     try {
-      const payload = { 
-        generalConfig, statusConfig, shops, flowerItems, staffList, 
-        deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, 
-        autoReplyTemplates, staffOrderConfig, timeSlots 
-      };
+      const payload = { generalConfig, statusConfig, shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReplyTemplates, staffOrderConfig, timeSlots };
       await supabase.from('app_settings').upsert({ id: 'default', settings_data: payload });
       sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(payload));
       alert('すべての設定を保存しました！');
-    } catch (e) { 
-      alert('保存失敗'); 
-    } finally { 
-      setIsSaving(false); 
-    }
+    } catch (e) { alert('保存失敗'); } finally { setIsSaving(false); }
   };
 
   const handleImg = (e, f) => {
@@ -177,12 +145,8 @@ export default function SettingsPage() {
       return newSlots;
     });
   };
-  const addTimeSlot = (method) => { 
-    setTimeSlots(prev => ({ ...prev, [method]: [...prev[method], ''] })); 
-  };
-  const removeTimeSlot = (method, index) => { 
-    setTimeSlots(prev => ({ ...prev, [method]: prev[method].filter((_, i) => i !== index) })); 
-  };
+  const addTimeSlot = (method) => { setTimeSlots(prev => ({ ...prev, [method]: [...prev[method], ''] })); };
+  const removeTimeSlot = (method, index) => { setTimeSlots(prev => ({ ...prev, [method]: prev[method].filter((_, i) => i !== index) })); };
 
   // --- タブ：基本設定 ---
   const renderGeneralTab = () => (
@@ -459,14 +423,14 @@ export default function SettingsPage() {
             <div className="space-y-1 md:col-span-2"><label className="text-[10px] font-bold text-[#999999]">インボイス番号</label><input type="text" value={shop.invoiceNumber || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, invoiceNumber:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="T12345..."/></div>
           </div>
           
-          <div className="space-y-1 border-t pt-4">
+          <div className="space-y-1 border-t pt-4 border-[#EAEAEA]">
             <label className="text-[10px] font-bold text-[#999999]">振込先口座情報</label>
             <textarea value={shop.bankInfo || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, bankInfo:e.target.value}:s))} className="w-full h-24 bg-[#FBFAF9] border rounded-xl p-3 text-[12px] outline-none resize-none focus:border-[#2D4B3E]" placeholder="銀行名 支店名..."/>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-[#FBFAF9]">
             <div className="space-y-4">
-              <label className="text-[12px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={14}/> 店舗 営業時間・特別日</label>
+              <label className="text-[12px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={14}/> 店舗(ご来店) 営業時間・特別日</label>
               <div className="flex gap-2 bg-[#FBFAF9] p-3 rounded-xl border mb-2">
                 <input type="time" value={shop.openTime || '10:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, openTime:e.target.value}:s))} className="border rounded p-1 text-xs outline-none bg-white"/>
                 <span>〜</span>
@@ -511,112 +475,160 @@ export default function SettingsPage() {
   // --- タブ：商品管理 ---
   const renderItemsTab = () => (
     <div className="space-y-8 animate-in fade-in">
-      {flowerItems.map(item => (
-        <div key={item.id} className="bg-white rounded-[32px] border p-8 shadow-sm relative space-y-6 text-left">
-          <button 
-            onClick={()=>setFlowerItems(flowerItems.filter(i=>i.id!==item.id))} 
-            className="absolute top-6 right-6 p-2 text-red-300 hover:text-red-500 transition-colors"
-          >
-            <Trash2 size={18}/>
-          </button>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-10 md:pr-14 pt-2">
-            <input 
-              type="text" 
-              value={item.name} 
-              onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, name:e.target.value}:i))} 
-              className="w-full h-12 bg-transparent border-b-2 text-[20px] font-bold outline-none focus:border-[#2D4B3E] transition-all" 
-              placeholder="商品名" 
-            />
-            <div className="flex items-center gap-2 justify-start md:justify-end">
-              <span className="text-[11px] font-bold text-[#999999]">配送サイズ (箱):</span>
-              <select 
-                value={item.defaultBoxSize || ''} 
-                onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, defaultBoxSize:e.target.value}:i))} 
-                className="h-10 bg-[#FBFAF9] border rounded-xl px-3 font-bold text-[13px] outline-none focus:border-[#2D4B3E]"
-              >
-                <option value="">未設定</option>
-                {shippingSizes.map(s => <option key={s} value={s}>{s}サイズ</option>)}
-              </select>
-            </div>
-          </div>
+      {flowerItems.map(item => {
+        const isAllShops = item.targetShops === 'all' || item.targetShops === undefined;
 
-          {/* ★ 価格制限の設定欄 */}
-          <div className="grid grid-cols-3 gap-4 pt-2 border-t border-[#FBFAF9] mt-2">
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-[#999999]">最低注文料金 (税抜)</label>
-              <input type="number" value={item.minPrice || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, minPrice:Number(e.target.value)}:i))} className="w-full h-10 bg-[#FBFAF9] border rounded-xl px-3 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="例: 3000"/>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-[#999999]">最大注文料金 (税抜)</label>
-              <input type="number" value={item.maxPrice || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, maxPrice:Number(e.target.value)}:i))} className="w-full h-10 bg-[#FBFAF9] border rounded-xl px-3 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="例: 50000"/>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-[#999999]">金額の刻み幅</label>
-              <input type="number" value={item.stepPrice || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, stepPrice:Number(e.target.value)}:i))} className="w-full h-10 bg-[#FBFAF9] border rounded-xl px-3 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="例: 1000"/>
-            </div>
-          </div>
-
-          <div className="pt-4 pb-2 border-t border-[#FBFAF9]">
-            <p className="text-[12px] font-bold text-[#2D4B3E] mb-3 flex items-center gap-2"><Store size={16}/> 対応可能な受取方法</p>
-            <div className="flex flex-wrap gap-3">
-              {['canPickup', 'canDelivery', 'canShipping'].map(key => (
-                <label key={key} className={`flex items-center gap-2 px-4 py-2 rounded-xl border cursor-pointer transition-all ${item[key] !== false ? 'bg-[#FBFAF9] border-[#2D4B3E]/30 text-[#2D4B3E]' : 'bg-white border-[#EAEAEA] text-[#999999]'}`}>
-                  <input type="checkbox" checked={item[key] !== false} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, [key]:e.target.checked}:i))} className="accent-[#2D4B3E] w-4 h-4"/>
-                  <span className="text-[12px] font-bold">{key==='canPickup'?'店頭受取':key==='canDelivery'?'自社配達':'業者配送'}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-[#FBFAF9] pt-6">
-            <div className="space-y-4">
-              <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={16}/> 納期設定</p>
-              <div className="space-y-2">
-                <label className="text-[9px] font-bold text-[#999999]">通常納期 (日後)</label>
-                <input type="number" value={item.normalLeadDays} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, normalLeadDays:Number(e.target.value)}:i))} className="w-full bg-[#FBFAF9] border rounded-lg h-10 px-3 font-bold outline-none focus:border-[#2D4B3E]"/>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[9px] font-bold text-[#999999]">業者配送 発送までの準備(日)</label>
-                <input type="number" value={item.shippingLeadDays} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, shippingLeadDays:Number(e.target.value)}:i))} className="w-full bg-[#FBFAF9] border rounded-lg h-10 px-3 font-bold outline-none focus:border-[#2D4B3E]"/>
+        return (
+          <div key={item.id} className="bg-white rounded-[32px] border p-8 shadow-sm relative space-y-6 text-left">
+            <button 
+              onClick={()=>setFlowerItems(flowerItems.filter(i=>i.id!==item.id))} 
+              className="absolute top-6 right-6 p-2 text-red-300 hover:text-red-500 transition-colors"
+            >
+              <Trash2 size={18}/>
+            </button>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-10 md:pr-14 pt-2">
+              <input 
+                type="text" 
+                value={item.name} 
+                onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, name:e.target.value}:i))} 
+                className="w-full h-12 bg-transparent border-b-2 text-[20px] font-bold outline-none focus:border-[#2D4B3E] transition-all" 
+                placeholder="商品名" 
+              />
+              <div className="flex items-center gap-2 justify-start md:justify-end">
+                <span className="text-[11px] font-bold text-[#999999]">配送サイズ (箱):</span>
+                <select 
+                  value={item.defaultBoxSize || ''} 
+                  onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, defaultBoxSize:e.target.value}:i))} 
+                  className="h-10 bg-[#FBFAF9] border rounded-xl px-3 font-bold text-[13px] outline-none focus:border-[#2D4B3E]"
+                >
+                  <option value="">未設定</option>
+                  {shippingSizes.map(s => <option key={s} value={s}>{s}サイズ</option>)}
+                </select>
               </div>
             </div>
 
-            <div className="space-y-4 px-4 border-l border-r border-[#FBFAF9]">
-              <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2"><ShieldCheck size={16}/> 持込設定</p>
-              {['canBringFlowers', 'canBringVase'].map(key => (
-                <div key={key} className="bg-[#FBFAF9] p-3 rounded-xl border space-y-2">
-                  <label className="flex items-center justify-between text-[12px] font-bold">
-                    {key==='canBringFlowers'?'花材持込':'花器持込'}
-                    <input type="checkbox" checked={item[key]} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, [key]:e.target.checked}:i))} className="accent-[#2D4B3E] w-4 h-4"/>
-                  </label>
-                  {item[key] && (
-                    <div className="flex items-center justify-between text-[10px] font-bold text-[#555555]">
-                      <span>持込時納期</span>
-                      <div className="flex items-center gap-1">
-                        <input type="number" value={item[key+'LeadDays']||7} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, [key+'LeadDays']:Number(e.target.value)}:i))} className="w-10 border rounded text-center h-8 font-black"/>日後
-                      </div>
-                    </div>
-                  )}
+            {/* ★ 価格制限の設定欄 */}
+            <div className="grid grid-cols-3 gap-4 pt-2 mt-2">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-[#999999]">最低注文料金 (税抜)</label>
+                <input type="number" value={item.minPrice || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, minPrice:Number(e.target.value)}:i))} className="w-full h-10 bg-[#FBFAF9] border rounded-xl px-3 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="例: 3000"/>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-[#999999]">最大注文料金 (税抜)</label>
+                <input type="number" value={item.maxPrice || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, maxPrice:Number(e.target.value)}:i))} className="w-full h-10 bg-[#FBFAF9] border rounded-xl px-3 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="例: 50000"/>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-[#999999]">金額の刻み幅</label>
+                <input type="number" value={item.stepPrice || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, stepPrice:Number(e.target.value)}:i))} className="w-full h-10 bg-[#FBFAF9] border rounded-xl px-3 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="例: 1000"/>
+              </div>
+            </div>
+
+            {/* ★ 新規追加：取扱店舗の設定 */}
+            <div className="pt-4 pb-2 border-t border-[#FBFAF9] mt-2">
+              <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between mb-3">
+                <p className="text-[12px] font-bold text-[#2D4B3E] flex items-center gap-2"><MapPin size={16}/> 取扱店舗</p>
+                <div className="flex gap-2 p-1 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA] w-fit">
+                  <button 
+                    onClick={() => setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, targetShops: 'all'}:i))} 
+                    className={`px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all ${isAllShops ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}
+                  >
+                    全店舗
+                  </button>
+                  <button 
+                    onClick={() => setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, targetShops: Array.isArray(i.targetShops) ? i.targetShops : []}:i))} 
+                    className={`px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all ${!isAllShops ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}
+                  >
+                    指定店舗のみ
+                  </button>
                 </div>
-              ))}
+              </div>
+              
+              {!isAllShops && (
+                <div className="flex flex-wrap gap-3 mt-2 p-4 bg-[#FBFAF9] rounded-2xl border border-[#EAEAEA] animate-in slide-in-from-top-2">
+                  {shops.length === 0 ? <p className="text-[11px] text-[#999999]">店舗が登録されていません</p> : shops.map(shop => {
+                    const isChecked = Array.isArray(item.targetShops) && item.targetShops.includes(shop.id);
+                    return (
+                      <label key={shop.id} className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-all ${isChecked ? 'bg-white border-[#2D4B3E]/30 text-[#2D4B3E] shadow-sm' : 'bg-transparent border-transparent text-[#999999] hover:bg-white'}`}>
+                        <input 
+                          type="checkbox" 
+                          checked={isChecked} 
+                          onChange={(e)=>{
+                            const current = Array.isArray(item.targetShops) ? item.targetShops : [];
+                            const next = e.target.checked ? [...current, shop.id] : current.filter(id => id !== shop.id);
+                            setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, targetShops: next}:i));
+                          }} 
+                          className="accent-[#2D4B3E] w-3.5 h-3.5"
+                        />
+                        <span className="text-[11px] font-bold">{shop.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            <div className="space-y-4">
-              <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2"><RotateCcw size={16}/> 器の回収/返却</p>
-              <div className="bg-[#FBFAF9] p-3 rounded-xl border space-y-3">
-                <label className="flex items-center justify-between text-[12px] font-bold cursor-pointer">
-                  器の回収を必要とする
-                  <input type="checkbox" checked={item.hasReturn} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, hasReturn:e.target.checked}:i))} className="accent-[#2D4B3E] w-5 h-5"/>
-                </label>
-                <p className="text-[9px] text-[#999999] leading-tight font-bold">※注文時に「器返却あり」の送料計算を自動で有効化します。</p>
+            <div className="pt-4 pb-2 border-t border-[#FBFAF9]">
+              <p className="text-[12px] font-bold text-[#2D4B3E] mb-3 flex items-center gap-2"><Store size={16}/> 対応可能な受取方法</p>
+              <div className="flex flex-wrap gap-3">
+                {['canPickup', 'canDelivery', 'canShipping'].map(key => (
+                  <label key={key} className={`flex items-center gap-2 px-4 py-2 rounded-xl border cursor-pointer transition-all ${item[key] !== false ? 'bg-[#FBFAF9] border-[#2D4B3E]/30 text-[#2D4B3E]' : 'bg-white border-[#EAEAEA] text-[#999999]'}`}>
+                    <input type="checkbox" checked={item[key] !== false} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, [key]:e.target.checked}:i))} className="accent-[#2D4B3E] w-4 h-4"/>
+                    <span className="text-[12px] font-bold">{key==='canPickup'?'店頭受取':key==='canDelivery'?'自社配達':'業者配送'}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-[#FBFAF9] pt-6">
+              <div className="space-y-4">
+                <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={16}/> 納期設定</p>
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-[#999999]">通常納期 (日後)</label>
+                  <input type="number" value={item.normalLeadDays} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, normalLeadDays:Number(e.target.value)}:i))} className="w-full bg-[#FBFAF9] border rounded-lg h-10 px-3 font-bold outline-none focus:border-[#2D4B3E]"/>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] font-bold text-[#999999]">業者配送 発送までの準備(日)</label>
+                  <input type="number" value={item.shippingLeadDays} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, shippingLeadDays:Number(e.target.value)}:i))} className="w-full bg-[#FBFAF9] border rounded-lg h-10 px-3 font-bold outline-none focus:border-[#2D4B3E]"/>
+                </div>
+              </div>
+
+              <div className="space-y-4 px-4 border-l border-r border-[#FBFAF9]">
+                <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2"><ShieldCheck size={16}/> 持込設定</p>
+                {['canBringFlowers', 'canBringVase'].map(key => (
+                  <div key={key} className="bg-[#FBFAF9] p-3 rounded-xl border space-y-2">
+                    <label className="flex items-center justify-between text-[12px] font-bold">
+                      {key==='canBringFlowers'?'花材持込':'花器持込'}
+                      <input type="checkbox" checked={item[key]} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, [key]:e.target.checked}:i))} className="accent-[#2D4B3E] w-4 h-4"/>
+                    </label>
+                    {item[key] && (
+                      <div className="flex items-center justify-between text-[10px] font-bold text-[#555555]">
+                        <span>持込時納期</span>
+                        <div className="flex items-center gap-1">
+                          <input type="number" value={item[key+'LeadDays']||7} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, [key+'LeadDays']:Number(e.target.value)}:i))} className="w-10 border rounded text-center h-8 font-black"/>日後
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2"><RotateCcw size={16}/> 器の回収/返却</p>
+                <div className="bg-[#FBFAF9] p-3 rounded-xl border space-y-3">
+                  <label className="flex items-center justify-between text-[12px] font-bold cursor-pointer">
+                    器の回収を必要とする
+                    <input type="checkbox" checked={item.hasReturn} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, hasReturn:e.target.checked}:i))} className="accent-[#2D4B3E] w-5 h-5"/>
+                  </label>
+                  <p className="text-[9px] text-[#999999] leading-tight font-bold">※注文時に「器返却あり」の送料計算を自動で有効化します。</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       <button 
-        onClick={()=>setFlowerItems([...flowerItems, {id:Date.now(), name:'', normalLeadDays:2, shippingLeadDays:3, canBringFlowers:false, hasReturn:false, canPickup:true, canDelivery:true, canShipping:true, minPrice:3000, maxPrice:50000, stepPrice:1000}])} 
+        onClick={()=>setFlowerItems([...flowerItems, {id:Date.now(), name:'', targetShops: 'all', normalLeadDays:2, shippingLeadDays:3, canBringFlowers:false, hasReturn:false, canPickup:true, canDelivery:true, canShipping:true, minPrice:3000, maxPrice:50000, stepPrice:1000}])} 
         className="w-full py-10 border-2 border-dashed border-[#EAEAEA] rounded-[32px] text-[#999999] font-bold transition-all hover:border-[#2D4B3E]"
       >
         + 商品を追加
@@ -789,7 +801,7 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             <div className="space-y-4">
               <label className="text-[12px] font-bold text-[#999999]">店舗ごとのテンプレート選択</label>
-              {shops.map(shop => (
+              {shops.length === 0 ? <p className="text-sm text-[#999999]">店舗を登録してください</p> : shops.map(shop => (
                 <div key={shop.id} className="bg-[#FBFAF9] p-4 rounded-2xl border border-[#EAEAEA] space-y-2">
                   <span className="font-bold text-[13px] text-[#2D4B3E]">{shop.name}</span>
                   <div className="flex flex-col gap-1">
@@ -844,6 +856,10 @@ export default function SettingsPage() {
             <input type="checkbox" checked={staffOrderConfig[item.key]} onChange={(e)=>setStaffOrderConfig({...staffOrderConfig, [item.key]:e.target.checked})} className="w-6 h-6 accent-[#2D4B3E]"/>
           </label>
         ))}
+        <label className="flex items-center justify-between bg-[#FBFAF9] p-5 rounded-[24px] cursor-pointer border border-transparent hover:border-[#EAEAEA] shadow-sm">
+          <span className="font-bold text-[14px]">お客様への自動返信メールを送らない</span>
+          <input type="checkbox" checked={!staffOrderConfig.sendAutoReply} onChange={(e)=>setStaffOrderConfig({...staffOrderConfig, sendAutoReply:!e.target.checked})} className="w-6 h-6 accent-[#2D4B3E]"/>
+        </label>
         <div className="pt-4 space-y-1">
           <label className="text-[11px] font-bold text-[#999999]">スタッフ専用 支払い方法（カンマ区切り）</label>
           <input type="text" value={(staffOrderConfig.paymentMethods||[]).join(', ')} onChange={(e)=>setStaffOrderConfig({...staffOrderConfig, paymentMethods:e.target.value.split(',').map(s=>s.trim()).filter(Boolean)})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/>
