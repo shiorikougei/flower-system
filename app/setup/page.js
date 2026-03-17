@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '../../../utils/supabase'; // パスは適宜調整してください
+import { supabase } from '../../utils/supabase'; // パスは適宜調整してください
 import { Store, Lock, Mail, ArrowRight, Sparkles, Key } from 'lucide-react';
 
 function SetupContent() {

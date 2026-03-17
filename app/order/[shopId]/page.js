@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '../../../../utils/supabase'; // パス階層に合わせて適宜調整してください
+import { supabase } from '../../../utils/supabase'; // パス階層に合わせて適宜調整してください
 import { Calendar, Package, ChevronRight, Store, Truck, AlertCircle } from 'lucide-react';
 
 // ★ 相対パスで共通コンポーネントをインポート
