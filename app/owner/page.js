@@ -4,7 +4,7 @@ import { supabase } from '@/utils/supabase';
 import { 
   Building2, Mail, ArrowUpCircle, Bot, Lock, Unlock, 
   CheckCircle, XCircle, RefreshCw, Save, Sparkles, Store,
-  MessageSquare, Trash2, AlertTriangle // ★ Trash2 と AlertTriangle を追加
+  MessageSquare, Trash2, AlertTriangle
 } from 'lucide-react';
 
 const DEFAULT_AI_PROMPT = '以下のテキストからお花の「価格」「用途」「カラー」「イメージ」をJSON形式で抽出してください。価格はカンマなしの数値で出力してください。';
@@ -27,64 +27,142 @@ export default function OwnerDashboard() {
   const [isAuth, setIsAuth] = useState(false);
   const [password, setPassword] = useState('');
 
-  useEffect(() => {
-    async function loadOwnerData() {
-      try {
-        const { data, error } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
-        if (data && data.settings_data) {
-          if (data.settings_data.tenants) setTenants(data.settings_data.tenants);
-          if (data.settings_data.invitations) setInvitations(data.settings_data.invitations);
-          if (data.settings_data.upgradeRequests) setUpgradeRequests(data.settings_data.upgradeRequests);
-          if (data.settings_data.clientRequests) setClientRequests(data.settings_data.clientRequests);
-        } else {
-          // 初回起動時のダミーデータ
-          setTenants([
-            { id: 'shop_a', name: '花・花 OHANA!', email: 'info@hana-ohana.example.com', price: 10000, status: 'active', lastPaid: '2026-02-28', features: { b2b: false, deliveryOutsource: true }, aiPrompt: DEFAULT_AI_PROMPT },
-            { id: 'shop_b', name: 'お花カフェ (デモ店舗)', email: 'demo@example.com', price: 0, status: 'active', lastPaid: '-', features: { b2b: true, deliveryOutsource: false }, aiPrompt: DEFAULT_AI_PROMPT },
-          ]);
-          setUpgradeRequests([
-            { id: 'req_1', tenantId: 'shop_a', tenantName: '花・花 OHANA!', featureKey: 'b2b', featureName: '法人ポータル管理機能', date: '2026-03-15', status: 'pending' }
-          ]);
-          setClientRequests([
-            { id: 'fb_1', tenantId: 'shop_b', tenantName: 'お花カフェ', type: 'アップデート依頼', text: '設定画面に「配送料の自動計算オフ」ボタンを追加してほしいです。', date: '2026-03-10', status: 'new' }
-          ]);
-        }
-      } catch (err) {
-        console.error('オーナーデータの読み込みエラー');
-      } finally {
-        setIsLoading(false);
+  // ★ データベースから「実在する全てのテナント」を取得する関数
+  const loadOwnerData = async () => {
+    setIsLoading(true);
+    try {
+      // 1. まずは管理用メタデータ (招待・依頼など) を取得
+      const { data: ownerMeta } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
+      if (ownerMeta?.settings_data) {
+        setInvitations(ownerMeta.settings_data.invitations || []);
+        setUpgradeRequests(ownerMeta.settings_data.upgradeRequests || []);
+        setClientRequests(ownerMeta.settings_data.clientRequests || []);
       }
-    }
-    loadOwnerData();
-  }, []);
 
-  const handleLogin = () => {
-    if (password === 'nocolde2026') {
-      setIsAuth(true);
-    } else {
-      alert('アクセス権限がありません。');
+      // 2. ★ app_settingsテーブルを全スキャンして実在する店舗テナントを特定
+      const { data: allRows, error: scanError } = await supabase.from('app_settings').select('*');
+      if (scanError) throw scanError;
+
+      // システム予約IDを除外したものが「実際の店舗」
+      const shopTenants = allRows
+        .filter(row => !['nocolde_owner', 'gallery', 'default'].includes(row.id))
+        .map(row => {
+          const s = row.settings_data || {};
+          const config = s.generalConfig || {};
+          return {
+            id: row.id,
+            name: config.appName || '未設定のショップ',
+            status: s.status || 'active',
+            price: s.monthlyPrice || 10000,
+            features: s.features || { b2b: false, deliveryOutsource: false },
+            aiPrompt: s.aiPrompt || DEFAULT_AI_PROMPT,
+            updatedAt: row.updated_at
+          };
+        });
+
+      setTenants(shopTenants);
+    } catch (err) {
+      console.error('データ読み込みエラー:', err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // 統合保存ロジック
-  const saveOwnerData = async (updatedTenants = tenants, updatedInvitations = invitations, updatedUpgrades = upgradeRequests, updatedFeedbacks = clientRequests) => {
+  useEffect(() => {
+    if (isAuth) loadOwnerData();
+  }, [isAuth]);
+
+  const handleLogin = () => {
+    if (password === 'nocolde2026') setIsAuth(true);
+    else alert('アクセス権限がありません。');
+  };
+
+  // メタデータ（招待・依頼など）の保存
+  const saveOwnerMetaData = async (updatedInvitations = invitations, updatedUpgrades = upgradeRequests, updatedFeedbacks = clientRequests) => {
     setIsSaving(true);
     try {
       await supabase.from('app_settings').upsert({ 
         id: 'nocolde_owner', 
         settings_data: { 
-          tenants: updatedTenants, 
           invitations: updatedInvitations,
           upgradeRequests: updatedUpgrades,
           clientRequests: updatedFeedbacks
         } 
       });
-      setTenants(updatedTenants);
       setInvitations(updatedInvitations);
       setUpgradeRequests(updatedUpgrades);
       setClientRequests(updatedFeedbacks);
     } catch (error) {
-      alert('データの保存に失敗しました。');
+      alert('メタデータの保存に失敗しました。');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ★ 各テナントの直接更新（ロック、機能解放、料金変更など）
+  const updateTenantInfo = async (tenantId, updates) => {
+    setIsSaving(true);
+    try {
+      const { data: current } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
+      const nextData = { ...current.settings_data, ...updates };
+      
+      const { error } = await supabase.from('app_settings').update({ settings_data: nextData }).eq('id', tenantId);
+      if (error) throw error;
+      
+      // 画面上のリストも更新
+      setTenants(tenants.map(t => t.id === tenantId ? { ...t, ...updates } : t));
+    } catch (e) { 
+      alert('テナントの更新に失敗しました。'); 
+    } finally { 
+      setIsSaving(false); 
+    }
+  };
+
+  const toggleLock = (tenantId) => {
+    const target = tenants.find(t => t.id === tenantId);
+    const newStatus = target.status === 'active' ? 'locked' : 'active';
+    const confirmMsg = newStatus === 'locked' 
+      ? `【警告】この店舗のシステム利用を強制停止（ロック）しますか？\n未入金などの場合に実行してください。` 
+      : `この店舗のロックを解除し、利用を再開させますか？`;
+      
+    if (!confirm(confirmMsg)) return;
+    updateTenantInfo(tenantId, { status: newStatus });
+  };
+
+  const toggleFeature = (tenantId, featureKey) => {
+    const target = tenants.find(t => t.id === tenantId);
+    const currentFeatures = target.features || { b2b: false, deliveryOutsource: false };
+    updateTenantInfo(tenantId, { features: { ...currentFeatures, [featureKey]: !currentFeatures[featureKey] } });
+  };
+
+  const updatePrice = (tenantId, newPrice) => {
+    updateTenantInfo(tenantId, { monthlyPrice: Number(newPrice) });
+  };
+
+  const updateTenantPrompt = (tenantId, newPrompt) => {
+    // 画面上だけの変更（Saveボタンで確定させる仕様）
+    setTenants(tenants.map(t => t.id === tenantId ? { ...t, aiPrompt: newPrompt } : t));
+  };
+
+  const saveAllPrompts = () => {
+    // 全テナントのプロンプトをDBに保存
+    tenants.forEach(t => updateTenantInfo(t.id, { aiPrompt: t.aiPrompt }));
+    alert('すべてのプロンプトを保存しました。');
+  };
+
+  // テナントの完全削除
+  const handleDeleteTenant = async (tenantId) => {
+    const target = tenants.find(t => t.id === tenantId);
+    const confirmMsg = `【超危険】テナント「${target.name}」を完全に削除しますか？\nこの操作は取り消せません。\n※現在Supabase上にある関連設定データ等も削除されます。`;
+    if (!confirm(confirmMsg)) return;
+
+    setIsSaving(true);
+    try {
+      await supabase.from('app_settings').delete().eq('id', tenantId);
+      setTenants(tenants.filter(t => t.id !== tenantId));
+      alert(`${target.name} を削除しました。`);
+    } catch (e) {
+      alert('削除中にエラーが発生しました。');
     } finally {
       setIsSaving(false);
     }
@@ -106,98 +184,35 @@ export default function OwnerDashboard() {
     };
     
     const updated = [newInvite, ...invitations];
-    saveOwnerData(tenants, updated, upgradeRequests, clientRequests);
+    saveOwnerMetaData(updated, upgradeRequests, clientRequests);
     setNewInviteEmail('');
     
     navigator.clipboard.writeText(`システムのご案内です。以下のURLから初期設定を行ってください。\n${setupUrl}`);
     alert('招待URLを発行し、クリップボードにコピーしました！');
   };
 
-  const toggleLock = (tenantId) => {
-    const target = tenants.find(t => t.id === tenantId);
-    const newStatus = target.status === 'active' ? 'locked' : 'active';
-    const confirmMsg = newStatus === 'locked' 
-      ? `【警告】この店舗のシステム利用を強制停止（ロック）しますか？\n未入金などの場合に実行してください。` 
-      : `この店舗のロックを解除し、利用を再開させますか？`;
-      
-    if (!confirm(confirmMsg)) return;
-
-    const updated = tenants.map(t => t.id === tenantId ? { ...t, status: newStatus } : t);
-    saveOwnerData(updated, invitations, upgradeRequests, clientRequests);
-  };
-
-  const updatePrice = (tenantId, newPrice) => {
-    const updated = tenants.map(t => t.id === tenantId ? { ...t, price: Number(newPrice) } : t);
-    saveOwnerData(updated, invitations, upgradeRequests, clientRequests);
-  };
-
-  const toggleFeature = (tenantId, featureKey) => {
-    const updated = tenants.map(t => {
-      if (t.id === tenantId) {
-        const currentFeatures = t.features || { b2b: false, deliveryOutsource: false };
-        return { ...t, features: { ...currentFeatures, [featureKey]: !currentFeatures[featureKey] } };
-      }
-      return t;
-    });
-    saveOwnerData(updated, invitations, upgradeRequests, clientRequests);
-  };
-
-  const updateTenantPrompt = (tenantId, newPrompt) => {
-    const updated = tenants.map(t => t.id === tenantId ? { ...t, aiPrompt: newPrompt } : t);
-    setTenants(updated);
-  };
-
   const handleApproveUpgrade = (reqId) => {
     if(!confirm('この機能のアップグレードを承認し、店舗に機能を解放しますか？')) return;
     const req = upgradeRequests.find(r => r.id === reqId);
     
-    const updatedTenants = tenants.map(t => {
-      if (t.id === req.tenantId) {
-        const currentFeatures = t.features || { b2b: false, deliveryOutsource: false };
-        return { ...t, features: { ...currentFeatures, [req.featureKey]: true } };
-      }
-      return t;
-    });
-
+    toggleFeature(req.tenantId, req.featureKey); // 機能解放
     const updatedReqs = upgradeRequests.map(r => r.id === reqId ? { ...r, status: 'approved' } : r);
-    saveOwnerData(updatedTenants, invitations, updatedReqs, clientRequests);
+    saveOwnerMetaData(invitations, updatedReqs, clientRequests);
     alert('機能を解放しました！');
   };
 
   const handleRejectUpgrade = (reqId) => {
     if(!confirm('この依頼を却下しますか？')) return;
     const updatedReqs = upgradeRequests.map(r => r.id === reqId ? { ...r, status: 'rejected' } : r);
-    saveOwnerData(tenants, invitations, updatedReqs, clientRequests);
+    saveOwnerMetaData(invitations, updatedReqs, clientRequests);
   };
 
   const handleCompleteFeedback = (fbId) => {
     const updatedFbs = clientRequests.map(fb => fb.id === fbId ? { ...fb, status: 'completed' } : fb);
-    saveOwnerData(tenants, invitations, upgradeRequests, updatedFbs);
+    saveOwnerMetaData(invitations, upgradeRequests, updatedFbs);
   };
 
-  // ★ 新規: テナントの完全削除
-  const handleDeleteTenant = async (tenantId) => {
-    const target = tenants.find(t => t.id === tenantId);
-    const confirmMsg = `【超危険】テナント「${target.name}」を完全に削除しますか？\nこの操作は取り消せません。\n※現在Supabase上にある関連設定データ等も削除されます。`;
-    if (!confirm(confirmMsg)) return;
-
-    setIsSaving(true);
-    try {
-      // 該当テナントの設定データ（あれば）を削除
-      await supabase.from('app_settings').delete().eq('id', tenantId);
-      
-      const updatedTenants = tenants.filter(t => t.id !== tenantId);
-      await saveOwnerData(updatedTenants, invitations, upgradeRequests, clientRequests);
-      alert(`${target.name} を削除しました。`);
-    } catch (e) {
-      console.error(e);
-      alert('削除中にエラーが発生しました。');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // ★ 新規: すべてのテスト注文データを削除
+  // すべてのテスト注文データを削除
   const handleClearAllOrders = async () => {
     if (!confirm(`【超危険】\nこれまでにテストで入力した『すべての注文データ』を完全に削除します。\n本当によろしいですか？`)) return;
     
@@ -209,14 +224,11 @@ export default function OwnerDashboard() {
 
     setIsSaving(true);
     try {
-      // idがnullではないデータ（つまり全件）を削除
       const { error } = await supabase.from('orders').delete().not('id', 'is', null);
       if (error) throw error;
-      
       alert('すべての注文データをクリーンアップしました！');
     } catch (e) {
-      console.error(e);
-      alert('注文データのクリーンアップに失敗しました。\n(Supabaseのポリシー設定によってはAPIからの全件削除がブロックされる場合があります。その場合はSupabaseのTable Editorから直接削除してください)');
+      alert('注文データのクリーンアップに失敗しました。\n(SupabaseのTable Editorから直接削除してください)');
     } finally {
       setIsSaving(false);
     }
@@ -275,7 +287,6 @@ export default function OwnerDashboard() {
             <Bot size={16}/> AIプロンプト設定
           </button>
 
-          {/* ★ 新規: データ初期化・デンジャーゾーン */}
           <div className="pt-8 pb-4">
             <button onClick={() => setActiveTab('danger')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'danger' ? 'bg-red-900/30 text-red-500 border border-red-900/50' : 'text-gray-500 hover:bg-red-900/10 hover:text-red-500'}`}>
               <AlertTriangle size={16}/> 危険な操作・初期化
@@ -283,13 +294,13 @@ export default function OwnerDashboard() {
           </div>
         </nav>
         <div className="absolute bottom-8 left-8 text-[10px] text-gray-600 font-mono">
-          System v1.4.0<br/>Secure Connection
+          System v1.5.0<br/>Secure Connection
         </div>
       </aside>
 
       <main className="flex-1 md:ml-64 p-8 md:p-12">
         <header className="flex justify-between items-center mb-10 border-b border-[#222222] pb-6">
-          <h2 className="text-xl font-bold text-white tracking-widest">
+          <h2 className="text-xl font-bold text-white tracking-widest uppercase">
             {activeTab === 'tenants' && 'TENANT MANAGEMENT'}
             {activeTab === 'invites' && 'ISSUE INVITATION'}
             {activeTab === 'upgrades' && 'UPGRADE REQUESTS'}
@@ -297,7 +308,10 @@ export default function OwnerDashboard() {
             {activeTab === 'ai' && 'AI PROMPT SETTINGS'}
             {activeTab === 'danger' && 'DANGER ZONE'}
           </h2>
-          {isSaving && <span className="text-[#2D4B3E] text-sm animate-pulse font-mono flex items-center gap-2"><RefreshCw size={14} className="animate-spin"/> Syncing...</span>}
+          <div className="flex items-center gap-4">
+            {isSaving && <span className="text-[#2D4B3E] text-sm animate-pulse font-mono flex items-center gap-2"><RefreshCw size={14} className="animate-spin"/> Syncing...</span>}
+            <button onClick={loadOwnerData} className="p-2 hover:bg-[#222222] rounded-full transition-all text-gray-500"><RefreshCw size={18} className={isLoading ? 'animate-spin' : ''}/></button>
+          </div>
         </header>
 
         {/* 1. 契約店舗・料金・機能・ロック管理 */}
@@ -363,7 +377,6 @@ export default function OwnerDashboard() {
                             >
                               {t.status === 'active' ? 'ロックする' : 'ロック解除'}
                             </button>
-                            {/* ★ 新規: 削除ボタン */}
                             <button 
                               onClick={() => handleDeleteTenant(t.id)}
                               className="p-2 rounded-lg text-gray-500 hover:bg-red-900/30 hover:text-red-500 transition-all border border-transparent hover:border-red-900/50"
@@ -376,6 +389,9 @@ export default function OwnerDashboard() {
                       </tr>
                     );
                   })}
+                  {tenants.length === 0 && !isLoading && (
+                    <tr><td colSpan="5" className="px-6 py-12 text-center text-gray-600 italic">登録されている店舗はありません。</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -537,7 +553,7 @@ export default function OwnerDashboard() {
 
             <div className="flex justify-end pt-6 border-t border-[#222222]">
               <button 
-                onClick={() => saveOwnerData(tenants, invitations, upgradeRequests, clientRequests)}
+                onClick={saveAllPrompts}
                 disabled={isSaving}
                 className="flex items-center justify-center w-full md:w-auto gap-2 bg-[#2D4B3E] text-white px-10 py-4 rounded-xl font-bold text-[13px] tracking-widest hover:bg-[#1f352b] transition-all disabled:opacity-50 shadow-lg shadow-[#2D4B3E]/20"
               >
@@ -547,7 +563,7 @@ export default function OwnerDashboard() {
           </div>
         )}
 
-        {/* ★ 新規: データ初期化・デンジャーゾーン */}
+        {/* 6. データ初期化・デンジャーゾーン */}
         {activeTab === 'danger' && (
           <div className="space-y-6 animate-in fade-in">
             <header className="mb-6 space-y-2">
