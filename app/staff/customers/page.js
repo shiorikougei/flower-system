@@ -6,12 +6,15 @@ import {
   Calendar, ChevronRight, X, Filter, PieChart
 } from 'lucide-react';
 
+// ★ キャッシュ用のキーを定義
+const CUSTOMERS_ORDERS_CACHE_KEY = 'florix_customers_orders_cache';
+
 export default function CustomersPage() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // ★ 追加: 新しいフィルター＆ソート状態
+  // 新しいフィルター＆ソート状態
   const [sortOption, setSortOption] = useState('recent'); // recent, frequent, spend
   const [filterMonth, setFilterMonth] = useState('all');
   const [filterType, setFilterType] = useState('all'); // all, new, repeat
@@ -22,11 +25,29 @@ export default function CustomersPage() {
   }, []);
 
   const fetchOrders = async () => {
-    setIsLoading(true);
+    // 1. まずは sessionStorage (キャッシュ) から復元して高速表示
+    const cached = sessionStorage.getItem(CUSTOMERS_ORDERS_CACHE_KEY);
+    if (cached) {
+      try {
+        setOrders(JSON.parse(cached));
+        setIsLoading(false); // キャッシュがあればローディングを即解除
+      } catch (e) {
+        console.error("キャッシュパース失敗", e);
+      }
+    } else {
+      setIsLoading(true); // キャッシュがない初回のみローディングを表示
+    }
+
+    // 2. バックグラウンドで最新データをDBから取得
     try {
       const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
       if (error) throw error;
-      setOrders(data || []);
+      
+      const fetchedOrders = data || [];
+      setOrders(fetchedOrders);
+      
+      // キャッシュを最新データで上書き保存
+      sessionStorage.setItem(CUSTOMERS_ORDERS_CACHE_KEY, JSON.stringify(fetchedOrders));
     } catch (error) {
       console.error('取得エラー:', error.message);
     } finally {
@@ -83,7 +104,7 @@ export default function CustomersPage() {
     return Object.values(cmap);
   }, [orders]);
 
-  // ★ 追加: 存在する「注文月」のリストを生成（セレクトボックス用）
+  // 存在する「注文月」のリストを生成（セレクトボックス用）
   const availableMonths = useMemo(() => {
     const months = new Set();
     orders.forEach(o => {
@@ -93,7 +114,7 @@ export default function CustomersPage() {
     return Array.from(months).sort().reverse();
   }, [orders]);
 
-  // ★ 変更: 検索 ＋ 月別 ＋ 新規/リピート ＋ 並び替え の複合フィルター
+  // 検索 ＋ 月別 ＋ 新規/リピート ＋ 並び替え の複合フィルター
   const filteredAndSortedCustomers = useMemo(() => {
     let result = customers.filter(c => {
       // 1. テキスト検索
@@ -125,7 +146,7 @@ export default function CustomersPage() {
     return result;
   }, [customers, searchQuery, sortOption, filterMonth, filterType]);
 
-  // ★ 追加: 円グラフ用のデータ計算
+  // 円グラフ用のデータ計算
   const chartData = useMemo(() => {
     const total = filteredAndSortedCustomers.length;
     const repeatCount = filteredAndSortedCustomers.filter(c => c.orderCount >= 2).length;
@@ -192,7 +213,7 @@ export default function CustomersPage() {
 
       <div className="p-4 md:p-8 max-w-[1200px] mx-auto space-y-6">
         
-        {/* ★ 追加: 分析ダッシュボード（円グラフ付き） */}
+        {/* 分析ダッシュボード（円グラフ付き） */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
           {/* 円グラフセクション */}
