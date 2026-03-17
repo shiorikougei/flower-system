@@ -8,7 +8,7 @@ import {
   LayoutTemplate, Package, Eye, EyeOff, Sparkles, AlertCircle, Link as LinkIcon
 } from 'lucide-react';
 
-import TatefudaPreview from '../../../components/TatefudaPreview';
+import TatefudaPreview from '@/components/TatefudaPreview';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 
@@ -18,11 +18,13 @@ export default function SettingsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false); 
+  
+  // ★ 新規: ログイン中のテナントIDを保持する
+  const [currentTenantId, setCurrentTenantId] = useState(null);
 
   // --- 1. 基本設定 ---
   const [generalConfig, setGeneralConfig] = useState({ 
-    tenantId: 'demo_flower', // ★ 新規: テナントID (URL用)
-    appName: 'FLORIX', logoUrl: '', logoSize: 100, logoTransparent: false, slipBgUrl: '', slipBgOpacity: 50, systemPassword: '7777'
+    tenantId: '', appName: 'FLORIX', logoUrl: '', logoSize: 100, logoTransparent: false, slipBgUrl: '', slipBgOpacity: 50, systemPassword: '7777'
   });
 
   // --- 2. ステータス設定 ---
@@ -50,7 +52,6 @@ export default function SettingsPage() {
     shipping: ['午前中', '14:00-16:00', '16:00-18:00', '18:00-20:00', '19:00-21:00']
   });
 
-  // --- 6. 立札デザインマスター ---
   const tateMaster = [
     { id: 'p1', label: '御供｜横型 (背景あり)', layout: 'horizontal', color: 'gray' }, 
     { id: 'p3', label: '御供｜縦型 (シンプル)', layout: 'vertical', color: 'gray' }, 
@@ -100,17 +101,33 @@ export default function SettingsPage() {
     if (s.timeSlots) setTimeSlots(s.timeSlots);
   };
 
+  // ★ 認証＆データ取得ロジック（RLS対応）
   useEffect(() => {
     async function loadSettings() {
       try {
-        const cached = sessionStorage.getItem(SETTINGS_CACHE_KEY);
-        if (cached) { applySettings(JSON.parse(cached)); }
-        const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
+        // 1. ログインチェック
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          window.location.href = '/staff/login';
+          return;
+        }
+
+        // 2. プロフィールからテナントIDを取得
+        const { data: profile, error: profileError } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
+        if (profileError) throw profileError;
+        
+        const tId = profile.tenant_id;
+        setCurrentTenantId(tId);
+
+        // 3. テナント固有の設定データを取得
+        const { data } = await supabase.from('app_settings').select('settings_data').eq('id', tId).single();
         if (data?.settings_data) {
           applySettings(data.settings_data);
-          sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(data.settings_data));
+          setGeneralConfig(prev => ({...prev, tenantId: tId}));
         }
-      } catch (e) { console.error('読込失敗', e); }
+      } catch (e) {
+        console.error('設定の読み込みに失敗:', e);
+      }
     }
     loadSettings();
   }, []);
@@ -122,12 +139,12 @@ export default function SettingsPage() {
   };
 
   const saveSettings = async () => {
-    if (!isAdmin) return;
+    if (!isAdmin || !currentTenantId) return;
     setIsSaving(true);
     try {
-      const payload = { generalConfig, statusConfig, shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReplyTemplates, staffOrderConfig, timeSlots };
-      await supabase.from('app_settings').upsert({ id: 'default', settings_data: payload });
-      sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(payload));
+      const payload = { generalConfig: {...generalConfig, tenantId: currentTenantId}, statusConfig, shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReplyTemplates, staffOrderConfig, timeSlots };
+      // ★ 自分のテナントIDで上書き保存
+      await supabase.from('app_settings').upsert({ id: currentTenantId, settings_data: payload });
       alert('すべての設定を保存しました！');
     } catch (e) { alert('保存失敗'); } finally { setIsSaving(false); }
   };
@@ -150,33 +167,20 @@ export default function SettingsPage() {
   const addTimeSlot = (method) => { setTimeSlots(prev => ({ ...prev, [method]: [...prev[method], ''] })); };
   const removeTimeSlot = (method, index) => { setTimeSlots(prev => ({ ...prev, [method]: prev[method].filter((_, i) => i !== index) })); };
 
-  // --- タブ：基本設定 ---
   const renderGeneralTab = () => (
     <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 animate-in fade-in">
       <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><ImageIcon size={20}/> 基本情報・ロゴ・伝票</h2>
       <div className="space-y-6">
         
-        {/* ★ 新規: テナントID設定 */}
         <div className="space-y-1 bg-[#F7F7F7] p-5 rounded-2xl border border-[#EAEAEA]">
           <label className="text-[11px] font-bold text-[#2D4B3E] flex items-center gap-2">テナントID (URL用システム連携ID)</label>
-          <p className="text-[10px] text-[#999999] mb-2">※法人ページやお客様の注文ページのURLに使用されます。半角英数字で設定してください。</p>
-          <input 
-            type="text" 
-            value={generalConfig.tenantId || 'demo_flower'} 
-            onChange={(e)=>setGeneralConfig({...generalConfig, tenantId: e.target.value})} 
-            className="w-full h-12 bg-white border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E] transition-colors"
-            placeholder="例: my_flower_shop"
-          />
+          <p className="text-[10px] text-[#999999] mb-2">※法人ページやお客様の注文ページのURLに使用されます。</p>
+          <input type="text" value={generalConfig.tenantId || currentTenantId || ''} readOnly className="w-full h-12 bg-white border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none text-gray-500 transition-colors" />
         </div>
 
         <div className="space-y-1">
           <label className="text-[11px] font-bold text-[#999999]">アプリ名 (ショップ名)</label>
-          <input 
-            type="text" 
-            value={generalConfig.appName} 
-            onChange={(e)=>setGeneralConfig({...generalConfig, appName: e.target.value})} 
-            className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E] transition-colors"
-          />
+          <input type="text" value={generalConfig.appName} onChange={(e)=>setGeneralConfig({...generalConfig, appName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E] transition-colors"/>
         </div>
         
         <div className="space-y-4 pt-4 border-t border-[#EAEAEA]">
@@ -208,7 +212,7 @@ export default function SettingsPage() {
           <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><ShieldCheck size={16}/> システムセキュリティ</h3>
           <div className="bg-red-50 p-6 rounded-2xl border border-red-100 space-y-3">
             <div className="space-y-1">
-              <label className="text-[11px] font-bold text-red-800">管理者パスワード</label>
+              <label className="text-[11px] font-bold text-red-800">管理者パスワード (設定変更・注文削除用)</label>
               <div className="relative w-full max-w-[240px]">
                 <input type={showPassword ? "text" : "password"} value={generalConfig.systemPassword || ''} onChange={(e)=>setGeneralConfig({...generalConfig, systemPassword: e.target.value})} className="w-full h-12 bg-white border border-red-200 rounded-xl px-4 font-bold outline-none focus:border-red-400 text-red-700 tracking-widest pr-10"/>
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600">
@@ -222,7 +226,6 @@ export default function SettingsPage() {
     </div>
   );
 
-  // --- タブ：ステータス ---
   const renderStatusTab = () => (
     <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-6 animate-in fade-in">
       <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><ListChecks size={20}/> 受注ステータス管理</h2>
@@ -243,7 +246,6 @@ export default function SettingsPage() {
     </div>
   );
 
-  // --- 特別日・営業時間のレンダリング補助 ---
   const renderSpecialHoursList = (shop, listKey) => (
     <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
       {(shop[listKey] || []).map(sh => (
@@ -286,7 +288,6 @@ export default function SettingsPage() {
     </div>
   );
 
-  // --- タブ：店舗管理 ---
   const renderShopTab = () => (
     <div className="space-y-8 animate-in fade-in">
       {shops.map(shop => (
@@ -373,7 +374,6 @@ export default function SettingsPage() {
     </div>
   );
 
-  // --- タブ：商品管理 ---
   const renderItemsTab = () => (
     <div className="space-y-8 animate-in fade-in">
       {flowerItems.map(item => {
@@ -465,7 +465,6 @@ export default function SettingsPage() {
     </div>
   );
 
-  // --- タブ：配送・送料・時間枠 ---
   const renderShippingTab = () => (
     <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-10 animate-in fade-in text-left">
       <h2 className="text-[18px] font-bold text-[#2D4B3E] border-b pb-4 flex items-center gap-2"><Truck size={20}/> 配送・送料・時間枠</h2>
@@ -607,9 +606,7 @@ export default function SettingsPage() {
     </div>
   );
 
-  // ★ URL・リンク発行タブを追加
   const renderLinksTab = () => {
-    // URL生成用のテナントID (未設定時は 'default')
     const tid = generalConfig.tenantId || 'default';
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
@@ -622,7 +619,6 @@ export default function SettingsPage() {
             <div className="space-y-2">
                <label className="text-[11px] font-bold text-[#999999]">法人ポータル・注文画面</label>
                <div className="flex gap-2">
-                 {/* ★ テナントIDを含んだURL */}
                  <input type="text" readOnly value={`${baseUrl}/corporate/${tid}`} className="flex-1 h-12 px-4 bg-white border border-[#EAEAEA] rounded-xl text-[13px] font-mono outline-none text-[#555555]" />
                  <button onClick={() => { navigator.clipboard.writeText(`${baseUrl}/corporate/${tid}`); alert('コピーしました！'); }} className="px-6 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold hover:bg-[#1f352b] transition-all">コピー</button>
                </div>
@@ -642,7 +638,6 @@ export default function SettingsPage() {
                <div key={shop.id} className="space-y-1">
                  <label className="text-[11px] font-bold text-[#2D4B3E]">{shop.name}</label>
                  <div className="flex gap-2">
-                   {/* ★ テナントIDと店舗IDを含んだURL */}
                    <input type="text" readOnly value={`${baseUrl}/order/${tid}/${shop.id}`} className="flex-1 h-12 px-4 bg-white border border-[#EAEAEA] rounded-xl text-[13px] font-mono outline-none text-[#555555]" />
                    <button onClick={() => { navigator.clipboard.writeText(`${baseUrl}/order/${tid}/${shop.id}`); alert('コピーしました！'); }} className="px-6 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold hover:bg-[#1f352b] transition-all">コピー</button>
                  </div>
@@ -654,7 +649,6 @@ export default function SettingsPage() {
     );
   };
 
-  // --- メイン描画 ---
   return (
     <div className="min-h-screen bg-[#FBFAF9] flex flex-col font-sans text-left pb-40">
       <header className="h-20 bg-white/80 backdrop-blur-md border-b flex items-center justify-between px-6 md:px-12 sticky top-0 z-50 shadow-sm">

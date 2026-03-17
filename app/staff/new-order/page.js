@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { Store, AlertCircle, Calendar, ChevronRight, Package } from 'lucide-react';
-import TatefudaPreview from '../../../components/TatefudaPreview';
+import TatefudaPreview from '@/components/TatefudaPreview';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 const GALLERY_CACHE_KEY = 'florix_gallery_cache';
@@ -14,6 +14,9 @@ export default function StaffNewOrderPage() {
   const [portfolioImages, setPortfolioImages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ★ 新規: ログイン中のテナントIDを保持する
+  const [currentTenantId, setCurrentTenantId] = useState(null);
 
   const [receptionType, setReceptionType] = useState('phone'); 
   const [staffName, setStaffName] = useState(''); 
@@ -65,6 +68,7 @@ export default function StaffNewOrderPage() {
   };
   const [timeSlots, setTimeSlots] = useState(defaultTimeSlots);
 
+  // ★ 認証＆データ取得ロジック（RLS対応）
   useEffect(() => {
     let isFirstLoad = true;
 
@@ -92,29 +96,28 @@ export default function StaffNewOrderPage() {
 
     async function fetchSettings() {
       try {
-        const cachedSettings = sessionStorage.getItem(SETTINGS_CACHE_KEY);
-        const cachedGallery = sessionStorage.getItem(GALLERY_CACHE_KEY);
-        
-        if (cachedSettings) {
-          applyDataToState(JSON.parse(cachedSettings), cachedGallery ? JSON.parse(cachedGallery) : null);
-          isFirstLoad = false;
-          setIsLoading(false);
+        // 1. ログインチェック
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          window.location.href = '/staff/login';
+          return;
         }
 
+        // 2. プロフィールからテナントIDを取得
+        const { data: profile, error: profileError } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
+        if (profileError) throw profileError;
+        
+        const tId = profile.tenant_id;
+        setCurrentTenantId(tId);
+
+        // 3. テナント固有の設定データを取得
         const [settingsRes, galleryRes] = await Promise.all([
-          supabase.from('app_settings').select('settings_data').eq('id', 'default').single(),
-          supabase.from('app_settings').select('settings_data').eq('id', 'gallery').single()
+          supabase.from('app_settings').select('settings_data').eq('id', tId).single(),
+          supabase.from('app_settings').select('settings_data').eq('id', 'gallery').single() // ギャラリーは一旦共通
         ]);
 
-        const newSettings = settingsRes.data?.settings_data;
-        const newGallery = galleryRes.data?.settings_data;
-
-        if (newSettings) {
-          applyDataToState(newSettings, newGallery);
-          sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(newSettings));
-          if (newGallery) {
-            sessionStorage.setItem(GALLERY_CACHE_KEY, JSON.stringify(newGallery));
-          }
+        if (settingsRes.data?.settings_data) {
+          applyDataToState(settingsRes.data.settings_data, galleryRes.data?.settings_data);
         }
       } catch (err) {
         console.error('設定の読み込みに失敗:', err.message);
@@ -253,10 +256,7 @@ export default function StaffNewOrderPage() {
       setCalculatedFee(null); setPickupFee(0); setAreaError(''); setShippingDate(''); return; 
     }
 
-    let baseFee = 0;
-    let boxFee = 0;
-    let coolFee = 0;
-    let pickupFeeAmt = 0;
+    let baseFee = 0, boxFee = 0, coolFee = 0, pickupFeeAmt = 0;
 
     if (receiveMethod === 'delivery') {
       setShippingDate(''); 
@@ -311,20 +311,16 @@ export default function StaffNewOrderPage() {
           setShippingDate('');
         }
 
-        let size = selectedItemSettings?.defaultBoxSize;
-        if (!size) {
-          size = appSettings?.shippingSizes?.[0] || '80';
-          if (appSettings?.boxFeeConfig?.type === 'flat') {
-            boxFee = Number(appSettings.boxFeeConfig.flatFee) || 0;
-          } else if (appSettings?.boxFeeConfig?.type === 'price_based') {
-            const tiers = appSettings.boxFeeConfig.priceTiers || [];
-            const sortedTiers = [...tiers].sort((a, b) => b.minPrice - a.minPrice);
-            const matchedTier = sortedTiers.find(t => Number(itemPrice) >= t.minPrice);
-            boxFee = matchedTier ? Number(matchedTier.fee) : 0;
-          }
-        }
-
+        let size = selectedItemSettings?.defaultBoxSize || appSettings?.shippingSizes?.[0] || '80';
         baseFee = Number(rateData['fee' + size]) || 0;
+
+        if (appSettings?.boxFeeConfig?.type === 'flat') {
+          boxFee = Number(appSettings.boxFeeConfig.flatFee) || 0;
+        } else if (appSettings?.boxFeeConfig?.type === 'price_based') {
+          const tiers = appSettings.boxFeeConfig.priceTiers || [];
+          const matchedTier = [...tiers].sort((a, b) => b.minPrice - a.minPrice).find(t => Number(itemPrice) >= t.minPrice);
+          boxFee = matchedTier ? Number(matchedTier.fee) : 0;
+        }
 
         if (appSettings?.boxFeeConfig?.freeShippingThresholdEnabled && Number(itemPrice) >= (appSettings.boxFeeConfig.freeShippingThreshold || 15000)) {
           baseFee = 0; 
@@ -337,12 +333,9 @@ export default function StaffNewOrderPage() {
           if (isCool) coolFee = Number(rateData['cool' + size]) || 0;
         }
 
-        setCalculatedFee(baseFee + boxFee + coolFee);
-        setPickupFee(0); 
-        setAreaError(''); 
+        setCalculatedFee(baseFee + boxFee + coolFee); setPickupFee(0); setAreaError(''); 
       } else {
-        setCalculatedFee(null); setShippingDate('');
-        setAreaError('該当する地域の送料設定が見つかりません。');
+        setCalculatedFee(null); setShippingDate(''); setAreaError('該当する地域の送料設定が見つかりません。');
       }
     }
   }, [customerInfo.address1, customerInfo.address2, recipientInfo.address1, recipientInfo.address2, isRecipientDifferent, receiveMethod, flowerType, itemPrice, selectedDate, appSettings, selectedItemSettings, transitDays]);
@@ -379,13 +372,6 @@ export default function StaffNewOrderPage() {
     if (!itemPrice) warnings.push('・ご予算(金額)');
     if (!selectedDate) warnings.push('・納品希望日');
     if (!customerInfo.name) warnings.push('・注文者のお名前');
-    if (receiveMethod === 'delivery' && absenceAction === '置き配' && !absenceNote) {
-      warnings.push('・置き配の場所');
-    }
-
-    if (selectedDate && flowerType && properMinDate && selectedDate < properMinDate) {
-      warnings.push(`・納品日 (${selectedDate}) が、規定の最短納期 (${properMinDate}) よりも早く設定されています`);
-    }
 
     if (warnings.length > 0) {
       const isConfirmed = window.confirm("⚠️ 以下の未入力・確認事項があります：\n\n" + warnings.join("\n") + "\n\nこのまま注文を強制的に登録してもよろしいですか？");
@@ -409,11 +395,15 @@ export default function StaffNewOrderPage() {
         isStaffEntered: true 
       };
 
-      const { error } = await supabase.from('orders').insert([{ order_data: orderPayload }]);
+      // ★ 新規: tenant_id を明示的に指定して登録する
+      const { error } = await supabase.from('orders').insert([
+        { tenant_id: currentTenantId, order_data: orderPayload }
+      ]);
+      
       if (error) throw error;
 
       alert('店舗注文を受付し、データを保存しました。');
-      router.push('/staff/orders');
+      router.push('/staff/orders'); // スタッフの受注一覧画面へ
       
     } catch (error) {
       console.error('注文エラー:', error.message);
@@ -619,7 +609,6 @@ export default function StaffNewOrderPage() {
                     {tateNeeds.includes('3b') && <input type="text" placeholder="③-2 役職・氏名" value={tateInput3b} onChange={(e) => setTateInput3b(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
                     
                     <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4">仕上がりプレビュー</p>
-                    {/* ★ 立札の共通コンポーネントを呼び出す */}
                     <TatefudaPreview 
                       tatePattern={tatePattern}
                       layout={selectedTateOpt?.layout}
@@ -643,7 +632,6 @@ export default function StaffNewOrderPage() {
               <label className="text-[11px] font-bold text-[#999999] tracking-widest">注文者情報</label>
               <input type="text" placeholder="お名前（必須）" value={customerInfo.name} onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none" />
               <input type="tel" placeholder="電話番号" value={customerInfo.phone} onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
-              {/* スタッフ用はメール任意 */}
               <input type="email" placeholder="メールアドレス (任意)" value={customerInfo.email} onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
               
               {receiveMethod !== 'pickup' && (
@@ -697,7 +685,6 @@ export default function StaffNewOrderPage() {
               </div>
             </div>
 
-            {/* ★ 発送予定日の自動表示パネル */}
             {receiveMethod === 'sagawa' && selectedDate && shippingDate && (
               <div className="mt-2 p-4 bg-green-50 border border-green-200 rounded-xl flex flex-col sm:flex-row sm:items-center gap-3 animate-in fade-in shadow-sm">
                 <div className="flex items-center gap-2 text-green-800 font-bold text-[12px]">
@@ -710,7 +697,6 @@ export default function StaffNewOrderPage() {
               </div>
             )}
 
-            {/* 置き配設定（自社配達の時だけ） */}
             {receiveMethod === 'delivery' && (
               <div className="pt-6 border-t border-[#FBFAF9] space-y-4 animate-in fade-in">
                 <div className="space-y-2">
