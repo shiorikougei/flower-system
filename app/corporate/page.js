@@ -4,31 +4,98 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { 
   Building2, Calendar, ShoppingBag, FileText, 
-  ChevronRight, Plus, CreditCard, LogOut, Gift, ArrowRight, Download, Package
+  ChevronRight, Plus, CreditCard, LogOut, Gift, ArrowRight, Download, Package,
+  MapPin, Clock, Truck, Store, MessageSquare, AlertCircle, User, Tag, ListChecks, X, Trash2, RefreshCw
 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CorporateDashboardPage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false); // 本番ではデータ取得時にtrue
-  const [companyName, setCompanyName] = useState('株式会社 グローバルIT'); // ※ダミー
+  const [isLoading, setIsLoading] = useState(true);
+  const [companyName, setCompanyName] = useState('株式会社 グローバルIT'); // ※本来はログイン情報から取得
 
-  // ダミーデータ：今後のお祝いイベント（スタッフ側のCRMと連動するイメージ）
-  const upcomingEvents = [
-    { id: 1, title: '代表取締役 就任記念', date: '2026-04-01', target: '山田 社長', recItem: '胡蝶蘭がおすすめ' },
-    { id: 2, title: '取引先(株式会社A) 移転祝い', date: '2026-04-15', target: '株式会社A 様', recItem: 'スタンド花 / アレンジメント' },
-  ];
+  // --- 注文データ関連 ---
+  const [orders, setOrders] = useState([]);
+  const [selectedOrder, setSelectedOrder] = useState(null); // モーダル用
 
-  // ダミーデータ：注文履歴
-  const recentOrders = [
-    { id: 'ORD-20260310', date: '2026-03-10', item: 'お祝い用スタンド花 1段', price: 16500, status: '配達完了', target: 'CLUB Louns 様' },
-    { id: 'ORD-20260214', date: '2026-02-14', item: '特選 胡蝶蘭 3本立ち', price: 33000, status: '配達完了', target: 'Bar NIGHT 様' },
-  ];
+  // --- イベント（行事）データ関連 ---
+  const [events, setEvents] = useState([
+    { id: 1, title: '代表取締役 就任記念', date: '2026-04-01', target: '山田 社長', repeat: '今年のみ' },
+    { id: 2, title: '創立記念日', date: '2026-05-10', target: '自社', repeat: '毎年' },
+  ]);
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [newEvent, setNewEvent] = useState({ title: '', date: '', target: '', repeat: '今年のみ' });
+
+  // データ取得ロジック（※本来はここで自社の corporate_id に紐づく注文のみを取得します）
+  useEffect(() => {
+    async function fetchMyOrders() {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        // ※実際は法人のID等でフィルターします
+        setOrders(data || []);
+      } catch (error) {
+        console.error('注文データの取得に失敗しました', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchMyOrders();
+  }, []);
 
   const handleLogout = async () => {
     // await supabase.auth.signOut();
     router.push('/corporate/login');
   };
+
+  // --- 行事（イベント）管理ロジック ---
+  const handleAddEvent = (e) => {
+    e.preventDefault();
+    if (!newEvent.title || !newEvent.date) return;
+    setEvents([...events, { id: Date.now(), ...newEvent }]);
+    setNewEvent({ title: '', date: '', target: '', repeat: '今年のみ' });
+    setIsEventModalOpen(false);
+  };
+
+  const handleDeleteEvent = (id) => {
+    if (confirm('この行事を削除してもよろしいですか？')) {
+      setEvents(events.filter(ev => ev.id !== id));
+    }
+  };
+
+  // --- 注文UI用ヘルパー関数 ---
+  const safeFormatDate = (dateString, withTime = false) => {
+    try {
+      if (!dateString) return '日時不明';
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return '日時不明';
+      return withTime ? d.toLocaleString('ja-JP') : d.toLocaleDateString('ja-JP');
+    } catch (e) { return '日時不明'; }
+  };
+
+  const getReceiveMethodBadge = (method) => {
+    switch (method) {
+      case 'pickup': return <span className="flex items-center gap-1 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm border border-orange-200"><Store size={14}/> 店頭受取</span>;
+      case 'delivery': return <span className="flex items-center gap-1 bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm border border-blue-200"><Truck size={14}/> 自社配達</span>;
+      case 'sagawa': return <span className="flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm border border-green-200"><Package size={14}/> 業者配送</span>;
+      default: return <span className="flex items-center gap-1 bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm border border-gray-200">未定</span>;
+    }
+  };
+
+  const getTotals = (orderData) => {
+    if (!orderData || typeof orderData !== 'object') return { item: 0, fee: 0, pickup: 0, subTotal: 0, tax: 0, total: 0 };
+    const item = Number(orderData.itemPrice) || 0;
+    const fee = Number(orderData.calculatedFee) || 0;
+    const pickup = Number(orderData.pickupFee) || 0;
+    const subTotal = item + fee + pickup;
+    const tax = Math.floor(subTotal * 0.1);
+    return { item, fee, pickup, subTotal, tax, total: subTotal + tax };
+  };
+
+  // モーダル用のデータ
+  const modalData = selectedOrder?.order_data || {};
+  const modalTargetInfo = modalData.isRecipientDifferent ? (modalData.recipientInfo || {}) : (modalData.customerInfo || {});
 
   return (
     <div className="min-h-screen bg-[#FBFAF9] font-sans text-[#111111] pb-32">
@@ -55,7 +122,6 @@ export default function CorporateDashboardPage() {
         
         {/* ウェルカム＆クイックアクション */}
         <div className="bg-[#2D4B3E] rounded-[32px] p-8 md:p-10 shadow-lg text-white relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
-          {/* 背景の装飾 */}
           <div className="absolute -right-20 -top-20 opacity-10 pointer-events-none">
             <Gift size={240} />
           </div>
@@ -72,7 +138,7 @@ export default function CorporateDashboardPage() {
           
           <div className="relative z-10 shrink-0">
             <Link 
-              href="/order/default" 
+              href="/corporate/order" 
               className="group flex items-center justify-center gap-2 bg-white text-[#2D4B3E] px-8 py-4 rounded-2xl font-black text-[15px] shadow-xl hover:scale-105 transition-all active:scale-95"
             >
               <Plus size={20} />
@@ -87,71 +153,105 @@ export default function CorporateDashboardPage() {
           {/* 左側：メインコンテンツ（2カラム分） */}
           <div className="md:col-span-2 space-y-8">
             
-            {/* 注文履歴 */}
+            {/* 注文履歴（OrdersPageのUIを移植） */}
             <section className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-[16px] font-black text-[#2D4B3E] flex items-center gap-2">
                   <ShoppingBag size={20} /> 最近のご注文履歴
                 </h2>
-                <Link href="#" className="text-[12px] font-bold text-[#999999] hover:text-[#2D4B3E] flex items-center gap-1">
-                  すべて見る <ChevronRight size={14} />
-                </Link>
               </div>
 
-              <div className="bg-white rounded-[24px] border border-[#EAEAEA] shadow-sm overflow-hidden">
-                <div className="divide-y divide-[#F7F7F7]">
-                  {recentOrders.map(order => (
-                    <div key={order.id} className="p-5 hover:bg-[#FBFAF9] transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-bold text-[#999999] font-mono">{order.date}</span>
-                          <span className="text-[10px] font-bold bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full">{order.status}</span>
-                        </div>
-                        <p className="text-[15px] font-black text-[#111111]">{order.item}</p>
-                        <p className="text-[12px] font-bold text-[#555555] flex items-center gap-1"><Building2 size={12}/> お届け先: {order.target}</p>
-                      </div>
-                      
-                      <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 border-t sm:border-t-0 border-[#EAEAEA] pt-3 sm:pt-0">
-                        <p className="text-[16px] font-black text-[#2D4B3E]">¥{order.price.toLocaleString()}</p>
-                        <button className="flex items-center gap-1 text-[11px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg hover:bg-blue-500 hover:text-white transition-all shadow-sm">
-                          <Download size={14} /> 領収書 / 納品書
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+              {isLoading ? (
+                <div className="text-center py-20 text-[#2D4B3E] font-bold animate-pulse">読み込み中...</div>
+              ) : orders.length === 0 ? (
+                <div className="text-center py-10 bg-white rounded-[24px] border border-dashed border-[#EAEAEA] text-[#999999] font-bold">
+                  ご注文履歴はありません。
                 </div>
-              </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {orders.slice(0, 5).map(order => {
+                    const d = order?.order_data || {};
+                    return (
+                      <div 
+                        key={order.id} 
+                        onClick={() => setSelectedOrder(order)}
+                        className="bg-white p-5 md:p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm hover:shadow-md hover:border-[#2D4B3E]/30 cursor-pointer transition-all flex flex-col md:flex-row md:items-center gap-4 group"
+                      >
+                        <div className="flex-1 space-y-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[11px] font-bold text-white bg-[#2D4B3E] px-3 py-1.5 rounded-lg tracking-wider shadow-sm">
+                              {safeFormatDate(order.created_at)} 注文
+                            </span>
+                            {getReceiveMethodBadge(d.receiveMethod)}
+                            <span className="text-[11px] font-bold text-[#555555] border border-[#EAEAEA] px-3 py-1.5 rounded-lg bg-[#FBFAF9] shadow-sm">
+                              {d.status === 'new' ? '受付完了' : (d.status || '対応中')}
+                            </span>
+                          </div>
+                          <div className="text-[16px] md:text-[18px] font-black text-[#111111] group-hover:text-[#2D4B3E] transition-colors">
+                            {d.flowerType || '商品未設定'}
+                          </div>
+                          <div className="text-[13px] font-bold text-[#D97C8F] flex items-center gap-1.5">
+                            <Calendar size={16} /> お届け: {d.selectedDate || '未指定'} {d.selectedTime && `(${d.selectedTime})`}
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-col md:items-end justify-between border-t md:border-t-0 md:border-l border-[#EAEAEA] pt-4 md:pt-0 md:pl-6">
+                          <p className="text-[11px] text-[#999999] font-bold mb-1">合計金額(税込)</p>
+                          <p className="text-[24px] font-black text-[#2D4B3E]">¥{getTotals(d).total.toLocaleString()}</p>
+                          <div className="flex items-center gap-1 text-[11px] font-bold text-blue-600 mt-2 bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 group-hover:bg-blue-500 group-hover:text-white transition-all">
+                            詳細を見る <ChevronRight size={14}/>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
-
           </div>
 
           {/* 右側：サイドコンテンツ（1カラム分） */}
           <div className="space-y-8">
             
-            {/* 今後のイベント（アラート） */}
+            {/* 今後のイベント・行事 */}
             <section className="space-y-4">
-              <h2 className="text-[16px] font-black text-[#2D4B3E] flex items-center gap-2">
-                <Calendar size={20} /> 近日中のお祝い・イベント
-              </h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-[16px] font-black text-[#2D4B3E] flex items-center gap-2">
+                  <Calendar size={20} /> 今後の行事・お祝い
+                </h2>
+                <button 
+                  onClick={() => setIsEventModalOpen(true)}
+                  className="text-[11px] font-bold bg-[#2D4B3E] text-white px-3 py-1.5 rounded-full hover:bg-[#1f352b] transition-all flex items-center gap-1"
+                >
+                  <Plus size={14}/> 登録
+                </button>
+              </div>
+
               <div className="space-y-3">
-                {upcomingEvents.map(ev => (
-                  <div key={ev.id} className="bg-white p-5 rounded-[20px] border border-[#EAEAEA] shadow-sm relative overflow-hidden group hover:border-[#D97C8F] transition-all cursor-pointer">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-[#D97C8F]"></div>
-                    <div className="space-y-2 pl-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-bold bg-[#D97C8F]/10 text-[#D97C8F] px-2 py-0.5 rounded font-mono">{ev.date}</span>
-                        <span className="text-[10px] font-bold text-[#999999] bg-[#FBFAF9] px-2 py-0.5 rounded border border-[#EAEAEA]">ご案内</span>
-                      </div>
-                      <p className="text-[14px] font-black text-[#111111] leading-tight">{ev.title}</p>
-                      <p className="text-[11px] font-bold text-[#555555]">{ev.target}</p>
-                      <div className="pt-2 mt-2 border-t border-[#F7F7F7]">
-                        <p className="text-[10px] font-bold text-[#999999] flex items-center gap-1">
-                          <Package size={12}/> 推奨: {ev.recItem}
-                        </p>
+                {events.length === 0 ? (
+                  <div className="text-center p-6 bg-[#FBFAF9] border border-[#EAEAEA] rounded-[20px] text-[12px] font-bold text-[#999999]">登録されている行事はありません</div>
+                ) : (
+                  events.sort((a, b) => new Date(a.date) - new Date(b.date)).map(ev => (
+                    <div key={ev.id} className="bg-white p-5 rounded-[20px] border border-[#EAEAEA] shadow-sm relative overflow-hidden group hover:border-[#D97C8F] transition-all">
+                      <div className="absolute top-0 left-0 w-1 h-full bg-[#D97C8F]"></div>
+                      <div className="flex justify-between items-start pl-2">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[11px] font-bold bg-[#D97C8F]/10 text-[#D97C8F] px-2 py-0.5 rounded font-mono">{ev.date}</span>
+                            <span className="text-[10px] font-bold text-[#999999] bg-[#FBFAF9] px-2 py-0.5 rounded border border-[#EAEAEA] flex items-center gap-1">
+                              {ev.repeat === '毎年' ? <RefreshCw size={10}/> : null} {ev.repeat}
+                            </span>
+                          </div>
+                          <p className="text-[14px] font-black text-[#111111] leading-tight">{ev.title}</p>
+                          <p className="text-[11px] font-bold text-[#555555]">{ev.target || '対象者なし'}</p>
+                        </div>
+                        <button onClick={() => handleDeleteEvent(ev.id)} className="text-[#EAEAEA] hover:text-red-500 transition-colors p-1">
+                          <Trash2 size={16}/>
+                        </button>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </section>
 
@@ -162,12 +262,12 @@ export default function CorporateDashboardPage() {
               </h2>
               <div className="space-y-4">
                 <div className="flex items-end justify-between">
-                  <span className="text-[11px] font-bold text-[#999999]">当月ご利用額 (3月分)</span>
-                  <span className="text-[20px] font-black text-[#111111]">¥49,500</span>
+                  <span className="text-[11px] font-bold text-[#999999]">当月ご利用額</span>
+                  <span className="text-[20px] font-black text-[#111111]">¥{orders.reduce((sum, o) => sum + getTotals(o.order_data).total, 0).toLocaleString()}</span>
                 </div>
                 <div className="flex items-end justify-between">
                   <span className="text-[11px] font-bold text-[#999999]">お支払い期限</span>
-                  <span className="text-[13px] font-bold text-[#111111]">2026年4月末日</span>
+                  <span className="text-[13px] font-bold text-[#111111]">翌月末日</span>
                 </div>
                 <button className="w-full mt-2 py-3 bg-white border border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#2D4B3E] hover:border-[#2D4B3E] transition-all flex items-center justify-center gap-2 shadow-sm">
                   <FileText size={16} /> 今月の請求書を発行する
@@ -176,9 +276,199 @@ export default function CorporateDashboardPage() {
             </section>
 
           </div>
-
         </div>
       </main>
+
+      {/* --- 詳細モーダル (法人用) --- */}
+      {selectedOrder && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="absolute inset-0 bg-[#111111]/40 backdrop-blur-sm" onClick={() => setSelectedOrder(null)}></div>
+          
+          <div className="bg-[#FBFAF9] w-full max-w-[800px] max-h-[90vh] rounded-[32px] shadow-2xl relative flex flex-col overflow-hidden">
+            
+            {/* モーダルヘッダー */}
+            <div className="bg-white border-b border-[#EAEAEA] p-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 z-10">
+              <div>
+                <h2 className="text-[20px] font-black text-[#2D4B3E]">注文詳細</h2>
+                <p className="text-[11px] text-[#999999] font-bold mt-1">注文日: {safeFormatDate(selectedOrder.created_at, true)} | 注文番号: {selectedOrder.id}</p>
+              </div>
+              
+              <div className="flex flex-wrap items-center gap-2">
+                {/* ★ 領収書 / 納品書 ダウンロードボタン */}
+                <button className="flex items-center gap-1.5 px-4 py-2 bg-white border border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#2D4B3E] hover:border-[#2D4B3E] transition-all shadow-sm">
+                  <Download size={14} /> 領収書・納品書 (PDF)
+                </button>
+                <button onClick={() => setSelectedOrder(null)} className="w-10 h-10 ml-2 bg-[#FBFAF9] rounded-full flex items-center justify-center text-[#999999] hover:text-[#111111] transition-colors border border-[#EAEAEA] hover:bg-[#EAEAEA]">
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* モーダルコンテンツ (スクロール) */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-8 hide-scrollbar">
+              
+              {/* ステータス表示（変更不可） */}
+              <div className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] shadow-sm flex items-center justify-between gap-4">
+                <span className="text-[13px] font-bold text-[#555555] flex items-center gap-2"><ListChecks size={18}/> 現在の状況</span>
+                <span className="px-4 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[14px] font-bold text-[#2D4B3E]">
+                  {modalData.status === 'new' ? '受付完了・手配中' : (modalData.status || '手配中')}
+                </span>
+              </div>
+
+              {/* 日程パネル */}
+              {modalData.receiveMethod === 'sagawa' ? (
+                <div className="bg-green-50 border border-green-200 p-6 md:p-8 rounded-[24px] flex flex-col md:flex-row items-center gap-6 justify-center text-center shadow-inner">
+                  <div className="space-y-1">
+                    <span className="text-[12px] font-bold text-green-700 tracking-widest bg-white/50 px-3 py-1 rounded-full">当店発送予定日</span>
+                    <p className="text-[20px] font-black text-green-900 pt-2">
+                      {modalData.shippingDate ? `${modalData.shippingDate.split('-')[1]}月${modalData.shippingDate.split('-')[2]}日` : '未設定'}
+                    </p>
+                  </div>
+                  <ChevronRight size={24} className="hidden md:block text-green-300"/>
+                  <div className="space-y-1">
+                    <span className="text-[12px] font-bold text-green-700 tracking-widest">お届け予定日</span>
+                    <p className="text-[24px] font-black text-green-800 flex items-center justify-center gap-2 pt-1">
+                      <Calendar size={20} className="text-green-600"/> 
+                      {modalData.selectedDate ? `${modalData.selectedDate.split('-')[1]}月${modalData.selectedDate.split('-')[2]}日` : '未指定'}
+                    </p>
+                    <p className="text-[12px] font-bold text-green-700">{modalData.selectedTime || '時間指定なし'}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-[#FBFAF9] border border-[#EAEAEA] p-6 rounded-[24px] flex flex-col items-center justify-center text-center shadow-inner">
+                   <span className="text-[12px] font-bold text-[#999999] tracking-widest mb-1">
+                     {modalData.receiveMethod === 'pickup' ? 'ご来店予定日' : 'お届け予定日'}
+                   </span>
+                   <p className="text-[28px] font-black text-[#2D4B3E] flex items-center gap-2">
+                     <Calendar size={24}/> {modalData.selectedDate ? `${modalData.selectedDate.split('-')[1]}月${modalData.selectedDate.split('-')[2]}日` : '未設定'}
+                   </p>
+                   <p className="text-[14px] font-bold text-[#D97C8F] mt-2">{modalData.selectedTime || '時間指定なし'}</p>
+                </div>
+              )}
+
+              {/* お届け先情報 */}
+              <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
+                <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><MapPin size={18}/> お届け先情報</h3>
+                <div className="space-y-3 text-[13px]">
+                  <div className="flex gap-2 items-center mb-4 bg-[#FBFAF9] p-3 rounded-xl border border-[#EAEAEA] w-fit">
+                    {getReceiveMethodBadge(modalData.receiveMethod)}
+                  </div>
+                  {modalData.receiveMethod === 'pickup' ? (
+                    <div className="bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA]">
+                      <p><span className="text-[#999999] text-[10px] block mb-1 tracking-widest">受取店舗</span><span className="font-black text-[16px] text-[#2D4B3E]">{modalData.selectedShop || '未指定'}</span></p>
+                    </div>
+                  ) : (
+                    <div className="bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA] space-y-3">
+                      <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">宛名</span><span className="font-black text-[16px]">{modalTargetInfo?.name || '未設定'} 様</span></p>
+                      <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">住所</span><span className="font-bold text-[14px] block leading-relaxed">〒{modalTargetInfo?.zip}<br/>{modalTargetInfo?.address1} {modalTargetInfo?.address2}</span></p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 商品とデザイン詳細 */}
+              <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
+                <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><Tag size={18}/> ご注文内容</h3>
+                <div className="flex flex-col sm:flex-row gap-6">
+                  {modalData.referenceImage ? (
+                    <img src={modalData.referenceImage} alt="参考" className="w-32 h-32 object-cover rounded-2xl border border-[#EAEAEA] shadow-sm shrink-0" />
+                  ) : (
+                    <div className="w-32 h-32 bg-[#FBFAF9] border border-[#EAEAEA] rounded-2xl flex items-center justify-center text-[#999999] text-[11px] font-bold shrink-0">画像なし</div>
+                  )}
+                  <div className="flex-1 grid grid-cols-2 gap-4 text-[13px]">
+                    <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block tracking-widest mb-1">種類</span><span className="font-black text-[#2D4B3E] text-[14px]">{modalData.flowerType || '未設定'}</span></div>
+                    <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block tracking-widest mb-1">用途</span><span className="font-bold">{modalData.flowerPurpose} {modalData.otherPurpose && `(${modalData.otherPurpose})`}</span></div>
+                    <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block tracking-widest mb-1">カラー</span><span className="font-bold">{modalData.flowerColor}</span></div>
+                    <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block tracking-widest mb-1">イメージ</span><span className="font-bold">{modalData.flowerVibe} {modalData.otherVibe && `(${modalData.otherVibe})`}</span></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* メッセージ・立札 */}
+              {modalData.cardType !== 'なし' && (
+                <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
+                  <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><MessageSquare size={18}/> {modalData.cardType}</h3>
+                  {modalData.cardType === 'メッセージカード' && (
+                    <div className="bg-[#FBFAF9] p-6 rounded-2xl text-[14px] font-bold whitespace-pre-wrap border border-[#EAEAEA] text-[#333333] leading-relaxed">
+                      {modalData.cardMessage}
+                    </div>
+                  )}
+                  {modalData.cardType === '立札' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[13px] bg-[#FBFAF9] p-6 rounded-2xl border border-[#EAEAEA]">
+                      {modalData.tateInput1 && <p><span className="text-[#999999] text-[10px] block tracking-widest mb-0.5">① 内容</span><span className="font-black text-[15px]">{modalData.tateInput1}</span></p>}
+                      {modalData.tateInput2 && <p><span className="text-[#999999] text-[10px] block tracking-widest mb-0.5">② 宛名</span><span className="font-black text-[15px]">{modalData.tateInput2} 様</span></p>}
+                      {modalData.tateInput3 && <p><span className="text-[#999999] text-[10px] block tracking-widest mb-0.5">③ 贈り主</span><span className="font-black text-[15px]">{modalData.tateInput3}</span></p>}
+                      {modalData.tateInput3a && <p><span className="text-[#999999] text-[10px] block tracking-widest mb-0.5">③-1 会社名</span><span className="font-black text-[15px]">{modalData.tateInput3a}</span></p>}
+                      {modalData.tateInput3b && <p><span className="text-[#999999] text-[10px] block tracking-widest mb-0.5">③-2 役職・氏名</span><span className="font-black text-[15px]">{modalData.tateInput3b}</span></p>}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* お支払い内訳 */}
+              <div className="bg-white p-8 rounded-[32px] border-2 border-[#2D4B3E]/20 shadow-md space-y-6">
+                <h3 className="text-[16px] font-black text-[#2D4B3E] border-b border-[#EAEAEA] pb-3 flex items-center gap-2"><CreditCard size={20}/> ご請求額</h3>
+                <div className="space-y-3 text-[14px] font-medium text-[#555555]">
+                  <div className="flex justify-between items-center"><span>商品代 (税抜):</span><span className="font-black text-[#111111] text-[16px]">¥{getTotals(modalData).item.toLocaleString()}</span></div>
+                  {getTotals(modalData).fee > 0 && <div className="flex justify-between items-center text-[#555555]"><span>配送料:</span><span className="font-bold text-[16px]">¥{getTotals(modalData).fee.toLocaleString()}</span></div>}
+                  {getTotals(modalData).pickup > 0 && <div className="flex justify-between items-center text-[#555555]"><span>回収・返却費:</span><span className="font-bold text-[16px]">¥{getTotals(modalData).pickup.toLocaleString()}</span></div>}
+                  <div className="flex justify-between items-center border-t border-[#EAEAEA] pt-3 text-[#2D4B3E]"><span>消費税 (10%):</span><span className="font-bold text-[16px]">¥{getTotals(modalData).tax.toLocaleString()}</span></div>
+                  
+                  <div className="flex justify-between border-t-2 border-[#2D4B3E]/20 pt-4 mt-2 items-end">
+                    <span className="text-[13px] font-bold text-[#2D4B3E] tracking-widest mb-1">合計 (税込)</span>
+                    <span className="text-[36px] font-black text-[#2D4B3E] leading-none">¥{getTotals(modalData).total.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- 行事登録モーダル --- */}
+      {isEventModalOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="absolute inset-0 bg-[#111111]/40 backdrop-blur-sm" onClick={() => setIsEventModalOpen(false)}></div>
+          <div className="bg-white w-full max-w-[500px] rounded-[32px] shadow-2xl relative flex flex-col overflow-hidden animate-in slide-in-from-bottom-8">
+            <div className="p-6 border-b border-[#EAEAEA] flex justify-between items-center bg-[#FBFAF9]">
+              <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Calendar size={20}/> 新しい行事を登録</h2>
+              <button onClick={() => setIsEventModalOpen(false)} className="text-[#999999] hover:text-[#111111] p-2 bg-white rounded-full border border-[#EAEAEA] shadow-sm"><X size={18}/></button>
+            </div>
+            <form onSubmit={handleAddEvent} className="p-6 space-y-5">
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-[#999999] tracking-widest">行事・イベント名 (必須)</label>
+                <input type="text" required value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} placeholder="例: 社長の誕生日、創立記念日" className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold focus:border-[#2D4B3E] outline-none" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-[#999999] tracking-widest">日付 (必須)</label>
+                <input type="date" required value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold focus:border-[#2D4B3E] outline-none" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-[#999999] tracking-widest">対象者・届け先 (任意)</label>
+                <input type="text" value={newEvent.target} onChange={e => setNewEvent({...newEvent, target: e.target.value})} placeholder="例: 山田社長、自社、取引先A社" className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold focus:border-[#2D4B3E] outline-none" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-[#999999] tracking-widest">繰り返しの設定</label>
+                <div className="flex gap-2 p-1 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA]">
+                  <button type="button" onClick={() => setNewEvent({...newEvent, repeat: '今年のみ'})} className={`flex-1 py-2.5 text-[12px] font-bold rounded-lg transition-all ${newEvent.repeat === '今年のみ' ? 'bg-white text-[#2D4B3E] shadow-sm border border-[#EAEAEA]' : 'text-[#999999]'}`}>今年のみ</button>
+                  <button type="button" onClick={() => setNewEvent({...newEvent, repeat: '毎年'})} className={`flex-1 py-2.5 text-[12px] font-bold rounded-lg transition-all ${newEvent.repeat === '毎年' ? 'bg-[#2D4B3E] text-white shadow-sm' : 'text-[#999999]'}`}>毎年繰り返す</button>
+                </div>
+              </div>
+              <div className="pt-4">
+                <button type="submit" className="w-full h-14 bg-[#2D4B3E] text-white rounded-2xl font-bold text-[15px] hover:bg-[#1f352b] transition-all shadow-md active:scale-[0.98]">
+                  行事を登録する
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <style jsx global>{`
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
     </div>
   );
 }
