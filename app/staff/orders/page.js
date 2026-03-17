@@ -1,11 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
-// アイコン
+// アイコン (Trash2を追加)
 import { 
   MapPin, Calendar, ChevronRight, X, Clock, Truck, Store, Package, 
   CreditCard, MessageSquare, AlertCircle, ListChecks, User, Tag, 
-  Printer, FileText, Send 
+  Printer, FileText, Send, Trash2
 } from 'lucide-react';
 
 // ★ キャッシュ用のキーを定義
@@ -96,6 +96,37 @@ export default function OrdersPage() {
       }
     } catch (error) {
       alert('ステータスの更新に失敗しました');
+    }
+  };
+
+  // ★ 注文の削除処理
+  const handleDeleteOrder = async (id) => {
+    const inputPass = prompt('この注文を削除しますか？\n実行するには管理者パスワードを入力してください。');
+    if (inputPass === null) return; // キャンセル時
+
+    // 設定からパスワードを取得（未設定時は初期値 '7777'）
+    const systemPass = appSettings?.generalConfig?.systemPassword || '7777';
+
+    if (inputPass !== systemPass) {
+      alert('パスワードが違います。');
+      return;
+    }
+
+    if (!confirm('本当に削除してもよろしいですか？\nこの操作は取り消せません。')) return;
+
+    try {
+      const { error } = await supabase.from('orders').delete().eq('id', id);
+      if (error) throw error;
+
+      // 画面とキャッシュから削除
+      const newOrders = orders.filter(o => o.id !== id);
+      setOrders(newOrders);
+      sessionStorage.setItem(ORDERS_CACHE_KEY, JSON.stringify(newOrders));
+      setSelectedOrder(null); // モーダルを閉じる
+      alert('注文を削除しました。');
+    } catch (error) {
+      console.error('削除エラー:', error);
+      alert('削除に失敗しました。');
     }
   };
 
@@ -271,7 +302,15 @@ export default function OrdersPage() {
                     <Send size={14} /> メール
                   </button>
                 )}
-                <button onClick={() => setSelectedOrder(null)} className="w-10 h-10 ml-2 bg-[#FBFAF9] rounded-full flex items-center justify-center text-[#999999] hover:text-[#111111] transition-colors border border-[#EAEAEA] hover:bg-[#EAEAEA]">
+                {/* ★ 削除ボタンを追加 */}
+                <button 
+                  onClick={() => handleDeleteOrder(selectedOrder.id)} 
+                  className="flex items-center gap-1.5 px-3 py-2 bg-red-50 border border-red-100 rounded-xl text-[11px] font-bold text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm ml-1"
+                >
+                  <Trash2 size={14} /> 削除
+                </button>
+
+                <button onClick={() => setSelectedOrder(null)} className="w-10 h-10 ml-1 bg-[#FBFAF9] rounded-full flex items-center justify-center text-[#999999] hover:text-[#111111] transition-colors border border-[#EAEAEA] hover:bg-[#EAEAEA]">
                   <X size={20} />
                 </button>
               </div>
