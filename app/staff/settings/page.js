@@ -8,7 +8,7 @@ import {
   LayoutTemplate, Package, Eye, EyeOff, Sparkles, AlertCircle, Link as LinkIcon
 } from 'lucide-react';
 
-import TatefudaPreview from '@/components/TatefudaPreview';
+import TatefudaPreview from '../../../components/TatefudaPreview';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 

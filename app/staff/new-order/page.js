@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { Store, AlertCircle, Calendar, ChevronRight, Package } from 'lucide-react';
-import TatefudaPreview from '@/components/TatefudaPreview';
+import TatefudaPreview from '../../../components/TatefudaPreview';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 const GALLERY_CACHE_KEY = 'florix_gallery_cache';

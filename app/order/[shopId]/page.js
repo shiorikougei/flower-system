@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { Calendar, Package, ChevronRight, Store, Truck, AlertCircle } from 'lucide-react';
 // ★ 共通コンポーネントのインポート
-import TatefudaPreview from '@/components/TatefudaPreview';
+import TatefudaPreview from '../../../components/TatefudaPreview';
 
 // キャッシュ用のキーを定義
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
