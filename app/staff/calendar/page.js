@@ -5,7 +5,7 @@ import {
   ChevronLeft, ChevronRight, RefreshCw, X, Calendar as CalendarIcon, 
   User, MapPin, Tag, FileText, Smartphone, Archive, RotateCcw, 
   Package, Store, Truck, Send, Printer, ListChecks, AlertCircle,
-  MessageSquare, CreditCard
+  MessageSquare, CreditCard, Trash2
 } from 'lucide-react';
 
 export default function CalendarPage() {
@@ -138,6 +138,37 @@ export default function CalendarPage() {
       
       setSelectedOrder(null);
     } catch (err) { alert('更新失敗'); }
+  };
+
+  // ★ 注文の削除処理
+  const handleDeleteOrder = async (id) => {
+    const inputPass = prompt('この注文を削除しますか？\n実行するには管理者パスワードを入力してください。');
+    if (inputPass === null) return; // キャンセル時
+
+    // 設定からパスワードを取得（未設定時は初期値 '7777'）
+    const systemPass = appSettings?.generalConfig?.systemPassword || '7777';
+
+    if (inputPass !== systemPass) {
+      alert('パスワードが違います。');
+      return;
+    }
+
+    if (!confirm('本当に削除してもよろしいですか？\nこの操作は取り消せません。')) return;
+
+    try {
+      const { error } = await supabase.from('orders').delete().eq('id', id);
+      if (error) throw error;
+
+      // 画面とキャッシュから削除
+      const newOrders = orders.filter(o => o.id !== id);
+      setOrders(newOrders);
+      sessionStorage.setItem('florix_orders_cache', JSON.stringify(newOrders));
+      setSelectedOrder(null); // モーダルを閉じる
+      alert('注文を削除しました。');
+    } catch (error) {
+      console.error('削除エラー:', error);
+      alert('削除に失敗しました。');
+    }
   };
 
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
@@ -646,7 +677,7 @@ export default function CalendarPage() {
                 <p className="text-[10px] md:text-[11px] text-[#999999] font-bold mt-1">受付: {safeFormatDate(selectedOrder.created_at, true)} | ID: {selectedOrder.id}</p>
               </div>
 
-              {/* ★ 印刷・PDFボタン */}
+              {/* ★ ボタン群 */}
               <div className="flex flex-wrap items-center gap-2 ml-auto">
                 <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all">
                   <Printer size={14} /> <span className="hidden sm:inline">印刷 / PDF出力</span>
@@ -663,8 +694,16 @@ export default function CalendarPage() {
                   {modalData.status === 'completed' || modalData.status === '完了' ? <RotateCcw size={14}/> : <Archive size={14}/>}
                   <span className="hidden sm:inline">{modalData.status === 'completed' || modalData.status === '完了' ? '未完了に戻す' : '完了にする'}</span>
                 </button>
+
+                {/* ★ 削除ボタンを追加 */}
+                <button 
+                  onClick={() => handleDeleteOrder(selectedOrder.id)} 
+                  className="flex items-center gap-1.5 px-3 py-2 bg-red-50 border border-red-100 rounded-xl text-[10px] md:text-[11px] font-bold text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm ml-1"
+                >
+                  <Trash2 size={14} /> 削除
+                </button>
                 
-                <button onClick={() => setSelectedOrder(null)} className="w-8 h-8 md:w-10 md:h-10 bg-[#FBFAF9] border border-[#EAEAEA] rounded-full flex items-center justify-center text-[#555555] font-bold hover:bg-[#EAEAEA] transition-colors">
+                <button onClick={() => setSelectedOrder(null)} className="w-8 h-8 md:w-10 md:h-10 bg-[#FBFAF9] border border-[#EAEAEA] rounded-full flex items-center justify-center text-[#555555] font-bold hover:bg-[#EAEAEA] transition-colors ml-1">
                   <X size={18} />
                 </button>
               </div>
@@ -742,6 +781,7 @@ export default function CalendarPage() {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* 注文者情報 */}
                 <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
                   <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><User size={18}/> 注文者情報</h3>
                   <div className="space-y-4 text-[13px] bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA]">
@@ -752,6 +792,7 @@ export default function CalendarPage() {
                   </div>
                 </div>
 
+                {/* お届け先情報 ＆ Googleマップ */}
                 <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
                   <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><MapPin size={18}/> お届け先情報</h3>
                   <div className="space-y-3 text-[13px]">
@@ -766,6 +807,7 @@ export default function CalendarPage() {
                         <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">宛名</span><span className="font-black text-[16px]">{modalTargetInfo?.name || '未設定'} 様</span></p>
                         <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">お届け先住所</span><span className="font-bold text-[14px] block leading-relaxed">〒{modalTargetInfo?.zip}<br/>{modalTargetInfo?.address1} {modalTargetInfo?.address2}</span></p>
                         
+                        {/* 📍 Googleマップボタン */}
                         <a 
                           href={getGoogleMapsUrl(modalTargetInfo)}
                           target="_blank"
@@ -882,7 +924,7 @@ export default function CalendarPage() {
           </div>
         </div>
       )}
-
+      
       <style jsx global>{`
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
