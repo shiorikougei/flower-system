@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 import { 
   Building2, Mail, ArrowUpCircle, Bot, Lock, Unlock, 
-  CheckCircle, XCircle, RefreshCw, Save, Sparkles, Store
+  CheckCircle, XCircle, RefreshCw, Save, Sparkles, Store,
+  MessageSquare
 } from 'lucide-react';
 
 const DEFAULT_AI_PROMPT = '以下のテキストからお花の「価格」「用途」「カラー」「イメージ」をJSON形式で抽出してください。価格はカンマなしの数値で出力してください。';
@@ -20,6 +21,7 @@ export default function OwnerDashboard() {
   const [newInvitePlan, setNewInvitePlan] = useState('10000');
   
   const [upgradeRequests, setUpgradeRequests] = useState([]);
+  const [clientRequests, setClientRequests] = useState([]); // ★ 新規: フィードバック/バグ報告用
 
   // オーナー用パスワード
   const [isAuth, setIsAuth] = useState(false);
@@ -33,14 +35,18 @@ export default function OwnerDashboard() {
           if (data.settings_data.tenants) setTenants(data.settings_data.tenants);
           if (data.settings_data.invitations) setInvitations(data.settings_data.invitations);
           if (data.settings_data.upgradeRequests) setUpgradeRequests(data.settings_data.upgradeRequests);
+          if (data.settings_data.clientRequests) setClientRequests(data.settings_data.clientRequests);
         } else {
-          // 初回起動時のダミーデータ（aiPromptを各店舗ごとに持たせる）
+          // 初回起動時のダミーデータ
           setTenants([
             { id: 'shop_a', name: '花・花 OHANA!', email: 'info@hana-ohana.example.com', price: 10000, status: 'active', lastPaid: '2026-02-28', features: { b2b: false, deliveryOutsource: true }, aiPrompt: DEFAULT_AI_PROMPT },
             { id: 'shop_b', name: 'お花カフェ (デモ店舗)', email: 'demo@example.com', price: 0, status: 'active', lastPaid: '-', features: { b2b: true, deliveryOutsource: false }, aiPrompt: DEFAULT_AI_PROMPT },
           ]);
           setUpgradeRequests([
             { id: 'req_1', tenantId: 'shop_a', tenantName: '花・花 OHANA!', featureKey: 'b2b', featureName: '法人ポータル管理機能', date: '2026-03-15', status: 'pending' }
+          ]);
+          setClientRequests([
+            { id: 'fb_1', tenantId: 'shop_b', tenantName: 'お花カフェ', type: 'アップデート依頼', text: '設定画面に「配送料の自動計算オフ」ボタンを追加してほしいです。', date: '2026-03-10', status: 'new' }
           ]);
         }
       } catch (err) {
@@ -60,8 +66,8 @@ export default function OwnerDashboard() {
     }
   };
 
-  // 統合保存ロジック（aiPromptはtenantsの中に含まれるため引数を整理）
-  const saveOwnerData = async (updatedTenants = tenants, updatedInvitations = invitations, updatedUpgrades = upgradeRequests) => {
+  // 統合保存ロジック
+  const saveOwnerData = async (updatedTenants = tenants, updatedInvitations = invitations, updatedUpgrades = upgradeRequests, updatedFeedbacks = clientRequests) => {
     setIsSaving(true);
     try {
       await supabase.from('app_settings').upsert({ 
@@ -69,12 +75,14 @@ export default function OwnerDashboard() {
         settings_data: { 
           tenants: updatedTenants, 
           invitations: updatedInvitations,
-          upgradeRequests: updatedUpgrades
+          upgradeRequests: updatedUpgrades,
+          clientRequests: updatedFeedbacks
         } 
       });
       setTenants(updatedTenants);
       setInvitations(updatedInvitations);
       setUpgradeRequests(updatedUpgrades);
+      setClientRequests(updatedFeedbacks);
     } catch (error) {
       alert('データの保存に失敗しました。');
     } finally {
@@ -99,7 +107,7 @@ export default function OwnerDashboard() {
     };
     
     const updated = [newInvite, ...invitations];
-    saveOwnerData(tenants, updated, upgradeRequests);
+    saveOwnerData(tenants, updated, upgradeRequests, clientRequests);
     setNewInviteEmail('');
     
     navigator.clipboard.writeText(`システムのご案内です。以下のURLから初期設定を行ってください。\n${setupUrl}`);
@@ -117,16 +125,16 @@ export default function OwnerDashboard() {
     if (!confirm(confirmMsg)) return;
 
     const updated = tenants.map(t => t.id === tenantId ? { ...t, status: newStatus } : t);
-    saveOwnerData(updated, invitations, upgradeRequests);
+    saveOwnerData(updated, invitations, upgradeRequests, clientRequests);
   };
 
   // 料金の変更
   const updatePrice = (tenantId, newPrice) => {
     const updated = tenants.map(t => t.id === tenantId ? { ...t, price: Number(newPrice) } : t);
-    saveOwnerData(updated, invitations, upgradeRequests);
+    saveOwnerData(updated, invitations, upgradeRequests, clientRequests);
   };
 
-  // 機能の個別出し分け（トグル切り替え）
+  // 機能の個別出し分け
   const toggleFeature = (tenantId, featureKey) => {
     const updated = tenants.map(t => {
       if (t.id === tenantId) {
@@ -135,22 +143,20 @@ export default function OwnerDashboard() {
       }
       return t;
     });
-    saveOwnerData(updated, invitations, upgradeRequests);
+    saveOwnerData(updated, invitations, upgradeRequests, clientRequests);
   };
 
-  // ★ AIプロンプトの個別更新（入力中）
+  // AIプロンプトの個別更新（入力中）
   const updateTenantPrompt = (tenantId, newPrompt) => {
     const updated = tenants.map(t => t.id === tenantId ? { ...t, aiPrompt: newPrompt } : t);
-    setTenants(updated); // ローカルステートだけ更新して入力をもたつかせない
+    setTenants(updated);
   };
 
   // アップグレードの承認
   const handleApproveUpgrade = (reqId) => {
     if(!confirm('この機能のアップグレードを承認し、店舗に機能を解放しますか？')) return;
-    
     const req = upgradeRequests.find(r => r.id === reqId);
     
-    // 店舗の機能を自動でONにする
     const updatedTenants = tenants.map(t => {
       if (t.id === req.tenantId) {
         const currentFeatures = t.features || { b2b: false, deliveryOutsource: false };
@@ -160,7 +166,7 @@ export default function OwnerDashboard() {
     });
 
     const updatedReqs = upgradeRequests.map(r => r.id === reqId ? { ...r, status: 'approved' } : r);
-    saveOwnerData(updatedTenants, invitations, updatedReqs);
+    saveOwnerData(updatedTenants, invitations, updatedReqs, clientRequests);
     alert('機能を解放しました！');
   };
 
@@ -168,10 +174,17 @@ export default function OwnerDashboard() {
   const handleRejectUpgrade = (reqId) => {
     if(!confirm('この依頼を却下しますか？')) return;
     const updatedReqs = upgradeRequests.map(r => r.id === reqId ? { ...r, status: 'rejected' } : r);
-    saveOwnerData(tenants, invitations, updatedReqs);
+    saveOwnerData(tenants, invitations, updatedReqs, clientRequests);
+  };
+
+  // フィードバックの対応完了
+  const handleCompleteFeedback = (fbId) => {
+    const updatedFbs = clientRequests.map(fb => fb.id === fbId ? { ...fb, status: 'completed' } : fb);
+    saveOwnerData(tenants, invitations, upgradeRequests, updatedFbs);
   };
 
   const pendingUpgradesCount = upgradeRequests.filter(r => r.status === 'pending').length;
+  const newFeedbacksCount = clientRequests.filter(r => r.status === 'new').length;
 
   if (!isAuth) {
     return (
@@ -215,12 +228,16 @@ export default function OwnerDashboard() {
             <div className="flex items-center gap-3"><ArrowUpCircle size={16}/> <span>アップグレード依頼</span></div>
             {pendingUpgradesCount > 0 && <span className="bg-red-600 text-white text-[9px] px-2 py-0.5 rounded-full">{pendingUpgradesCount}</span>}
           </button>
+          <button onClick={() => setActiveTab('feedbacks')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center justify-between ${activeTab === 'feedbacks' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}>
+            <div className="flex items-center gap-3"><MessageSquare size={16}/> <span>要望・フィードバック</span></div>
+            {newFeedbacksCount > 0 && <span className="bg-blue-600 text-white text-[9px] px-2 py-0.5 rounded-full">{newFeedbacksCount}</span>}
+          </button>
           <button onClick={() => setActiveTab('ai')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'ai' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}>
             <Bot size={16}/> AIプロンプト設定
           </button>
         </nav>
         <div className="absolute bottom-8 left-8 text-[10px] text-gray-600 font-mono">
-          System v1.3.0<br/>Secure Connection
+          System v1.4.0<br/>Secure Connection
         </div>
       </aside>
 
@@ -230,6 +247,7 @@ export default function OwnerDashboard() {
             {activeTab === 'tenants' && 'TENANT MANAGEMENT'}
             {activeTab === 'invites' && 'ISSUE INVITATION'}
             {activeTab === 'upgrades' && 'UPGRADE REQUESTS'}
+            {activeTab === 'feedbacks' && 'CLIENT FEEDBACKS'}
             {activeTab === 'ai' && 'AI PROMPT SETTINGS'}
           </h2>
           {isSaving && <span className="text-[#2D4B3E] text-sm animate-pulse font-mono flex items-center gap-2"><RefreshCw size={14} className="animate-spin"/> Syncing...</span>}
@@ -397,7 +415,43 @@ export default function OwnerDashboard() {
           </div>
         )}
 
-        {/* 4. ★AIプロンプトの設定 (店舗別) */}
+        {/* 4. フィードバック・要望確認画面 */}
+        {activeTab === 'feedbacks' && (
+          <div className="space-y-4 animate-in fade-in">
+            {clientRequests.length === 0 ? (
+              <div className="text-center py-20 text-gray-600 font-mono tracking-widest border border-dashed border-[#333333] rounded-2xl">
+                NO FEEDBACKS.
+              </div>
+            ) : (
+              clientRequests.map(fb => (
+                <div key={fb.id} className={`bg-[#111111] p-6 rounded-xl border ${fb.status === 'new' ? 'border-[#333333] border-l-4 border-l-[#2D4B3E]' : 'border-[#222222] opacity-60'} transition-all`}>
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] px-2 py-0.5 rounded font-bold tracking-widest ${fb.status === 'new' ? 'bg-blue-600 text-white' : 'border border-gray-600 text-gray-400'}`}>
+                        {fb.status === 'new' ? 'NEW' : '対応完了'}
+                      </span>
+                      <span className="text-[10px] text-gray-400 font-bold bg-[#222222] px-2 py-0.5 rounded">
+                        {fb.type}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-gray-500 font-mono">{fb.date} | {fb.tenantName}</span>
+                  </div>
+                  <p className="text-[13px] text-gray-300 whitespace-pre-wrap leading-relaxed">{fb.text}</p>
+                  
+                  {fb.status === 'new' && (
+                    <div className="mt-4 flex gap-2">
+                      <button onClick={() => handleCompleteFeedback(fb.id)} className="text-[11px] font-bold border border-[#333333] text-white px-5 py-2 rounded-lg hover:bg-[#2D4B3E] hover:border-[#2D4B3E] transition-all">
+                        対応済みにする
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* 5. AIプロンプトの設定 (店舗別) */}
         {activeTab === 'ai' && (
           <div className="space-y-6 animate-in fade-in">
             <header className="mb-6 space-y-2">
@@ -426,7 +480,7 @@ export default function OwnerDashboard() {
 
             <div className="flex justify-end pt-6 border-t border-[#222222]">
               <button 
-                onClick={() => saveOwnerData(tenants, invitations, upgradeRequests)}
+                onClick={() => saveOwnerData(tenants, invitations, upgradeRequests, clientRequests)}
                 disabled={isSaving}
                 className="flex items-center justify-center w-full md:w-auto gap-2 bg-[#2D4B3E] text-white px-10 py-4 rounded-xl font-bold text-[13px] tracking-widest hover:bg-[#1f352b] transition-all disabled:opacity-50 shadow-lg shadow-[#2D4B3E]/20"
               >
