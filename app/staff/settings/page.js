@@ -5,7 +5,7 @@ import {
   Settings as SettingsIcon, ListChecks, Store, Tag, Truck, User, Mail, 
   Trash2, Plus, Clock, ShieldCheck, RotateCcw, Image as ImageIcon, Ruler, 
   ChevronRight, Calendar as CalendarIcon, Box, MapPin, X,
-  LayoutTemplate, Package, Eye, EyeOff, Sparkles, Building2
+  LayoutTemplate, Package, Eye, EyeOff, Sparkles, AlertCircle
 } from 'lucide-react';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
@@ -19,11 +19,20 @@ export default function SettingsPage() {
 
   // --- 1. 基本設定 ---
   const [generalConfig, setGeneralConfig] = useState({ 
-    appName: 'FLORIX', logoUrl: '', logoSize: 100, logoTransparent: false, slipBgUrl: '', slipBgOpacity: 50, systemPassword: '7777'
+    appName: 'FLORIX', 
+    logoUrl: '', 
+    logoSize: 100, 
+    logoTransparent: false, 
+    slipBgUrl: '', 
+    slipBgOpacity: 50, 
+    systemPassword: '7777'
   });
 
   // --- 2. ステータス設定 ---
-  const [statusConfig, setStatusConfig] = useState({ type: 'template', customLabels: ['未対応', '制作中', '制作完了', '配達中'] });
+  const [statusConfig, setStatusConfig] = useState({ 
+    type: 'template', 
+    customLabels: ['未対応', '制作中', '制作完了', '配達中'] 
+  });
 
   // --- 3. 店舗管理 ---
   const [shops, setShops] = useState([]); 
@@ -36,9 +45,17 @@ export default function SettingsPage() {
   const [shippingSizes, setShippingSizes] = useState(['80', '100', '120']);
   const [shippingRates, setShippingRates] = useState([]); 
   const [boxFeeConfig, setBoxFeeConfig] = useState({ 
-    type: 'flat', flatFee: 500, priceTiers: [{ minPrice: 0, fee: 300 }, { minPrice: 10000, fee: 0 }], itemFees: {},
-    returnFeeType: 'flat', returnFeeValue: 1000, coolBinEnabled: true, coolBinPeriods: [],
-    freeShippingThresholdEnabled: false, freeShippingThreshold: 15000, isBundleDiscount: true
+    type: 'flat', 
+    flatFee: 500, 
+    priceTiers: [{ minPrice: 0, fee: 300 }, { minPrice: 10000, fee: 0 }], 
+    itemFees: {},
+    returnFeeType: 'flat', 
+    returnFeeValue: 1000, 
+    coolBinEnabled: true, 
+    coolBinPeriods: [],
+    freeShippingThresholdEnabled: false, 
+    freeShippingThreshold: 15000, 
+    isBundleDiscount: true
   });
   
   const [timeSlots, setTimeSlots] = useState({
@@ -63,9 +80,13 @@ export default function SettingsPage() {
   const [staffList, setStaffList] = useState([]);
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffStore, setNewStaffStore] = useState('all');
-  const [staffOrderConfig, setStaffOrderConfig] = useState({ ignoreLeadTime: true, allowCustomPrice: true, paymentMethods: ['店頭支払い(済)', '銀行振込(請求書)', '代金引換'], sendAutoReply: false });
+  const [staffOrderConfig, setStaffOrderConfig] = useState({ 
+    ignoreLeadTime: true, 
+    allowCustomPrice: true, 
+    paymentMethods: ['店頭支払い(済)', '銀行振込(請求書)', '代金引換'], 
+    sendAutoReply: false 
+  });
   
-  // 通知メールテンプレート
   const [autoReplyTemplates, setAutoReplyTemplates] = useState([
     { id: 't1', trigger: '注文受付時', subject: 'ご注文ありがとうございます', body: '{CustomerName} 様\n\nご注文ありがとうございます。' }
   ]);
@@ -101,14 +122,17 @@ export default function SettingsPage() {
     async function loadSettings() {
       try {
         const cached = sessionStorage.getItem(SETTINGS_CACHE_KEY);
-        if (cached) { applySettings(JSON.parse(cached)); }
+        if (cached) { 
+          applySettings(JSON.parse(cached)); 
+        }
         const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
         if (data?.settings_data) {
-          const s = data.settings_data;
-          applySettings(s);
-          sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(s));
+          applySettings(data.settings_data);
+          sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(data.settings_data));
         }
-      } catch (e) { console.error('読込失敗', e); }
+      } catch (e) { 
+        console.error('読込失敗', e); 
+      }
     }
     loadSettings();
   }, []);
@@ -123,11 +147,19 @@ export default function SettingsPage() {
     if (!isAdmin) return;
     setIsSaving(true);
     try {
-      const payload = { generalConfig, statusConfig, shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReplyTemplates, staffOrderConfig, timeSlots };
+      const payload = { 
+        generalConfig, statusConfig, shops, flowerItems, staffList, 
+        deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, 
+        autoReplyTemplates, staffOrderConfig, timeSlots 
+      };
       await supabase.from('app_settings').upsert({ id: 'default', settings_data: payload });
       sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(payload));
       alert('すべての設定を保存しました！');
-    } catch (e) { alert('保存失敗'); } finally { setIsSaving(false); }
+    } catch (e) { 
+      alert('保存失敗'); 
+    } finally { 
+      setIsSaving(false); 
+    }
   };
 
   const handleImg = (e, f) => {
@@ -145,8 +177,12 @@ export default function SettingsPage() {
       return newSlots;
     });
   };
-  const addTimeSlot = (method) => { setTimeSlots(prev => ({ ...prev, [method]: [...prev[method], ''] })); };
-  const removeTimeSlot = (method, index) => { setTimeSlots(prev => ({ ...prev, [method]: prev[method].filter((_, i) => i !== index) })); };
+  const addTimeSlot = (method) => { 
+    setTimeSlots(prev => ({ ...prev, [method]: [...prev[method], ''] })); 
+  };
+  const removeTimeSlot = (method, index) => { 
+    setTimeSlots(prev => ({ ...prev, [method]: prev[method].filter((_, i) => i !== index) })); 
+  };
 
   // --- タブ：基本設定 ---
   const renderGeneralTab = () => (
@@ -461,10 +497,49 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
+
+          {/* ★ 新規追加: 各受取方法の注意事項（店舗ごと） */}
+          <div className="pt-6 border-t border-[#FBFAF9] space-y-4">
+            <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><AlertCircle size={16}/> 注意書き・ご案内テキスト設定</h3>
+            <p className="text-[10px] text-[#999999]">お客様のオーダー画面で表示される、各受取方法ごとの注意書きを店舗別に設定できます。</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-[#999999]">店頭受取のご案内</label>
+                <textarea 
+                  value={shop.pickupNote ?? 'ご来店予定日時に店舗までお越しください。'} 
+                  onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, pickupNote:e.target.value}:s))} 
+                  className="w-full h-24 bg-[#FBFAF9] border rounded-xl p-3 text-[12px] outline-none resize-none focus:border-[#2D4B3E]" 
+                  placeholder="店頭受取時の注意事項"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-[#999999]">自社配達のご案内</label>
+                <textarea 
+                  value={shop.deliveryNote ?? '交通状況により配達時間が前後する場合がございます。'} 
+                  onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryNote:e.target.value}:s))} 
+                  className="w-full h-24 bg-[#FBFAF9] border rounded-xl p-3 text-[12px] outline-none resize-none focus:border-[#2D4B3E]" 
+                  placeholder="自社配達時の注意事項"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-[#999999]">業者配送のご案内</label>
+                <textarea 
+                  value={shop.shippingNote ?? '発送準備期間＋配送日数がかかります。交通状況により遅延する場合がございます。'} 
+                  onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, shippingNote:e.target.value}:s))} 
+                  className="w-full h-24 bg-[#FBFAF9] border rounded-xl p-3 text-[12px] outline-none resize-none focus:border-[#2D4B3E]" 
+                  placeholder="業者配送時の注意事項"
+                />
+              </div>
+            </div>
+          </div>
         </div>
       ))}
       <button 
-        onClick={()=>setShops([...shops, {id:Date.now(), name:'', isActive:true, openTime:'10:00', closeTime:'19:00', deliveryOpenTime:'11:00', deliveryCloseTime:'18:00', specialHours:[], deliverySpecialHours:[], enabledTatePatterns: ['p5', 'p7']}])} 
+        onClick={()=>setShops([...shops, {
+          id:Date.now(), name:'', isActive:true, openTime:'10:00', closeTime:'19:00', deliveryOpenTime:'11:00', deliveryCloseTime:'18:00', 
+          specialHours:[], deliverySpecialHours:[], enabledTatePatterns: ['p5', 'p7'],
+          pickupNote: 'ご来店予定日時に店舗までお越しください。', deliveryNote: '交通状況により配達時間が前後する場合がございます。', shippingNote: '発送準備期間＋配送日数がかかります。交通状況により遅延する場合がございます。'
+        }])} 
         className="w-full py-10 border-2 border-dashed border-[#EAEAEA] rounded-[32px] text-[#999999] font-bold transition-all hover:border-[#2D4B3E] shadow-sm"
       >
         + 店舗を新規追加
@@ -524,7 +599,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* ★ 新規追加：取扱店舗の設定 */}
+            {/* 取扱店舗の設定 */}
             <div className="pt-4 pb-2 border-t border-[#FBFAF9] mt-2">
               <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between mb-3">
                 <p className="text-[12px] font-bold text-[#2D4B3E] flex items-center gap-2"><MapPin size={16}/> 取扱店舗</p>
