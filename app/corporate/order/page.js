@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/utils/supabase';
-// ★ AlertCircle を追加インポート
+import { useParams, useRouter } from 'next/navigation';
+import { supabase } from '@/utils/supabase'; // パスは適宜調整してください
 import { Calendar, Package, ChevronRight, Store, Truck, Building2, AlertCircle } from 'lucide-react';
+
 // ★ 共通コンポーネントをインポート
 import TatefudaPreview from '@/components/TatefudaPreview';
 
@@ -11,7 +11,11 @@ const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 const GALLERY_CACHE_KEY = 'florix_gallery_cache';
 
 export default function CorporateOrderPage() {
+  const params = useParams();
   const router = useRouter();
+  
+  // ★ テナントID（URLから取得できなければ 'default'）
+  const tenantId = params?.tenantId || 'default';
 
   const myCompany = {
     companyName: '株式会社 グローバルIT',
@@ -105,6 +109,7 @@ export default function CorporateOrderPage() {
           setIsLoading(false);
         }
 
+        // ★ DBからは対象テナントIDのデータを取得する（今は 'default' として取得）
         const [settingsRes, galleryRes] = await Promise.all([
           supabase.from('app_settings').select('settings_data').eq('id', 'default').single(),
           supabase.from('app_settings').select('settings_data').eq('id', 'gallery').single()
@@ -124,7 +129,7 @@ export default function CorporateOrderPage() {
       }
     }
     fetchSettings();
-  }, []);
+  }, [tenantId]); // tenantId が変わったら再取得
 
   const selectedItemSettings = useMemo(() => appSettings?.flowerItems?.find(i => i.name === flowerType) || {}, [flowerType, appSettings]);
 
@@ -142,7 +147,6 @@ export default function CorporateOrderPage() {
   const selectedTateOpt = tateOptions.find(opt => opt.id === tatePattern);
   const tateNeeds = selectedTateOpt?.needs || [];
 
-  // ★設定データから「最低額」「最大額」「刻み幅」を使ってオプションを生成
   const getPriceOptions = () => {
     if (!flowerType) return [];
     let min = 2000, max = 50000, stepSize = 1000;
@@ -269,20 +273,16 @@ export default function CorporateOrderPage() {
           setShippingDate('');
         }
 
-        let size = selectedItemSettings?.defaultBoxSize;
-        if (!size) {
-          size = appSettings?.shippingSizes?.[0] || '80';
-          if (appSettings?.boxFeeConfig?.type === 'flat') {
-            boxFee = Number(appSettings.boxFeeConfig.flatFee) || 0;
-          } else if (appSettings?.boxFeeConfig?.type === 'price_based') {
-            const tiers = appSettings.boxFeeConfig.priceTiers || [];
-            const sortedTiers = [...tiers].sort((a, b) => b.minPrice - a.minPrice);
-            const matchedTier = sortedTiers.find(t => Number(itemPrice) >= t.minPrice);
-            boxFee = matchedTier ? Number(matchedTier.fee) : 0;
-          }
-        }
-
+        let size = selectedItemSettings?.defaultBoxSize || appSettings?.shippingSizes?.[0] || '80';
         baseFee = Number(rateData['fee' + size]) || 0;
+
+        if (appSettings?.boxFeeConfig?.type === 'flat') {
+          boxFee = Number(appSettings.boxFeeConfig.flatFee) || 0;
+        } else if (appSettings?.boxFeeConfig?.type === 'price_based') {
+          const tiers = appSettings.boxFeeConfig.priceTiers || [];
+          const matchedTier = [...tiers].sort((a, b) => b.minPrice - a.minPrice).find(t => Number(itemPrice) >= t.minPrice);
+          boxFee = matchedTier ? Number(matchedTier.fee) : 0;
+        }
 
         if (appSettings?.boxFeeConfig?.freeShippingThresholdEnabled && Number(itemPrice) >= (appSettings.boxFeeConfig.freeShippingThreshold || 15000)) {
           baseFee = 0; 
@@ -291,8 +291,7 @@ export default function CorporateOrderPage() {
         if (!selectedItemSettings?.excludeCoolBin && appSettings?.boxFeeConfig?.coolBinEnabled && selectedDate) {
           const dateObj = new Date(selectedDate);
           const mmdd = String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + String(dateObj.getDate()).padStart(2, '0');
-          const periods = appSettings.boxFeeConfig.coolBinPeriods || [];
-          const isCool = periods.some(p => mmdd >= p.start && mmdd <= p.end);
+          const isCool = (appSettings.boxFeeConfig.coolBinPeriods || []).some(p => mmdd >= p.start && mmdd <= p.end);
           if (isCool) coolFee = Number(rateData['cool' + size]) || 0;
         }
 
@@ -379,7 +378,7 @@ export default function CorporateOrderPage() {
       if (error) throw error;
 
       alert('ご注文を承りました！ポータル画面へ戻ります。');
-      router.push('/corporate');
+      router.push(`/corporate/${tenantId}`); // 完了後はポータルに戻る
       
     } catch (error) {
       console.error('注文エラー:', error.message);
@@ -399,6 +398,11 @@ export default function CorporateOrderPage() {
   const pickupNote = targetShopData.pickupNote || 'ご来店予定日時に店舗までお越しください。';
   const deliveryNote = targetShopData.deliveryNote || '交通状況により配達時間が前後する場合がございます。';
   const shippingNote = targetShopData.shippingNote || '発送準備期間＋配送日数がかかります。交通状況により遅延する場合がございます。';
+  const absenceInstruction = targetShopData.absenceInstruction || '生花のため、ご不在時は原則として置き配または宅配ボックスへのお届けとなります。ご希望の対応をお選びください。';
+
+  const generalConfig = appSettings?.generalConfig || {};
+  const appName = generalConfig.appName || 'FLORIX';
+  const logoUrl = generalConfig.logoUrl || '';
 
   if (isLoading) return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-sans"><div className="text-[#2D4B3E] font-bold tracking-widest animate-pulse">読み込み中...</div></div>;
 
@@ -429,7 +433,6 @@ export default function CorporateOrderPage() {
             <div className="space-y-6">
               <select className="w-full h-16 px-5 bg-white border border-[#EAEAEA] rounded-[20px] outline-none focus:border-[#2D4B3E] transition-all text-[15px] font-bold appearance-none shadow-sm" value={flowerType} onChange={(e) => { setFlowerType(e.target.value); setItemPrice(''); setIsBring('shop'); }}>
                 <option value="">種類を選択してください</option>
-                {/* ★ 店舗による商品の絞り込み（法人ポータルは基本的に全店舗の全商品が見える想定） */}
                 {appSettings?.flowerItems?.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
               </select>
 
@@ -522,6 +525,10 @@ export default function CorporateOrderPage() {
                 ))}
               </div>
 
+              {cardType === 'メッセージカード' && (
+                 <textarea value={cardMessage} onChange={(e) => setCardMessage(e.target.value)} placeholder="カードのメッセージをご入力ください" className="w-full h-32 p-4 bg-white border border-[#EAEAEA] rounded-[24px] text-[13px] resize-none outline-none focus:border-[#2D4B3E] shadow-sm animate-in zoom-in-95"></textarea>
+              )}
+
               {cardType === '立札' && (
                 <div className="space-y-6 bg-white p-6 rounded-[28px] border border-[#EAEAEA] shadow-sm animate-in zoom-in-95 duration-300">
                   <select value={tatePattern} onChange={(e) => setTatePattern(e.target.value)} className="w-full h-14 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none font-bold text-[13px] focus:border-[#2D4B3E]">
@@ -543,7 +550,8 @@ export default function CorporateOrderPage() {
                       {tateNeeds.includes('3b') && <input type="text" placeholder="③-2 役職・氏名" value={tateInput3b} onChange={(e) => setTateInput3b(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       
                       <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4 mb-2">仕上がりプレビュー</p>
-                      {/* ★ 立札の共通コンポーネントを呼び出す */}
+                      
+                      {/* ★ 共通コンポーネントを呼び出し */}
                       <TatefudaPreview 
                         tatePattern={tatePattern}
                         layout={selectedTateOpt?.layout}
@@ -554,6 +562,7 @@ export default function CorporateOrderPage() {
                         input3a={tateInput3a}
                         input3b={tateInput3b}
                       />
+                      
                     </div>
                   )}
                 </div>
@@ -567,7 +576,7 @@ export default function CorporateOrderPage() {
           <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div>
               <h1 className="text-[20px] font-bold mb-2 text-[#2D4B3E]">お届け・お客様情報</h1>
-              <p className="text-[12px] text-[#555555]">お届け希望日と、お届け先の情報をご入力ください。</p>
+              <p className="text-[12px] text-[#555555]">お届け希望日と、お客様の情報をご入力ください。</p>
             </div>
 
             <div className="space-y-6">
@@ -668,6 +677,9 @@ export default function CorporateOrderPage() {
                   {receiveMethod === 'delivery' && (
                     <>
                       <p>{deliveryNote}</p>
+                      {/* ★ 置き配に関する案内を追加 */}
+                      <p className="text-[#2D4B3E] font-bold">{absenceInstruction}</p>
+                      
                       {parsedPickupFee > 0 && <p className="font-bold text-orange-600">※ご注文の商品には回収が必要な器（スタンド等）が含まれているため、回収費用(¥{parsedPickupFee.toLocaleString()})が加算されています。</p>}
                     </>
                   )}
