@@ -1,14 +1,12 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { supabase } from '../../../utils/supabase'; // パス階層に合わせて適宜調整してください
+// ★ 絶対パスに変更（どこにファイルを移動してもエラーになりません！）
+import { supabase } from '@/utils/supabase'; 
 import { Calendar, Package, ChevronRight, Store, Truck, Building2, AlertCircle } from 'lucide-react';
 
-// ★ 相対パスで共通コンポーネントをインポート
-import TatefudaPreview from '../../../components/TatefudaPreview';
-
-const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
-const GALLERY_CACHE_KEY = 'florix_gallery_cache';
+// ★ こちらも絶対パスに変更
+import TatefudaPreview from '@/components/TatefudaPreview';
 
 export default function CorporateOrderPage() {
   const router = useRouter();
@@ -17,6 +15,11 @@ export default function CorporateOrderPage() {
   // ★ URLに tenantId が含まれている場合は取得、なければ 'default'
   const tenantId = params?.tenantId || 'default';
 
+  // ★ キャッシュ用のキーをテナントごとに独立させる（他のお店のデータと混ざらないように！）
+  const SETTINGS_CACHE_KEY = `florix_app_settings_cache_${tenantId}`;
+  const GALLERY_CACHE_KEY = `florix_gallery_cache_${tenantId}`;
+
+  // ※ 本来はログインしている法人アカウント（Supabase Auth）のデータを使用しますが、今回はデモ用の固定データです
   const myCompany = {
     companyName: '株式会社 グローバルIT',
     contactName: '山田 太郎',
@@ -109,9 +112,10 @@ export default function CorporateOrderPage() {
           setIsLoading(false);
         }
 
+        // ★ ギャラリー画像も「その花屋さん専用（テナントID_gallery）」のものを引っ張ってくる
         const [settingsRes, galleryRes] = await Promise.all([
           supabase.from('app_settings').select('settings_data').eq('id', tenantId).single(),
-          supabase.from('app_settings').select('settings_data').eq('id', 'gallery').single()
+          supabase.from('app_settings').select('settings_data').eq('id', `${tenantId}_gallery`).single()
         ]);
 
         if (settingsRes.data?.settings_data) {
@@ -373,7 +377,7 @@ export default function CorporateOrderPage() {
         isCorporateOrder: true
       };
 
-      // ★ 修正箇所：テナントIDを明示的にセットしてDBに保存
+      // ★ 修正箇所：テナントIDを明示的にセットしてDBに保存！
       const { error } = await supabase.from('orders').insert([
         { tenant_id: tenantId, order_data: orderPayload }
       ]);
