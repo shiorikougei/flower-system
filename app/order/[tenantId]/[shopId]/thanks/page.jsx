@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '../../../../utils/supabase';
+import { supabase } from '../../../../../utils/supabase';
 
 export default function ThanksPage() {
   const params = useParams();
