@@ -5,8 +5,10 @@ import {
   Settings as SettingsIcon, ListChecks, Store, Tag, Truck, User, Mail, 
   Trash2, Plus, Clock, ShieldCheck, RotateCcw, Image as ImageIcon, Ruler, 
   ChevronRight, Calendar as CalendarIcon, Box, MapPin, X,
-  LayoutTemplate, Package, Eye, EyeOff, Sparkles, AlertCircle
+  LayoutTemplate, Package, Eye, EyeOff, Sparkles
 } from 'lucide-react';
+// ★ 先ほど作った共通コンポーネントをインポート
+import TatefudaPreview from '@/components/TatefudaPreview';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 
@@ -19,20 +21,11 @@ export default function SettingsPage() {
 
   // --- 1. 基本設定 ---
   const [generalConfig, setGeneralConfig] = useState({ 
-    appName: 'FLORIX', 
-    logoUrl: '', 
-    logoSize: 100, 
-    logoTransparent: false, 
-    slipBgUrl: '', 
-    slipBgOpacity: 50, 
-    systemPassword: '7777'
+    appName: 'FLORIX', logoUrl: '', logoSize: 100, logoTransparent: false, slipBgUrl: '', slipBgOpacity: 50, systemPassword: '7777'
   });
 
   // --- 2. ステータス設定 ---
-  const [statusConfig, setStatusConfig] = useState({ 
-    type: 'template', 
-    customLabels: ['未対応', '制作中', '制作完了', '配達中'] 
-  });
+  const [statusConfig, setStatusConfig] = useState({ type: 'template', customLabels: ['未対応', '制作中', '制作完了', '配達中'] });
 
   // --- 3. 店舗管理 ---
   const [shops, setShops] = useState([]); 
@@ -45,17 +38,9 @@ export default function SettingsPage() {
   const [shippingSizes, setShippingSizes] = useState(['80', '100', '120']);
   const [shippingRates, setShippingRates] = useState([]); 
   const [boxFeeConfig, setBoxFeeConfig] = useState({ 
-    type: 'flat', 
-    flatFee: 500, 
-    priceTiers: [{ minPrice: 0, fee: 300 }, { minPrice: 10000, fee: 0 }], 
-    itemFees: {},
-    returnFeeType: 'flat', 
-    returnFeeValue: 1000, 
-    coolBinEnabled: true, 
-    coolBinPeriods: [],
-    freeShippingThresholdEnabled: false, 
-    freeShippingThreshold: 15000, 
-    isBundleDiscount: true
+    type: 'flat', flatFee: 500, priceTiers: [{ minPrice: 0, fee: 300 }, { minPrice: 10000, fee: 0 }], itemFees: {},
+    returnFeeType: 'flat', returnFeeValue: 1000, coolBinEnabled: true, coolBinPeriods: [],
+    freeShippingThresholdEnabled: false, freeShippingThreshold: 15000, isBundleDiscount: true
   });
   
   const [timeSlots, setTimeSlots] = useState({
@@ -80,12 +65,7 @@ export default function SettingsPage() {
   const [staffList, setStaffList] = useState([]);
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffStore, setNewStaffStore] = useState('all');
-  const [staffOrderConfig, setStaffOrderConfig] = useState({ 
-    ignoreLeadTime: true, 
-    allowCustomPrice: true, 
-    paymentMethods: ['店頭支払い(済)', '銀行振込(請求書)', '代金引換'], 
-    sendAutoReply: false 
-  });
+  const [staffOrderConfig, setStaffOrderConfig] = useState({ ignoreLeadTime: true, allowCustomPrice: true, paymentMethods: ['店頭支払い(済)', '銀行振込(請求書)', '代金引換'], sendAutoReply: false });
   
   const [autoReplyTemplates, setAutoReplyTemplates] = useState([
     { id: 't1', trigger: '注文受付時', subject: 'ご注文ありがとうございます', body: '{CustomerName} 様\n\nご注文ありがとうございます。' }
@@ -122,17 +102,13 @@ export default function SettingsPage() {
     async function loadSettings() {
       try {
         const cached = sessionStorage.getItem(SETTINGS_CACHE_KEY);
-        if (cached) { 
-          applySettings(JSON.parse(cached)); 
-        }
+        if (cached) { applySettings(JSON.parse(cached)); }
         const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
         if (data?.settings_data) {
           applySettings(data.settings_data);
           sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(data.settings_data));
         }
-      } catch (e) { 
-        console.error('読込失敗', e); 
-      }
+      } catch (e) { console.error('読込失敗', e); }
     }
     loadSettings();
   }, []);
@@ -147,19 +123,11 @@ export default function SettingsPage() {
     if (!isAdmin) return;
     setIsSaving(true);
     try {
-      const payload = { 
-        generalConfig, statusConfig, shops, flowerItems, staffList, 
-        deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, 
-        autoReplyTemplates, staffOrderConfig, timeSlots 
-      };
+      const payload = { generalConfig, statusConfig, shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReplyTemplates, staffOrderConfig, timeSlots };
       await supabase.from('app_settings').upsert({ id: 'default', settings_data: payload });
       sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(payload));
       alert('すべての設定を保存しました！');
-    } catch (e) { 
-      alert('保存失敗'); 
-    } finally { 
-      setIsSaving(false); 
-    }
+    } catch (e) { alert('保存失敗'); } finally { setIsSaving(false); }
   };
 
   const handleImg = (e, f) => {
@@ -177,27 +145,17 @@ export default function SettingsPage() {
       return newSlots;
     });
   };
-  const addTimeSlot = (method) => { 
-    setTimeSlots(prev => ({ ...prev, [method]: [...prev[method], ''] })); 
-  };
-  const removeTimeSlot = (method, index) => { 
-    setTimeSlots(prev => ({ ...prev, [method]: prev[method].filter((_, i) => i !== index) })); 
-  };
+  const addTimeSlot = (method) => { setTimeSlots(prev => ({ ...prev, [method]: [...prev[method], ''] })); };
+  const removeTimeSlot = (method, index) => { setTimeSlots(prev => ({ ...prev, [method]: prev[method].filter((_, i) => i !== index) })); };
 
   // --- タブ：基本設定 ---
   const renderGeneralTab = () => (
     <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 animate-in fade-in">
       <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><ImageIcon size={20}/> 基本情報・ロゴ・伝票</h2>
       <div className="space-y-6">
-        
         <div className="space-y-1">
           <label className="text-[11px] font-bold text-[#999999]">アプリ名</label>
-          <input 
-            type="text" 
-            value={generalConfig.appName} 
-            onChange={(e)=>setGeneralConfig({...generalConfig, appName: e.target.value})} 
-            className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E] transition-colors"
-          />
+          <input type="text" value={generalConfig.appName} onChange={(e)=>setGeneralConfig({...generalConfig, appName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E] transition-colors"/>
         </div>
         
         <div className="space-y-4 pt-4 border-t border-[#EAEAEA]">
@@ -205,25 +163,10 @@ export default function SettingsPage() {
           {!generalConfig.logoUrl && <input type="file" accept="image/*" onChange={(e)=>handleImg(e, 'logoUrl')} className="block w-full text-xs" />}
           {generalConfig.logoUrl && (
             <div className="p-6 bg-[#FBFAF9] rounded-2xl border space-y-6 relative">
-              <button 
-                onClick={() => setGeneralConfig({...generalConfig, logoUrl: ''})} 
-                className="absolute top-4 right-4 text-red-400 hover:text-red-600 bg-white p-2 rounded-full shadow-sm transition-colors"
-              >
-                <Trash2 size={16}/>
-              </button>
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] font-bold">表示サイズ: {generalConfig.logoSize}%</span>
-                <input type="range" min="30" max="150" value={generalConfig.logoSize} onChange={(e)=>setGeneralConfig({...generalConfig, logoSize: Number(e.target.value)})} className="w-40 accent-[#2D4B3E]"/>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] font-bold">白背景を透過</span>
-                <button onClick={()=>setGeneralConfig({...generalConfig, logoTransparent: !generalConfig.logoTransparent})} className={`w-12 h-6 rounded-full transition-all ${generalConfig.logoTransparent ? 'bg-[#2D4B3E]' : 'bg-gray-300'}`}>
-                  <div className={`w-4 h-4 bg-white rounded-full mx-1 transition-all ${generalConfig.logoTransparent ? 'translate-x-6' : ''}`}/>
-                </button>
-              </div>
-              <div className="flex justify-center border-t pt-4 bg-white rounded-xl p-4">
-                <img src={generalConfig.logoUrl} style={{width: `${generalConfig.logoSize}%`, mixBlendMode: generalConfig.logoTransparent ? 'multiply' : 'normal'}} className="max-h-24 object-contain" />
-              </div>
+              <button onClick={() => setGeneralConfig({...generalConfig, logoUrl: ''})} className="absolute top-4 right-4 text-red-400 hover:text-red-600 bg-white p-2 rounded-full shadow-sm transition-colors"><Trash2 size={16}/></button>
+              <div className="flex items-center justify-between"><span className="text-[12px] font-bold">表示サイズ: {generalConfig.logoSize}%</span><input type="range" min="30" max="150" value={generalConfig.logoSize} onChange={(e)=>setGeneralConfig({...generalConfig, logoSize: Number(e.target.value)})} className="w-40 accent-[#2D4B3E]"/></div>
+              <div className="flex items-center justify-between"><span className="text-[12px] font-bold">白背景を透過</span><button onClick={()=>setGeneralConfig({...generalConfig, logoTransparent: !generalConfig.logoTransparent})} className={`w-12 h-6 rounded-full transition-all ${generalConfig.logoTransparent ? 'bg-[#2D4B3E]' : 'bg-gray-300'}`}><div className={`w-4 h-4 bg-white rounded-full mx-1 transition-all ${generalConfig.logoTransparent ? 'translate-x-6' : ''}`}/></button></div>
+              <div className="flex justify-center border-t pt-4 bg-white rounded-xl p-4"><img src={generalConfig.logoUrl} style={{width: `${generalConfig.logoSize}%`, mixBlendMode: generalConfig.logoTransparent ? 'multiply' : 'normal'}} className="max-h-24 object-contain" /></div>
             </div>
           )}
         </div>
@@ -233,22 +176,9 @@ export default function SettingsPage() {
           {!generalConfig.slipBgUrl && <input type="file" accept="image/*" onChange={(e)=>handleImg(e, 'slipBgUrl')} className="block w-full text-xs" />}
           {generalConfig.slipBgUrl && (
             <div className="p-6 bg-[#FBFAF9] rounded-2xl border space-y-6 relative">
-              <button 
-                onClick={() => setGeneralConfig({...generalConfig, slipBgUrl: ''})} 
-                className="absolute top-4 right-4 text-red-400 hover:text-red-600 bg-white p-2 rounded-full shadow-sm"
-              >
-                <Trash2 size={16}/>
-              </button>
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] font-bold">透過度: {generalConfig.slipBgOpacity}%</span>
-                <input type="range" min="0" max="100" value={generalConfig.slipBgOpacity} onChange={(e)=>setGeneralConfig({...generalConfig, slipBgOpacity: Number(e.target.value)})} className="w-40 accent-[#2D4B3E]"/>
-              </div>
-              <div className="flex justify-center border-t pt-4">
-                <div className="relative w-48 h-32 bg-white border shadow-sm overflow-hidden flex flex-col justify-between p-2">
-                  <div className="absolute inset-0 z-0 grayscale-[30%] pointer-events-none" style={{ backgroundImage: `url(${generalConfig.slipBgUrl})`, backgroundSize: 'cover', opacity: generalConfig.slipBgOpacity / 100 }} />
-                  <span className="relative z-10 text-[10px] font-bold text-green-700">受 注 書</span>
-                </div>
-              </div>
+              <button onClick={() => setGeneralConfig({...generalConfig, slipBgUrl: ''})} className="absolute top-4 right-4 text-red-400 hover:text-red-600 bg-white p-2 rounded-full shadow-sm"><Trash2 size={16}/></button>
+              <div className="flex items-center justify-between"><span className="text-[12px] font-bold">透過度: {generalConfig.slipBgOpacity}%</span><input type="range" min="0" max="100" value={generalConfig.slipBgOpacity} onChange={(e)=>setGeneralConfig({...generalConfig, slipBgOpacity: Number(e.target.value)})} className="w-40 accent-[#2D4B3E]"/></div>
+              <div className="flex justify-center border-t pt-4"><div className="relative w-48 h-32 bg-white border shadow-sm overflow-hidden flex flex-col justify-between p-2"><div className="absolute inset-0 z-0 grayscale-[30%] pointer-events-none" style={{ backgroundImage: `url(${generalConfig.slipBgUrl})`, backgroundSize: 'cover', opacity: generalConfig.slipBgOpacity / 100 }} /><span className="relative z-10 text-[10px] font-bold text-green-700">受 注 書</span></div></div>
             </div>
           )}
         </div>
@@ -257,26 +187,17 @@ export default function SettingsPage() {
           <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><ShieldCheck size={16}/> システムセキュリティ</h3>
           <div className="bg-red-50 p-6 rounded-2xl border border-red-100 space-y-3">
             <div className="space-y-1">
-              <label className="text-[11px] font-bold text-red-800">管理者パスワード</label>
+              <label className="text-[11px] font-bold text-red-800">管理者パスワード (設定変更・注文削除用)</label>
               <div className="relative w-full max-w-[240px]">
-                <input 
-                  type={showPassword ? "text" : "password"} 
-                  value={generalConfig.systemPassword || ''} 
-                  onChange={(e)=>setGeneralConfig({...generalConfig, systemPassword: e.target.value})} 
-                  className="w-full h-12 bg-white border border-red-200 rounded-xl px-4 font-bold outline-none focus:border-red-400 text-red-700 tracking-widest pr-10"
-                />
-                <button 
-                  type="button" 
-                  onClick={() => setShowPassword(!showPassword)} 
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600"
-                >
+                <input type={showPassword ? "text" : "password"} value={generalConfig.systemPassword || ''} onChange={(e)=>setGeneralConfig({...generalConfig, systemPassword: e.target.value})} className="w-full h-12 bg-white border border-red-200 rounded-xl px-4 font-bold outline-none focus:border-red-400 text-red-700 tracking-widest pr-10"/>
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600">
                   {showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}
                 </button>
               </div>
             </div>
+            <p className="text-[10px] text-red-600 font-bold leading-relaxed">※初期値は「7777」です。</p>
           </div>
         </div>
-
       </div>
     </div>
   );
@@ -287,49 +208,17 @@ export default function SettingsPage() {
       <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><ListChecks size={20}/> 受注ステータス管理</h2>
       <div className="flex gap-2 p-1 bg-[#F7F7F7] rounded-xl mb-4">
         {['template', 'custom'].map(t => (
-          <button 
-            key={t} 
-            onClick={() => setStatusConfig({...statusConfig, type: t})} 
-            className={`flex-1 py-3 rounded-lg font-bold text-[12px] ${statusConfig.type === t ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}
-          >
-            {t === 'template' ? '標準' : 'カスタム'}
-          </button>
+          <button key={t} onClick={() => setStatusConfig({...statusConfig, type: t})} className={`flex-1 py-3 rounded-lg font-bold text-[12px] ${statusConfig.type === t ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}>{t === 'template' ? '標準' : 'カスタム'}</button>
         ))}
       </div>
       <div className="space-y-3">
         {(statusConfig.type === 'template' ? ['未対応', '制作中', '制作完了', '配達中'] : statusConfig.customLabels).map((l, i) => (
           <div key={i} className="flex gap-2">
-            <input 
-              type="text" 
-              value={l} 
-              readOnly={statusConfig.type==='template'} 
-              onChange={(e) => { 
-                if(statusConfig.type==='custom'){ 
-                  const n = [...statusConfig.customLabels]; 
-                  n[i] = e.target.value; 
-                  setStatusConfig({...statusConfig, customLabels: n}); 
-                } 
-              }} 
-              className={`flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none ${statusConfig.type==='template'?'text-[#999999] cursor-not-allowed':'focus:border-[#2D4B3E]'}`} 
-            />
-            {statusConfig.type === 'custom' && (
-              <button 
-                onClick={() => setStatusConfig({...statusConfig, customLabels: statusConfig.customLabels.filter((_, idx) => idx !== i)})} 
-                className="text-red-300 p-2 hover:text-red-500"
-              >
-                <Trash2 size={18}/>
-              </button>
-            )}
+            <input type="text" value={l} readOnly={statusConfig.type==='template'} onChange={(e) => { if(statusConfig.type==='custom'){ const n = [...statusConfig.customLabels]; n[i] = e.target.value; setStatusConfig({...statusConfig, customLabels: n}); } }} className={`flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none ${statusConfig.type==='template'?'text-[#999999] cursor-not-allowed':'focus:border-[#2D4B3E]'}`} />
+            {statusConfig.type === 'custom' && <button onClick={() => setStatusConfig({...statusConfig, customLabels: statusConfig.customLabels.filter((_, idx) => idx !== i)})} className="text-red-300 p-2 hover:text-red-500"><Trash2 size={18}/></button>}
           </div>
         ))}
-        {statusConfig.type === 'custom' && (
-          <button 
-            onClick={() => setStatusConfig({...statusConfig, customLabels: [...statusConfig.customLabels, '新状態']})} 
-            className="w-full py-3 border-2 border-dashed border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all"
-          >
-            + 項目を追加
-          </button>
-        )}
+        {statusConfig.type === 'custom' && <button onClick={() => setStatusConfig({...statusConfig, customLabels: [...statusConfig.customLabels, '新状態']})} className="w-full py-3 border-2 border-dashed border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ 項目を追加</button>}
       </div>
     </div>
   );
@@ -339,94 +228,37 @@ export default function SettingsPage() {
     <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
       {(shop[listKey] || []).map(sh => (
         <div key={sh.id} className="flex flex-col gap-2 bg-[#FBFAF9] p-3 rounded-xl border border-[#EAEAEA] text-[11px] relative">
-          <button 
-            onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].filter(h=>h.id!==sh.id)}:s))} 
-            className="absolute top-2 right-2 text-red-400 hover:text-red-600"
-          >
-            <X size={14}/>
-          </button>
-
+          <button onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].filter(h=>h.id!==sh.id)}:s))} className="absolute top-2 right-2 text-red-400 hover:text-red-600"><X size={14}/></button>
           <div className="flex gap-2 pr-6">
-            <select 
-              value={sh.repeatType || '今年のみ'} 
-              onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, repeatType:e.target.value}:h)}:s))} 
-              className="border rounded p-1.5 outline-none font-bold bg-white"
-            >
-              <option value="今年のみ">単日</option>
-              <option value="毎週">毎週</option>
-              <option value="毎月">毎月</option>
-              <option value="毎年">毎年</option>
-              <option value="祝日">祝日</option>
+            <select value={sh.repeatType || '今年のみ'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, repeatType:e.target.value}:h)}:s))} className="border rounded p-1.5 outline-none font-bold bg-white">
+              <option value="今年のみ">単日</option><option value="毎週">毎週</option><option value="毎月">毎月</option><option value="毎年">毎年</option><option value="祝日">祝日</option>
             </select>
             {sh.repeatType !== '祝日' && (
               <div className="flex-1">
                 {sh.repeatType === '毎週' ? (
-                  <select 
-                    value={sh.date} 
-                    onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, date:e.target.value}:h)}:s))} 
-                    className="w-full border rounded p-1.5 outline-none bg-white"
-                  >
-                    <option value="">曜日を選択</option>
-                    <option value="日">日曜日</option><option value="月">月曜日</option><option value="火">火曜日</option>
-                    <option value="水">水曜日</option><option value="木">木曜日</option><option value="金">金曜日</option><option value="土">土曜日</option>
+                  <select value={sh.date} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, date:e.target.value}:h)}:s))} className="w-full border rounded p-1.5 outline-none bg-white">
+                    <option value="">曜日を選択</option><option value="日">日曜日</option><option value="月">月曜日</option><option value="火">火曜日</option><option value="水">水曜日</option><option value="木">木曜日</option><option value="金">金曜日</option><option value="土">土曜日</option>
                   </select>
                 ) : sh.repeatType === '毎月' ? (
-                  <select 
-                    value={sh.date} 
-                    onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, date:e.target.value}:h)}:s))} 
-                    className="w-full border rounded p-1.5 outline-none bg-white"
-                  >
-                    <option value="">日付を選択</option>
-                    {[...Array(31)].map((_, i) => <option key={i} value={`${i+1}日`}>{i+1}日</option>)}
+                  <select value={sh.date} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, date:e.target.value}:h)}:s))} className="w-full border rounded p-1.5 outline-none bg-white">
+                    <option value="">日付を選択</option>{[...Array(31)].map((_, i) => <option key={i} value={`${i+1}日`}>{i+1}日</option>)}
                   </select>
-                ) : (
-                  <input 
-                    type={sh.repeatType==='毎年' ? 'text' : 'date'} 
-                    placeholder="MM-DD" 
-                    value={sh.date} 
-                    onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, date:e.target.value}:h)}:s))} 
-                    className="w-full border rounded p-1.5 outline-none bg-white"
-                  />
-                )}
+                ) : <input type={sh.repeatType==='毎年' ? 'text' : 'date'} placeholder="MM-DD" value={sh.date} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, date:e.target.value}:h)}:s))} className="w-full border rounded p-1.5 outline-none bg-white"/>}
               </div>
             )}
           </div>
-
           <div className="flex gap-2">
-            <select 
-              value={sh.type || 'closed'} 
-              onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, type:e.target.value}:h)}:s))} 
-              className={`border rounded p-1.5 outline-none font-bold ${sh.type === 'closed' ? 'bg-red-50 text-red-600' : sh.type === 'changed' ? 'bg-orange-50 text-orange-600' : 'bg-green-50 text-green-600'}`}
-            >
-              <option value="closed">休業</option>
-              <option value="changed">時間変更</option>
-              <option value="open">特別営業</option>
+            <select value={sh.type || 'closed'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, type:e.target.value}:h)}:s))} className={`border rounded p-1.5 outline-none font-bold ${sh.type === 'closed' ? 'bg-red-50 text-red-600' : sh.type === 'changed' ? 'bg-orange-50 text-orange-600' : 'bg-green-50 text-green-600'}`}>
+              <option value="closed">休業</option><option value="changed">時間変更</option><option value="open">特別営業</option>
             </select>
-            <input 
-              type="text" 
-              placeholder="理由メモ" 
-              value={sh.note || ''} 
-              onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, note:e.target.value}:h)}:s))} 
-              className="flex-1 border rounded p-1.5 outline-none bg-white"
-            />
+            <input type="text" placeholder="理由メモ" value={sh.note || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, note:e.target.value}:h)}:s))} className="flex-1 border rounded p-1.5 outline-none bg-white"/>
           </div>
-
           {sh.type === 'changed' && (
             <div className="flex gap-2 items-center bg-white p-2 rounded border border-orange-200 mt-1 animate-in slide-in-from-top-1">
               <span className="text-[10px] font-bold text-orange-600">変更後:</span>
-              <input 
-                type="time" 
-                value={sh.changedOpenTime || ''} 
-                onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, changedOpenTime:e.target.value}:h)}:s))} 
-                className="border rounded p-1 text-[10px] outline-none"
-              />
+              <input type="time" value={sh.changedOpenTime || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, changedOpenTime:e.target.value}:h)}:s))} className="border rounded p-1 text-[10px] outline-none"/>
               <span>〜</span>
-              <input 
-                type="time" 
-                value={sh.changedCloseTime || ''} 
-                onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, changedCloseTime:e.target.value}:h)}:s))} 
-                className="border rounded p-1 text-[10px] outline-none"
-              />
+              <input type="time" value={sh.changedCloseTime || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, changedCloseTime:e.target.value}:h)}:s))} className="border rounded p-1 text-[10px] outline-none"/>
             </div>
           )}
         </div>
@@ -439,12 +271,7 @@ export default function SettingsPage() {
     <div className="space-y-8 animate-in fade-in">
       {shops.map(shop => (
         <div key={shop.id} className="bg-white rounded-[32px] border p-8 shadow-sm relative space-y-8 text-left">
-          <button 
-            onClick={()=>setShops(shops.filter(s=>s.id!==shop.id))} 
-            className="absolute top-6 right-6 p-2 text-red-300 hover:text-red-500 transition-colors"
-          >
-            <Trash2 size={20}/>
-          </button>
+          <button onClick={()=>setShops(shops.filter(s=>s.id!==shop.id))} className="absolute top-6 right-6 p-2 text-red-300 hover:text-red-500 transition-colors"><Trash2 size={20}/></button>
           
           <div className="flex items-center gap-3">
             <input type="checkbox" checked={shop.isActive} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, isActive:e.target.checked}:s))} className="w-6 h-6 accent-[#2D4B3E]"/>
@@ -473,12 +300,7 @@ export default function SettingsPage() {
                 <input type="time" value={shop.closeTime || '19:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, closeTime:e.target.value}:s))} className="border rounded p-1 text-xs outline-none bg-white"/>
               </div>
               {renderSpecialHoursList(shop, 'specialHours')}
-              <button 
-                onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, specialHours:[...(s.specialHours||[]), {id:Date.now(), date:'', type:'closed', repeatType:'今年のみ', note:''}]}:s))} 
-                className="w-full py-2 bg-[#FBFAF9] border-dashed border border-[#EAEAEA] rounded-xl text-[10px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all"
-              >
-                + 特別ルールを追加
-              </button>
+              <button onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, specialHours:[...(s.specialHours||[]), {id:Date.now(), date:'', type:'closed', repeatType:'今年のみ', note:''}]}:s))} className="w-full py-2 bg-[#FBFAF9] border-dashed border border-[#EAEAEA] rounded-xl text-[10px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ 特別ルールを追加</button>
             </div>
             
             <div className="space-y-4">
@@ -489,61 +311,12 @@ export default function SettingsPage() {
                 <input type="time" value={shop.deliveryCloseTime || '18:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryCloseTime:e.target.value}:s))} className="border border-[#D97C8F]/30 rounded p-1 text-xs outline-none bg-white"/>
               </div>
               {renderSpecialHoursList(shop, 'deliverySpecialHours')}
-              <button 
-                onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:[...(s.deliverySpecialHours||[]), {id:Date.now(), date:'', type:'closed', repeatType:'今年のみ', note:''}]}:s))} 
-                className="w-full py-2 bg-[#D97C8F]/5 border-dashed border border-[#D97C8F]/30 rounded-xl text-[10px] font-bold text-[#D97C8F]/80 hover:text-[#D97C8F] transition-all"
-              >
-                + 配達特別ルールを追加
-              </button>
-            </div>
-          </div>
-
-          {/* ★ 新規追加: 各受取方法の注意事項（店舗ごと） */}
-          <div className="pt-6 border-t border-[#FBFAF9] space-y-4">
-            <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><AlertCircle size={16}/> 注意書き・ご案内テキスト設定</h3>
-            <p className="text-[10px] text-[#999999]">お客様のオーダー画面で表示される、各受取方法ごとの注意書きを店舗別に設定できます。</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">店頭受取のご案内</label>
-                <textarea 
-                  value={shop.pickupNote ?? 'ご来店予定日時に店舗までお越しください。'} 
-                  onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, pickupNote:e.target.value}:s))} 
-                  className="w-full h-24 bg-[#FBFAF9] border rounded-xl p-3 text-[12px] outline-none resize-none focus:border-[#2D4B3E]" 
-                  placeholder="店頭受取時の注意事項"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">自社配達のご案内</label>
-                <textarea 
-                  value={shop.deliveryNote ?? '交通状況により配達時間が前後する場合がございます。'} 
-                  onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryNote:e.target.value}:s))} 
-                  className="w-full h-24 bg-[#FBFAF9] border rounded-xl p-3 text-[12px] outline-none resize-none focus:border-[#2D4B3E]" 
-                  placeholder="自社配達時の注意事項"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">業者配送のご案内</label>
-                <textarea 
-                  value={shop.shippingNote ?? '発送準備期間＋配送日数がかかります。交通状況により遅延する場合がございます。'} 
-                  onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, shippingNote:e.target.value}:s))} 
-                  className="w-full h-24 bg-[#FBFAF9] border rounded-xl p-3 text-[12px] outline-none resize-none focus:border-[#2D4B3E]" 
-                  placeholder="業者配送時の注意事項"
-                />
-              </div>
+              <button onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:[...(s.deliverySpecialHours||[]), {id:Date.now(), date:'', type:'closed', repeatType:'今年のみ', note:''}]}:s))} className="w-full py-2 bg-[#D97C8F]/5 border-dashed border border-[#D97C8F]/30 rounded-xl text-[10px] font-bold text-[#D97C8F]/80 hover:text-[#D97C8F] transition-all">+ 配達特別ルールを追加</button>
             </div>
           </div>
         </div>
       ))}
-      <button 
-        onClick={()=>setShops([...shops, {
-          id:Date.now(), name:'', isActive:true, openTime:'10:00', closeTime:'19:00', deliveryOpenTime:'11:00', deliveryCloseTime:'18:00', 
-          specialHours:[], deliverySpecialHours:[], enabledTatePatterns: ['p5', 'p7'],
-          pickupNote: 'ご来店予定日時に店舗までお越しください。', deliveryNote: '交通状況により配達時間が前後する場合がございます。', shippingNote: '発送準備期間＋配送日数がかかります。交通状況により遅延する場合がございます。'
-        }])} 
-        className="w-full py-10 border-2 border-dashed border-[#EAEAEA] rounded-[32px] text-[#999999] font-bold transition-all hover:border-[#2D4B3E] shadow-sm"
-      >
-        + 店舗を新規追加
-      </button>
+      <button onClick={()=>setShops([...shops, {id:Date.now(), name:'', isActive:true, openTime:'10:00', closeTime:'19:00', deliveryOpenTime:'11:00', deliveryCloseTime:'18:00', specialHours:[], deliverySpecialHours:[], enabledTatePatterns: ['p5', 'p7']}])} className="w-full py-10 border-2 border-dashed border-[#EAEAEA] rounded-[32px] text-[#999999] font-bold transition-all hover:border-[#2D4B3E] shadow-sm">+ 店舗を新規追加</button>
     </div>
   );
 
@@ -555,28 +328,13 @@ export default function SettingsPage() {
 
         return (
           <div key={item.id} className="bg-white rounded-[32px] border p-8 shadow-sm relative space-y-6 text-left">
-            <button 
-              onClick={()=>setFlowerItems(flowerItems.filter(i=>i.id!==item.id))} 
-              className="absolute top-6 right-6 p-2 text-red-300 hover:text-red-500 transition-colors"
-            >
-              <Trash2 size={18}/>
-            </button>
+            <button onClick={()=>setFlowerItems(flowerItems.filter(i=>i.id!==item.id))} className="absolute top-6 right-6 p-2 text-red-300 hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-10 md:pr-14 pt-2">
-              <input 
-                type="text" 
-                value={item.name} 
-                onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, name:e.target.value}:i))} 
-                className="w-full h-12 bg-transparent border-b-2 text-[20px] font-bold outline-none focus:border-[#2D4B3E] transition-all" 
-                placeholder="商品名" 
-              />
+              <input type="text" value={item.name} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, name:e.target.value}:i))} className="w-full h-12 bg-transparent border-b-2 text-[20px] font-bold outline-none focus:border-[#2D4B3E] transition-all" placeholder="商品名" />
               <div className="flex items-center gap-2 justify-start md:justify-end">
                 <span className="text-[11px] font-bold text-[#999999]">配送サイズ (箱):</span>
-                <select 
-                  value={item.defaultBoxSize || ''} 
-                  onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, defaultBoxSize:e.target.value}:i))} 
-                  className="h-10 bg-[#FBFAF9] border rounded-xl px-3 font-bold text-[13px] outline-none focus:border-[#2D4B3E]"
-                >
+                <select value={item.defaultBoxSize || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, defaultBoxSize:e.target.value}:i))} className="h-10 bg-[#FBFAF9] border rounded-xl px-3 font-bold text-[13px] outline-none focus:border-[#2D4B3E]">
                   <option value="">未設定</option>
                   {shippingSizes.map(s => <option key={s} value={s}>{s}サイズ</option>)}
                 </select>
@@ -585,37 +343,18 @@ export default function SettingsPage() {
 
             {/* ★ 価格制限の設定欄 */}
             <div className="grid grid-cols-3 gap-4 pt-2 mt-2">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">最低注文料金 (税抜)</label>
-                <input type="number" value={item.minPrice || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, minPrice:Number(e.target.value)}:i))} className="w-full h-10 bg-[#FBFAF9] border rounded-xl px-3 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="例: 3000"/>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">最大注文料金 (税抜)</label>
-                <input type="number" value={item.maxPrice || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, maxPrice:Number(e.target.value)}:i))} className="w-full h-10 bg-[#FBFAF9] border rounded-xl px-3 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="例: 50000"/>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">金額の刻み幅</label>
-                <input type="number" value={item.stepPrice || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, stepPrice:Number(e.target.value)}:i))} className="w-full h-10 bg-[#FBFAF9] border rounded-xl px-3 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="例: 1000"/>
-              </div>
+              <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">最低注文料金 (税抜)</label><input type="number" value={item.minPrice || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, minPrice:Number(e.target.value)}:i))} className="w-full h-10 bg-[#FBFAF9] border rounded-xl px-3 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="例: 3000"/></div>
+              <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">最大注文料金 (税抜)</label><input type="number" value={item.maxPrice || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, maxPrice:Number(e.target.value)}:i))} className="w-full h-10 bg-[#FBFAF9] border rounded-xl px-3 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="例: 50000"/></div>
+              <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">金額の刻み幅</label><input type="number" value={item.stepPrice || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, stepPrice:Number(e.target.value)}:i))} className="w-full h-10 bg-[#FBFAF9] border rounded-xl px-3 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="例: 1000"/></div>
             </div>
 
-            {/* 取扱店舗の設定 */}
+            {/* ★ 取扱店舗の設定 */}
             <div className="pt-4 pb-2 border-t border-[#FBFAF9] mt-2">
               <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between mb-3">
                 <p className="text-[12px] font-bold text-[#2D4B3E] flex items-center gap-2"><MapPin size={16}/> 取扱店舗</p>
                 <div className="flex gap-2 p-1 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA] w-fit">
-                  <button 
-                    onClick={() => setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, targetShops: 'all'}:i))} 
-                    className={`px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all ${isAllShops ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}
-                  >
-                    全店舗
-                  </button>
-                  <button 
-                    onClick={() => setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, targetShops: Array.isArray(i.targetShops) ? i.targetShops : []}:i))} 
-                    className={`px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all ${!isAllShops ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}
-                  >
-                    指定店舗のみ
-                  </button>
+                  <button onClick={() => setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, targetShops: 'all'}:i))} className={`px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all ${isAllShops ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}>全店舗</button>
+                  <button onClick={() => setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, targetShops: Array.isArray(i.targetShops) ? i.targetShops : []}:i))} className={`px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all ${!isAllShops ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}>指定店舗のみ</button>
                 </div>
               </div>
               
@@ -625,16 +364,7 @@ export default function SettingsPage() {
                     const isChecked = Array.isArray(item.targetShops) && item.targetShops.includes(shop.id);
                     return (
                       <label key={shop.id} className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-all ${isChecked ? 'bg-white border-[#2D4B3E]/30 text-[#2D4B3E] shadow-sm' : 'bg-transparent border-transparent text-[#999999] hover:bg-white'}`}>
-                        <input 
-                          type="checkbox" 
-                          checked={isChecked} 
-                          onChange={(e)=>{
-                            const current = Array.isArray(item.targetShops) ? item.targetShops : [];
-                            const next = e.target.checked ? [...current, shop.id] : current.filter(id => id !== shop.id);
-                            setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, targetShops: next}:i));
-                          }} 
-                          className="accent-[#2D4B3E] w-3.5 h-3.5"
-                        />
+                        <input type="checkbox" checked={isChecked} onChange={(e)=>{const current = Array.isArray(item.targetShops) ? item.targetShops : []; const next = e.target.checked ? [...current, shop.id] : current.filter(id => id !== shop.id); setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, targetShops: next}:i));}} className="accent-[#2D4B3E] w-3.5 h-3.5"/>
                         <span className="text-[11px] font-bold">{shop.name}</span>
                       </label>
                     );
@@ -658,32 +388,16 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-[#FBFAF9] pt-6">
               <div className="space-y-4">
                 <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={16}/> 納期設定</p>
-                <div className="space-y-2">
-                  <label className="text-[9px] font-bold text-[#999999]">通常納期 (日後)</label>
-                  <input type="number" value={item.normalLeadDays} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, normalLeadDays:Number(e.target.value)}:i))} className="w-full bg-[#FBFAF9] border rounded-lg h-10 px-3 font-bold outline-none focus:border-[#2D4B3E]"/>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[9px] font-bold text-[#999999]">業者配送 発送までの準備(日)</label>
-                  <input type="number" value={item.shippingLeadDays} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, shippingLeadDays:Number(e.target.value)}:i))} className="w-full bg-[#FBFAF9] border rounded-lg h-10 px-3 font-bold outline-none focus:border-[#2D4B3E]"/>
-                </div>
+                <div className="space-y-2"><label className="text-[9px] font-bold text-[#999999]">通常納期 (日後)</label><input type="number" value={item.normalLeadDays} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, normalLeadDays:Number(e.target.value)}:i))} className="w-full bg-[#FBFAF9] border rounded-lg h-10 px-3 font-bold outline-none focus:border-[#2D4B3E]"/></div>
+                <div className="space-y-2"><label className="text-[9px] font-bold text-[#999999]">業者配送 発送までの準備(日)</label><input type="number" value={item.shippingLeadDays} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, shippingLeadDays:Number(e.target.value)}:i))} className="w-full bg-[#FBFAF9] border rounded-lg h-10 px-3 font-bold outline-none focus:border-[#2D4B3E]"/></div>
               </div>
 
               <div className="space-y-4 px-4 border-l border-r border-[#FBFAF9]">
                 <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2"><ShieldCheck size={16}/> 持込設定</p>
                 {['canBringFlowers', 'canBringVase'].map(key => (
                   <div key={key} className="bg-[#FBFAF9] p-3 rounded-xl border space-y-2">
-                    <label className="flex items-center justify-between text-[12px] font-bold">
-                      {key==='canBringFlowers'?'花材持込':'花器持込'}
-                      <input type="checkbox" checked={item[key]} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, [key]:e.target.checked}:i))} className="accent-[#2D4B3E] w-4 h-4"/>
-                    </label>
-                    {item[key] && (
-                      <div className="flex items-center justify-between text-[10px] font-bold text-[#555555]">
-                        <span>持込時納期</span>
-                        <div className="flex items-center gap-1">
-                          <input type="number" value={item[key+'LeadDays']||7} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, [key+'LeadDays']:Number(e.target.value)}:i))} className="w-10 border rounded text-center h-8 font-black"/>日後
-                        </div>
-                      </div>
-                    )}
+                    <label className="flex items-center justify-between text-[12px] font-bold">{key==='canBringFlowers'?'花材持込':'花器持込'}<input type="checkbox" checked={item[key]} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, [key]:e.target.checked}:i))} className="accent-[#2D4B3E] w-4 h-4"/></label>
+                    {item[key] && <div className="flex items-center justify-between text-[10px] font-bold text-[#555555]"><span>持込時納期</span><div className="flex items-center gap-1"><input type="number" value={item[key+'LeadDays']||7} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, [key+'LeadDays']:Number(e.target.value)}:i))} className="w-10 border rounded text-center h-8 font-black"/>日後</div></div>}
                   </div>
                 ))}
               </div>
@@ -691,10 +405,7 @@ export default function SettingsPage() {
               <div className="space-y-4">
                 <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2"><RotateCcw size={16}/> 器の回収/返却</p>
                 <div className="bg-[#FBFAF9] p-3 rounded-xl border space-y-3">
-                  <label className="flex items-center justify-between text-[12px] font-bold cursor-pointer">
-                    器の回収を必要とする
-                    <input type="checkbox" checked={item.hasReturn} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, hasReturn:e.target.checked}:i))} className="accent-[#2D4B3E] w-5 h-5"/>
-                  </label>
+                  <label className="flex items-center justify-between text-[12px] font-bold cursor-pointer">器の回収を必要とする<input type="checkbox" checked={item.hasReturn} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, hasReturn:e.target.checked}:i))} className="accent-[#2D4B3E] w-5 h-5"/></label>
                   <p className="text-[9px] text-[#999999] leading-tight font-bold">※注文時に「器返却あり」の送料計算を自動で有効化します。</p>
                 </div>
               </div>
@@ -702,12 +413,7 @@ export default function SettingsPage() {
           </div>
         );
       })}
-      <button 
-        onClick={()=>setFlowerItems([...flowerItems, {id:Date.now(), name:'', targetShops: 'all', normalLeadDays:2, shippingLeadDays:3, canBringFlowers:false, hasReturn:false, canPickup:true, canDelivery:true, canShipping:true, minPrice:3000, maxPrice:50000, stepPrice:1000}])} 
-        className="w-full py-10 border-2 border-dashed border-[#EAEAEA] rounded-[32px] text-[#999999] font-bold transition-all hover:border-[#2D4B3E]"
-      >
-        + 商品を追加
-      </button>
+      <button onClick={()=>setFlowerItems([...flowerItems, {id:Date.now(), name:'', targetShops: 'all', normalLeadDays:2, shippingLeadDays:3, canBringFlowers:false, hasReturn:false, canPickup:true, canDelivery:true, canShipping:true, minPrice:3000, maxPrice:50000, stepPrice:1000}])} className="w-full py-10 border-2 border-dashed border-[#EAEAEA] rounded-[32px] text-[#999999] font-bold transition-all hover:border-[#2D4B3E]">+ 商品を追加</button>
     </div>
   );
 
@@ -728,18 +434,11 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 {timeSlots[method].map((slot, i) => (
                   <div key={i} className="flex gap-2">
-                    <input 
-                      type="text" 
-                      value={slot} 
-                      onChange={(e) => handleTimeSlotChange(method, i, e.target.value)} 
-                      className={`flex-1 px-3 py-1.5 rounded-lg border bg-white text-[13px] font-bold outline-none focus:border-[#2D4B3E] ${method==='pickup'?'border-orange-200':method==='delivery'?'border-blue-200':'border-green-200'}`} 
-                    />
+                    <input type="text" value={slot} onChange={(e) => handleTimeSlotChange(method, i, e.target.value)} className={`flex-1 px-3 py-1.5 rounded-lg border bg-white text-[13px] font-bold outline-none focus:border-[#2D4B3E] ${method==='pickup'?'border-orange-200':method==='delivery'?'border-blue-200':'border-green-200'}`} />
                     <button onClick={() => removeTimeSlot(method, i)} className="text-red-300 p-1.5 hover:text-red-500 transition-colors"><X size={14}/></button>
                   </div>
                 ))}
-                <button onClick={() => addTimeSlot(method)} className={`text-[11px] font-bold flex items-center gap-1 mt-2 transition-colors ${method==='pickup'?'text-orange-600 hover:text-orange-800':method==='delivery'?'text-blue-600 hover:text-blue-800':'text-green-600 hover:text-green-800'}`}>
-                  <Plus size={14}/> 枠を追加
-                </button>
+                <button onClick={() => addTimeSlot(method)} className={`text-[11px] font-bold flex items-center gap-1 mt-2 transition-colors ${method==='pickup'?'text-orange-600 hover:text-orange-800':method==='delivery'?'text-blue-600 hover:text-blue-800':'text-green-600 hover:text-green-800'}`}><Plus size={14}/> 枠を追加</button>
               </div>
             </div>
           ))}
@@ -752,10 +451,7 @@ export default function SettingsPage() {
           {deliveryAreas.map(a => (
             <div key={a.id} className="flex gap-2 bg-[#FBFAF9] p-2 rounded-xl border border-[#EAEAEA]">
               <input type="text" value={a.name} onChange={(e)=>setDeliveryAreas(deliveryAreas.map(x=>x.id===a.id?{...x, name:e.target.value}:x))} className="flex-[2] h-10 bg-white border rounded-xl px-3 text-[13px] font-bold focus:border-[#2D4B3E] outline-none" placeholder="判定用キーワード (例: 中央区, 北区)"/>
-              <div className="flex-1 flex items-center gap-1 bg-white border rounded-xl px-3 h-10">
-                <span className="text-[10px] text-[#999999] font-bold">¥</span>
-                <input type="number" value={a.fee} onChange={(e)=>setDeliveryAreas(deliveryAreas.map(x=>x.id===a.id?{...x, fee:Number(e.target.value)}:x))} className="w-full bg-transparent text-right font-bold text-[13px] outline-none"/>
-              </div>
+              <div className="flex-1 flex items-center gap-1 bg-white border rounded-xl px-3 h-10"><span className="text-[10px] text-[#999999] font-bold">¥</span><input type="number" value={a.fee} onChange={(e)=>setDeliveryAreas(deliveryAreas.map(x=>x.id===a.id?{...x, fee:Number(e.target.value)}:x))} className="w-full bg-transparent text-right font-bold text-[13px] outline-none"/></div>
               <button onClick={()=>setDeliveryAreas(deliveryAreas.filter(x=>x.id!==a.id))} className="text-red-300 px-2 hover:text-red-500"><Trash2 size={16}/></button>
             </div>
           ))}
@@ -766,23 +462,14 @@ export default function SettingsPage() {
       <div className="pt-6 space-y-4 border-t border-[#EAEAEA]">
         <label className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Box size={16}/> 梱包（箱代）の計算ロジック</label>
         <div className="flex gap-2 bg-[#FBFAF9] p-1 rounded-xl w-fit">
-          {[{id:'flat',l:'一律'},{id:'price_based',l:'商品代ベース'}].map(t=>(
-            <button key={t.id} onClick={()=>setBoxFeeConfig({...boxFeeConfig, type:t.id})} className={`px-4 py-2 rounded-lg text-xs font-bold ${boxFeeConfig.type===t.id?'bg-white shadow text-[#2D4B3E]':'text-[#999999]'}`}>{t.l}</button>
-          ))}
+          {[{id:'flat',l:'一律'},{id:'price_based',l:'商品代ベース'}].map(t=>(<button key={t.id} onClick={()=>setBoxFeeConfig({...boxFeeConfig, type:t.id})} className={`px-4 py-2 rounded-lg text-xs font-bold ${boxFeeConfig.type===t.id?'bg-white shadow text-[#2D4B3E]':'text-[#999999]'}`}>{t.l}</button>))}
         </div>
         {boxFeeConfig.type === 'flat' ? (
-          <div className="flex items-center gap-2 bg-[#FBFAF9] p-4 rounded-xl border w-fit">
-            <span className="text-[12px] font-bold">一律加算:</span>
-            <input type="number" value={boxFeeConfig.flatFee} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, flatFee:Number(e.target.value)})} className="w-20 h-8 rounded border px-2 text-right font-bold focus:border-[#2D4B3E] outline-none"/>円
-          </div>
+          <div className="flex items-center gap-2 bg-[#FBFAF9] p-4 rounded-xl border w-fit"><span className="text-[12px] font-bold">一律加算:</span><input type="number" value={boxFeeConfig.flatFee} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, flatFee:Number(e.target.value)})} className="w-20 h-8 rounded border px-2 text-right font-bold focus:border-[#2D4B3E] outline-none"/>円</div>
         ) : (
           <div className="space-y-2 bg-[#FBFAF9] p-4 rounded-xl border">
             {boxFeeConfig.priceTiers.map((tier, i) => (
-              <div key={i} className="flex items-center gap-2 text-[12px] font-bold">
-                <input type="number" value={tier.minPrice} onChange={(e)=>{const n=[...boxFeeConfig.priceTiers];n[i].minPrice=Number(e.target.value);setBoxFeeConfig({...boxFeeConfig,priceTiers:n})}} className="w-24 h-8 rounded border px-2 focus:border-[#2D4B3E] outline-none"/>
-                円以上なら 箱代
-                <input type="number" value={tier.fee} onChange={(e)=>{const n=[...boxFeeConfig.priceTiers];n[i].fee=Number(e.target.value);setBoxFeeConfig({...boxFeeConfig,priceTiers:n})}} className="w-20 h-8 rounded border px-2 text-right focus:border-[#2D4B3E] outline-none"/>円
-              </div>
+              <div key={i} className="flex items-center gap-2 text-[12px] font-bold"><input type="number" value={tier.minPrice} onChange={(e)=>{const n=[...boxFeeConfig.priceTiers];n[i].minPrice=Number(e.target.value);setBoxFeeConfig({...boxFeeConfig,priceTiers:n})}} className="w-24 h-8 rounded border px-2 focus:border-[#2D4B3E] outline-none"/>円以上なら 箱代<input type="number" value={tier.fee} onChange={(e)=>{const n=[...boxFeeConfig.priceTiers];n[i].fee=Number(e.target.value);setBoxFeeConfig({...boxFeeConfig,priceTiers:n})}} className="w-20 h-8 rounded border px-2 text-right focus:border-[#2D4B3E] outline-none"/>円</div>
             ))}
             <button onClick={()=>setBoxFeeConfig({...boxFeeConfig, priceTiers:[...boxFeeConfig.priceTiers, {minPrice:0,fee:0}]})} className="text-[10px] text-[#2D4B3E] font-bold">+ 条件追加</button>
           </div>
@@ -790,15 +477,11 @@ export default function SettingsPage() {
       </div>
 
       <div className="space-y-4 border-t border-[#EAEAEA] pt-8">
-        <div className="flex justify-between items-center">
-          <label className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><CalendarIcon size={16}/> クール便 適用期間設定</label>
-          <button onClick={()=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: [...boxFeeConfig.coolBinPeriods, {id:Date.now(), start:'06-01', end:'09-30', note:''}]})} className="text-[10px] bg-[#2D4B3E] text-white px-3 py-1.5 rounded-full font-bold shadow-sm transition-all hover:bg-[#1f352b]">+ 期間を追加</button>
-        </div>
+        <div className="flex justify-between items-center"><label className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><CalendarIcon size={16}/> クール便 適用期間設定</label><button onClick={()=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: [...boxFeeConfig.coolBinPeriods, {id:Date.now(), start:'06-01', end:'09-30', note:''}]})} className="text-[10px] bg-[#2D4B3E] text-white px-3 py-1.5 rounded-full font-bold shadow-sm transition-all hover:bg-[#1f352b]">+ 期間を追加</button></div>
         <div className="grid grid-cols-1 gap-3">
           {boxFeeConfig.coolBinPeriods.map(p => (
             <div key={p.id} className="flex flex-wrap gap-2 items-center bg-[#FBFAF9] p-3 rounded-2xl border border-[#EAEAEA] shadow-sm">
-              <input type="text" value={p.start} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.map(x=>x.id===p.id?{...x, start:e.target.value}:x)})} className="w-16 h-9 border rounded-lg text-center text-[11px] font-bold outline-none focus:border-[#2D4B3E]"/>
-              <span className="text-[11px] text-[#999999]">〜</span>
+              <input type="text" value={p.start} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.map(x=>x.id===p.id?{...x, start:e.target.value}:x)})} className="w-16 h-9 border rounded-lg text-center text-[11px] font-bold outline-none focus:border-[#2D4B3E]"/><span className="text-[11px] text-[#999999]">〜</span>
               <input type="text" value={p.end} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.map(x=>x.id===p.id?{...x, end:e.target.value}:x)})} className="w-16 h-9 border rounded-lg text-center text-[11px] font-bold outline-none focus:border-[#2D4B3E]"/>
               <input type="text" placeholder="理由メモ" value={p.note} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.map(x=>x.id===p.id?{...x, note:e.target.value}:x)})} className="flex-1 h-9 border rounded-lg px-3 text-[11px] outline-none font-bold focus:border-[#2D4B3E]"/>
               <button onClick={()=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.filter(x=>x.id!==p.id)})} className="text-red-300 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
@@ -867,8 +550,6 @@ export default function SettingsPage() {
   );
 
   const renderRulesTab = () => {
-    const isOsonae = ['p1', 'p3', 'p4'].includes(selectedPreviewTate.id);
-    const topPrefixText = isOsonae ? '御供' : '祝'; 
     return (
       <div className="space-y-8 animate-in fade-in">
         <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 text-left">
@@ -900,20 +581,22 @@ export default function SettingsPage() {
                 </div>
               ))}
             </div>
+            
             <div className="sticky top-24 h-fit bg-[#FBFAF9] p-8 rounded-[32px] border border-[#EAEAEA] shadow-inner text-center">
               <span className="text-[10px] font-bold text-[#999999] tracking-widest block mb-4">プレビュー ({selectedPreviewTate.label})</span>
-              <div className={`relative mx-auto border border-[#EAEAEA] shadow-lg bg-white flex flex-col items-center font-serif ${selectedPreviewTate.layout === 'horizontal' ? 'aspect-[1.414/1] w-full justify-center p-6' : 'aspect-[1/1.414] h-[300px] pt-6 px-4'}`}>
-                 <div className={`font-black ${['p1','p3','p4'].includes(selectedPreviewTate.id)?'text-gray-500':'text-red-600'} ${selectedPreviewTate.layout==='horizontal'?'text-[28px] mb-4':'text-[40px] mb-6'}`}>{topPrefixText}</div>
-                 <div className={`flex w-full font-bold text-gray-900 ${selectedPreviewTate.layout === 'horizontal' ? 'flex-col items-center gap-2 text-[16px]' : 'flex-row-reverse justify-center gap-6 text-[18px]'}`}>
-                   {selectedPreviewTate.id.includes('p6') || selectedPreviewTate.id.includes('p8') ? (
-                     <><div className={`${selectedPreviewTate.layout==='vertical'?'[writing-mode:vertical-rl]':''}`}>山田太郎 様</div>{!isOsonae && <div className={`${selectedPreviewTate.layout==='vertical'?'[writing-mode:vertical-rl]':''}`}>御開店</div>}<div className={`${selectedPreviewTate.layout==='vertical'?'[writing-mode:vertical-rl]':''}`}>株式会社〇〇</div></>
-                   ) : selectedPreviewTate.id.includes('p4') ? (
-                     <><div className={`${selectedPreviewTate.layout==='vertical'?'[writing-mode:vertical-rl]':''}`}>株式会社〇〇</div><div className={`${selectedPreviewTate.layout==='vertical'?'mt-6 text-[14px] [writing-mode:vertical-rl]':'mt-4 text-[14px]'}`}>代表 山田太郎</div></>
-                   ) : (
-                     <>{!isOsonae && <div className={`${selectedPreviewTate.layout==='vertical'?'[writing-mode:vertical-rl]':''}`}>御開店</div>}<div className={`${selectedPreviewTate.layout==='vertical'?'[writing-mode:vertical-rl]':''}`}>株式会社〇〇</div></>
-                   )}
-                 </div>
-              </div>
+              
+              {/* ★ 新しく作った共通コンポーネントをここで呼び出す */}
+              <TatefudaPreview 
+                tatePattern={selectedPreviewTate.id}
+                layout={selectedPreviewTate.layout}
+                isOsonae={['p1', 'p3', 'p4'].includes(selectedPreviewTate.id)}
+                input1="御開店"
+                input2="山田太郎"
+                input3="株式会社〇〇"
+                input3a="株式会社〇〇"
+                input3b="代表 山田太郎"
+              />
+
             </div>
           </div>
         </div>
