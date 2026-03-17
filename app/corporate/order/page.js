@@ -4,14 +4,12 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { Calendar, Package, ChevronRight, Store, Truck, Building2 } from 'lucide-react';
 
-// ★ キャッシュ用のキー
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 const GALLERY_CACHE_KEY = 'florix_gallery_cache';
 
 export default function CorporateOrderPage() {
   const router = useRouter();
 
-  // --- 法人ログインユーザーのダミーデータ（※本番ではSupabase Authから取得） ---
   const myCompany = {
     companyName: '株式会社 グローバルIT',
     contactName: '山田 太郎',
@@ -26,7 +24,6 @@ export default function CorporateOrderPage() {
   const [portfolioImages, setPortfolioImages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // --- 状態管理 ---
   const [step, setStep] = useState(1);
   const [flowerType, setFlowerType] = useState('');
   const [isBring, setIsBring] = useState('shop');
@@ -40,7 +37,7 @@ export default function CorporateOrderPage() {
   
   const [itemPrice, setItemPrice] = useState('');
   const [flowerPurpose, setFlowerPurpose] = useState('');
-  const [flowerColor, setFlowerColor] = useState('');
+  const [flowerColor, setFlowerColor] = useState(''); // ★ これが不足していました
   const [flowerVibe, setFlowerVibe] = useState('');
   const [otherPurpose, setOtherPurpose] = useState('');
   const [otherVibe, setOtherVibe] = useState('');
@@ -51,7 +48,6 @@ export default function CorporateOrderPage() {
 
   const [cardType, setCardType] = useState('なし');
   const [cardMessage, setCardMessage] = useState('');
-  // ★ 立札の「贈り主」に初期値として自社名をセットしておく
   const [tatePattern, setTatePattern] = useState('');
   const [tateInput1, setTateInput1] = useState(''); 
   const [tateInput2, setTateInput2] = useState(''); 
@@ -59,7 +55,6 @@ export default function CorporateOrderPage() {
   const [tateInput3a, setTateInput3a] = useState(myCompany.companyName); 
   const [tateInput3b, setTateInput3b] = useState(`代表取締役 ${myCompany.contactName}`); 
 
-  // ★ 注文者情報に初期値として自社情報をフルセットしておく
   const [customerInfo, setCustomerInfo] = useState({ 
     name: `${myCompany.companyName} ${myCompany.contactName}`, 
     phone: myCompany.phone, 
@@ -69,7 +64,6 @@ export default function CorporateOrderPage() {
     address2: myCompany.address2 
   });
   
-  // 法人は他社へ送る（お届け先が異なる）ケースが圧倒的に多いので、初期状態をtrueに
   const [isRecipientDifferent, setIsRecipientDifferent] = useState(true);
   const [recipientInfo, setRecipientInfo] = useState({ name: '', phone: '', zip: '', address1: '', address2: '' });
   
@@ -77,9 +71,7 @@ export default function CorporateOrderPage() {
   const [pickupFee, setPickupFee] = useState(0); 
   const [areaError, setAreaError] = useState('');
   
-  // ★ 支払い方法（法人は請求書払いをデフォルトにする）
   const [paymentMethod, setPaymentMethod] = useState('請求書払い (月末締め 翌月末払い)');
-
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const defaultTimeSlots = {
@@ -89,7 +81,6 @@ export default function CorporateOrderPage() {
   };
   const [timeSlots, setTimeSlots] = useState(defaultTimeSlots);
 
-  // ★ キャッシュ化ロジック
   useEffect(() => {
     let isFirstLoad = true;
     const applyDataToState = (settingsData, galleryData) => {
@@ -102,17 +93,15 @@ export default function CorporateOrderPage() {
 
     async function fetchSettings() {
       try {
-        // 1. キャッシュから即時復元
         const cachedSettings = sessionStorage.getItem(SETTINGS_CACHE_KEY);
         const cachedGallery = sessionStorage.getItem(GALLERY_CACHE_KEY);
 
         if (cachedSettings) {
           applyDataToState(JSON.parse(cachedSettings), cachedGallery ? JSON.parse(cachedGallery) : null);
           isFirstLoad = false;
-          setIsLoading(false); // 画面を即時表示
+          setIsLoading(false);
         }
 
-        // 2. バックグラウンドで最新データを取得
         const [settingsRes, galleryRes] = await Promise.all([
           supabase.from('app_settings').select('settings_data').eq('id', 'default').single(),
           supabase.from('app_settings').select('settings_data').eq('id', 'gallery').single()
@@ -120,7 +109,6 @@ export default function CorporateOrderPage() {
 
         if (settingsRes.data?.settings_data) {
           applyDataToState(settingsRes.data.settings_data, galleryRes.data?.settings_data);
-          // 最新データをキャッシュに上書き保存
           sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(settingsRes.data.settings_data));
           if (galleryRes.data?.settings_data) {
             sessionStorage.setItem(GALLERY_CACHE_KEY, JSON.stringify(galleryRes.data.settings_data));
@@ -136,29 +124,6 @@ export default function CorporateOrderPage() {
   }, []);
 
   const selectedItemSettings = useMemo(() => appSettings?.flowerItems?.find(i => i.name === flowerType) || {}, [flowerType, appSettings]);
-
-  const matchingImages = useMemo(() => {
-    if (!portfolioImages || portfolioImages.length === 0) return [];
-    return portfolioImages.filter(img => {
-      let match = true;
-      if (flowerPurpose && flowerPurpose !== 'その他' && img.purpose && img.purpose !== flowerPurpose) match = false;
-      if (flowerColor && flowerColor !== 'おまかせ' && img.color && img.color !== flowerColor) match = false;
-      if (flowerVibe && flowerVibe !== 'その他' && flowerVibe !== 'おまかせ' && img.vibe && img.vibe !== flowerVibe) match = false;
-      return match;
-    });
-  }, [portfolioImages, flowerPurpose, flowerColor, flowerVibe]);
-
-  const handleSelectImage = (img) => {
-    if (selectedImage?.id === img.id) {
-      setSelectedImage(null); 
-    } else {
-      setSelectedImage(img);
-      if (img.price > 0) setItemPrice(String(img.price));
-      if (img.purpose) setFlowerPurpose(img.purpose);
-      if (img.color) setFlowerColor(img.color);
-      if (img.vibe) setFlowerVibe(img.vibe);
-    }
-  };
 
   const isOsonae = flowerPurpose === 'お供え';
   const tateOptions = isOsonae ? [
@@ -358,21 +323,32 @@ export default function CorporateOrderPage() {
   const tax = Math.floor(subTotal * 0.1);
   const totalAmount = subTotal + tax;
 
-  const isFormInvalid = () => {
+  // ★ どの項目が未入力かを出力する賢いバリデーション
+  const missingFields = useMemo(() => {
+    const missing = [];
+    if (step === 1) {
+      if (!flowerType) missing.push('商品');
+      if (flowerType && !agreed) missing.push('注意事項の同意');
+    }
     if (step === 3) {
-      if (!flowerPurpose || !flowerColor || !flowerVibe || !itemPrice) return true;
-      if (cardType === 'メッセージカード' && !cardMessage) return true;
-      if (cardType === '立札' && !tatePattern) return true;
+      if (!flowerPurpose) missing.push('ご用途');
+      if (!flowerColor) missing.push('カラー'); // ★追加
+      if (!flowerVibe) missing.push('イメージ');
+      if (!itemPrice) missing.push('ご予算');
+      if (cardType === 'メッセージカード' && !cardMessage) missing.push('メッセージ内容');
+      if (cardType === '立札' && !tatePattern) missing.push('立札のレイアウト');
     }
     if (step === 4) {
-      if (!customerInfo.name || !customerInfo.phone || !customerInfo.email || !selectedDate || !selectedTime || !methodAgreed) return true;
-      if (selectedDate && selectedDate < minDateLimit) return true;
-      if ((receiveMethod === 'delivery' || receiveMethod === 'sagawa') && areaError) return true;
-      if (receiveMethod === 'delivery' && absenceAction === '置き配' && !absenceNote) return true;
-      if (isRecipientDifferent && (!recipientInfo.name || !recipientInfo.phone || !recipientInfo.zip || !recipientInfo.address1 || !recipientInfo.address2)) return true;
+      if (!customerInfo.name || !customerInfo.phone) missing.push('ご注文者情報');
+      if (isRecipientDifferent && (!recipientInfo.name || !recipientInfo.phone || !recipientInfo.address1)) missing.push('お届け先情報');
+      if (!selectedDate) missing.push('お届け希望日');
+      if (!selectedTime) missing.push('希望時間');
+      if ((receiveMethod === 'delivery' || receiveMethod === 'sagawa') && areaError) missing.push('配送エリアの確認');
+      if (receiveMethod === 'delivery' && absenceAction === '置き配' && !absenceNote) missing.push('置き配の指定場所');
+      if (!methodAgreed) missing.push('注文内容の同意');
     }
-    return false;
-  };
+    return missing;
+  }, [step, flowerType, agreed, flowerPurpose, flowerColor, flowerVibe, itemPrice, cardType, cardMessage, tatePattern, customerInfo, isRecipientDifferent, recipientInfo, selectedDate, selectedTime, methodAgreed, areaError, receiveMethod, absenceAction, absenceNote]);
 
   const handleSubmitOrder = async () => {
     setIsSubmitting(true);
@@ -386,16 +362,15 @@ export default function CorporateOrderPage() {
         cardType, cardMessage, tatePattern,
         tateInput1, tateInput2, tateInput3, tateInput3a, tateInput3b,
         customerInfo, isRecipientDifferent, recipientInfo,
-        paymentMethod, // 法人用の支払方法
+        paymentMethod,
         referenceImage: selectedImage ? selectedImage.url : null,
         status: 'new',
-        isCorporateOrder: true // 法人からの注文フラグ
+        isCorporateOrder: true
       };
 
       const { error } = await supabase.from('orders').insert([{ order_data: orderPayload }]);
       if (error) throw error;
 
-      // 送信完了後、法人ポータルへ戻る（完了メッセージなどを出すと親切）
       alert('ご注文を承りました！ポータル画面へ戻ります。');
       router.push('/corporate');
       
@@ -442,8 +417,8 @@ export default function CorporateOrderPage() {
                 <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] space-y-4 animate-in fade-in">
                   <p className="text-[11px] font-bold text-[#111111] tracking-widest border-b border-[#EAEAEA] pb-2">納期に関する注意事項</p>
                   <div className="space-y-2 text-[12px] text-[#555555] font-medium">
-                    {selectedItemSettings.normalLeadDays && <div className="flex justify-between"><span>通常納期 (配達)</span><span className="font-bold">{selectedItemSettings.normalLeadDays}日後以降</span></div>}
-                    {selectedItemSettings.shippingLeadDays && <div className="flex justify-between text-[#2D4B3E]"><span>業者配送 納期</span><span className="font-bold">発送準備 {selectedItemSettings.shippingLeadDays}日 ＋ 配送リードタイム</span></div>}
+                    {selectedItemSettings.normalLeadDays !== undefined && <div className="flex justify-between"><span>通常納期 (配達)</span><span className="font-bold">{selectedItemSettings.normalLeadDays}日後以降</span></div>}
+                    {selectedItemSettings.shippingLeadDays !== undefined && <div className="flex justify-between text-[#2D4B3E]"><span>業者配送 納期</span><span className="font-bold">発送準備 {selectedItemSettings.shippingLeadDays}日 ＋ 配送日数</span></div>}
                   </div>
                   <label className="flex items-center gap-3 pt-4 cursor-pointer border-t border-[#EAEAEA]">
                     <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="w-5 h-5 accent-[#2D4B3E] rounded-md cursor-pointer" />
@@ -473,7 +448,7 @@ export default function CorporateOrderPage() {
           </div>
         )}
 
-        {/* --- STEP 3: デザイン詳細と画像提案 --- */}
+        {/* --- STEP 3: デザイン詳細と立札 --- */}
         {step === 3 && (
           <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div>
@@ -490,6 +465,19 @@ export default function CorporateOrderPage() {
                 </select>
                 {flowerPurpose === 'その他' && <input type="text" placeholder="詳細を入力..." value={otherPurpose} onChange={(e) => setOtherPurpose(e.target.value)} className="w-full h-10 mt-2 bg-[#FBFAF9] px-4 rounded-lg outline-none text-sm border border-[#EAEAEA]" />}
               </div>
+              
+              {/* ★ 追加: カラーの選択欄 */}
+              <div className="space-y-3">
+                <label className="text-[11px] font-bold text-[#999999] tracking-widest">カラー</label>
+                <select value={flowerColor} onChange={(e) => setFlowerColor(e.target.value)} className="w-full h-12 border-b border-[#EAEAEA] bg-transparent outline-none font-bold focus:border-[#2D4B3E] transition-all">
+                  <option value="">選択...</option>
+                  <option value="おまかせ">おまかせ</option>
+                  <option value="暖色系 (赤・ピンク・オレンジ)">暖色系 (赤・ピンク・オレンジ)</option>
+                  <option value="寒色系 (青・紫・白)">寒色系 (青・紫・白)</option>
+                  <option value="ホワイト・グリーン系">ホワイト・グリーン系</option>
+                </select>
+              </div>
+
               <div className="space-y-3">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">イメージ / ご要望</label>
                 <select value={flowerVibe} onChange={(e) => setFlowerVibe(e.target.value)} className="w-full h-12 border-b border-[#EAEAEA] bg-transparent outline-none font-bold focus:border-[#2D4B3E] transition-all">
@@ -497,6 +485,7 @@ export default function CorporateOrderPage() {
                 </select>
                 {flowerVibe === 'その他' && <input type="text" placeholder="イメージの詳細をご入力ください" value={otherVibe} onChange={(e) => setOtherVibe(e.target.value)} className="w-full h-10 mt-2 bg-[#FBFAF9] px-4 rounded-lg outline-none text-sm border border-[#EAEAEA]" />}
               </div>
+              
               <div className="space-y-3 pt-4">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">ご予算 (税抜)</label>
                 <select value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} className="w-full h-14 border rounded-xl px-4 bg-[#FBFAF9] outline-none font-bold text-[16px] transition-all border-[#EAEAEA] focus:border-[#2D4B3E]">
@@ -658,17 +647,27 @@ export default function CorporateOrderPage() {
 
         {/* ナビゲーション */}
         <div className="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-md border-t border-[#EAEAEA] py-4 px-6 z-50">
-          <div className="max-w-[600px] mx-auto flex gap-4">
-            {step > 1 && (
-              <button onClick={() => setStep(step - 1)} className="px-6 h-14 shrink-0 rounded-[16px] bg-white border border-[#EAEAEA] text-[#555555] font-bold text-[14px] hover:bg-[#F7F7F7] transition-all">戻る</button>
+          <div className="max-w-[600px] mx-auto flex flex-col gap-2">
+            
+            {/* ★ 強化されたナビゲーション（未入力項目の表示） */}
+            {missingFields.length > 0 && (
+              <div className="text-[10px] font-bold text-red-500 text-center animate-pulse">
+                未入力項目があります: {missingFields.join('、')}
+              </div>
             )}
-            <button 
-              disabled={isFormInvalid() || (step === 1 && !agreed) || isSubmitting} 
-              onClick={() => step < 4 ? setStep(step + 1) : handleSubmitOrder()} 
-              className={`flex-1 h-14 rounded-[16px] bg-[#2D4B3E] text-white font-bold text-[15px] tracking-widest shadow-md transition-all active:scale-[0.98] disabled:opacity-40 disabled:active:scale-100 hover:bg-[#1f352b]`}
-            >
-              {step === 4 ? (isSubmitting ? '送信中...' : '注文を確定する') : '次へ進む'}
-            </button>
+            
+            <div className="flex gap-4">
+              {step > 1 && (
+                <button onClick={() => setStep(step - 1)} className="px-6 h-14 shrink-0 rounded-[16px] bg-white border border-[#EAEAEA] text-[#555555] font-bold text-[14px] hover:bg-[#F7F7F7] transition-all">戻る</button>
+              )}
+              <button 
+                disabled={missingFields.length > 0 || isSubmitting} 
+                onClick={() => step < 4 ? setStep(step + 1) : handleSubmitOrder()} 
+                className={`flex-1 h-14 rounded-[16px] bg-[#2D4B3E] text-white font-bold text-[15px] tracking-widest shadow-md transition-all active:scale-[0.98] disabled:opacity-40 disabled:active:scale-100 hover:bg-[#1f352b]`}
+              >
+                {step === 4 ? (isSubmitting ? '送信中...' : '注文を確定する') : '次へ進む'}
+              </button>
+            </div>
           </div>
         </div>
 
