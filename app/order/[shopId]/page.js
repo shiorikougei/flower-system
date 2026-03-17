@@ -4,6 +4,10 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../utils/supabase';
 import { Calendar, Package, ChevronRight, Store, Truck } from 'lucide-react';
 
+// ★ キャッシュ用のキーを定義
+const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
+const GALLERY_CACHE_KEY = 'florix_gallery_cache';
+
 export default function OrderPage() {
   const params = useParams();
   const router = useRouter();
@@ -68,27 +72,56 @@ export default function OrderPage() {
   };
   const [timeSlots, setTimeSlots] = useState(defaultTimeSlots);
 
+  // ★ キャッシュ化のロジック
   useEffect(() => {
+    let isFirstLoad = true;
+
+    const applyDataToState = (settingsData, galleryData) => {
+      if (settingsData) {
+        setAppSettings(settingsData);
+        if (settingsData.timeSlots) {
+          setTimeSlots(settingsData.timeSlots);
+        }
+      }
+      if (galleryData?.images) {
+        setPortfolioImages(galleryData.images);
+      }
+    };
+
     async function fetchSettings() {
       try {
-        const { data, error } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
-        if (error) throw error;
-        if (data && data.settings_data) {
-          setAppSettings(data.settings_data);
-          // 時間枠の設定があれば上書き
-          if (data.settings_data.timeSlots) {
-            setTimeSlots(data.settings_data.timeSlots);
-          }
+        // 1. キャッシュから即時読み込み
+        const cachedSettings = sessionStorage.getItem(SETTINGS_CACHE_KEY);
+        const cachedGallery = sessionStorage.getItem(GALLERY_CACHE_KEY);
+
+        if (cachedSettings) {
+          applyDataToState(JSON.parse(cachedSettings), cachedGallery ? JSON.parse(cachedGallery) : null);
+          isFirstLoad = false;
+          setIsLoading(false); // 即座に画面を表示
         }
 
-        const { data: gallery } = await supabase.from('app_settings').select('settings_data').eq('id', 'gallery').single();
-        if (gallery && gallery.settings_data?.images) {
-          setPortfolioImages(gallery.settings_data.images);
+        // 2. バックグラウンドでDBから最新取得
+        const [settingsRes, galleryRes] = await Promise.all([
+          supabase.from('app_settings').select('settings_data').eq('id', 'default').single(),
+          supabase.from('app_settings').select('settings_data').eq('id', 'gallery').single()
+        ]);
+
+        const newSettings = settingsRes.data?.settings_data;
+        const newGallery = galleryRes.data?.settings_data;
+
+        if (newSettings) {
+          applyDataToState(newSettings, newGallery);
+          // キャッシュを更新
+          sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(newSettings));
+          if (newGallery) {
+            sessionStorage.setItem(GALLERY_CACHE_KEY, JSON.stringify(newGallery));
+          }
         }
       } catch (err) {
         console.error('設定読込エラー:', err.message);
       } finally {
         setIsLoading(false);
+        isFirstLoad = false;
       }
     }
     fetchSettings();
@@ -154,7 +187,7 @@ export default function OrderPage() {
     return options;
   };
 
-  // ★ 住所から「配送リードタイム」を自動判定
+  // 住所から「配送リードタイム」を自動判定
   const transitDays = useMemo(() => {
     if (receiveMethod !== 'sagawa') return 0;
     const targetInfo = isRecipientDifferent ? recipientInfo : customerInfo;
@@ -172,7 +205,7 @@ export default function OrderPage() {
     return 1; // 住所が未入力の場合は最低1日とする
   }, [receiveMethod, customerInfo.address1, recipientInfo.address1, isRecipientDifferent, appSettings]);
 
-  // ★ 最短納期の計算（準備日数 ＋ 配送リードタイム）
+  // 最短納期の計算（準備日数 ＋ 配送リードタイム）
   const minDateLimit = useMemo(() => {
     const base = new Date();
     let prepDays = 0;
@@ -426,7 +459,6 @@ export default function OrderPage() {
                   <p className="text-[11px] font-bold text-[#111111] tracking-widest border-b border-[#EAEAEA] pb-2">納期に関する注意事項</p>
                   <div className="space-y-2 text-[12px] text-[#555555] font-medium">
                     {selectedItemSettings.normalLeadDays && <div className="flex justify-between"><span>通常納期 (店頭/配達)</span><span className="font-bold">{selectedItemSettings.normalLeadDays}日後以降</span></div>}
-                    {/* ★「配送リードタイム」の表記に修正 */}
                     {selectedItemSettings.shippingLeadDays && <div className="flex justify-between text-[#2D4B3E]"><span>業者配送 納期</span><span className="font-bold">発送準備 {selectedItemSettings.shippingLeadDays}日 ＋ 配送リードタイム(最短1日〜)</span></div>}
                     {isBring === 'bring' && (selectedItemSettings.canBringFlowersLeadDays || selectedItemSettings.canBringVaseLeadDays) && <div className="flex justify-between text-[#2D4B3E] pt-1"><span>お持ち込み時 (通常より延長)</span><span className="font-bold">{Math.max(Number(selectedItemSettings.canBringFlowersLeadDays)||0, Number(selectedItemSettings.canBringVaseLeadDays)||0)}日後以降</span></div>}
                   </div>
@@ -572,6 +604,7 @@ export default function OrderPage() {
                       {tateNeeds.includes('3b') && <input type="text" placeholder="③-2 役職・氏名" value={tateInput3b} onChange={(e) => setTateInput3b(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       
                       <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4">仕上がりプレビュー</p>
+                      {/* ★ 立札プレビューのUI（設定ページと同期用） */}
                       <div className={`relative mx-auto border border-[#EAEAEA] shadow-lg bg-white flex flex-col items-center font-serif ${selectedTateOpt?.layout === 'horizontal' ? 'aspect-[1.414/1] w-full justify-center p-6' : 'aspect-[1/1.414] h-[300px] pt-6 px-4'}`}>
                          <div className={`font-black ${isOsonae ? 'text-gray-500' : 'text-red-600'} ${selectedTateOpt?.layout === 'horizontal' ? 'text-[28px] mb-4' : 'text-[40px] mb-6 leading-none'}`}>
                            {topPrefixText}
