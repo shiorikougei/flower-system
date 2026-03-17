@@ -4,6 +4,10 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../../../utils/supabase';
 import { Store, AlertCircle, Calendar, ChevronRight, Package } from 'lucide-react';
 
+// ★ キャッシュ用のキーを定義（設定ページと共有）
+const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
+const GALLERY_CACHE_KEY = 'florix_gallery_cache';
+
 export default function StaffNewOrderPage() {
   const router = useRouter();
   const [appSettings, setAppSettings] = useState(null);
@@ -62,36 +66,67 @@ export default function StaffNewOrderPage() {
   };
   const [timeSlots, setTimeSlots] = useState(defaultTimeSlots);
 
+  // ★ キャッシュ化＆入力保護対応の初期化ロジック
   useEffect(() => {
-    async function fetchSettings() {
-      try {
-        const { data, error } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
-        if (error) throw error;
-        if (data && data.settings_data) {
-          setAppSettings(data.settings_data);
-          
-          if (data.settings_data.timeSlots) {
-            setTimeSlots(data.settings_data.timeSlots);
-          }
+    let isFirstLoad = true; // DB取得完了時に入力を上書きしないためのフラグ
 
-          if (data.settings_data.staffOrderConfig?.sendAutoReply) setSendAutoReply(true);
-          if (data.settings_data.staffOrderConfig?.paymentMethods?.length > 0) {
-            setPaymentMethod(data.settings_data.staffOrderConfig.paymentMethods[0]);
+    const applyDataToState = (settingsData, galleryData) => {
+      if (settingsData) {
+        setAppSettings(settingsData);
+        if (settingsData.timeSlots) setTimeSlots(settingsData.timeSlots);
+        
+        // ユーザーが入力する前の初回のみ、デフォルト値をセットする
+        if (isFirstLoad) {
+          if (settingsData.staffOrderConfig?.sendAutoReply) setSendAutoReply(true);
+          if (settingsData.staffOrderConfig?.paymentMethods?.length > 0) {
+            setPaymentMethod(settingsData.staffOrderConfig.paymentMethods[0]);
           }
-          if (data.settings_data.shops?.length > 0) {
-            const defaultShop = data.settings_data.shops[0];
+          if (settingsData.shops?.length > 0) {
+            const defaultShop = settingsData.shops[0];
             setShopId(defaultShop.id);
             setSelectedShop(defaultShop.name);
           }
         }
-        const { data: gallery } = await supabase.from('app_settings').select('settings_data').eq('id', 'gallery').single();
-        if (gallery && gallery.settings_data?.images) {
-          setPortfolioImages(gallery.settings_data.images);
+      }
+      if (galleryData?.images) {
+        setPortfolioImages(galleryData.images);
+      }
+    };
+
+    async function fetchSettings() {
+      try {
+        // 1. キャッシュから即時復元
+        const cachedSettings = sessionStorage.getItem(SETTINGS_CACHE_KEY);
+        const cachedGallery = sessionStorage.getItem(GALLERY_CACHE_KEY);
+        
+        if (cachedSettings) {
+          applyDataToState(JSON.parse(cachedSettings), cachedGallery ? JSON.parse(cachedGallery) : null);
+          isFirstLoad = false; // キャッシュで初期化されたらフラグを折る
+          setIsLoading(false); // 画面表示
+        }
+
+        // 2. 裏側でDBから最新データを取得
+        const [settingsRes, galleryRes] = await Promise.all([
+          supabase.from('app_settings').select('settings_data').eq('id', 'default').single(),
+          supabase.from('app_settings').select('settings_data').eq('id', 'gallery').single()
+        ]);
+
+        const newSettings = settingsRes.data?.settings_data;
+        const newGallery = galleryRes.data?.settings_data;
+
+        if (newSettings) {
+          applyDataToState(newSettings, newGallery);
+          // キャッシュを更新
+          sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(newSettings));
+          if (newGallery) {
+            sessionStorage.setItem(GALLERY_CACHE_KEY, JSON.stringify(newGallery));
+          }
         }
       } catch (err) {
         console.error('設定の読み込みに失敗しました:', err.message);
       } finally {
         setIsLoading(false);
+        isFirstLoad = false;
       }
     }
     fetchSettings();
@@ -138,7 +173,6 @@ export default function StaffNewOrderPage() {
   const tateNeeds = selectedTateOpt?.needs || [];
   const topPrefixText = isOsonae ? (prefixFormat === 'hiragana' ? 'お供え' : '御供') : (prefixFormat === 'hiragana' ? 'お祝い' : '祝');
 
-  // ★ 住所から「配送日数」を自動判定
   const transitDays = useMemo(() => {
     if (receiveMethod !== 'sagawa') return 0;
     const targetInfo = isRecipientDifferent ? recipientInfo : customerInfo;
@@ -156,7 +190,6 @@ export default function StaffNewOrderPage() {
     return 1;
   }, [receiveMethod, customerInfo.address1, recipientInfo.address1, isRecipientDifferent, appSettings]);
 
-  // ★ 納期計算
   const properMinDate = useMemo(() => {
     if (!flowerType) return '';
     const base = new Date();
