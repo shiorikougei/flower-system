@@ -5,10 +5,9 @@ import {
   Settings as SettingsIcon, ListChecks, Store, Tag, Truck, User, Mail, 
   Trash2, Plus, Clock, ShieldCheck, RotateCcw, Image, Ruler, Percent, 
   ChevronRight, Calendar as CalendarIcon, Box, MapPin, Search, CheckCircle, X,
-  LayoutTemplate, Package
+  LayoutTemplate, Package, Eye, EyeOff
 } from 'lucide-react';
 
-// キャッシュ用のキーを定義
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 
 export default function SettingsPage() {
@@ -16,9 +15,9 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // ★ パスワードの表示/非表示
 
   // --- 1. 基本設定 ---
-  // ★ systemPassword（管理者パスワード）を追加（初期値は7777）
   const [generalConfig, setGeneralConfig] = useState({ 
     appName: 'FLORIX', logoUrl: '', logoSize: 100, logoTransparent: false, slipBgUrl: '', slipBgOpacity: 50, systemPassword: '7777'
   });
@@ -42,7 +41,6 @@ export default function SettingsPage() {
     freeShippingThresholdEnabled: false, freeShippingThreshold: 15000, isBundleDiscount: true
   });
   
-  // 時間帯枠の設定
   const [timeSlots, setTimeSlots] = useState({
     pickup: ['10:00-12:00', '12:00-15:00', '15:00-18:00'],
     delivery: ['9:00-12:00', '12:00-15:00', '15:00-18:00', '18:00-21:00'],
@@ -66,12 +64,16 @@ export default function SettingsPage() {
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffStore, setNewStaffStore] = useState('all');
   const [staffOrderConfig, setStaffOrderConfig] = useState({ ignoreLeadTime: true, allowCustomPrice: true, paymentMethods: ['店頭支払い(済)', '銀行振込(請求書)', '代金引換'], sendAutoReply: false });
-  const [autoReply, setAutoReply] = useState({ subject: '', body: '' });
+  
+  // ★ 通知メール設定を複数持てるように配列化
+  const [autoReplyTemplates, setAutoReplyTemplates] = useState([
+    { id: 't1', trigger: '注文受付時', subject: 'ご注文ありがとうございます', body: '{CustomerName} 様\n\nご注文ありがとうございます。' }
+  ]);
 
   const tabs = [
     { id: 'general', label: '基本設定', icon: SettingsIcon },
     { id: 'status', label: 'ステータス', icon: ListChecks },
-    { id: 'shop', label: '店舗・決済', icon: Store }, 
+    { id: 'shop', label: '店舗・特別日', icon: Store }, 
     { id: 'items', label: '商品・納期', icon: Tag },
     { id: 'shipping', label: '配送・時間枠', icon: Truck },
     { id: 'rules', label: '立札デザイン', icon: LayoutTemplate },
@@ -80,7 +82,6 @@ export default function SettingsPage() {
     { id: 'message', label: '通知メール', icon: Mail },
   ];
 
-  // 取得したデータを各Stateに適用する共通関数
   const applySettings = (s) => {
     if (s.generalConfig) setGeneralConfig(prev => ({...prev, ...s.generalConfig}));
     if (s.statusConfig) setStatusConfig(s.statusConfig);
@@ -92,7 +93,7 @@ export default function SettingsPage() {
     if (s.shippingRates) setShippingRates(s.shippingRates);
     if (s.boxFeeConfig) setBoxFeeConfig(prev => ({...prev, ...s.boxFeeConfig}));
     if (s.staffOrderConfig) setStaffOrderConfig(s.staffOrderConfig);
-    if (s.autoReply) setAutoReply(s.autoReply);
+    if (s.autoReplyTemplates) setAutoReplyTemplates(s.autoReplyTemplates);
     if (s.timeSlots) setTimeSlots(s.timeSlots);
   };
 
@@ -117,7 +118,6 @@ export default function SettingsPage() {
     loadSettings();
   }, []);
 
-  // ★ ログイン時のパスワードチェックをDBの設定値と照合するように変更
   const handleLogin = () => {
     const correctPassword = generalConfig.systemPassword || '7777';
     if (adminPassword === correctPassword) setIsAdmin(true);
@@ -128,7 +128,7 @@ export default function SettingsPage() {
     if (!isAdmin) return;
     setIsSaving(true);
     try {
-      const payload = { generalConfig, statusConfig, shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReply, staffOrderConfig, timeSlots };
+      const payload = { generalConfig, statusConfig, shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReplyTemplates, staffOrderConfig, timeSlots };
       await supabase.from('app_settings').upsert({ id: 'default', settings_data: payload });
       
       sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(payload));
@@ -148,20 +148,6 @@ export default function SettingsPage() {
     r.readAsDataURL(file);
   };
 
-  const handleTimeSlotChange = (method, index, value) => {
-    setTimeSlots(prev => {
-      const newSlots = { ...prev };
-      newSlots[method][index] = value;
-      return newSlots;
-    });
-  };
-  const addTimeSlot = (method) => {
-    setTimeSlots(prev => ({ ...prev, [method]: [...prev[method], ''] }));
-  };
-  const removeTimeSlot = (method, index) => {
-    setTimeSlots(prev => ({ ...prev, [method]: prev[method].filter((_, i) => i !== index) }));
-  };
-
   // --- タブのレンダリングコンポーネント ---
 
   const renderGeneralTab = () => (
@@ -173,11 +159,13 @@ export default function SettingsPage() {
           <input type="text" value={generalConfig.appName} onChange={(e)=>setGeneralConfig({...generalConfig, appName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E] transition-colors"/>
         </div>
         
+        {/* ★ ロゴ画像 */}
         <div className="space-y-4 pt-4 border-t border-[#EAEAEA]">
           <label className="text-[11px] font-bold text-[#999999]">ロゴ画像</label>
-          <input type="file" accept="image/*" onChange={(e)=>handleImg(e, 'logoUrl')} className="block w-full text-xs" />
+          {!generalConfig.logoUrl && <input type="file" accept="image/*" onChange={(e)=>handleImg(e, 'logoUrl')} className="block w-full text-xs" />}
           {generalConfig.logoUrl && (
-            <div className="p-6 bg-[#FBFAF9] rounded-2xl border space-y-6">
+            <div className="p-6 bg-[#FBFAF9] rounded-2xl border space-y-6 relative">
+              <button onClick={() => setGeneralConfig({...generalConfig, logoUrl: ''})} className="absolute top-4 right-4 text-red-400 hover:text-red-600 bg-white p-2 rounded-full shadow-sm"><Trash2 size={16}/></button>
               <div className="flex items-center justify-between"><span className="text-[12px] font-bold">ロゴ表示サイズ: {generalConfig.logoSize}%</span><input type="range" min="30" max="150" value={generalConfig.logoSize} onChange={(e)=>setGeneralConfig({...generalConfig, logoSize: Number(e.target.value)})} className="w-40 accent-[#2D4B3E]"/></div>
               <div className="flex items-center justify-between"><span className="text-[12px] font-bold">白背景を透過</span><button onClick={()=>setGeneralConfig({...generalConfig, logoTransparent: !generalConfig.logoTransparent})} className={`w-12 h-6 rounded-full transition-all ${generalConfig.logoTransparent ? 'bg-[#2D4B3E]' : 'bg-gray-300'}`}><div className={`w-4 h-4 bg-white rounded-full mx-1 transition-all ${generalConfig.logoTransparent ? 'translate-x-6' : ''}`}/></button></div>
               <div className="flex justify-center border-t pt-4 bg-white rounded-xl p-4"><img src={generalConfig.logoUrl} style={{width: `${generalConfig.logoSize}%`, mixBlendMode: generalConfig.logoTransparent ? 'multiply' : 'normal'}} className="max-h-24 object-contain" /></div>
@@ -185,30 +173,41 @@ export default function SettingsPage() {
           )}
         </div>
 
+        {/* ★ 伝票背景画像 */}
         <div className="space-y-4 pt-4 border-t border-[#EAEAEA]">
           <label className="text-[11px] font-bold text-[#999999]">伝票用 背景（透かし柄）画像</label>
-          <input type="file" accept="image/*" onChange={(e)=>handleImg(e, 'slipBgUrl')} className="block w-full text-xs" />
+          {!generalConfig.slipBgUrl && <input type="file" accept="image/*" onChange={(e)=>handleImg(e, 'slipBgUrl')} className="block w-full text-xs" />}
           {generalConfig.slipBgUrl && (
-            <div className="p-6 bg-[#FBFAF9] rounded-2xl border space-y-6">
+            <div className="p-6 bg-[#FBFAF9] rounded-2xl border space-y-6 relative">
+              <button onClick={() => setGeneralConfig({...generalConfig, slipBgUrl: ''})} className="absolute top-4 right-4 text-red-400 hover:text-red-600 bg-white p-2 rounded-full shadow-sm"><Trash2 size={16}/></button>
               <div className="flex items-center justify-between"><span className="text-[12px] font-bold">画像の濃さ（透過度）: {generalConfig.slipBgOpacity}%</span><input type="range" min="0" max="100" value={generalConfig.slipBgOpacity} onChange={(e)=>setGeneralConfig({...generalConfig, slipBgOpacity: Number(e.target.value)})} className="w-40 accent-[#2D4B3E]"/></div>
               <div className="flex justify-center border-t pt-4"><div className="relative w-48 h-32 bg-white border shadow-sm overflow-hidden flex flex-col justify-between p-2"><div className="absolute inset-0 z-0 grayscale-[30%] pointer-events-none" style={{ backgroundImage: `url(${generalConfig.slipBgUrl})`, backgroundSize: 'cover', opacity: generalConfig.slipBgOpacity / 100 }} /><span className="relative z-10 text-[10px] font-bold text-green-700">受 注 書</span></div></div>
             </div>
           )}
         </div>
 
-        {/* ★ 追加：管理者パスワードの設定エリア */}
         <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
           <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><ShieldCheck size={16}/> システムセキュリティ</h3>
           <div className="bg-red-50 p-6 rounded-2xl border border-red-100 space-y-3">
             <div className="space-y-1">
               <label className="text-[11px] font-bold text-red-800">管理者パスワード (設定変更・注文削除用)</label>
-              <input 
-                type="text" 
-                value={generalConfig.systemPassword || ''} 
-                onChange={(e)=>setGeneralConfig({...generalConfig, systemPassword: e.target.value})} 
-                placeholder="7777"
-                className="w-full max-w-[240px] h-12 bg-white border border-red-200 rounded-xl px-4 font-bold outline-none focus:border-red-400 text-red-700 tracking-widest"
-              />
+              <div className="relative w-full max-w-[240px]">
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  value={generalConfig.systemPassword || ''} 
+                  onChange={(e)=>setGeneralConfig({...generalConfig, systemPassword: e.target.value})} 
+                  placeholder="7777"
+                  className="w-full h-12 bg-white border border-red-200 rounded-xl px-4 font-bold outline-none focus:border-red-400 text-red-700 tracking-widest pr-10"
+                />
+                {/* ★ パスワード表示トグル */}
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)} 
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600"
+                >
+                  {showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}
+                </button>
+              </div>
             </div>
             <p className="text-[10px] text-red-600 font-bold leading-relaxed">
               ※初期値は「7777」です。<br/>
@@ -229,10 +228,24 @@ export default function SettingsPage() {
           <button key={t} onClick={() => setStatusConfig({...statusConfig, type: t})} className={`flex-1 py-3 rounded-lg font-bold text-[12px] ${statusConfig.type === t ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}>{t === 'template' ? '標準' : 'カスタム'}</button>
         ))}
       </div>
-      {statusConfig.type === 'custom' && (
+      
+      {/* ★ 標準を選択した場合も、今の項目を表示する（編集不可） */}
+      {statusConfig.type === 'template' ? (
+        <div className="space-y-3">
+          {['未対応', '制作中', '制作完了', '配達中'].map((l, i) => (
+            <div key={i} className="flex gap-2">
+              <input type="text" value={l} readOnly className="flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold text-[#999999] outline-none cursor-not-allowed" />
+            </div>
+          ))}
+          <p className="text-[10px] font-bold text-[#999999]">※標準設定のため、項目の追加・変更・削除はできません。</p>
+        </div>
+      ) : (
         <div className="space-y-3">
           {statusConfig.customLabels.map((l, i) => (
-            <div key={i} className="flex gap-2"><input type="text" value={l} onChange={(e) => { const n = [...statusConfig.customLabels]; n[i] = e.target.value; setStatusConfig({...statusConfig, customLabels: n}); }} className="flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none" /><button onClick={() => setStatusConfig({...statusConfig, customLabels: statusConfig.customLabels.filter((_, idx) => idx !== i)})} className="text-red-300 p-2 hover:text-red-500"><Trash2 size={18}/></button></div>
+            <div key={i} className="flex gap-2">
+              <input type="text" value={l} onChange={(e) => { const n = [...statusConfig.customLabels]; n[i] = e.target.value; setStatusConfig({...statusConfig, customLabels: n}); }} className="flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" />
+              <button onClick={() => setStatusConfig({...statusConfig, customLabels: statusConfig.customLabels.filter((_, idx) => idx !== i)})} className="text-red-300 p-2 hover:text-red-500"><Trash2 size={18}/></button>
+            </div>
           ))}
           <button onClick={() => setStatusConfig({...statusConfig, customLabels: [...statusConfig.customLabels, '新状態']})} className="w-full py-3 border-2 border-dashed border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ 項目を追加</button>
         </div>
@@ -258,43 +271,118 @@ export default function SettingsPage() {
           </div>
           
           <div className="pt-4 border-t border-[#FBFAF9] space-y-4">
-            <h3 className="text-[14px] font-bold text-[#2D4B3E]">決済・振込先情報</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">振込先口座情報</label><textarea value={shop.bankInfo || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, bankInfo:e.target.value}:s))} className="w-full h-24 bg-[#FBFAF9] border rounded-xl p-3 text-[12px] outline-none resize-none" placeholder="銀行名 支店名..."/></div>
-              <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">オンライン決済URL</label><input type="url" value={shop.paymentUrl || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, paymentUrl:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[12px] outline-none" placeholder="https://..."/></div>
-            </div>
+            <h3 className="text-[14px] font-bold text-[#2D4B3E]">振込先情報</h3>
+            {/* ★ 決済URLを削除 */}
+            <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">振込先口座情報 (請求書払いのお客様向け)</label><textarea value={shop.bankInfo || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, bankInfo:e.target.value}:s))} className="w-full h-24 bg-[#FBFAF9] border rounded-xl p-3 text-[12px] outline-none resize-none focus:border-[#2D4B3E]" placeholder="銀行名 支店名..."/></div>
           </div>
 
+          {/* ★ 特別日の設定を大幅アップデート */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-[#FBFAF9]">
+            
+            {/* 店舗（ご来店）の特別日 */}
             <div className="space-y-4">
-              <label className="text-[12px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={14}/> 店舗 営業時間・特別日</label>
-              <div className="flex gap-2 bg-[#FBFAF9] p-2 rounded-xl border mb-2">
-                <input type="time" value={shop.openTime || '10:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, openTime:e.target.value}:s))} className="border rounded p-1 text-xs"/><span>〜</span><input type="time" value={shop.closeTime || '19:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, closeTime:e.target.value}:s))} className="border rounded p-1 text-xs"/>
+              <label className="text-[12px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={14}/> 店舗(ご来店) 営業時間・特別日</label>
+              <div className="flex gap-2 bg-[#FBFAF9] p-3 rounded-xl border mb-2">
+                <input type="time" value={shop.openTime || '10:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, openTime:e.target.value}:s))} className="border rounded p-1 text-xs outline-none"/><span>〜</span><input type="time" value={shop.closeTime || '19:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, closeTime:e.target.value}:s))} className="border rounded p-1 text-xs outline-none"/>
               </div>
-              {(shop.specialHours || []).map(sh => (
-                <div key={sh.id} className="flex gap-1 items-center bg-[#FBFAF9] p-2 rounded-xl border text-[10px]">
-                  <input type="date" value={sh.date} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, specialHours:s.specialHours.map(h=>h.id===sh.id?{...h, date:e.target.value}:h)}:s))} className="border rounded p-1"/>
-                  <select value={sh.type} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, specialHours:s.specialHours.map(h=>h.id===sh.id?{...h, type:e.target.value}:h)}:s))} className="border rounded p-1"><option value="closed">休業</option><option value="changed">時間変更</option></select>
-                  <input type="text" placeholder="理由" value={sh.note} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, specialHours:s.specialHours.map(h=>h.id===sh.id?{...h, note:e.target.value}:h)}:s))} className="flex-1 border rounded p-1"/>
-                  <button onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, specialHours:s.specialHours.filter(h=>h.id!==sh.id)}:s))} className="text-red-400">×</button>
-                </div>
-              ))}
-              <button onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, specialHours:[...(s.specialHours||[]), {id:Date.now(), date:'', type:'closed'}]}:s))} className="w-full py-2 bg-[#FBFAF9] border-dashed border rounded-xl text-[10px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ 店舗特別日を追加</button>
+              
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                {(shop.specialHours || []).map(sh => (
+                  <div key={sh.id} className="flex flex-col gap-2 bg-[#FBFAF9] p-3 rounded-xl border border-[#EAEAEA] text-[11px] relative">
+                    <button onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, specialHours:s.specialHours.filter(h=>h.id!==sh.id)}:s))} className="absolute top-2 right-2 text-red-400 hover:text-red-600"><Trash2 size={12}/></button>
+                    
+                    <div className="flex gap-2 pr-6">
+                      <select value={sh.repeatType || '今年のみ'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, specialHours:s.specialHours.map(h=>h.id===sh.id?{...h, repeatType:e.target.value}:h)}:s))} className="border rounded p-1.5 outline-none font-bold">
+                        <option value="今年のみ">単日</option>
+                        <option value="毎週">毎週</option>
+                        <option value="毎月">毎月</option>
+                        <option value="毎年">毎年</option>
+                        <option value="祝日">祝日</option>
+                      </select>
+
+                      {sh.repeatType !== '祝日' && (
+                        <div className="flex-1">
+                          {sh.repeatType === '毎週' ? (
+                            <select value={sh.date} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, specialHours:s.specialHours.map(h=>h.id===sh.id?{...h, date:e.target.value}:h)}:s))} className="w-full border rounded p-1.5 outline-none">
+                              <option value="">曜日を選択</option><option value="日">日曜日</option><option value="月">月曜日</option><option value="火">火曜日</option><option value="水">水曜日</option><option value="木">木曜日</option><option value="金">金曜日</option><option value="土">土曜日</option>
+                            </select>
+                          ) : sh.repeatType === '毎月' ? (
+                            <select value={sh.date} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, specialHours:s.specialHours.map(h=>h.id===sh.id?{...h, date:e.target.value}:h)}:s))} className="w-full border rounded p-1.5 outline-none">
+                              <option value="">日付を選択</option>
+                              {[...Array(31)].map((_, i) => <option key={i} value={`${i+1}日`}>{i+1}日</option>)}
+                            </select>
+                          ) : (
+                            <input type={sh.repeatType==='毎年' ? 'text' : 'date'} placeholder={sh.repeatType==='毎年' ? 'MM-DD' : ''} value={sh.date} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, specialHours:s.specialHours.map(h=>h.id===sh.id?{...h, date:e.target.value}:h)}:s))} className="w-full border rounded p-1.5 outline-none"/>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <select value={sh.type || 'closed'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, specialHours:s.specialHours.map(h=>h.id===sh.id?{...h, type:e.target.value}:h)}:s))} className={`border rounded p-1.5 outline-none font-bold ${sh.type === 'closed' ? 'text-red-600 bg-red-50' : sh.type === 'changed' ? 'text-orange-600 bg-orange-50' : 'text-green-600 bg-green-50'}`}>
+                        <option value="closed">休業</option>
+                        <option value="changed">時間変更</option>
+                        <option value="open">営業 (祝日等)</option>
+                      </select>
+                      <input type="text" placeholder="理由やメモ (例: 定休日)" value={sh.note || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, specialHours:s.specialHours.map(h=>h.id===sh.id?{...h, note:e.target.value}:h)}:s))} className="flex-1 border rounded p-1.5 outline-none"/>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, specialHours:[...(s.specialHours||[]), {id:Date.now(), date:'', type:'closed', repeatType:'今年のみ', note:''}]}:s))} className="w-full py-2 bg-[#FBFAF9] border-dashed border rounded-xl text-[10px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ 特別ルールを追加</button>
             </div>
+
+            {/* 配達の特別日 */}
             <div className="space-y-4">
               <label className="text-[12px] font-bold text-[#D97C8F] flex items-center gap-2"><Truck size={14}/> 配達可能時間・特別日</label>
-              <div className="flex gap-2 bg-[#D97C8F]/5 p-2 rounded-xl border border-[#D97C8F]/10 mb-2">
-                <input type="time" value={shop.deliveryOpenTime || '11:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryOpenTime:e.target.value}:s))} className="border rounded p-1 text-xs"/><span>〜</span><input type="time" value={shop.deliveryCloseTime || '18:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryCloseTime:e.target.value}:s))} className="border rounded p-1 text-xs"/>
+              <div className="flex gap-2 bg-[#D97C8F]/5 p-3 rounded-xl border border-[#D97C8F]/10 mb-2">
+                <input type="time" value={shop.deliveryOpenTime || '11:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryOpenTime:e.target.value}:s))} className="border rounded p-1 text-xs outline-none"/><span>〜</span><input type="time" value={shop.deliveryCloseTime || '18:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryCloseTime:e.target.value}:s))} className="border rounded p-1 text-xs outline-none"/>
               </div>
-              {(shop.deliverySpecialHours || []).map(sh => (
-                <div key={sh.id} className="flex gap-1 items-center bg-[#D97C8F]/5 p-2 rounded-xl border border-[#D97C8F]/10 text-[10px]">
-                  <input type="date" value={sh.date} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:s.deliverySpecialHours.map(h=>h.id===sh.id?{...h, date:e.target.value}:h)}:s))} className="border p-1"/>
-                  <select value={sh.type} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:s.deliverySpecialHours.map(h=>h.id===sh.id?{...h, type:e.target.value}:h)}:s))} className="border p-1"><option value="closed">配達休止</option><option value="changed">時間変更</option></select>
-                  <input type="text" placeholder="理由メモ" value={sh.note} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:s.deliverySpecialHours.map(h=>h.id===sh.id?{...h, note:e.target.value}:h)}:s))} className="flex-1 border p-1"/>
-                  <button onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:s.deliverySpecialHours.filter(h=>h.id!==sh.id)}:s))} className="text-red-400">×</button>
-                </div>
-              ))}
-              <button onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:[...(s.deliverySpecialHours||[]), {id:Date.now(), date:'', type:'closed'}]}:s))} className="w-full py-2 bg-[#D97C8F]/5 border-dashed border rounded-xl text-[10px] font-bold text-[#D97C8F]/60 hover:text-[#D97C8F] transition-all">+ 配達特別日を追加</button>
+              
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                {(shop.deliverySpecialHours || []).map(sh => (
+                  <div key={sh.id} className="flex flex-col gap-2 bg-[#D97C8F]/5 p-3 rounded-xl border border-[#D97C8F]/20 text-[11px] relative">
+                    <button onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:s.deliverySpecialHours.filter(h=>h.id!==sh.id)}:s))} className="absolute top-2 right-2 text-red-400 hover:text-red-600"><Trash2 size={12}/></button>
+                    
+                    <div className="flex gap-2 pr-6">
+                      <select value={sh.repeatType || '今年のみ'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:s.deliverySpecialHours.map(h=>h.id===sh.id?{...h, repeatType:e.target.value}:h)}:s))} className="border border-[#D97C8F]/30 rounded p-1.5 outline-none font-bold">
+                        <option value="今年のみ">単日</option>
+                        <option value="毎週">毎週</option>
+                        <option value="毎月">毎月</option>
+                        <option value="毎年">毎年</option>
+                        <option value="祝日">祝日</option>
+                      </select>
+
+                      {sh.repeatType !== '祝日' && (
+                        <div className="flex-1">
+                          {sh.repeatType === '毎週' ? (
+                            <select value={sh.date} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:s.deliverySpecialHours.map(h=>h.id===sh.id?{...h, date:e.target.value}:h)}:s))} className="w-full border border-[#D97C8F]/30 rounded p-1.5 outline-none">
+                              <option value="">曜日を選択</option><option value="日">日曜日</option><option value="月">月曜日</option><option value="火">火曜日</option><option value="水">水曜日</option><option value="木">木曜日</option><option value="金">金曜日</option><option value="土">土曜日</option>
+                            </select>
+                          ) : sh.repeatType === '毎月' ? (
+                            <select value={sh.date} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:s.deliverySpecialHours.map(h=>h.id===sh.id?{...h, date:e.target.value}:h)}:s))} className="w-full border border-[#D97C8F]/30 rounded p-1.5 outline-none">
+                              <option value="">日付を選択</option>
+                              {[...Array(31)].map((_, i) => <option key={i} value={`${i+1}日`}>{i+1}日</option>)}
+                            </select>
+                          ) : (
+                            <input type={sh.repeatType==='毎年' ? 'text' : 'date'} placeholder={sh.repeatType==='毎年' ? 'MM-DD' : ''} value={sh.date} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:s.deliverySpecialHours.map(h=>h.id===sh.id?{...h, date:e.target.value}:h)}:s))} className="w-full border border-[#D97C8F]/30 rounded p-1.5 outline-none"/>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <select value={sh.type || 'closed'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:s.deliverySpecialHours.map(h=>h.id===sh.id?{...h, type:e.target.value}:h)}:s))} className={`border border-[#D97C8F]/30 rounded p-1.5 outline-none font-bold ${sh.type === 'closed' ? 'text-red-600 bg-red-50' : sh.type === 'changed' ? 'text-orange-600 bg-orange-50' : 'text-green-600 bg-green-50'}`}>
+                        <option value="closed">配達休止</option>
+                        <option value="changed">時間変更</option>
+                        <option value="open">配達可能 (祝日等)</option>
+                      </select>
+                      <input type="text" placeholder="理由やメモ" value={sh.note || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:s.deliverySpecialHours.map(h=>h.id===sh.id?{...h, note:e.target.value}:h)}:s))} className="flex-1 border border-[#D97C8F]/30 rounded p-1.5 outline-none"/>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:[...(s.deliverySpecialHours||[]), {id:Date.now(), date:'', type:'closed', repeatType:'今年のみ', note:''}]}:s))} className="w-full py-2 bg-[#D97C8F]/5 border-dashed border border-[#D97C8F]/30 rounded-xl text-[10px] font-bold text-[#D97C8F]/80 hover:text-[#D97C8F] transition-all">+ 配達の特別ルールを追加</button>
             </div>
           </div>
         </div>
@@ -372,7 +460,6 @@ export default function SettingsPage() {
       <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-10">
         <h2 className="text-[18px] font-bold text-[#2D4B3E] border-b pb-4 flex items-center gap-2"><Truck size={20}/> 配送・送料・時間枠</h2>
         
-        {/* 時間枠の設定エリア */}
         <section className="space-y-6">
           <label className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={16}/> 受取・配達の時間帯枠設定</label>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -381,7 +468,7 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 {timeSlots.pickup.map((slot, i) => (
                   <div key={i} className="flex gap-2">
-                    <input type="text" value={slot} onChange={(e) => handleTimeSlotChange('pickup', i, e.target.value)} className="flex-1 px-3 py-1.5 rounded-lg border border-orange-200 text-[13px] font-bold outline-none" />
+                    <input type="text" value={slot} onChange={(e) => handleTimeSlotChange('pickup', i, e.target.value)} className="flex-1 px-3 py-1.5 rounded-lg border border-orange-200 text-[13px] font-bold outline-none focus:border-orange-400" />
                     <button onClick={() => removeTimeSlot('pickup', i)} className="text-red-500 p-1.5"><X size={14}/></button>
                   </div>
                 ))}
@@ -394,7 +481,7 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 {timeSlots.delivery.map((slot, i) => (
                   <div key={i} className="flex gap-2">
-                    <input type="text" value={slot} onChange={(e) => handleTimeSlotChange('delivery', i, e.target.value)} className="flex-1 px-3 py-1.5 rounded-lg border border-blue-200 text-[13px] font-bold outline-none" />
+                    <input type="text" value={slot} onChange={(e) => handleTimeSlotChange('delivery', i, e.target.value)} className="flex-1 px-3 py-1.5 rounded-lg border border-blue-200 text-[13px] font-bold outline-none focus:border-blue-400" />
                     <button onClick={() => removeTimeSlot('delivery', i)} className="text-red-500 p-1.5"><X size={14}/></button>
                   </div>
                 ))}
@@ -407,7 +494,7 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 {timeSlots.shipping.map((slot, i) => (
                   <div key={i} className="flex gap-2">
-                    <input type="text" value={slot} onChange={(e) => handleTimeSlotChange('shipping', i, e.target.value)} className="flex-1 px-3 py-1.5 rounded-lg border border-green-200 text-[13px] font-bold outline-none" />
+                    <input type="text" value={slot} onChange={(e) => handleTimeSlotChange('shipping', i, e.target.value)} className="flex-1 px-3 py-1.5 rounded-lg border border-green-200 text-[13px] font-bold outline-none focus:border-green-400" />
                     <button onClick={() => removeTimeSlot('shipping', i)} className="text-red-500 p-1.5"><X size={14}/></button>
                   </div>
                 ))}
@@ -417,21 +504,21 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        <div className="space-y-4 pt-6 border-t">
+        <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
           <label className="text-[14px] font-bold text-[#2D4B3E]">自社配達エリアと料金</label>
           <div className="space-y-2">
             {deliveryAreas.map(a => (
-              <div key={a.id} className="flex gap-2 bg-[#FBFAF9] p-2 rounded-xl border">
-                <input type="text" value={a.name} onChange={(e)=>setDeliveryAreas(deliveryAreas.map(x=>x.id===a.id?{...x, name:e.target.value}:x))} className="flex-[2] h-10 bg-white border rounded-xl px-3 text-xs font-bold focus:border-[#2D4B3E] outline-none" placeholder="判定用キーワード"/>
-                <div className="flex-1 flex items-center gap-1 bg-white border rounded-xl px-3 h-10"><span className="text-[10px] font-bold text-[#999999]">¥</span><input type="number" value={a.fee} onChange={(e)=>setDeliveryAreas(deliveryAreas.map(x=>x.id===a.id?{...x, fee:Number(e.target.value)}:x))} className="w-full bg-transparent text-right font-bold text-xs outline-none"/></div>
-                <button onClick={()=>setDeliveryAreas(deliveryAreas.filter(x=>x.id!==a.id))} className="text-red-300 px-2">×</button>
+              <div key={a.id} className="flex gap-2 bg-[#FBFAF9] p-2 rounded-xl border border-[#EAEAEA]">
+                <input type="text" value={a.name} onChange={(e)=>setDeliveryAreas(deliveryAreas.map(x=>x.id===a.id?{...x, name:e.target.value}:x))} className="flex-[2] h-10 bg-white border rounded-xl px-3 text-[13px] font-bold focus:border-[#2D4B3E] outline-none" placeholder="判定用キーワード (例: 中央区, 北区)"/>
+                <div className="flex-1 flex items-center gap-1 bg-white border rounded-xl px-3 h-10"><span className="text-[10px] font-bold text-[#999999]">¥</span><input type="number" value={a.fee} onChange={(e)=>setDeliveryAreas(deliveryAreas.map(x=>x.id===a.id?{...x, fee:Number(e.target.value)}:x))} className="w-full bg-transparent text-right font-bold text-[13px] outline-none"/></div>
+                <button onClick={()=>setDeliveryAreas(deliveryAreas.filter(x=>x.id!==a.id))} className="text-red-300 hover:text-red-500 px-2"><X size={16}/></button>
               </div>
             ))}
             <button onClick={()=>setDeliveryAreas([...deliveryAreas, {id:Date.now(), name:'', fee:0}])} className="py-3 border border-dashed rounded-xl text-[11px] font-bold text-[#999999] hover:text-[#2D4B3E] w-full transition-all">+ 配達エリアを追加</button>
           </div>
         </div>
 
-        <div className="pt-6 space-y-4 border-t">
+        <div className="pt-6 space-y-4 border-t border-[#EAEAEA]">
           <label className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Box size={16}/> 梱包（箱代）の計算ロジック</label>
           <div className="flex gap-2 bg-[#FBFAF9] p-1 rounded-xl w-fit">
             {[{id:'flat',l:'一律'},{id:'price_based',l:'商品代ベース'}].map(t=><button key={t.id} onClick={()=>setBoxFeeConfig({...boxFeeConfig, type:t.id})} className={`px-4 py-2 rounded-lg text-xs font-bold ${boxFeeConfig.type===t.id?'bg-white shadow text-[#2D4B3E]':'text-[#999999]'}`}>{t.l}</button>)}
@@ -445,7 +532,7 @@ export default function SettingsPage() {
             <div className="space-y-2 bg-[#FBFAF9] p-4 rounded-xl border">
               {boxFeeConfig.priceTiers.map((tier, i) => (
                 <div key={i} className="flex items-center gap-2 text-[12px] font-bold">
-                  <input type="number" value={tier.minPrice} onChange={(e)=>{const n=[...boxFeeConfig.priceTiers];n[i].minPrice=Number(e.target.value);setBoxFeeConfig({...boxFeeConfig,priceTiers:n})}} className="w-24 h-8 rounded border px-2"/>円以上なら 箱代<input type="number" value={tier.fee} onChange={(e)=>{const n=[...boxFeeConfig.priceTiers];n[i].fee=Number(e.target.value);setBoxFeeConfig({...boxFeeConfig,priceTiers:n})}} className="w-20 h-8 rounded border px-2 text-right"/>円
+                  <input type="number" value={tier.minPrice} onChange={(e)=>{const n=[...boxFeeConfig.priceTiers];n[i].minPrice=Number(e.target.value);setBoxFeeConfig({...boxFeeConfig,priceTiers:n})}} className="w-24 h-8 rounded border px-2 focus:border-[#2D4B3E] outline-none"/>円以上なら 箱代<input type="number" value={tier.fee} onChange={(e)=>{const n=[...boxFeeConfig.priceTiers];n[i].fee=Number(e.target.value);setBoxFeeConfig({...boxFeeConfig,priceTiers:n})}} className="w-20 h-8 rounded border px-2 text-right focus:border-[#2D4B3E] outline-none"/>円
                 </div>
               ))}
               <button onClick={()=>setBoxFeeConfig({...boxFeeConfig, priceTiers:[...boxFeeConfig.priceTiers, {minPrice:0,fee:0}]})} className="text-[10px] text-[#2D4B3E] font-bold">+ 条件追加</button>
@@ -453,16 +540,16 @@ export default function SettingsPage() {
           )}
         </div>
 
-        <div className="space-y-4 border-t pt-8">
-          <div className="flex justify-between items-center"><label className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><CalendarIcon size={16}/> クール便 適用期間設定</label><button onClick={()=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: [...boxFeeConfig.coolBinPeriods, {id:Date.now(), start:'06-01', end:'09-30', note:''}]})} className="text-[10px] bg-[#2D4B3E] text-white px-3 py-1.5 rounded-full font-bold shadow-sm">+ 期間を追加</button></div>
+        <div className="space-y-4 border-t border-[#EAEAEA] pt-8">
+          <div className="flex justify-between items-center"><label className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><CalendarIcon size={16}/> クール便 適用期間設定</label><button onClick={()=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: [...boxFeeConfig.coolBinPeriods, {id:Date.now(), start:'06-01', end:'09-30', note:''}]})} className="text-[10px] bg-[#2D4B3E] text-white px-3 py-1.5 rounded-full font-bold shadow-sm hover:bg-[#1f352b] transition-all">+ 期間を追加</button></div>
           <div className="grid grid-cols-1 gap-3">
             {boxFeeConfig.coolBinPeriods.map(p => (
               <div key={p.id} className="flex flex-wrap gap-2 items-center bg-[#FBFAF9] p-3 rounded-2xl border">
-                <input type="text" value={p.start} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.map(x=>x.id===p.id?{...x, start:e.target.value}:x)})} className="w-16 h-9 bg-white border rounded-lg text-center text-[11px] font-bold"/>
+                <input type="text" value={p.start} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.map(x=>x.id===p.id?{...x, start:e.target.value}:x)})} className="w-16 h-9 bg-white border rounded-lg text-center text-[11px] font-bold focus:border-[#2D4B3E] outline-none"/>
                 <span className="text-[11px] text-[#999999]">〜</span>
-                <input type="text" value={p.end} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.map(x=>x.id===p.id?{...x, end:e.target.value}:x)})} className="w-16 h-9 bg-white border rounded-lg text-center text-[11px] font-bold"/>
-                <input type="text" placeholder="理由（例：夏季）" value={p.note} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.map(x=>x.id===p.id?{...x, note:e.target.value}:x)})} className="flex-1 h-9 bg-white border rounded-lg px-3 text-[11px] font-bold"/>
-                <button onClick={()=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.filter(x=>x.id!==p.id)})} className="text-red-300 hover:text-red-500">×</button>
+                <input type="text" value={p.end} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.map(x=>x.id===p.id?{...x, end:e.target.value}:x)})} className="w-16 h-9 bg-white border rounded-lg text-center text-[11px] font-bold focus:border-[#2D4B3E] outline-none"/>
+                <input type="text" placeholder="理由（例：夏季）" value={p.note} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.map(x=>x.id===p.id?{...x, note:e.target.value}:x)})} className="flex-1 h-9 bg-white border rounded-lg px-3 text-[11px] font-bold focus:border-[#2D4B3E] outline-none"/>
+                <button onClick={()=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.filter(x=>x.id!==p.id)})} className="text-red-300 hover:text-red-500"><X size={16}/></button>
               </div>
             ))}
           </div>
@@ -471,16 +558,16 @@ export default function SettingsPage() {
         <div className="bg-[#2D4B3E]/5 p-6 rounded-[24px] border border-[#2D4B3E]/10 space-y-4">
           <div className="font-bold text-[#2D4B3E] text-[14px] flex items-center gap-2"><RotateCcw size={18}/> 器回収/返却時の加算送料</div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">計算タイプ</label><select value={boxFeeConfig.returnFeeType} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, returnFeeType:e.target.value})} className="w-full h-10 bg-white border rounded-xl px-3 text-xs font-bold"><option value="flat">固定金額 (¥)</option><option value="percent">基本送料の○%</option></select></div>
-            <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">{boxFeeConfig.returnFeeType === 'flat' ? '加算金額 (¥)' : '加算率 (%)'}</label><input type="number" value={boxFeeConfig.returnFeeValue} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, returnFeeValue:Number(e.target.value)})} className="w-full h-10 bg-white border rounded-xl px-3 text-xs font-bold text-right"/></div>
+            <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">計算タイプ</label><select value={boxFeeConfig.returnFeeType} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, returnFeeType:e.target.value})} className="w-full h-10 bg-white border rounded-xl px-3 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"><option value="flat">固定金額 (¥)</option><option value="percent">基本送料の○%</option></select></div>
+            <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">{boxFeeConfig.returnFeeType === 'flat' ? '加算金額 (¥)' : '加算率 (%)'}</label><input type="number" value={boxFeeConfig.returnFeeValue} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, returnFeeValue:Number(e.target.value)})} className="w-full h-10 bg-white border rounded-xl px-3 text-[13px] font-bold text-right outline-none focus:border-[#2D4B3E]"/></div>
           </div>
         </div>
 
-        <div className="space-y-6 pt-4 border-t">
+        <div className="space-y-6 pt-4 border-t border-[#EAEAEA]">
           <div className="flex justify-between items-center"><label className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Ruler size={16}/> 業者配送 サイズ・地方別マスタ</label>
             <div className="flex gap-2">
-              <button onClick={()=>{const s=prompt('サイズを入力(例:140)'); if(s) setShippingSizes([...shippingSizes, s]);}} className="text-[10px] bg-[#2D4B3E] text-white px-3 py-1.5 rounded-full font-bold shadow-sm">+ サイズ追加</button>
-              <button onClick={()=>{const r=prompt('新しい地域名を入力'); if(r) setShippingRates([...shippingRates, {region:r, leadDays:1}]);}} className="text-[10px] bg-[#2D4B3E] text-white px-3 py-1.5 rounded-full font-bold shadow-sm">+ 地域追加</button>
+              <button onClick={()=>{const s=prompt('サイズを入力(例:140)'); if(s) setShippingSizes([...shippingSizes, s]);}} className="text-[10px] bg-[#2D4B3E] text-white px-3 py-1.5 rounded-full font-bold shadow-sm hover:bg-[#1f352b] transition-all">+ サイズ追加</button>
+              <button onClick={()=>{const r=prompt('新しい地域名を入力'); if(r) setShippingRates([...shippingRates, {region:r, leadDays:1}]);}} className="text-[10px] bg-[#2D4B3E] text-white px-3 py-1.5 rounded-full font-bold shadow-sm hover:bg-[#1f352b] transition-all">+ 地域追加</button>
             </div>
           </div>
           
@@ -489,7 +576,7 @@ export default function SettingsPage() {
             {shippingSizes.map((s, i) => (
               <div key={i} className="flex items-center gap-2 bg-white border rounded-full pl-3 pr-1 py-1 shadow-sm transition-all hover:border-red-200">
                 <span className="text-[11px] font-black text-[#2D4B3E]">{s}サイズ</span>
-                <button onClick={() => { if(confirm(`${s}サイズを削除しますか？`)){ setShippingSizes(shippingSizes.filter((_, idx)=>idx!==i)); }}} className="w-5 h-5 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white">×</button>
+                <button onClick={() => { if(confirm(`${s}サイズを削除しますか？`)){ setShippingSizes(shippingSizes.filter((_, idx)=>idx!==i)); }}} className="w-5 h-5 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"><X size={12}/></button>
               </div>
             ))}
           </div>
@@ -507,17 +594,17 @@ export default function SettingsPage() {
               </thead>
               <tbody className="divide-y">
                 {shippingRates.map((r, i) => (
-                  <tr key={i} className="hover:bg-gray-50/50">
-                    <td className="p-3"><input type="text" value={r.region} onChange={(e)=>{const n=[...shippingRates]; n[i].region=e.target.value; setShippingRates(n);}} className="w-full border-none bg-transparent font-bold text-[11px] focus:ring-0" /></td>
+                  <tr key={i} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="p-3"><input type="text" value={r.region} onChange={(e)=>{const n=[...shippingRates]; n[i].region=e.target.value; setShippingRates(n);}} className="w-full border-none bg-transparent font-bold text-[11px] focus:ring-0 outline-none" /></td>
                     <td className="p-1 border-l bg-green-50/30">
                       <div className="flex items-center justify-center gap-1">
                         <input type="number" value={r.leadDays || 1} onChange={(e)=>{const n=[...shippingRates]; n[i].leadDays=Number(e.target.value); setShippingRates(n);}} className="w-12 border border-green-200 rounded p-1.5 text-center font-bold text-green-900 outline-none focus:border-green-500"/>
                         <span className="text-[10px] text-green-800">日</span>
                       </div>
                     </td>
-                    {shippingSizes.map(s => <td key={s} className="p-1 border-l"><input type="number" value={r['fee'+s]||0} onChange={(e)=>{const n=[...shippingRates]; n[i]['fee'+s]=Number(e.target.value); setShippingRates(n);}} className="w-16 border rounded p-1.5 mx-auto block text-right font-bold"/></td>)}
-                    {shippingSizes.map(s => <td key={'c'+s} className="p-1 border-l bg-blue-50/10"><input type="number" value={r['cool'+s]||0} onChange={(e)=>{const n=[...shippingRates]; n[i]['cool'+s]=Number(e.target.value); setShippingRates(n);}} className="w-16 border border-blue-100 rounded p-1.5 mx-auto block text-right text-blue-500 font-bold"/></td>)}
-                    <td className="p-1 text-center"><button onClick={()=>{if(confirm('削除しますか？')){setShippingRates(shippingRates.filter((_, idx)=>idx!==i))}}} className="text-red-300">×</button></td>
+                    {shippingSizes.map(s => <td key={s} className="p-1 border-l"><input type="number" value={r['fee'+s]||0} onChange={(e)=>{const n=[...shippingRates]; n[i]['fee'+s]=Number(e.target.value); setShippingRates(n);}} className="w-16 border rounded p-1.5 mx-auto block text-right font-bold outline-none focus:border-[#2D4B3E]"/></td>)}
+                    {shippingSizes.map(s => <td key={'c'+s} className="p-1 border-l bg-blue-50/10"><input type="number" value={r['cool'+s]||0} onChange={(e)=>{const n=[...shippingRates]; n[i]['cool'+s]=Number(e.target.value); setShippingRates(n);}} className="w-16 border border-blue-100 rounded p-1.5 mx-auto block text-right text-blue-500 font-bold outline-none focus:border-blue-400"/></td>)}
+                    <td className="p-1 text-center"><button onClick={()=>{if(confirm('削除しますか？')){setShippingRates(shippingRates.filter((_, idx)=>idx!==i))}}} className="text-red-300 hover:text-red-500 p-2"><Trash2 size={14}/></button></td>
                   </tr>
                 ))}
               </tbody>
@@ -601,7 +688,10 @@ export default function SettingsPage() {
           <div><span className="font-bold block text-[14px] group-hover:text-[#2D4B3E]">お客様への自動返信メールを送らない</span><span className="text-[10px] text-[#999999] font-bold">代理入力時は、送信完了後の自動メールを停止します</span></div>
           <input type="checkbox" checked={!staffOrderConfig.sendAutoReply} onChange={(e)=>setStaffOrderConfig({...staffOrderConfig, sendAutoReply:!e.target.checked})} className="w-6 h-6 accent-[#2D4B3E]"/>
         </label>
-        <div className="pt-4 space-y-1"><label className="text-[11px] font-bold text-[#999999]">スタッフ専用 支払い方法リスト（カンマ区切り）</label><input type="text" value={(staffOrderConfig.paymentMethods||[]).join(', ')} onChange={(e)=>setStaffOrderConfig({...staffOrderConfig, paymentMethods:e.target.value.split(',').map(s=>s.trim()).filter(Boolean)})} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/></div>
+        <div className="pt-4 space-y-1">
+          <label className="text-[11px] font-bold text-[#999999]">スタッフ専用 支払い方法リスト（カンマ区切り）</label>
+          <input type="text" value={(staffOrderConfig.paymentMethods||[]).join(', ')} onChange={(e)=>setStaffOrderConfig({...staffOrderConfig, paymentMethods:e.target.value.split(',').map(s=>s.trim()).filter(Boolean)})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/>
+        </div>
       </div>
     </div>
   );
@@ -613,24 +703,72 @@ export default function SettingsPage() {
         {staffList.map((s, i) => (
           <div key={i} className="flex justify-between items-center bg-[#FBFAF9] p-4 rounded-2xl border hover:bg-white transition-all">
             <div className="flex flex-col"><span className="font-bold text-[14px]">{s.name}</span><span className="text-[9px] text-[#999999] font-bold uppercase tracking-tight">所属: {s.store === 'all' ? '全店舗共通' : shops.find(sh=>sh.id===Number(s.store))?.name || s.store}</span></div>
-            <button onClick={()=>setStaffList(staffList.filter((_,idx)=>idx!==i))} className="text-red-300 hover:text-red-500 px-2">削除</button>
+            <button onClick={()=>setStaffList(staffList.filter((_,idx)=>idx!==i))} className="text-red-300 hover:text-red-500 p-2"><Trash2 size={16}/></button>
           </div>
         ))}
-        <div className="flex flex-col md:flex-row gap-2 pt-4 border-t">
+        <div className="flex flex-col md:flex-row gap-2 pt-4 border-t border-[#EAEAEA]">
           <input type="text" placeholder="氏名" value={newStaffName} onChange={(e)=>setNewStaffName(e.target.value)} className="flex-[2] h-12 bg-[#FBFAF9] border rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E]"/>
-          <select value={newStaffStore} onChange={(e)=>setNewStaffStore(e.target.value)} className="flex-1 h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[12px] font-bold outline-none"><option value="all">全店舗共通</option>{shops.map(shop=><option key={shop.id} value={shop.id}>{shop.name}</option>)}</select>
-          <button onClick={()=>{if(newStaffName.trim()){setStaffList([...staffList,{name:newStaffName, store:newStaffStore}]); setNewStaffName('');}}} className="bg-[#2D4B3E] text-white px-6 h-12 rounded-xl font-bold text-[13px] shadow-sm hover:bg-[#1f352b]">追加</button>
+          <select value={newStaffStore} onChange={(e)=>setNewStaffStore(e.target.value)} className="flex-1 h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"><option value="all">全店舗共通</option>{shops.map(shop=><option key={shop.id} value={shop.id}>{shop.name}</option>)}</select>
+          <button onClick={()=>{if(newStaffName.trim()){setStaffList([...staffList,{name:newStaffName, store:newStaffStore}]); setNewStaffName('');}}} className="bg-[#2D4B3E] text-white px-6 h-12 rounded-xl font-bold text-[13px] shadow-sm hover:bg-[#1f352b] transition-all">追加</button>
         </div>
       </div>
     </div>
   );
 
+  // ★ 通知メール設定を複数持てるように大幅アップデート
   const renderMessageTab = () => (
     <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-6 animate-in fade-in text-left">
-      <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Mail size={20}/> 自動返信メール設定</h2>
-      <div className="space-y-4">
-        <div className="space-y-1"><label className="text-[11px] font-bold text-[#999999]">メール件名</label><input type="text" value={autoReply.subject} onChange={(e)=>setAutoReply({...autoReply, subject:e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E]"/></div>
-        <div className="space-y-1"><label className="text-[11px] font-bold text-[#999999]">メール本文 (利用可能タグ: {"{CustomerName}"} {"{OrderDetails}"})</label><textarea value={autoReply.body} onChange={(e)=>setAutoReply({...autoReply, body:e.target.value})} className="w-full h-80 bg-[#FBFAF9] border border-[#EAEAEA] rounded-[24px] p-5 text-[13px] font-bold outline-none resize-none leading-relaxed focus:border-[#2D4B3E]" /></div>
+      <div className="flex justify-between items-center border-b border-[#EAEAEA] pb-4">
+        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Mail size={20}/> 通知メールテンプレート管理</h2>
+        <button 
+          onClick={() => setAutoReplyTemplates([...autoReplyTemplates, { id: `t_${Date.now()}`, trigger: 'カスタム', subject: '新しいテンプレート', body: '' }])}
+          className="text-[11px] bg-[#2D4B3E] text-white px-4 py-2 rounded-full font-bold shadow-sm hover:bg-[#1f352b] transition-all flex items-center gap-1"
+        >
+          <Plus size={14}/> テンプレート追加
+        </button>
+      </div>
+
+      <div className="space-y-8">
+        {autoReplyTemplates.map((template, index) => (
+          <div key={template.id} className="bg-[#FBFAF9] p-6 rounded-[24px] border border-[#EAEAEA] space-y-4 relative group">
+            <button 
+              onClick={() => { if(confirm('このテンプレートを削除しますか？')) setAutoReplyTemplates(autoReplyTemplates.filter(t => t.id !== template.id)) }} 
+              className="absolute top-6 right-6 text-red-300 hover:text-red-500 bg-white p-2 rounded-full shadow-sm"
+            >
+              <Trash2 size={16}/>
+            </button>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-12">
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-[#999999]">送信タイミング・用途 (管理用)</label>
+                <input 
+                  type="text" value={template.trigger} 
+                  onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].trigger = e.target.value; setAutoReplyTemplates(newT); }} 
+                  className="w-full h-12 bg-white border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E]"
+                  placeholder="例: 注文受付時, 入金確認後"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-[#999999]">メール件名</label>
+                <input 
+                  type="text" value={template.subject} 
+                  onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].subject = e.target.value; setAutoReplyTemplates(newT); }} 
+                  className="w-full h-12 bg-white border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E]"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-[#999999]">メール本文 (利用可能タグ: {"{CustomerName}"} {"{OrderDetails}"} {"{PaymentInfo}"})</label>
+              <textarea 
+                value={template.body} 
+                onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].body = e.target.value; setAutoReplyTemplates(newT); }} 
+                className="w-full h-48 bg-white border border-[#EAEAEA] rounded-[20px] p-5 text-[13px] font-bold outline-none resize-none leading-relaxed focus:border-[#2D4B3E]" 
+                placeholder="本文を入力してください..."
+              />
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -648,17 +786,17 @@ export default function SettingsPage() {
           {!isAdmin ? (
             <div className="flex items-center gap-2 bg-white px-2 py-1.5 rounded-xl border shadow-sm">
               <input type="password" placeholder="Pass" value={adminPassword} onChange={(e)=>setAdminPassword(e.target.value)} className="w-16 h-8 px-2 bg-[#FBFAF9] text-[11px] font-bold outline-none rounded-lg border"/>
-              <button onClick={handleLogin} className="px-3 h-8 bg-[#2D4B3E] text-white text-[11px] font-bold rounded-lg">解除</button>
+              <button onClick={handleLogin} className="px-3 h-8 bg-[#2D4B3E] text-white text-[11px] font-bold rounded-lg hover:bg-[#1f352b]">解除</button>
             </div>
           ) : (
-            <button onClick={saveSettings} disabled={isSaving} className={`px-6 py-2.5 rounded-xl text-[12px] font-bold tracking-widest shadow-md transition-all ${isSaving ? 'bg-gray-400' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b]'}`}>{isSaving ? '保存中...' : '変更を保存'}</button>
+            <button onClick={saveSettings} disabled={isSaving} className={`px-6 py-2.5 rounded-xl text-[12px] font-bold tracking-widest shadow-md transition-all ${isSaving ? 'bg-gray-400' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b] active:scale-95'}`}>{isSaving ? '保存中...' : '変更を保存'}</button>
           )}
         </div>
       </header>
 
       <div className="md:hidden flex overflow-x-auto bg-white border-b p-2 hide-scrollbar sticky top-20 z-40 shadow-sm">
         {tabs.map((t) => (
-          <button key={t.id} onClick={() => setActiveTab(t.id)} className={`whitespace-nowrap px-4 py-2 text-[12px] font-bold rounded-lg ${activeTab === t.id ? 'bg-[#2D4B3E] text-white shadow-md' : 'text-[#999999]'}`}>{t.label}</button>
+          <button key={t.id} onClick={() => setActiveTab(t.id)} className={`whitespace-nowrap px-4 py-2 text-[12px] font-bold rounded-lg transition-all ${activeTab === t.id ? 'bg-[#2D4B3E] text-white shadow-md' : 'text-[#999999]'}`}>{t.label}</button>
         ))}
       </div>
 
@@ -674,7 +812,6 @@ export default function SettingsPage() {
         {activeTab === 'message' && renderMessageTab()}
       </main>
 
-      {/* ★ 注文ページで使っているのと同じ明朝体フォントやスクロールバー非表示のスタイルを適用 */}
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&display=swap');
         .font-serif { font-family: 'Noto Serif JP', serif; }
