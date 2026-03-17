@@ -3,8 +3,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 import { 
   Building2, Mail, ArrowUpCircle, Bot, Lock, Unlock, 
-  CheckCircle, XCircle, RefreshCw, Save, Sparkles, ExternalLink
+  CheckCircle, XCircle, RefreshCw, Save, Sparkles, Store
 } from 'lucide-react';
+
+const DEFAULT_AI_PROMPT = '以下のテキストからお花の「価格」「用途」「カラー」「イメージ」をJSON形式で抽出してください。価格はカンマなしの数値で出力してください。';
 
 export default function OwnerDashboard() {
   const [activeTab, setActiveTab] = useState('tenants');
@@ -17,9 +19,7 @@ export default function OwnerDashboard() {
   const [newInviteEmail, setNewInviteEmail] = useState('');
   const [newInvitePlan, setNewInvitePlan] = useState('10000');
   
-  // ★ 新規追加データ
   const [upgradeRequests, setUpgradeRequests] = useState([]);
-  const [aiPrompt, setAiPrompt] = useState('以下のテキストからお花の「価格」「用途」「カラー」「イメージ」をJSON形式で抽出してください。価格はカンマなしの数値で出力してください。');
 
   // オーナー用パスワード
   const [isAuth, setIsAuth] = useState(false);
@@ -33,12 +33,11 @@ export default function OwnerDashboard() {
           if (data.settings_data.tenants) setTenants(data.settings_data.tenants);
           if (data.settings_data.invitations) setInvitations(data.settings_data.invitations);
           if (data.settings_data.upgradeRequests) setUpgradeRequests(data.settings_data.upgradeRequests);
-          if (data.settings_data.aiPrompt) setAiPrompt(data.settings_data.aiPrompt);
         } else {
-          // 初回起動時のダミーデータ
+          // 初回起動時のダミーデータ（aiPromptを各店舗ごとに持たせる）
           setTenants([
-            { id: 'shop_a', name: '花・花 OHANA!', email: 'info@hana-ohana.example.com', price: 10000, status: 'active', lastPaid: '2026-02-28', features: { b2b: false, deliveryOutsource: true } },
-            { id: 'shop_b', name: 'お花カフェ (デモ店舗)', email: 'demo@example.com', price: 0, status: 'active', lastPaid: '-', features: { b2b: true, deliveryOutsource: false } },
+            { id: 'shop_a', name: '花・花 OHANA!', email: 'info@hana-ohana.example.com', price: 10000, status: 'active', lastPaid: '2026-02-28', features: { b2b: false, deliveryOutsource: true }, aiPrompt: DEFAULT_AI_PROMPT },
+            { id: 'shop_b', name: 'お花カフェ (デモ店舗)', email: 'demo@example.com', price: 0, status: 'active', lastPaid: '-', features: { b2b: true, deliveryOutsource: false }, aiPrompt: DEFAULT_AI_PROMPT },
           ]);
           setUpgradeRequests([
             { id: 'req_1', tenantId: 'shop_a', tenantName: '花・花 OHANA!', featureKey: 'b2b', featureName: '法人ポータル管理機能', date: '2026-03-15', status: 'pending' }
@@ -61,8 +60,8 @@ export default function OwnerDashboard() {
     }
   };
 
-  // ★ 統合保存ロジック
-  const saveOwnerData = async (updatedTenants = tenants, updatedInvitations = invitations, updatedUpgrades = upgradeRequests, updatedPrompt = aiPrompt) => {
+  // 統合保存ロジック（aiPromptはtenantsの中に含まれるため引数を整理）
+  const saveOwnerData = async (updatedTenants = tenants, updatedInvitations = invitations, updatedUpgrades = upgradeRequests) => {
     setIsSaving(true);
     try {
       await supabase.from('app_settings').upsert({ 
@@ -70,14 +69,12 @@ export default function OwnerDashboard() {
         settings_data: { 
           tenants: updatedTenants, 
           invitations: updatedInvitations,
-          upgradeRequests: updatedUpgrades,
-          aiPrompt: updatedPrompt
+          upgradeRequests: updatedUpgrades
         } 
       });
       setTenants(updatedTenants);
       setInvitations(updatedInvitations);
       setUpgradeRequests(updatedUpgrades);
-      setAiPrompt(updatedPrompt);
     } catch (error) {
       alert('データの保存に失敗しました。');
     } finally {
@@ -102,7 +99,7 @@ export default function OwnerDashboard() {
     };
     
     const updated = [newInvite, ...invitations];
-    saveOwnerData(tenants, updated, upgradeRequests, aiPrompt);
+    saveOwnerData(tenants, updated, upgradeRequests);
     setNewInviteEmail('');
     
     navigator.clipboard.writeText(`システムのご案内です。以下のURLから初期設定を行ってください。\n${setupUrl}`);
@@ -120,16 +117,16 @@ export default function OwnerDashboard() {
     if (!confirm(confirmMsg)) return;
 
     const updated = tenants.map(t => t.id === tenantId ? { ...t, status: newStatus } : t);
-    saveOwnerData(updated, invitations, upgradeRequests, aiPrompt);
+    saveOwnerData(updated, invitations, upgradeRequests);
   };
 
   // 料金の変更
   const updatePrice = (tenantId, newPrice) => {
     const updated = tenants.map(t => t.id === tenantId ? { ...t, price: Number(newPrice) } : t);
-    saveOwnerData(updated, invitations, upgradeRequests, aiPrompt);
+    saveOwnerData(updated, invitations, upgradeRequests);
   };
 
-  // ★ 新規追加：機能の個別出し分け（トグル切り替え）
+  // 機能の個別出し分け（トグル切り替え）
   const toggleFeature = (tenantId, featureKey) => {
     const updated = tenants.map(t => {
       if (t.id === tenantId) {
@@ -138,10 +135,16 @@ export default function OwnerDashboard() {
       }
       return t;
     });
-    saveOwnerData(updated, invitations, upgradeRequests, aiPrompt);
+    saveOwnerData(updated, invitations, upgradeRequests);
   };
 
-  // ★ 新規追加：アップグレードの承認
+  // ★ AIプロンプトの個別更新（入力中）
+  const updateTenantPrompt = (tenantId, newPrompt) => {
+    const updated = tenants.map(t => t.id === tenantId ? { ...t, aiPrompt: newPrompt } : t);
+    setTenants(updated); // ローカルステートだけ更新して入力をもたつかせない
+  };
+
+  // アップグレードの承認
   const handleApproveUpgrade = (reqId) => {
     if(!confirm('この機能のアップグレードを承認し、店舗に機能を解放しますか？')) return;
     
@@ -157,15 +160,15 @@ export default function OwnerDashboard() {
     });
 
     const updatedReqs = upgradeRequests.map(r => r.id === reqId ? { ...r, status: 'approved' } : r);
-    saveOwnerData(updatedTenants, invitations, updatedReqs, aiPrompt);
+    saveOwnerData(updatedTenants, invitations, updatedReqs);
     alert('機能を解放しました！');
   };
 
-  // ★ 新規追加：アップグレードの却下
+  // アップグレードの却下
   const handleRejectUpgrade = (reqId) => {
     if(!confirm('この依頼を却下しますか？')) return;
     const updatedReqs = upgradeRequests.map(r => r.id === reqId ? { ...r, status: 'rejected' } : r);
-    saveOwnerData(tenants, invitations, updatedReqs, aiPrompt);
+    saveOwnerData(tenants, invitations, updatedReqs);
   };
 
   const pendingUpgradesCount = upgradeRequests.filter(r => r.status === 'pending').length;
@@ -217,7 +220,7 @@ export default function OwnerDashboard() {
           </button>
         </nav>
         <div className="absolute bottom-8 left-8 text-[10px] text-gray-600 font-mono">
-          System v1.2.0<br/>Secure Connection
+          System v1.3.0<br/>Secure Connection
         </div>
       </aside>
 
@@ -227,7 +230,7 @@ export default function OwnerDashboard() {
             {activeTab === 'tenants' && 'TENANT MANAGEMENT'}
             {activeTab === 'invites' && 'ISSUE INVITATION'}
             {activeTab === 'upgrades' && 'UPGRADE REQUESTS'}
-            {activeTab === 'ai' && 'AI PROMPT CONTROL'}
+            {activeTab === 'ai' && 'AI PROMPT SETTINGS'}
           </h2>
           {isSaving && <span className="text-[#2D4B3E] text-sm animate-pulse font-mono flex items-center gap-2"><RefreshCw size={14} className="animate-spin"/> Syncing...</span>}
         </header>
@@ -267,7 +270,6 @@ export default function OwnerDashboard() {
                           </div>
                         </td>
                         <td className="px-6 py-5">
-                          {/* ★ 機能トグル */}
                           <div className="flex flex-col gap-3">
                             <label className="flex items-center gap-3 cursor-pointer group">
                               <div onClick={() => toggleFeature(t.id, 'b2b')} className={`w-9 h-5 rounded-full transition-all flex items-center px-0.5 ${f.b2b ? 'bg-[#2D4B3E]' : 'bg-[#333333]'}`}>
@@ -395,33 +397,41 @@ export default function OwnerDashboard() {
           </div>
         )}
 
-        {/* 4. AIプロンプトの設定 */}
+        {/* 4. ★AIプロンプトの設定 (店舗別) */}
         {activeTab === 'ai' && (
           <div className="space-y-6 animate-in fade-in">
-            <div className="bg-[#111111] p-8 rounded-2xl border border-[#222222] shadow-2xl space-y-6">
-              <div className="space-y-2">
-                <h3 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2"><Sparkles size={18}/> AI 画像解析プロンプト (システム全体設定)</h3>
-                <p className="text-[12px] text-gray-500 leading-relaxed">
-                  テナントが「過去分登録 (URL取込)」を使用した際に、AIに対してどのようにテキストを解析させるかの指示文（プロンプト）です。抽出精度を上げるためにここで調整できます。
-                </p>
-              </div>
+            <header className="mb-6 space-y-2">
+               <h3 className="text-[16px] font-bold text-emerald-400 flex items-center gap-2"><Sparkles size={18}/> 店舗別 AI 画像解析プロンプト</h3>
+               <p className="text-[12px] text-gray-500 leading-relaxed">
+                 各店舗が「過去分登録 (URL取込)」を使用した際に、AIに対してどのようにテキストを解析させるかの指示文を個別にチューニングできます。
+               </p>
+            </header>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               {tenants.map(t => (
+                  <div key={t.id} className="bg-[#111111] p-6 rounded-2xl border border-[#222222] shadow-xl flex flex-col">
+                     <h4 className="text-white font-bold mb-4 flex items-center gap-2">
+                       <Store size={16} className="text-emerald-500" /> 
+                       {t.name} <span className="text-gray-600 text-[10px] font-mono">({t.id})</span>
+                     </h4>
+                     <textarea
+                        value={t.aiPrompt ?? DEFAULT_AI_PROMPT}
+                        onChange={(e) => updateTenantPrompt(t.id, e.target.value)}
+                        className="w-full h-40 bg-black border border-[#333333] rounded-xl p-4 text-[12px] text-emerald-50 outline-none resize-none font-mono focus:border-[#2D4B3E] transition-colors flex-1"
+                        placeholder="この店舗専用のAI指示を記述..."
+                     />
+                  </div>
+               ))}
+            </div>
 
-              <textarea 
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                className="w-full h-64 bg-black border border-[#333333] rounded-xl p-6 text-[13px] text-emerald-50 outline-none resize-none font-mono leading-relaxed focus:border-[#2D4B3E] transition-colors"
-                placeholder="AIへの指示を記述..."
-              />
-
-              <div className="flex justify-end">
-                <button 
-                  onClick={() => saveOwnerData(tenants, invitations, upgradeRequests, aiPrompt)}
-                  disabled={isSaving}
-                  className="flex items-center gap-2 bg-[#2D4B3E] text-white px-8 py-3.5 rounded-xl font-bold text-[13px] tracking-widest hover:bg-[#1f352b] transition-all disabled:opacity-50"
-                >
-                  <Save size={16}/> {isSaving ? 'SAVING...' : 'SAVE PROMPT'}
-                </button>
-              </div>
+            <div className="flex justify-end pt-6 border-t border-[#222222]">
+              <button 
+                onClick={() => saveOwnerData(tenants, invitations, upgradeRequests)}
+                disabled={isSaving}
+                className="flex items-center justify-center w-full md:w-auto gap-2 bg-[#2D4B3E] text-white px-10 py-4 rounded-xl font-bold text-[13px] tracking-widest hover:bg-[#1f352b] transition-all disabled:opacity-50 shadow-lg shadow-[#2D4B3E]/20"
+              >
+                <Save size={16}/> {isSaving ? 'SAVING...' : 'SAVE ALL PROMPTS'}
+              </button>
             </div>
           </div>
         )}
