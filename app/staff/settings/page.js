@@ -21,6 +21,7 @@ export default function SettingsPage() {
 
   // --- 1. 基本設定 ---
   const [generalConfig, setGeneralConfig] = useState({ 
+    tenantId: 'demo_flower', // ★ 新規: テナントID (URL用)
     appName: 'FLORIX', logoUrl: '', logoSize: 100, logoTransparent: false, slipBgUrl: '', slipBgOpacity: 50, systemPassword: '7777'
   });
 
@@ -71,7 +72,6 @@ export default function SettingsPage() {
     { id: 't1', trigger: '注文受付時', subject: 'ご注文ありがとうございます', body: '{CustomerName} 様\n\nご注文ありがとうございます。' }
   ]);
 
-  // ★ URL・リンク発行タブを追加
   const tabs = [
     { id: 'general', label: '基本設定', icon: SettingsIcon },
     { id: 'status', label: 'ステータス', icon: ListChecks },
@@ -156,8 +156,21 @@ export default function SettingsPage() {
       <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><ImageIcon size={20}/> 基本情報・ロゴ・伝票</h2>
       <div className="space-y-6">
         
+        {/* ★ 新規: テナントID設定 */}
+        <div className="space-y-1 bg-[#F7F7F7] p-5 rounded-2xl border border-[#EAEAEA]">
+          <label className="text-[11px] font-bold text-[#2D4B3E] flex items-center gap-2">テナントID (URL用システム連携ID)</label>
+          <p className="text-[10px] text-[#999999] mb-2">※法人ページやお客様の注文ページのURLに使用されます。半角英数字で設定してください。</p>
+          <input 
+            type="text" 
+            value={generalConfig.tenantId || 'demo_flower'} 
+            onChange={(e)=>setGeneralConfig({...generalConfig, tenantId: e.target.value})} 
+            className="w-full h-12 bg-white border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E] transition-colors"
+            placeholder="例: my_flower_shop"
+          />
+        </div>
+
         <div className="space-y-1">
-          <label className="text-[11px] font-bold text-[#999999]">アプリ名</label>
+          <label className="text-[11px] font-bold text-[#999999]">アプリ名 (ショップ名)</label>
           <input 
             type="text" 
             value={generalConfig.appName} 
@@ -195,7 +208,7 @@ export default function SettingsPage() {
           <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><ShieldCheck size={16}/> システムセキュリティ</h3>
           <div className="bg-red-50 p-6 rounded-2xl border border-red-100 space-y-3">
             <div className="space-y-1">
-              <label className="text-[11px] font-bold text-red-800">管理者パスワード (設定変更・注文削除用)</label>
+              <label className="text-[11px] font-bold text-red-800">管理者パスワード</label>
               <div className="relative w-full max-w-[240px]">
                 <input type={showPassword ? "text" : "password"} value={generalConfig.systemPassword || ''} onChange={(e)=>setGeneralConfig({...generalConfig, systemPassword: e.target.value})} className="w-full h-12 bg-white border border-red-200 rounded-xl px-4 font-bold outline-none focus:border-red-400 text-red-700 tracking-widest pr-10"/>
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600">
@@ -322,7 +335,6 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* ★ 置き配・注意事項の設定 */}
           <div className="pt-6 border-t border-[#FBFAF9] space-y-4">
             <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><AlertCircle size={16}/> 注意書き・ご案内テキスト設定</h3>
             <p className="text-[10px] text-[#999999]">お客様のオーダー画面で表示される、各受取方法ごとの注意書きを店舗別に設定できます。</p>
@@ -519,7 +531,7 @@ export default function SettingsPage() {
         <div className="overflow-x-auto border rounded-[24px]">
           <table className="w-full text-left text-[10px] min-w-[1100px] bg-white">
             <thead className="bg-[#FBFAF9] border-b text-[#999999]"><tr><th className="p-3 w-32 font-black">地域・地方名</th><th className="p-3 text-center border-l bg-green-50 text-green-800">配送日数</th>{shippingSizes.map(s=><th key={s} className="p-3 text-center border-l bg-gray-50">{s}サイズ</th>)}{shippingSizes.map(s=><th key={'c'+s} className="p-3 text-center border-l bg-blue-50 text-blue-500">{s}クール加算</th>)}<th className="p-3"></th></tr></thead>
-            <tbody className="divide-y">{shippingRates.map((r, i) => (<tr key={i} className="hover:bg-gray-50/50 transition-colors"><td className="p-3"><input type="text" value={r.region} onChange={(e)=>{const n=[...shippingRates]; n[i].region=e.target.value; setShippingRates(n);}} className="w-full border-none bg-transparent font-bold text-[11px] outline-none" /></td><td className="p-1 border-l bg-green-50/30"><div className="flex items-center justify-center gap-1"><input type="number" value={r.leadDays || 1} onChange={(e)=>{const n=[...shippingRates]; n[i].leadDays=Number(e.target.value); setShippingRates(n);}} className="w-12 border rounded p-1.5 text-center font-bold text-green-900 outline-none"/><span className="text-[10px] text-green-800">日</span></div></td>{shippingSizes.map(s => <td key={s} className="p-1 border-l"><input type="number" value={r['fee'+s]||0} onChange={(e)=>{const n=[...shippingRates]; n[i]['fee'+s]=Number(e.target.value); setShippingRates(n);}} className="w-16 border rounded p-1.5 mx-auto block text-right font-bold outline-none focus:border-[#2D4B3E]"/></td>)}{shippingSizes.map(s => <td key={'c'+s} className="p-1 border-l bg-blue-50/10"><input type="number" value={r['cool'+s]||0} onChange={(e)=>{const n=[...shippingRates]; n[i]['cool'+s]=Number(e.target.value); setShippingRates(n);}} className="w-16 border border-blue-100 rounded p-1.5 mx-auto block text-right text-blue-500 font-bold outline-none focus:border-blue-400"/></td>)}<td className="p-1 text-center"><button onClick={()=>{if(confirm('削除しますか？')){setShippingRates(shippingRates.filter((_, idx)=>idx!==i))}}} className="text-red-300 hover:text-red-500 p-2"><Trash2 size={14}/></button></td></tr>))}</tbody>
+            <tbody className="divide-y">{shippingRates.map((r, i) => (<tr key={i} className="hover:bg-gray-50/50 transition-colors"><td className="p-3"><input type="text" value={r.region} onChange={(e)=>{const n=[...shippingRates]; n[i].region=e.target.value; setShippingRates(n);}} className="w-full border-none bg-transparent font-bold text-[11px] outline-none" /></td><td className="p-1 border-l bg-green-50/30"><div className="flex items-center justify-center gap-1"><input type="number" value={r.leadDays || 1} onChange={(e)=>{const n=[...shippingRates]; n[i].leadDays=Number(e.target.value); setShippingRates(n);}} className="w-12 border rounded p-1.5 text-center font-bold text-green-900 outline-none"/></div></td>{shippingSizes.map(s => <td key={s} className="p-1 border-l"><input type="number" value={r['fee'+s]||0} onChange={(e)=>{const n=[...shippingRates]; n[i]['fee'+s]=Number(e.target.value); setShippingRates(n);}} className="w-16 border rounded p-1.5 mx-auto block text-right font-bold outline-none focus:border-[#2D4B3E]"/></td>)}{shippingSizes.map(s => <td key={'c'+s} className="p-1 border-l bg-blue-50/10"><input type="number" value={r['cool'+s]||0} onChange={(e)=>{const n=[...shippingRates]; n[i]['cool'+s]=Number(e.target.value); setShippingRates(n);}} className="w-16 border border-blue-100 rounded p-1.5 mx-auto block text-right text-blue-500 font-bold outline-none focus:border-blue-400"/></td>)}<td className="p-1 text-center"><button onClick={()=>{if(confirm('削除しますか？')){setShippingRates(shippingRates.filter((_, idx)=>idx!==i))}}} className="text-red-300 hover:text-red-500 p-2"><Trash2 size={14}/></button></td></tr>))}</tbody>
           </table>
         </div>
       </div>
@@ -595,44 +607,52 @@ export default function SettingsPage() {
     </div>
   );
 
-  // ★ 追加: リンク・URL発行タブ
-  const renderLinksTab = () => (
-    <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 animate-in fade-in">
-      <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><LinkIcon size={20}/> URL・リンク発行</h2>
-      <div className="space-y-6">
-        <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] space-y-4">
-          <h3 className="text-[14px] font-bold text-[#111111]">法人のお客様向け</h3>
-          <div className="space-y-2">
-             <label className="text-[11px] font-bold text-[#999999]">法人ポータル (ログイン・注文履歴)</label>
-             <div className="flex gap-2">
-               <input type="text" readOnly value={`${window.location.origin}/corporate`} className="flex-1 h-12 px-4 bg-white border border-[#EAEAEA] rounded-xl text-[13px] font-mono outline-none text-[#555555]" />
-               <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/corporate`); alert('コピーしました！'); }} className="px-6 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold hover:bg-[#1f352b] transition-all">コピー</button>
-             </div>
-          </div>
-          <div className="space-y-2 pt-2">
-             <label className="text-[11px] font-bold text-[#999999]">法人アカウント新規登録フォーム</label>
-             <div className="flex gap-2">
-               <input type="text" readOnly value={`${window.location.origin}/corporate/register`} className="flex-1 h-12 px-4 bg-white border border-[#EAEAEA] rounded-xl text-[13px] font-mono outline-none text-[#555555]" />
-               <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/corporate/register`); alert('コピーしました！'); }} className="px-6 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold hover:bg-[#1f352b] transition-all">コピー</button>
-             </div>
-          </div>
-        </div>
+  // ★ URL・リンク発行タブを追加
+  const renderLinksTab = () => {
+    // URL生成用のテナントID (未設定時は 'default')
+    const tid = generalConfig.tenantId || 'default';
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
-        <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] space-y-4">
-          <h3 className="text-[14px] font-bold text-[#111111]">一般のお客様向け (店舗別注文ページ)</h3>
-          {shops.length === 0 ? <p className="text-[12px] text-[#999999]">店舗を登録してください。</p> : shops.map(shop => (
-             <div key={shop.id} className="space-y-1">
-               <label className="text-[11px] font-bold text-[#2D4B3E]">{shop.name}</label>
+    return (
+      <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 animate-in fade-in text-left">
+        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><LinkIcon size={20}/> URL・リンク発行</h2>
+        <div className="space-y-6">
+          <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] space-y-4">
+            <h3 className="text-[14px] font-bold text-[#111111] flex items-center gap-2"><Building2 size={16}/> 法人のお客様向け</h3>
+            <div className="space-y-2">
+               <label className="text-[11px] font-bold text-[#999999]">法人ポータル・注文画面</label>
                <div className="flex gap-2">
-                 <input type="text" readOnly value={`${window.location.origin}/order/${shop.id}`} className="flex-1 h-12 px-4 bg-white border border-[#EAEAEA] rounded-xl text-[13px] font-mono outline-none text-[#555555]" />
-                 <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/order/${shop.id}`); alert('コピーしました！'); }} className="px-6 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold hover:bg-[#1f352b] transition-all">コピー</button>
+                 {/* ★ テナントIDを含んだURL */}
+                 <input type="text" readOnly value={`${baseUrl}/corporate/${tid}`} className="flex-1 h-12 px-4 bg-white border border-[#EAEAEA] rounded-xl text-[13px] font-mono outline-none text-[#555555]" />
+                 <button onClick={() => { navigator.clipboard.writeText(`${baseUrl}/corporate/${tid}`); alert('コピーしました！'); }} className="px-6 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold hover:bg-[#1f352b] transition-all">コピー</button>
                </div>
-             </div>
-          ))}
+            </div>
+            <div className="space-y-2 pt-2">
+               <label className="text-[11px] font-bold text-[#999999]">法人アカウント 新規登録フォーム</label>
+               <div className="flex gap-2">
+                 <input type="text" readOnly value={`${baseUrl}/corporate/register/${tid}`} className="flex-1 h-12 px-4 bg-white border border-[#EAEAEA] rounded-xl text-[13px] font-mono outline-none text-[#555555]" />
+                 <button onClick={() => { navigator.clipboard.writeText(`${baseUrl}/corporate/register/${tid}`); alert('コピーしました！'); }} className="px-6 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold hover:bg-[#1f352b] transition-all">コピー</button>
+               </div>
+            </div>
+          </div>
+
+          <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] space-y-4">
+            <h3 className="text-[14px] font-bold text-[#111111] flex items-center gap-2"><Store size={16}/> 一般のお客様向け (店舗別注文ページ)</h3>
+            {shops.length === 0 ? <p className="text-[12px] text-[#999999]">店舗を登録してください。</p> : shops.map(shop => (
+               <div key={shop.id} className="space-y-1">
+                 <label className="text-[11px] font-bold text-[#2D4B3E]">{shop.name}</label>
+                 <div className="flex gap-2">
+                   {/* ★ テナントIDと店舗IDを含んだURL */}
+                   <input type="text" readOnly value={`${baseUrl}/order/${tid}/${shop.id}`} className="flex-1 h-12 px-4 bg-white border border-[#EAEAEA] rounded-xl text-[13px] font-mono outline-none text-[#555555]" />
+                   <button onClick={() => { navigator.clipboard.writeText(`${baseUrl}/order/${tid}/${shop.id}`); alert('コピーしました！'); }} className="px-6 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold hover:bg-[#1f352b] transition-all">コピー</button>
+                 </div>
+               </div>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // --- メイン描画 ---
   return (
