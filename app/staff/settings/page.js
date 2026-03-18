@@ -5,7 +5,7 @@ import {
   Settings as SettingsIcon, ListChecks, Store, Tag, Truck, User, Mail, 
   Trash2, Plus, Clock, ShieldCheck, RotateCcw, Image as ImageIcon, Ruler, 
   ChevronRight, Calendar as CalendarIcon, Box, MapPin, X,
-  LayoutTemplate, Package, Eye, EyeOff, Sparkles, AlertCircle, Link as LinkIcon, Building2 
+  LayoutTemplate, Package, Eye, EyeOff, Sparkles, AlertCircle, Link as LinkIcon, Building2, CreditCard 
 } from 'lucide-react';
 
 import TatefudaPreview from '@/components/TatefudaPreview';
@@ -19,12 +19,26 @@ export default function SettingsPage() {
   const [adminPassword, setAdminPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false); 
   
-  // ★ 新規: ログイン中のテナントIDを保持する
   const [currentTenantId, setCurrentTenantId] = useState(null);
 
-  // --- 1. 基本設定 ---
+  // --- 1. 基本設定（★ 請求書用の情報と口座情報を追加！） ---
   const [generalConfig, setGeneralConfig] = useState({ 
-    tenantId: '', appName: 'FLORIX', logoUrl: '', logoSize: 100, logoTransparent: false, slipBgUrl: '', slipBgOpacity: 50, systemPassword: '7777'
+    tenantId: '', 
+    appName: 'FLORIX', 
+    zipCode: '',     // 郵便番号
+    address: '',     // 住所
+    phone: '',       // 電話番号
+    invoiceNumber: '', // 適格請求書発行事業者登録番号
+    logoUrl: '', logoSize: 100, logoTransparent: false, slipBgUrl: '', slipBgOpacity: 50, systemPassword: '7777'
+  });
+
+  // ★ 振込先口座の設定を追加
+  const [paymentConfig, setPaymentConfig] = useState({
+    bankName: '',
+    branchName: '',
+    accountType: '普通',
+    accountNumber: '',
+    accountName: ''
   });
 
   // --- 2. ステータス設定 ---
@@ -74,7 +88,7 @@ export default function SettingsPage() {
   ]);
 
   const tabs = [
-    { id: 'general', label: '基本設定', icon: SettingsIcon },
+    { id: 'general', label: '基本・請求情報', icon: SettingsIcon }, // ★ タブ名変更
     { id: 'status', label: 'ステータス', icon: ListChecks },
     { id: 'shop', label: '店舗・特別日', icon: Store }, 
     { id: 'items', label: '商品・納期', icon: Tag },
@@ -88,6 +102,7 @@ export default function SettingsPage() {
 
   const applySettings = (s) => {
     if (s.generalConfig) setGeneralConfig(prev => ({...prev, ...s.generalConfig}));
+    if (s.paymentConfig) setPaymentConfig(prev => ({...prev, ...s.paymentConfig})); // ★ 追加
     if (s.statusConfig) setStatusConfig(s.statusConfig);
     if (s.shops) setShops(s.shops);
     if (s.flowerItems) setFlowerItems(s.flowerItems);
@@ -101,25 +116,21 @@ export default function SettingsPage() {
     if (s.timeSlots) setTimeSlots(s.timeSlots);
   };
 
-  // ★ 認証＆データ取得ロジック（RLS対応）
   useEffect(() => {
     async function loadSettings() {
       try {
-        // 1. ログインチェック
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
           window.location.href = '/staff/login';
           return;
         }
 
-        // 2. プロフィールからテナントIDを取得
         const { data: profile, error: profileError } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
         if (profileError) throw profileError;
         
         const tId = profile.tenant_id;
         setCurrentTenantId(tId);
 
-        // 3. テナント固有の設定データを取得
         const { data } = await supabase.from('app_settings').select('settings_data').eq('id', tId).single();
         if (data?.settings_data) {
           applySettings(data.settings_data);
@@ -142,8 +153,12 @@ export default function SettingsPage() {
     if (!isAdmin || !currentTenantId) return;
     setIsSaving(true);
     try {
-      const payload = { generalConfig: {...generalConfig, tenantId: currentTenantId}, statusConfig, shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReplyTemplates, staffOrderConfig, timeSlots };
-      // ★ 自分のテナントIDで上書き保存
+      // ★ 保存データに paymentConfig も追加
+      const payload = { 
+        generalConfig: {...generalConfig, tenantId: currentTenantId}, 
+        paymentConfig, 
+        statusConfig, shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReplyTemplates, staffOrderConfig, timeSlots 
+      };
       await supabase.from('app_settings').upsert({ id: currentTenantId, settings_data: payload });
       alert('すべての設定を保存しました！');
     } catch (e) { alert('保存失敗'); } finally { setIsSaving(false); }
@@ -167,23 +182,77 @@ export default function SettingsPage() {
   const addTimeSlot = (method) => { setTimeSlots(prev => ({ ...prev, [method]: [...prev[method], ''] })); };
   const removeTimeSlot = (method, index) => { setTimeSlots(prev => ({ ...prev, [method]: prev[method].filter((_, i) => i !== index) })); };
 
+  // ★ タブ１：請求書用の設定欄を追加！
   const renderGeneralTab = () => (
-    <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 animate-in fade-in">
-      <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><ImageIcon size={20}/> 基本情報・ロゴ・伝票</h2>
-      <div className="space-y-6">
-        
-        <div className="space-y-1 bg-[#F7F7F7] p-5 rounded-2xl border border-[#EAEAEA]">
-          <label className="text-[11px] font-bold text-[#2D4B3E] flex items-center gap-2">テナントID (URL用システム連携ID)</label>
-          <p className="text-[10px] text-[#999999] mb-2">※法人ページやお客様の注文ページのURLに使用されます。</p>
-          <input type="text" value={generalConfig.tenantId || currentTenantId || ''} readOnly className="w-full h-12 bg-white border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none text-gray-500 transition-colors" />
-        </div>
+    <div className="space-y-8 animate-in fade-in">
+      
+      <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8">
+        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Building2 size={20}/> 会社情報 (請求書・特商法表示用)</h2>
+        <div className="space-y-4">
+          <div className="space-y-1 bg-[#F7F7F7] p-5 rounded-2xl border border-[#EAEAEA]">
+            <label className="text-[11px] font-bold text-[#2D4B3E] flex items-center gap-2">テナントID (URL用システム連携ID)</label>
+            <p className="text-[10px] text-[#999999] mb-2">※法人ページやお客様の注文ページのURLに使用されます。</p>
+            <input type="text" value={generalConfig.tenantId || currentTenantId || ''} readOnly className="w-full h-12 bg-white border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none text-gray-500 transition-colors" />
+          </div>
 
-        <div className="space-y-1">
-          <label className="text-[11px] font-bold text-[#999999]">アプリ名 (ショップ名)</label>
-          <input type="text" value={generalConfig.appName} onChange={(e)=>setGeneralConfig({...generalConfig, appName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E] transition-colors"/>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-[#999999]">アプリ名 (ショップ名)</label>
+              <input type="text" value={generalConfig.appName} onChange={(e)=>setGeneralConfig({...generalConfig, appName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E] transition-colors" placeholder="花・花OHANA!"/>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-[#999999]">インボイス登録番号</label>
+              <input type="text" value={generalConfig.invoiceNumber} onChange={(e)=>setGeneralConfig({...generalConfig, invoiceNumber: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 font-mono text-[13px] outline-none focus:border-[#2D4B3E] transition-colors" placeholder="T1234567890123"/>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-[#999999]">郵便番号</label>
+              <input type="text" value={generalConfig.zipCode} onChange={(e)=>setGeneralConfig({...generalConfig, zipCode: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E] transition-colors" placeholder="000-0000"/>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-[#999999]">電話番号</label>
+              <input type="tel" value={generalConfig.phone} onChange={(e)=>setGeneralConfig({...generalConfig, phone: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E] transition-colors" placeholder="03-1234-5678"/>
+            </div>
+            <div className="space-y-1 md:col-span-2">
+              <label className="text-[11px] font-bold text-[#999999]">住所 (都道府県・市区町村・番地)</label>
+              <input type="text" value={generalConfig.address} onChange={(e)=>setGeneralConfig({...generalConfig, address: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E] transition-colors" placeholder="東京都渋谷区..."/>
+            </div>
+          </div>
         </div>
-        
-        <div className="space-y-4 pt-4 border-t border-[#EAEAEA]">
+      </div>
+
+      <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8">
+        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={20}/> 振込先口座情報 (法人請求書用)</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-[#999999]">銀行名</label>
+            <input type="text" value={paymentConfig.bankName} onChange={(e)=>setPaymentConfig({...paymentConfig, bankName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E] transition-colors" placeholder="〇〇銀行"/>
+          </div>
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-[#999999]">支店名</label>
+            <input type="text" value={paymentConfig.branchName} onChange={(e)=>setPaymentConfig({...paymentConfig, branchName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E] transition-colors" placeholder="〇〇支店"/>
+          </div>
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-[#999999]">口座種別</label>
+            <select value={paymentConfig.accountType} onChange={(e)=>setPaymentConfig({...paymentConfig, accountType: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E] transition-colors">
+              <option value="普通">普通</option>
+              <option value="当座">当座</option>
+              <option value="貯蓄">貯蓄</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-[#999999]">口座番号</label>
+            <input type="text" value={paymentConfig.accountNumber} onChange={(e)=>setPaymentConfig({...paymentConfig, accountNumber: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-mono outline-none focus:border-[#2D4B3E] transition-colors" placeholder="1234567"/>
+          </div>
+          <div className="space-y-1 md:col-span-2">
+            <label className="text-[11px] font-bold text-[#999999]">口座名義 (カナ等)</label>
+            <input type="text" value={paymentConfig.accountName} onChange={(e)=>setPaymentConfig({...paymentConfig, accountName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E] transition-colors" placeholder="カ）ハナハナオハナ"/>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8">
+        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><ImageIcon size={20}/> ロゴ・画像・セキュリティ</h2>
+        <div className="space-y-4">
           <label className="text-[11px] font-bold text-[#999999]">ロゴ画像</label>
           {!generalConfig.logoUrl && <input type="file" accept="image/*" onChange={(e)=>handleImg(e, 'logoUrl')} className="block w-full text-xs" />}
           {generalConfig.logoUrl && (
@@ -223,6 +292,7 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
     </div>
   );
 
