@@ -5,7 +5,7 @@ import { supabase } from '@/utils/supabase';
 import { 
   Building2, Calendar, ShoppingBag, FileText, 
   ChevronRight, Plus, CreditCard, LogOut, Gift, ArrowRight, Download, Package,
-  MapPin, Clock, Truck, Store, MessageSquare, AlertCircle, User, Tag, ListChecks, X, Trash2, RefreshCw, Zap, Repeat
+  MapPin, Truck, Store, MessageSquare, AlertCircle, Trash2, RefreshCw, Zap, Repeat, Settings, X
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -18,21 +18,17 @@ export default function CorporateDashboardPage() {
   const SETTINGS_CACHE_KEY = `florix_app_settings_cache_${tenantId}`;
 
   const [isLoading, setIsLoading] = useState(true);
-  
-  // ★ 初期値を空にしておき、あとでログイン情報から上書きします
   const [companyName, setCompanyName] = useState(''); 
   const [appSettings, setAppSettings] = useState(null);
+
+  // ★ 法人情報の編集用 State
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [profileForm, setProfileForm] = useState({ companyName: '', contactName: '', phone: '', email: '', zip: '', address1: '', address2: '' });
 
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  const [billingInfo, setBillingInfo] = useState({
-    hasUnpaid: false,
-    unpaidMonth: '',
-    unpaidAmount: 0,
-    dueDate: '',
-    currentMonthAmount: 0
-  });
+  const [billingInfo, setBillingInfo] = useState({ hasUnpaid: false, unpaidMonth: '', unpaidAmount: 0, dueDate: '', currentMonthAmount: 0 });
 
   const [events, setEvents] = useState([]);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
@@ -42,30 +38,32 @@ export default function CorporateDashboardPage() {
 
   useEffect(() => {
     async function initData() {
-      // ★ 1. ログイン中のユーザー情報を取得して法人名をセット！
+      // ★ ログイン中のユーザー情報を取得してセット！
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session && session.user && session.user.user_metadata) {
-        // 登録時に入力した「company_name」を画面に表示
-        setCompanyName(session.user.user_metadata.company_name || 'ゲスト法人');
+        const meta = session.user.user_metadata;
+        setCompanyName(meta.company_name || 'ゲスト法人');
+        setProfileForm({
+          companyName: meta.company_name || '',
+          contactName: meta.contact_name || '',
+          phone: meta.phone || '',
+          email: session.user.email || '',
+          zip: meta.zip || '',
+          address1: meta.address1 || '',
+          address2: meta.address2 || ''
+        });
       } else {
-        // もしログインせずに直接URLを開こうとしたら、ログイン画面に強制送還する（セキュリティ）
         router.push('/corporate/login');
         return;
       }
 
-      // 2. キャッシュの確認
       const cachedOrders = sessionStorage.getItem(CORPORATE_ORDERS_CACHE_KEY);
       const cachedSettings = sessionStorage.getItem(SETTINGS_CACHE_KEY);
       
-      if (cachedOrders) {
-        try { setOrders(JSON.parse(cachedOrders)); } catch (e) {}
-      }
-      if (cachedSettings) {
-        try { setAppSettings(JSON.parse(cachedSettings)); } catch (e) {}
-      }
+      if (cachedOrders) { try { setOrders(JSON.parse(cachedOrders)); } catch (e) {} }
+      if (cachedSettings) { try { setAppSettings(JSON.parse(cachedSettings)); } catch (e) {} }
 
-      // 3. データベースから最新情報を取得
       try {
         const [ordersRes, settingsRes] = await Promise.all([
           supabase.from('orders').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
@@ -90,18 +88,45 @@ export default function CorporateDashboardPage() {
   }, [tenantId, router]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut(); // ★ ログアウト処理も確実に追加
+    await supabase.auth.signOut(); 
     router.push('/corporate/login'); 
   };
 
-  const fetchAddress = async (zip) => {
+  // ★ 法人情報の保存処理
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          company_name: profileForm.companyName,
+          contact_name: profileForm.contactName,
+          phone: profileForm.phone,
+          zip: profileForm.zip,
+          address1: profileForm.address1,
+          address2: profileForm.address2
+        }
+      });
+      if (error) throw error;
+      setCompanyName(profileForm.companyName);
+      alert('登録情報を更新しました！');
+      setIsProfileModalOpen(false);
+    } catch(err) {
+      alert('更新に失敗しました。');
+    }
+  };
+
+  const fetchAddress = async (zip, isProfile = false) => {
     if (zip.length !== 7) return;
     try {
       const res = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${zip}`);
       const data = await res.json();
       if (data.results) {
         const fullAddr = `${data.results[0].address1}${data.results[0].address2}${data.results[0].address3}`;
-        setNewEvent(prev => ({ ...prev, address1: fullAddr }));
+        if (isProfile) {
+          setProfileForm(prev => ({ ...prev, address1: fullAddr }));
+        } else {
+          setNewEvent(prev => ({ ...prev, address1: fullAddr }));
+        }
       }
     } catch (error) {}
   };
@@ -193,20 +218,51 @@ export default function CorporateDashboardPage() {
 
       <main className="max-w-[1000px] mx-auto p-6 md:p-8 space-y-8 pt-8">
 
+        {/* 未入金アラートバナー */}
+        {billingInfo.hasUnpaid && (
+          <div className="bg-red-50 border border-red-200 p-5 rounded-[24px] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={24} />
+              <div>
+                <p className="text-[15px] font-black text-red-800">未入金の請求書があります</p>
+                <p className="text-[12px] font-bold text-red-600 mt-1">{billingInfo.unpaidMonth}ご利用分 (¥{billingInfo.unpaidAmount.toLocaleString()}) のお支払いが確認できておりません。至急ご確認をお願いいたします。</p>
+              </div>
+            </div>
+            <button className="shrink-0 flex items-center justify-center gap-2 text-[12px] font-bold text-white bg-red-500 px-5 py-2.5 rounded-xl hover:bg-red-600 transition-all shadow-sm">
+              <Download size={16}/> 請求書をダウンロード
+            </button>
+          </div>
+        )}
+        
         {/* ウェルカム＆クイックアクション */}
         <div className="bg-[#2D4B3E] rounded-[32px] p-8 md:p-10 shadow-lg text-white relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="absolute -right-20 -top-20 opacity-10 pointer-events-none">
             <Gift size={240} />
           </div>
           
-          <div className="relative z-10 space-y-2">
-            <h1 className="text-[24px] md:text-[28px] font-black tracking-tight leading-tight">
-              いつもご利用ありがとうございます。<br />
-              <span className="text-emerald-300">{companyName}</span> 様
-            </h1>
+          <div className="relative z-10 space-y-2 flex-1">
+            <div className="flex justify-between items-start">
+              <h1 className="text-[24px] md:text-[28px] font-black tracking-tight leading-tight">
+                いつもご利用ありがとうございます。<br />
+                <span className="text-emerald-300">{companyName}</span> 様
+              </h1>
+              {/* ★ 法人情報設定ボタン */}
+              <button 
+                onClick={() => setIsProfileModalOpen(true)}
+                className="hidden md:flex items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-[11px] font-bold transition-all border border-white/20"
+              >
+                <Settings size={14}/> 登録情報の確認・変更
+              </button>
+            </div>
             <p className="text-[13px] text-white/80 font-medium pt-2">
               ご請求書のダウンロードや、次回のお祝い花のオーダーをこちらから行えます。
             </p>
+            <button 
+              onClick={() => setIsProfileModalOpen(true)}
+              className="md:hidden mt-4 flex w-fit items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-[11px] font-bold transition-all border border-white/20"
+            >
+              <Settings size={14}/> 登録情報の確認・変更
+            </button>
           </div>
           
           <div className="relative z-10 shrink-0">
@@ -222,7 +278,6 @@ export default function CorporateDashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
           <div className="md:col-span-2 space-y-8">
             <section className="space-y-4">
               <div className="flex items-center justify-between">
@@ -343,7 +398,6 @@ export default function CorporateDashboardPage() {
 
                       <div className="mt-4 pt-4 border-t border-[#F7F7F7] space-y-2 pl-2">
                         <p className="text-[10px] font-bold text-[#999999] mb-2 tracking-widest">この行事のご注文</p>
-                        
                         <div className="flex flex-col gap-2">
                           <button 
                             onClick={() => handleQuickOrder('omakase', ev)}
@@ -351,7 +405,6 @@ export default function CorporateDashboardPage() {
                           >
                             <Zap size={14}/> 種類と予算を決めておまかせ注文
                           </button>
-                          
                           {ev.lastOrder ? (
                             <button 
                               onClick={() => handleQuickOrder('repeat', ev)}
@@ -374,6 +427,52 @@ export default function CorporateDashboardPage() {
           </div>
         </div>
       </main>
+
+      {/* --- ★ 法人プロフィールの編集モーダル --- */}
+      {isProfileModalOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="absolute inset-0 bg-[#111111]/40 backdrop-blur-sm" onClick={() => setIsProfileModalOpen(false)}></div>
+          <div className="bg-[#FBFAF9] w-full max-w-[500px] rounded-[32px] shadow-2xl relative flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 max-h-[90vh]">
+            <div className="p-6 border-b border-[#EAEAEA] flex justify-between items-center bg-white z-10 shrink-0">
+              <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Building2 size={20}/> 登録情報の確認・変更</h2>
+              <button onClick={() => setIsProfileModalOpen(false)} className="text-[#999999] hover:text-[#111111] p-2 bg-[#FBFAF9] rounded-full border border-[#EAEAEA] shadow-sm"><X size={18}/></button>
+            </div>
+            
+            <form onSubmit={handleSaveProfile} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-6 space-y-6 overflow-y-auto flex-1 hide-scrollbar">
+                <div className="space-y-4 bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm">
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-[#999999] tracking-widest">法人名・店舗名</label>
+                    <input type="text" required value={profileForm.companyName} onChange={e => setProfileForm({...profileForm, companyName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold focus:border-[#2D4B3E] outline-none" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-[#999999] tracking-widest">ご担当者名</label>
+                    <input type="text" required value={profileForm.contactName} onChange={e => setProfileForm({...profileForm, contactName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold focus:border-[#2D4B3E] outline-none" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-[#999999] tracking-widest">電話番号</label>
+                    <input type="tel" value={profileForm.phone} onChange={e => setProfileForm({...profileForm, phone: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold focus:border-[#2D4B3E] outline-none" />
+                  </div>
+                </div>
+
+                <div className="space-y-4 bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm">
+                  <label className="text-[11px] font-bold text-[#2D4B3E] tracking-widest flex items-center gap-1.5"><MapPin size={14}/> 基本となる住所</label>
+                  <p className="text-[10px] text-[#999999] leading-relaxed">ご登録いただいた情報は、注文時のご請求先情報などに自動で入力されます。</p>
+                  <input type="text" placeholder="郵便番号 (7桁・ハイフンなし)" value={profileForm.zip} onChange={(e) => { setProfileForm({...profileForm, zip: e.target.value}); if(e.target.value.length === 7) fetchAddress(e.target.value, true); }} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
+                  <input type="text" placeholder="都道府県・市区町村 (自動入力)" value={profileForm.address1} className="w-full h-12 bg-[#EAEAEA]/30 border border-[#EAEAEA] rounded-xl px-4 text-[13px] text-[#555555] outline-none" readOnly />
+                  <input type="text" placeholder="番地・建物名" value={profileForm.address2} onChange={(e) => setProfileForm({...profileForm, address2: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
+                </div>
+              </div>
+              
+              <div className="p-6 bg-white border-t border-[#EAEAEA] shrink-0">
+                <button type="submit" className="w-full h-14 bg-[#2D4B3E] text-white rounded-2xl font-bold text-[15px] hover:bg-[#1f352b] transition-all shadow-md active:scale-[0.98]">
+                  情報を保存する
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* --- 詳細モーダル (法人用) --- */}
       {selectedOrder && (
@@ -569,7 +668,7 @@ export default function CorporateDashboardPage() {
         </div>
       )}
 
-      {/* --- ★ 新規追加：おまかせ注文専用モーダル --- */}
+      {/* --- おまかせ注文専用モーダル --- */}
       {omakaseModal.isOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
           <div className="absolute inset-0 bg-[#111111]/40 backdrop-blur-sm" onClick={() => setOmakaseModal({ ...omakaseModal, isOpen: false })}></div>

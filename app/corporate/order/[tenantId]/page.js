@@ -1,34 +1,17 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-// ★ 絶対パスに変更（どこにファイルを移動してもエラーになりません！）
 import { supabase } from '@/utils/supabase'; 
 import { Calendar, Package, ChevronRight, Store, Truck, Building2, AlertCircle } from 'lucide-react';
-
-// ★ こちらも絶対パスに変更
 import TatefudaPreview from '@/components/TatefudaPreview';
 
 export default function CorporateOrderPage() {
   const router = useRouter();
   const params = useParams();
 
-  // ★ URLに tenantId が含まれている場合は取得、なければ 'default'
   const tenantId = params?.tenantId || 'default';
-
-  // ★ キャッシュ用のキーをテナントごとに独立させる（他のお店のデータと混ざらないように！）
   const SETTINGS_CACHE_KEY = `florix_app_settings_cache_${tenantId}`;
   const GALLERY_CACHE_KEY = `florix_gallery_cache_${tenantId}`;
-
-  // ※ 本来はログインしている法人アカウント（Supabase Auth）のデータを使用しますが、今回はデモ用の固定データです
-  const myCompany = {
-    companyName: '株式会社 グローバルIT',
-    contactName: '山田 太郎',
-    phone: '03-1234-5678',
-    email: 'info@global-it.example.com',
-    zip: '100-0001',
-    address1: '東京都千代田区',
-    address2: '千代田1-1-1 グローバルビル5F',
-  };
 
   const [appSettings, setAppSettings] = useState(null);
   const [portfolioImages, setPortfolioImages] = useState([]);
@@ -59,20 +42,15 @@ export default function CorporateOrderPage() {
   const [cardType, setCardType] = useState('なし');
   const [cardMessage, setCardMessage] = useState('');
   const [tatePattern, setTatePattern] = useState('');
+  
+  // ★ 初期値を空にしておく（useEffectで上書き）
   const [tateInput1, setTateInput1] = useState(''); 
   const [tateInput2, setTateInput2] = useState(''); 
-  const [tateInput3, setTateInput3] = useState(myCompany.companyName); 
-  const [tateInput3a, setTateInput3a] = useState(myCompany.companyName); 
-  const [tateInput3b, setTateInput3b] = useState(`代表取締役 ${myCompany.contactName}`); 
+  const [tateInput3, setTateInput3] = useState(''); 
+  const [tateInput3a, setTateInput3a] = useState(''); 
+  const [tateInput3b, setTateInput3b] = useState(''); 
 
-  const [customerInfo, setCustomerInfo] = useState({ 
-    name: `${myCompany.companyName} ${myCompany.contactName}`, 
-    phone: myCompany.phone, 
-    email: myCompany.email, 
-    zip: myCompany.zip, 
-    address1: myCompany.address1, 
-    address2: myCompany.address2 
-  });
+  const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', email: '', zip: '', address1: '', address2: '' });
   
   const [isRecipientDifferent, setIsRecipientDifferent] = useState(true);
   const [recipientInfo, setRecipientInfo] = useState({ name: '', phone: '', zip: '', address1: '', address2: '' });
@@ -90,6 +68,32 @@ export default function CorporateOrderPage() {
     shipping: ['午前中', '14:00-16:00', '16:00-18:00', '18:00-20:00', '19:00-21:00']
   };
   const [timeSlots, setTimeSlots] = useState(defaultTimeSlots);
+
+  // ★ ログイン中の法人情報を取得して、お客様情報＆立札に自動入力する
+  useEffect(() => {
+    async function loadCorporateUser() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.user_metadata) {
+        const meta = session.user.user_metadata;
+        const cName = meta.company_name || '';
+        const pName = meta.contact_name || '';
+        
+        setCustomerInfo({
+          name: `${cName} ${pName}`.trim(),
+          phone: meta.phone || '',
+          email: session.user.email || '',
+          zip: meta.zip || '',
+          address1: meta.address1 || '',
+          address2: meta.address2 || ''
+        });
+
+        setTateInput3(cName);
+        setTateInput3a(cName);
+        setTateInput3b(pName ? `代表取締役 ${pName}` : '');
+      }
+    }
+    loadCorporateUser();
+  }, []);
 
   useEffect(() => {
     let isFirstLoad = true;
@@ -112,7 +116,6 @@ export default function CorporateOrderPage() {
           setIsLoading(false);
         }
 
-        // ★ ギャラリー画像も「その花屋さん専用（テナントID_gallery）」のものを引っ張ってくる
         const [settingsRes, galleryRes] = await Promise.all([
           supabase.from('app_settings').select('settings_data').eq('id', tenantId).single(),
           supabase.from('app_settings').select('settings_data').eq('id', `${tenantId}_gallery`).single()
@@ -180,6 +183,7 @@ export default function CorporateOrderPage() {
     return 1;
   }, [receiveMethod, customerInfo.address1, recipientInfo.address1, isRecipientDifferent, appSettings]);
 
+  // ★ リードタイムのカレンダー制限（タイムゾーンによるズレを修正！）
   const minDateLimit = useMemo(() => {
     const base = new Date();
     let prepDays = 0;
@@ -196,7 +200,11 @@ export default function CorporateOrderPage() {
     }
     const d = new Date(base);
     d.setDate(d.getDate() + prepDays + transitDays);
-    return d.toISOString().split('T')[0];
+    
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
   }, [flowerType, isBring, receiveMethod, selectedItemSettings, transitDays]);
 
   const normalizeAddressText = (text) => {
@@ -349,7 +357,7 @@ export default function CorporateOrderPage() {
     }
     if (step === 4) {
       if (!customerInfo.name || !customerInfo.phone) missing.push('ご注文者情報');
-      if (isRecipientDifferent && (!recipientInfo.name || !recipientInfo.phone || !recipientInfo.address1)) missing.push('お届け先情報');
+      if (isRecipientDifferent && receiveMethod !== 'pickup' && (!recipientInfo.name || !recipientInfo.phone || !recipientInfo.address1)) missing.push('お届け先情報');
       if (!selectedDate) missing.push('お届け希望日');
       if (!selectedTime) missing.push('希望時間');
       if ((receiveMethod === 'delivery' || receiveMethod === 'sagawa') && areaError) missing.push('配送エリアの確認');
@@ -377,7 +385,6 @@ export default function CorporateOrderPage() {
         isCorporateOrder: true
       };
 
-      // ★ 修正箇所：テナントIDを明示的にセットしてDBに保存！
       const { error } = await supabase.from('orders').insert([
         { tenant_id: tenantId, order_data: orderPayload }
       ]);
@@ -401,6 +408,7 @@ export default function CorporateOrderPage() {
     return appSettings?.shops?.[0] || {};
   }, [selectedShop, appSettings]);
 
+  // ★ 設定画面の注意事項を反映
   const pickupNote = targetShopData.pickupNote || 'ご来店予定日時に店舗までお越しください。';
   const deliveryNote = targetShopData.deliveryNote || '交通状況により配達時間が前後する場合がございます。';
   const shippingNote = targetShopData.shippingNote || '発送準備期間＋配送日数がかかります。交通状況により遅延する場合がございます。';
@@ -442,7 +450,7 @@ export default function CorporateOrderPage() {
                 <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] space-y-4 animate-in fade-in">
                   <p className="text-[11px] font-bold text-[#111111] tracking-widest border-b border-[#EAEAEA] pb-2">納期に関する注意事項</p>
                   <div className="space-y-2 text-[12px] text-[#555555] font-medium">
-                    {selectedItemSettings.normalLeadDays !== undefined && <div className="flex justify-between"><span>通常納期 (配達)</span><span className="font-bold">{selectedItemSettings.normalLeadDays}日後以降</span></div>}
+                    {selectedItemSettings.normalLeadDays !== undefined && <div className="flex justify-between"><span>通常納期 (配達/店舗受取)</span><span className="font-bold">{selectedItemSettings.normalLeadDays}日後以降</span></div>}
                     {selectedItemSettings.shippingLeadDays !== undefined && <div className="flex justify-between text-[#2D4B3E]"><span>業者配送 納期</span><span className="font-bold">発送準備 {selectedItemSettings.shippingLeadDays}日 ＋ 配送日数</span></div>}
                   </div>
                   <label className="flex items-center gap-3 pt-4 cursor-pointer border-t border-[#EAEAEA]">
@@ -466,9 +474,22 @@ export default function CorporateOrderPage() {
               <h1 className="text-[20px] font-bold mb-2 text-[#2D4B3E]">お届け方法を選ぶ</h1>
               <p className="text-[12px] text-[#555555]">お花のお届け方法をお選びください。</p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              {selectedItemSettings.canDelivery !== false && (<button onClick={() => { setReceiveMethod('delivery'); setStep(3); }} className="p-6 rounded-[24px] bg-[#FBFAF9] border border-[#EAEAEA] font-bold text-[14px] hover:bg-white hover:border-[#2D4B3E] transition-all text-[#555555] hover:text-[#2D4B3E]">自社配達<br/><span className="text-[10px] font-normal text-[#999]">(近隣エリア向け)</span></button>)}
-              {selectedItemSettings.canShipping !== false && (<button onClick={() => { setReceiveMethod('sagawa'); setStep(3); }} className="p-6 rounded-[24px] bg-[#FBFAF9] border border-[#EAEAEA] font-bold text-[14px] hover:bg-white hover:border-[#2D4B3E] transition-all text-[#555555] hover:text-[#2D4B3E]">業者配送<br/><span className="text-[10px] font-normal text-[#999]">(全国対応)</span></button>)}
+            
+            <div className="space-y-4">
+              {/* ★ 店頭受取ボタンを復活！ */}
+              {selectedItemSettings.canPickup !== false && appSettings?.shops?.length > 0 ? (
+                appSettings.shops.map(shop => (
+                  <button key={shop.id} onClick={() => { setReceiveMethod('pickup'); setSelectedShop(shop.name); setStep(3); }} className="w-full p-8 rounded-[24px] bg-white border border-[#EAEAEA] shadow-sm hover:border-[#2D4B3E] transition-all text-left group">
+                    <span className="block font-bold text-[16px] mb-1 group-hover:text-[#2D4B3E]">{shop.name}で受取</span>
+                    <span className="block text-[12px] text-[#999999]">{shop.address}</span>
+                  </button>
+                ))
+              ) : null}
+              
+              <div className="grid grid-cols-2 gap-4 mt-8">
+                {selectedItemSettings.canDelivery !== false && (<button onClick={() => { setReceiveMethod('delivery'); setStep(3); }} className="p-6 rounded-[24px] bg-[#FBFAF9] border border-[#EAEAEA] font-bold text-[14px] hover:bg-white hover:border-[#2D4B3E] transition-all text-[#555555] hover:text-[#2D4B3E]">自社配達<br/><span className="text-[10px] font-normal text-[#999]">(近隣エリア向け)</span></button>)}
+                {selectedItemSettings.canShipping !== false && (<button onClick={() => { setReceiveMethod('sagawa'); setStep(3); }} className="p-6 rounded-[24px] bg-[#FBFAF9] border border-[#EAEAEA] font-bold text-[14px] hover:bg-white hover:border-[#2D4B3E] transition-all text-[#555555] hover:text-[#2D4B3E]">業者配送<br/><span className="text-[10px] font-normal text-[#999]">(全国対応)</span></button>)}
+              </div>
             </div>
           </div>
         )}
@@ -570,8 +591,8 @@ export default function CorporateOrderPage() {
         {step === 4 && (
           <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div>
-              <h1 className="text-[20px] font-bold mb-2 text-[#2D4B3E]">お届け・お客様情報</h1>
-              <p className="text-[12px] text-[#555555]">お届け希望日と、お届け先の情報をご入力ください。</p>
+              <h1 className="text-[20px] font-bold mb-2 text-[#2D4B3E]">{receiveMethod === 'pickup' ? 'お客様情報' : 'お届け・お客様情報'}</h1>
+              <p className="text-[12px] text-[#555555]">ご希望日と、情報をご確認ください。</p>
             </div>
 
             <div className="space-y-6">
@@ -584,11 +605,12 @@ export default function CorporateOrderPage() {
                 <div className="text-[13px] font-bold text-gray-700 space-y-2">
                   <p>{customerInfo.name}</p>
                   <p>{customerInfo.phone} / {customerInfo.email}</p>
-                  <p>〒{customerInfo.zip} {customerInfo.address1}{customerInfo.address2}</p>
+                  {customerInfo.zip && <p>〒{customerInfo.zip} {customerInfo.address1}{customerInfo.address2}</p>}
                 </div>
               </div>
 
-              {isRecipientDifferent && (
+              {/* 店舗受取の時はお届け先情報を隠す */}
+              {isRecipientDifferent && receiveMethod !== 'pickup' && (
                 <div className="space-y-4 bg-white p-8 rounded-[28px] border border-[#2D4B3E]/20 shadow-sm">
                   <label className="text-[11px] font-bold text-[#2D4B3E] tracking-widest">お届け先情報をご入力ください</label>
                   <input type="text" placeholder="お届け先 会社名・お名前" value={recipientInfo.name} onChange={(e) => setRecipientInfo({...recipientInfo, name: e.target.value})} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px] font-bold" />
@@ -601,7 +623,7 @@ export default function CorporateOrderPage() {
 
               <div className="grid grid-cols-2 gap-4 mt-6">
                 <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-[#999999] tracking-widest">お届け希望日</label>
+                  <label className="text-[11px] font-bold text-[#999999] tracking-widest">{receiveMethod === 'pickup' ? 'ご来店希望日' : 'お届け希望日'}</label>
                   <input type="date" min={minDateLimit} value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full h-14 px-4 bg-white border border-[#EAEAEA] rounded-[16px] outline-none font-bold text-[#555555] focus:border-[#2D4B3E] shadow-sm" />
                 </div>
                 <div className="space-y-2">
