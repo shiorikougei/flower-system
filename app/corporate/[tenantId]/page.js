@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { 
@@ -26,6 +26,9 @@ export default function CorporateDashboardPage() {
 
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
+
+  // ★ 請求書モーダル用のStateを追加
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
 
   const [billingInfo, setBillingInfo] = useState({ hasUnpaid: false, unpaidMonth: '', unpaidAmount: 0, dueDate: '', currentMonthAmount: 0 });
 
@@ -186,6 +189,24 @@ export default function CorporateDashboardPage() {
     return { item, fee, pickup, subTotal, tax, total: subTotal + tax };
   };
 
+  // ★ 今月の注文だけに絞り込む処理（請求書・ダッシュボード表示用）
+  const currentMonthOrders = useMemo(() => {
+    const now = new Date();
+    return orders.filter(o => {
+      const d = new Date(o.created_at);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+  }, [orders]);
+
+  // ★ 請求書を開く処理
+  const handleOpenInvoice = () => {
+    if (currentMonthOrders.length === 0) {
+      alert('今月のご利用（ご請求データ）はまだありません。');
+      return;
+    }
+    setIsInvoiceModalOpen(true);
+  };
+
   const modalData = selectedOrder?.order_data || {};
   const modalTargetInfo = modalData.isRecipientDifferent ? (modalData.recipientInfo || {}) : (modalData.customerInfo || {});
 
@@ -196,7 +217,7 @@ export default function CorporateDashboardPage() {
   return (
     <div className="min-h-screen bg-[#FBFAF9] font-sans text-[#111111] pb-32">
       
-      <header className="h-16 bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] sticky top-0 z-40 px-6 flex items-center justify-between shadow-sm">
+      <header className="h-16 bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] sticky top-0 z-40 px-6 flex items-center justify-between shadow-sm print:hidden">
         <div className="flex items-center gap-3">
           <span className="font-serif italic text-[20px] font-black tracking-tight text-[#2D4B3E]">{shopName}</span>
           <span className="hidden sm:inline-block w-[1px] h-4 bg-[#EAEAEA]"></span>
@@ -213,7 +234,7 @@ export default function CorporateDashboardPage() {
         </div>
       </header>
 
-      <main className="max-w-[1000px] mx-auto p-6 md:p-8 space-y-8 pt-8">
+      <main className="max-w-[1000px] mx-auto p-6 md:p-8 space-y-8 pt-8 print:hidden">
 
         {billingInfo.hasUnpaid && (
           <div className="bg-red-50 border border-red-200 p-5 rounded-[24px] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
@@ -230,34 +251,35 @@ export default function CorporateDashboardPage() {
           </div>
         )}
         
-        {/* ★ ウェルカムバナー：レイアウト修正版！ */}
         <div className="bg-[#2D4B3E] rounded-[32px] p-8 md:p-10 shadow-lg text-white relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-8">
-          {/* 背景のアイコン */}
           <div className="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
             <Gift size={240} />
           </div>
           
-          {/* 左側のテキスト＆設定ボタン（縦積みにしてゆったりと） */}
           <div className="relative z-10 flex-1 space-y-5">
-            <div className="space-y-3">
+            <div className="flex justify-between items-start">
               <h1 className="text-[24px] md:text-[30px] font-black tracking-tight leading-tight">
                 いつもご利用ありがとうございます。<br />
                 <span className="text-emerald-300">{companyName}</span> 様
               </h1>
-              <p className="text-[13px] text-white/80 font-medium leading-relaxed max-w-lg">
-                ご請求書のダウンロードや、次回のお祝い花のオーダーをこちらから行えます。
-              </p>
+              <button 
+                onClick={() => setIsProfileModalOpen(true)}
+                className="hidden md:flex items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-[11px] font-bold transition-all border border-white/20 backdrop-blur-sm"
+              >
+                <Settings size={14}/> 登録情報の確認・変更
+              </button>
             </div>
-            
+            <p className="text-[13px] text-white/80 font-medium leading-relaxed max-w-lg">
+              ご請求書のダウンロードや、次回のお祝い花のオーダーをこちらから行えます。
+            </p>
             <button 
               onClick={() => setIsProfileModalOpen(true)}
-              className="flex w-fit items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-[12px] font-bold transition-all border border-white/20 backdrop-blur-sm"
+              className="md:hidden mt-4 flex w-fit items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-[11px] font-bold transition-all border border-white/20"
             >
               <Settings size={14}/> 登録情報の確認・変更
             </button>
           </div>
           
-          {/* 右側のアクションボタン */}
           <div className="relative z-10 shrink-0 w-full md:w-auto mt-2 md:mt-0">
             <Link 
               href={`/corporate/order/${tenantId}`} 
@@ -333,15 +355,19 @@ export default function CorporateDashboardPage() {
               </h2>
               <div className="space-y-4">
                 <div className="flex items-end justify-between">
-                  <span className="text-[11px] font-bold text-[#999999]">当月ご利用額</span>
-                  <span className="text-[20px] font-black text-[#111111]">¥{orders.reduce((sum, o) => sum + getTotals(o.order_data).total, 0).toLocaleString()}</span>
+                  <span className="text-[11px] font-bold text-[#999999]">当月ご利用額 (税込)</span>
+                  {/* ★ 今月の注文だけの合計金額を算出！ */}
+                  <span className="text-[20px] font-black text-[#111111]">
+                    ¥{currentMonthOrders.reduce((sum, o) => sum + getTotals(o.order_data).total, 0).toLocaleString()}
+                  </span>
                 </div>
                 <div className="flex items-end justify-between">
                   <span className="text-[11px] font-bold text-[#999999]">お支払い期限</span>
                   <span className="text-[13px] font-bold text-[#111111]">翌月末日</span>
                 </div>
+                {/* ★ 請求書発行（表示）アクションに変更 */}
                 <button 
-                  onClick={() => alert('今月分の請求書PDFを生成してダウンロードします。')}
+                  onClick={handleOpenInvoice}
                   className="w-full mt-2 py-3 bg-white border border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#2D4B3E] hover:border-[#2D4B3E] transition-all flex items-center justify-center gap-2 shadow-sm"
                 >
                   <FileText size={16} /> 今月の請求書を発行する
@@ -425,7 +451,7 @@ export default function CorporateDashboardPage() {
 
       {/* --- 法人プロフィールの編集モーダル --- */}
       {isProfileModalOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200 print:hidden">
           <div className="absolute inset-0 bg-[#111111]/40 backdrop-blur-sm" onClick={() => setIsProfileModalOpen(false)}></div>
           <div className="bg-[#FBFAF9] w-full max-w-[500px] rounded-[32px] shadow-2xl relative flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 max-h-[90vh]">
             <div className="p-6 border-b border-[#EAEAEA] flex justify-between items-center bg-white z-10 shrink-0">
@@ -471,7 +497,7 @@ export default function CorporateDashboardPage() {
 
       {/* --- 詳細モーダル (法人用) --- */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200 print:hidden">
           <div className="absolute inset-0 bg-[#111111]/40 backdrop-blur-sm" onClick={() => setSelectedOrder(null)}></div>
           
           <div className="bg-[#FBFAF9] w-full max-w-[800px] max-h-[90vh] rounded-[32px] shadow-2xl relative flex flex-col overflow-hidden">
@@ -609,7 +635,7 @@ export default function CorporateDashboardPage() {
 
       {/* --- 行事登録モーダル --- */}
       {isEventModalOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200 print:hidden">
           <div className="absolute inset-0 bg-[#111111]/40 backdrop-blur-sm" onClick={() => setIsEventModalOpen(false)}></div>
           <div className="bg-[#FBFAF9] w-full max-w-[500px] rounded-[32px] shadow-2xl relative flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 max-h-[90vh]">
             
@@ -665,7 +691,7 @@ export default function CorporateDashboardPage() {
 
       {/* --- おまかせ注文専用モーダル --- */}
       {omakaseModal.isOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200 print:hidden">
           <div className="absolute inset-0 bg-[#111111]/40 backdrop-blur-sm" onClick={() => setOmakaseModal({ ...omakaseModal, isOpen: false })}></div>
           <div className="bg-[#FBFAF9] w-full max-w-[400px] rounded-[32px] shadow-2xl relative flex flex-col overflow-hidden animate-in slide-in-from-bottom-8">
             <div className="p-6 border-b border-[#EAEAEA] flex justify-between items-center bg-white z-10">
@@ -711,9 +737,138 @@ export default function CorporateDashboardPage() {
         </div>
       )}
 
+      {/* --- ★ 新規追加：請求書プレビューモーダル（印刷対応） --- */}
+      {isInvoiceModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-[#111111]/60 backdrop-blur-sm print:p-0 print:bg-white animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-[800px] max-h-[90vh] print:max-h-none print:h-auto rounded-[32px] print:rounded-none shadow-2xl relative flex flex-col overflow-hidden print:overflow-visible animate-in zoom-in-95 duration-200">
+            
+            {/* モーダルヘッダー (印刷時は非表示) */}
+            <div className="p-6 border-b border-[#EAEAEA] flex justify-between items-center bg-white z-10 shrink-0 print:hidden">
+              <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><FileText size={20}/> 請求書プレビュー</h2>
+              <div className="flex gap-2">
+                <button onClick={() => window.print()} className="px-5 py-2.5 bg-[#2D4B3E] text-white text-[13px] font-bold tracking-widest rounded-xl hover:bg-[#1f352b] transition-all flex items-center gap-2 shadow-md">
+                  <Download size={16}/> PDF保存・印刷
+                </button>
+                <button onClick={() => setIsInvoiceModalOpen(false)} className="text-[#999999] hover:text-[#111111] p-2.5 bg-[#FBFAF9] rounded-full border border-[#EAEAEA] shadow-sm transition-all"><X size={18}/></button>
+              </div>
+            </div>
+
+            {/* 請求書（A4）の中身 */}
+            <div className="flex-1 overflow-y-auto p-8 md:p-12 print:p-0 bg-white hide-scrollbar print:text-black">
+               <div className="max-w-[700px] mx-auto space-y-8">
+                 
+                 {/* 請求書タイトルと日付 */}
+                 <div className="flex justify-between items-start border-b-2 border-gray-800 pb-6">
+                   <div>
+                     <h1 className="text-[32px] font-serif tracking-widest text-gray-800">請求書</h1>
+                     <p className="text-[12px] font-mono text-gray-500 mt-1">INVOICE</p>
+                   </div>
+                   <div className="text-right text-[12px] text-gray-600 space-y-1 font-medium font-mono">
+                     <p>発行日: {new Date().toLocaleDateString('ja-JP')}</p>
+                     <p>請求番号: INV-{new Date().getFullYear()}{String(new Date().getMonth()+1).padStart(2,'0')}-{String(Math.floor(Math.random()*10000)).padStart(4,'0')}</p>
+                   </div>
+                 </div>
+
+                 {/* 宛名と発行元 */}
+                 <div className="flex justify-between items-start">
+                   <div className="space-y-4">
+                     <div className="border-b border-gray-400 pb-2 min-w-[250px]">
+                       <h2 className="text-[20px] font-bold text-gray-800">{profileForm.companyName || companyName} <span className="text-[14px] font-normal ml-1">御中</span></h2>
+                       {profileForm.contactName && <p className="text-[14px] text-gray-700 mt-2 font-medium">ご担当: {profileForm.contactName} 様</p>}
+                     </div>
+                     <p className="text-[12px] text-gray-600 leading-relaxed pt-2">
+                       平素は格別のお引き立てを賜り、厚く御礼申し上げます。<br/>
+                       下記の通りご請求申し上げます。
+                     </p>
+                     
+                     <div className="bg-gray-50 p-4 rounded-xl inline-block mt-4 border border-gray-200">
+                       <p className="text-[12px] text-gray-500 mb-1 font-bold tracking-widest">ご請求金額 (税込)</p>
+                       <p className="text-[28px] font-black text-gray-800 font-sans tracking-tight">
+                         ¥{currentMonthOrders.reduce((sum, o) => sum + getTotals(o.order_data).total, 0).toLocaleString()}
+                       </p>
+                     </div>
+                   </div>
+
+                   <div className="text-right text-[12px] text-gray-700 space-y-1.5 bg-gray-50 p-5 rounded-xl border border-gray-100">
+                     <p className="text-[16px] font-bold text-gray-800 mb-3">{shopName}</p>
+                     <p>〒{appSettings?.generalConfig?.zipCode || '000-0000'}</p>
+                     <p>{appSettings?.generalConfig?.address || '住所未設定'}</p>
+                     <p>TEL: {appSettings?.generalConfig?.phone || '未設定'}</p>
+                     <p className="pt-2 text-gray-500">適格請求書発行事業者登録番号</p>
+                     <p className="font-mono font-bold">{appSettings?.generalConfig?.invoiceNumber || '未設定'}</p>
+                   </div>
+                 </div>
+
+                 {/* 明細テーブル */}
+                 <table className="w-full text-[12px] border-collapse mt-8">
+                   <thead>
+                     <tr className="bg-gray-100 border-y-2 border-gray-800 text-gray-700">
+                       <th className="py-3 px-4 text-left font-bold w-28 border-r border-white">ご注文日</th>
+                       <th className="py-3 px-4 text-left font-bold border-r border-white">品名 / 用途</th>
+                       <th className="py-3 px-4 text-center font-bold w-16 border-r border-white">数量</th>
+                       <th className="py-3 px-4 text-right font-bold w-32">金額 (税抜)</th>
+                     </tr>
+                   </thead>
+                   <tbody className="border-b-2 border-gray-800">
+                     {currentMonthOrders.map(order => {
+                       const d = order.order_data;
+                       const totals = getTotals(d);
+                       return (
+                         <tr key={order.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                           <td className="py-4 px-4 text-gray-600 font-mono">{new Date(order.created_at).toLocaleDateString('ja-JP')}</td>
+                           <td className="py-4 px-4 text-gray-800 font-medium">
+                             {d.flowerType} <span className="text-[10px] text-gray-500 ml-2">({d.flowerPurpose})</span>
+                             {(totals.fee > 0 || totals.pickup > 0) && <div className="text-[10px] text-gray-500 mt-1.5 flex items-center gap-2"><Truck size={10}/> ※配送料・回収費等を含む</div>}
+                           </td>
+                           <td className="py-4 px-4 text-center text-gray-600">1</td>
+                           <td className="py-4 px-4 text-right text-gray-800 font-bold">¥{totals.subTotal.toLocaleString()}</td>
+                         </tr>
+                       );
+                     })}
+                   </tbody>
+                 </table>
+
+                 {/* 合計金額エリア */}
+                 <div className="flex justify-end mt-6">
+                   <div className="w-[300px] space-y-2 text-[13px] bg-gray-50 p-4 rounded-xl border border-gray-200">
+                     <div className="flex justify-between border-b border-gray-200 pb-2">
+                       <span className="text-gray-600 font-medium">小計 (税抜)</span>
+                       <span className="text-gray-800 font-bold tracking-wider">¥{currentMonthOrders.reduce((sum, o) => sum + getTotals(o.order_data).subTotal, 0).toLocaleString()}</span>
+                     </div>
+                     <div className="flex justify-between border-b border-gray-200 py-2">
+                       <span className="text-gray-600 font-medium">消費税 (10%)</span>
+                       <span className="text-gray-800 font-bold tracking-wider">¥{currentMonthOrders.reduce((sum, o) => sum + getTotals(o.order_data).tax, 0).toLocaleString()}</span>
+                     </div>
+                     <div className="flex justify-between pt-2 items-end">
+                       <span className="font-bold text-gray-800">合計金額</span>
+                       <span className="text-[24px] font-black text-gray-800 tracking-tight">¥{currentMonthOrders.reduce((sum, o) => sum + getTotals(o.order_data).total, 0).toLocaleString()}</span>
+                     </div>
+                   </div>
+                 </div>
+
+                 {/* 振込先情報 */}
+                 <div className="mt-12 pt-6 border-t border-gray-300 text-[11px] text-gray-600 space-y-1.5">
+                   <p className="font-bold text-gray-800 mb-2 flex items-center gap-1.5"><CreditCard size={14}/> お振込先情報</p>
+                   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 inline-block font-medium">
+                     <p>{appSettings?.paymentConfig?.bankName || '〇〇銀行'}　{appSettings?.paymentConfig?.branchName || '〇〇支店'}</p>
+                     <p className="my-1">{appSettings?.paymentConfig?.accountType || '普通'} <span className="font-mono text-[13px]">{appSettings?.paymentConfig?.accountNumber || '1234567'}</span></p>
+                     <p>口座名義: {appSettings?.paymentConfig?.accountName || 'カ）ハナヤ'}</p>
+                   </div>
+                   <p className="mt-4 text-red-600 font-bold tracking-widest">※ 恐れ入りますが、お振込手数料は貴社にてご負担をお願いいたします。</p>
+                   <p className="font-bold tracking-widest">※ お支払期限: 翌月末日</p>
+                 </div>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style jsx global>{`
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @media print {
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; }
+        }
       `}</style>
     </div>
   );
