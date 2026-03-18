@@ -21,7 +21,6 @@ export default function CorporateDashboardPage() {
   const [companyName, setCompanyName] = useState(''); 
   const [appSettings, setAppSettings] = useState(null);
 
-  // ★ 法人情報の編集用 State
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [profileForm, setProfileForm] = useState({ companyName: '', contactName: '', phone: '', email: '', zip: '', address1: '', address2: '' });
 
@@ -38,7 +37,6 @@ export default function CorporateDashboardPage() {
 
   useEffect(() => {
     async function initData() {
-      // ★ ログイン中のユーザー情報を取得してセット！
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session && session.user && session.user.user_metadata) {
@@ -92,7 +90,6 @@ export default function CorporateDashboardPage() {
     router.push('/corporate/login'); 
   };
 
-  // ★ 法人情報の保存処理
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     try {
@@ -218,7 +215,6 @@ export default function CorporateDashboardPage() {
 
       <main className="max-w-[1000px] mx-auto p-6 md:p-8 space-y-8 pt-8">
 
-        {/* 未入金アラートバナー */}
         {billingInfo.hasUnpaid && (
           <div className="bg-red-50 border border-red-200 p-5 rounded-[24px] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
             <div className="flex items-start gap-3">
@@ -234,41 +230,38 @@ export default function CorporateDashboardPage() {
           </div>
         )}
         
-        {/* ウェルカム＆クイックアクション */}
-        <div className="bg-[#2D4B3E] rounded-[32px] p-8 md:p-10 shadow-lg text-white relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="absolute -right-20 -top-20 opacity-10 pointer-events-none">
+        {/* ★ ウェルカムバナー：レイアウト修正版！ */}
+        <div className="bg-[#2D4B3E] rounded-[32px] p-8 md:p-10 shadow-lg text-white relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-8">
+          {/* 背景のアイコン */}
+          <div className="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
             <Gift size={240} />
           </div>
           
-          <div className="relative z-10 space-y-2 flex-1">
-            <div className="flex justify-between items-start">
-              <h1 className="text-[24px] md:text-[28px] font-black tracking-tight leading-tight">
+          {/* 左側のテキスト＆設定ボタン（縦積みにしてゆったりと） */}
+          <div className="relative z-10 flex-1 space-y-5">
+            <div className="space-y-3">
+              <h1 className="text-[24px] md:text-[30px] font-black tracking-tight leading-tight">
                 いつもご利用ありがとうございます。<br />
                 <span className="text-emerald-300">{companyName}</span> 様
               </h1>
-              {/* ★ 法人情報設定ボタン */}
-              <button 
-                onClick={() => setIsProfileModalOpen(true)}
-                className="hidden md:flex items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-[11px] font-bold transition-all border border-white/20"
-              >
-                <Settings size={14}/> 登録情報の確認・変更
-              </button>
+              <p className="text-[13px] text-white/80 font-medium leading-relaxed max-w-lg">
+                ご請求書のダウンロードや、次回のお祝い花のオーダーをこちらから行えます。
+              </p>
             </div>
-            <p className="text-[13px] text-white/80 font-medium pt-2">
-              ご請求書のダウンロードや、次回のお祝い花のオーダーをこちらから行えます。
-            </p>
+            
             <button 
               onClick={() => setIsProfileModalOpen(true)}
-              className="md:hidden mt-4 flex w-fit items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-[11px] font-bold transition-all border border-white/20"
+              className="flex w-fit items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-[12px] font-bold transition-all border border-white/20 backdrop-blur-sm"
             >
               <Settings size={14}/> 登録情報の確認・変更
             </button>
           </div>
           
-          <div className="relative z-10 shrink-0">
+          {/* 右側のアクションボタン */}
+          <div className="relative z-10 shrink-0 w-full md:w-auto mt-2 md:mt-0">
             <Link 
               href={`/corporate/order/${tenantId}`} 
-              className="group flex items-center justify-center gap-2 bg-white text-[#2D4B3E] px-8 py-4 rounded-2xl font-black text-[15px] shadow-xl hover:scale-105 transition-all active:scale-95"
+              className="group flex w-full md:w-auto items-center justify-center gap-2 bg-white text-[#2D4B3E] px-8 py-5 rounded-2xl font-black text-[15px] shadow-xl hover:scale-105 transition-all active:scale-95"
             >
               <Plus size={20} />
               新しいお花を注文する
@@ -398,6 +391,7 @@ export default function CorporateDashboardPage() {
 
                       <div className="mt-4 pt-4 border-t border-[#F7F7F7] space-y-2 pl-2">
                         <p className="text-[10px] font-bold text-[#999999] mb-2 tracking-widest">この行事のご注文</p>
+                        
                         <div className="flex flex-col gap-2">
                           <button 
                             onClick={() => handleQuickOrder('omakase', ev)}
@@ -405,6 +399,7 @@ export default function CorporateDashboardPage() {
                           >
                             <Zap size={14}/> 種類と予算を決めておまかせ注文
                           </button>
+                          
                           {ev.lastOrder ? (
                             <button 
                               onClick={() => handleQuickOrder('repeat', ev)}
@@ -428,7 +423,7 @@ export default function CorporateDashboardPage() {
         </div>
       </main>
 
-      {/* --- ★ 法人プロフィールの編集モーダル --- */}
+      {/* --- 法人プロフィールの編集モーダル --- */}
       {isProfileModalOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
           <div className="absolute inset-0 bg-[#111111]/40 backdrop-blur-sm" onClick={() => setIsProfileModalOpen(false)}></div>
