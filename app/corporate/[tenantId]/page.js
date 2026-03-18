@@ -27,9 +27,7 @@ export default function CorporateDashboardPage() {
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  // ★ 請求書モーダル用のStateを追加
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
-
   const [billingInfo, setBillingInfo] = useState({ hasUnpaid: false, unpaidMonth: '', unpaidAmount: 0, dueDate: '', currentMonthAmount: 0 });
 
   const [events, setEvents] = useState([]);
@@ -189,7 +187,6 @@ export default function CorporateDashboardPage() {
     return { item, fee, pickup, subTotal, tax, total: subTotal + tax };
   };
 
-  // ★ 今月の注文だけに絞り込む処理（請求書・ダッシュボード表示用）
   const currentMonthOrders = useMemo(() => {
     const now = new Date();
     return orders.filter(o => {
@@ -198,7 +195,6 @@ export default function CorporateDashboardPage() {
     });
   }, [orders]);
 
-  // ★ 請求書を開く処理
   const handleOpenInvoice = () => {
     if (currentMonthOrders.length === 0) {
       alert('今月のご利用（ご請求データ）はまだありません。');
@@ -251,36 +247,34 @@ export default function CorporateDashboardPage() {
           </div>
         )}
         
+        {/* ★ UI事故修正版ウェルカムバナー！ */}
         <div className="bg-[#2D4B3E] rounded-[32px] p-8 md:p-10 shadow-lg text-white relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-8">
           <div className="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
             <Gift size={240} />
           </div>
           
-          <div className="relative z-10 flex-1 space-y-5">
-            <div className="flex justify-between items-start">
-              <h1 className="text-[24px] md:text-[30px] font-black tracking-tight leading-tight">
-                いつもご利用ありがとうございます。<br />
-                <span className="text-emerald-300">{companyName}</span> 様
-              </h1>
+          <div className="relative z-10 flex-1 space-y-4">
+            <h1 className="text-[24px] md:text-[30px] font-black tracking-tight leading-tight">
+              いつもご利用ありがとうございます。<br />
+              <span className="text-emerald-300">{companyName}</span> 様
+            </h1>
+            
+            {/* ★ 設定ボタンをタイトルの「下」に配置（横幅が足りなくても崩れない） */}
+            <div className="pt-1">
               <button 
                 onClick={() => setIsProfileModalOpen(true)}
-                className="hidden md:flex items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-[11px] font-bold transition-all border border-white/20 backdrop-blur-sm"
+                className="flex w-fit items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-[12px] font-bold transition-all border border-white/20 backdrop-blur-sm"
               >
                 <Settings size={14}/> 登録情報の確認・変更
               </button>
             </div>
-            <p className="text-[13px] text-white/80 font-medium leading-relaxed max-w-lg">
+            
+            <p className="text-[13px] text-white/80 font-medium leading-relaxed max-w-lg pt-1">
               ご請求書のダウンロードや、次回のお祝い花のオーダーをこちらから行えます。
             </p>
-            <button 
-              onClick={() => setIsProfileModalOpen(true)}
-              className="md:hidden mt-4 flex w-fit items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-[11px] font-bold transition-all border border-white/20"
-            >
-              <Settings size={14}/> 登録情報の確認・変更
-            </button>
           </div>
           
-          <div className="relative z-10 shrink-0 w-full md:w-auto mt-2 md:mt-0">
+          <div className="relative z-10 shrink-0 w-full md:w-auto mt-4 md:mt-0">
             <Link 
               href={`/corporate/order/${tenantId}`} 
               className="group flex w-full md:w-auto items-center justify-center gap-2 bg-white text-[#2D4B3E] px-8 py-5 rounded-2xl font-black text-[15px] shadow-xl hover:scale-105 transition-all active:scale-95"
@@ -356,7 +350,6 @@ export default function CorporateDashboardPage() {
               <div className="space-y-4">
                 <div className="flex items-end justify-between">
                   <span className="text-[11px] font-bold text-[#999999]">当月ご利用額 (税込)</span>
-                  {/* ★ 今月の注文だけの合計金額を算出！ */}
                   <span className="text-[20px] font-black text-[#111111]">
                     ¥{currentMonthOrders.reduce((sum, o) => sum + getTotals(o.order_data).total, 0).toLocaleString()}
                   </span>
@@ -365,7 +358,6 @@ export default function CorporateDashboardPage() {
                   <span className="text-[11px] font-bold text-[#999999]">お支払い期限</span>
                   <span className="text-[13px] font-bold text-[#111111]">翌月末日</span>
                 </div>
-                {/* ★ 請求書発行（表示）アクションに変更 */}
                 <button 
                   onClick={handleOpenInvoice}
                   className="w-full mt-2 py-3 bg-white border border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#2D4B3E] hover:border-[#2D4B3E] transition-all flex items-center justify-center gap-2 shadow-sm"
@@ -737,9 +729,9 @@ export default function CorporateDashboardPage() {
         </div>
       )}
 
-      {/* --- ★ 新規追加：請求書プレビューモーダル（印刷対応） --- */}
+      {/* --- ★ 請求書プレビューモーダル（印刷対応・はみ出し防止） --- */}
       {isInvoiceModalOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-[#111111]/60 backdrop-blur-sm print:p-0 print:bg-white animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-[#111111]/60 backdrop-blur-sm print:absolute print:inset-0 print:p-0 print:bg-white animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-[800px] max-h-[90vh] print:max-h-none print:h-auto rounded-[32px] print:rounded-none shadow-2xl relative flex flex-col overflow-hidden print:overflow-visible animate-in zoom-in-95 duration-200">
             
             {/* モーダルヘッダー (印刷時は非表示) */}
@@ -754,7 +746,7 @@ export default function CorporateDashboardPage() {
             </div>
 
             {/* 請求書（A4）の中身 */}
-            <div className="flex-1 overflow-y-auto p-8 md:p-12 print:p-0 bg-white hide-scrollbar print:text-black">
+            <div className="flex-1 overflow-y-auto print:overflow-visible p-8 md:p-12 print:p-0 bg-white hide-scrollbar print:text-black">
                <div className="max-w-[700px] mx-auto space-y-8">
                  
                  {/* 請求書タイトルと日付 */}
@@ -802,7 +794,7 @@ export default function CorporateDashboardPage() {
                  {/* 明細テーブル */}
                  <table className="w-full text-[12px] border-collapse mt-8">
                    <thead>
-                     <tr className="bg-gray-100 border-y-2 border-gray-800 text-gray-700">
+                     <tr className="bg-gray-100 border-y-2 border-gray-800 text-gray-700 break-inside-avoid">
                        <th className="py-3 px-4 text-left font-bold w-28 border-r border-white">ご注文日</th>
                        <th className="py-3 px-4 text-left font-bold border-r border-white">品名 / 用途</th>
                        <th className="py-3 px-4 text-center font-bold w-16 border-r border-white">数量</th>
@@ -814,7 +806,7 @@ export default function CorporateDashboardPage() {
                        const d = order.order_data;
                        const totals = getTotals(d);
                        return (
-                         <tr key={order.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                         <tr key={order.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors break-inside-avoid">
                            <td className="py-4 px-4 text-gray-600 font-mono">{new Date(order.created_at).toLocaleDateString('ja-JP')}</td>
                            <td className="py-4 px-4 text-gray-800 font-medium">
                              {d.flowerType} <span className="text-[10px] text-gray-500 ml-2">({d.flowerPurpose})</span>
@@ -829,7 +821,7 @@ export default function CorporateDashboardPage() {
                  </table>
 
                  {/* 合計金額エリア */}
-                 <div className="flex justify-end mt-6">
+                 <div className="flex justify-end mt-6 break-inside-avoid">
                    <div className="w-[300px] space-y-2 text-[13px] bg-gray-50 p-4 rounded-xl border border-gray-200">
                      <div className="flex justify-between border-b border-gray-200 pb-2">
                        <span className="text-gray-600 font-medium">小計 (税抜)</span>
@@ -847,7 +839,7 @@ export default function CorporateDashboardPage() {
                  </div>
 
                  {/* 振込先情報 */}
-                 <div className="mt-12 pt-6 border-t border-gray-300 text-[11px] text-gray-600 space-y-1.5">
+                 <div className="mt-12 pt-6 border-t border-gray-300 text-[11px] text-gray-600 space-y-1.5 break-inside-avoid">
                    <p className="font-bold text-gray-800 mb-2 flex items-center gap-1.5"><CreditCard size={14}/> お振込先情報</p>
                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 inline-block font-medium">
                      <p>{appSettings?.paymentConfig?.bankName || '〇〇銀行'}　{appSettings?.paymentConfig?.branchName || '〇〇支店'}</p>
@@ -868,6 +860,8 @@ export default function CorporateDashboardPage() {
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         @media print {
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; }
+          /* 印刷時はスクロールを解除して全要素を描画する */
+          .fixed { position: absolute !important; }
         }
       `}</style>
     </div>
