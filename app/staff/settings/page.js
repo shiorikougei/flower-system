@@ -5,7 +5,7 @@ import {
   Settings as SettingsIcon, ListChecks, Store, Tag, Truck, User, Mail, 
   Trash2, Plus, Clock, ShieldCheck, RotateCcw, Image as ImageIcon, Ruler, 
   ChevronRight, Calendar as CalendarIcon, Box, MapPin, X,
-  LayoutTemplate, Package, Eye, EyeOff, Sparkles, AlertCircle, Link as LinkIcon, Building2, CreditCard 
+  LayoutTemplate, Package, Eye, EyeOff, Sparkles, AlertCircle, Link as LinkIcon, Building2, CreditCard, Palette 
 } from 'lucide-react';
 
 import TatefudaPreview from '@/components/TatefudaPreview';
@@ -21,18 +21,18 @@ export default function SettingsPage() {
   
   const [currentTenantId, setCurrentTenantId] = useState(null);
 
-  // --- 1. 基本設定（★ 請求書用の情報と口座情報を追加！） ---
+  // --- 1. 基本設定 ---
   const [generalConfig, setGeneralConfig] = useState({ 
     tenantId: '', 
     appName: 'FLORIX', 
-    zipCode: '',     // 郵便番号
-    address: '',     // 住所
-    phone: '',       // 電話番号
-    invoiceNumber: '', // 適格請求書発行事業者登録番号
+    zipCode: '',     
+    address: '',     
+    phone: '',       
+    invoiceNumber: '', 
     logoUrl: '', logoSize: 100, logoTransparent: false, slipBgUrl: '', slipBgOpacity: 50, systemPassword: '7777'
   });
 
-  // ★ 振込先口座の設定を追加
+  // --- 振込先口座の設定 ---
   const [paymentConfig, setPaymentConfig] = useState({
     bankName: '',
     branchName: '',
@@ -43,6 +43,13 @@ export default function SettingsPage() {
 
   // --- 2. ステータス設定 ---
   const [statusConfig, setStatusConfig] = useState({ type: 'template', customLabels: ['未対応', '制作中', '制作完了', '配達中'] });
+
+  // --- ★ 新規：デザイン選択肢（用途・カラー・イメージ）の設定 ---
+  const [designOptions, setDesignOptions] = useState({
+    purposes: ['誕生日', '開店', 'お供え', '就任・昇進祝い', '移転祝い'],
+    colors: ['おまかせ', '暖色系 (赤・ピンク・オレンジ)', '寒色系 (青・紫・白)', 'ホワイト・グリーン系'],
+    vibes: ['おまかせ (用途に合わせる)', 'かわいい', '豪華', '大人っぽい', '元気', '華やか・豪華', '上品・落ち着いた雰囲気']
+  });
 
   // --- 3. 店舗管理 ---
   const [shops, setShops] = useState([]); 
@@ -88,8 +95,9 @@ export default function SettingsPage() {
   ]);
 
   const tabs = [
-    { id: 'general', label: '基本・請求情報', icon: SettingsIcon }, // ★ タブ名変更
+    { id: 'general', label: '基本・請求情報', icon: SettingsIcon },
     { id: 'status', label: 'ステータス', icon: ListChecks },
+    { id: 'design', label: 'デザイン選択肢', icon: Palette }, // ★ 新規追加
     { id: 'shop', label: '店舗・特別日', icon: Store }, 
     { id: 'items', label: '商品・納期', icon: Tag },
     { id: 'shipping', label: '配送・時間枠', icon: Truck },
@@ -102,8 +110,9 @@ export default function SettingsPage() {
 
   const applySettings = (s) => {
     if (s.generalConfig) setGeneralConfig(prev => ({...prev, ...s.generalConfig}));
-    if (s.paymentConfig) setPaymentConfig(prev => ({...prev, ...s.paymentConfig})); // ★ 追加
+    if (s.paymentConfig) setPaymentConfig(prev => ({...prev, ...s.paymentConfig})); 
     if (s.statusConfig) setStatusConfig(s.statusConfig);
+    if (s.designOptions) setDesignOptions(prev => ({...prev, ...s.designOptions})); // ★ 追加
     if (s.shops) setShops(s.shops);
     if (s.flowerItems) setFlowerItems(s.flowerItems);
     if (s.staffList) setStaffList(s.staffList);
@@ -153,11 +162,12 @@ export default function SettingsPage() {
     if (!isAdmin || !currentTenantId) return;
     setIsSaving(true);
     try {
-      // ★ 保存データに paymentConfig も追加
       const payload = { 
         generalConfig: {...generalConfig, tenantId: currentTenantId}, 
         paymentConfig, 
-        statusConfig, shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReplyTemplates, staffOrderConfig, timeSlots 
+        statusConfig, 
+        designOptions, // ★ 保存データに追加
+        shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReplyTemplates, staffOrderConfig, timeSlots 
       };
       await supabase.from('app_settings').upsert({ id: currentTenantId, settings_data: payload });
       alert('すべての設定を保存しました！');
@@ -182,7 +192,8 @@ export default function SettingsPage() {
   const addTimeSlot = (method) => { setTimeSlots(prev => ({ ...prev, [method]: [...prev[method], ''] })); };
   const removeTimeSlot = (method, index) => { setTimeSlots(prev => ({ ...prev, [method]: prev[method].filter((_, i) => i !== index) })); };
 
-  // ★ タブ１：請求書用の設定欄を追加！
+  // --- タブレンダリング用関数群 ---
+
   const renderGeneralTab = () => (
     <div className="space-y-8 animate-in fade-in">
       
@@ -312,6 +323,60 @@ export default function SettingsPage() {
           </div>
         ))}
         {statusConfig.type === 'custom' && <button onClick={() => setStatusConfig({...statusConfig, customLabels: [...statusConfig.customLabels, '新状態']})} className="w-full py-3 border-2 border-dashed border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ 項目を追加</button>}
+      </div>
+    </div>
+  );
+
+  // ★ 新規：デザイン選択肢（用途・カラー・イメージ）の設定タブ
+  const renderDesignTab = () => (
+    <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 animate-in fade-in">
+      <div className="border-b pb-4">
+        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Palette size={20}/> デザイン選択肢の設定</h2>
+        <p className="text-[11px] text-[#999999] mt-2">注文フォームでお客様が選択する「用途」「カラー」「イメージ」の選択肢を自由にカスタマイズできます。「その他」は自動で追加されます。</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* 用途 */}
+        <div className="space-y-3">
+          <label className="text-[14px] font-bold text-[#2D4B3E] bg-[#FBFAF9] px-4 py-2 rounded-lg inline-block border">ご用途</label>
+          <div className="space-y-2">
+            {designOptions.purposes.map((p, i) => (
+              <div key={i} className="flex gap-2">
+                <input type="text" value={p} onChange={(e) => { const n = [...designOptions.purposes]; n[i] = e.target.value; setDesignOptions({...designOptions, purposes: n}); }} className="flex-1 h-10 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-3 text-[12px] font-bold outline-none focus:border-[#2D4B3E]" />
+                <button onClick={() => setDesignOptions({...designOptions, purposes: designOptions.purposes.filter((_, idx) => idx !== i)})} className="text-red-300 p-1.5 hover:text-red-500"><Trash2 size={16}/></button>
+              </div>
+            ))}
+            <button onClick={() => setDesignOptions({...designOptions, purposes: [...designOptions.purposes, '新しい用途']})} className="w-full py-2 border-2 border-dashed border-[#EAEAEA] rounded-xl text-[11px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ 追加</button>
+          </div>
+        </div>
+
+        {/* カラー */}
+        <div className="space-y-3 border-t md:border-t-0 md:border-l border-[#EAEAEA] md:pl-6">
+          <label className="text-[14px] font-bold text-[#2D4B3E] bg-[#FBFAF9] px-4 py-2 rounded-lg inline-block border">カラー</label>
+          <div className="space-y-2">
+            {designOptions.colors.map((c, i) => (
+              <div key={i} className="flex gap-2">
+                <input type="text" value={c} onChange={(e) => { const n = [...designOptions.colors]; n[i] = e.target.value; setDesignOptions({...designOptions, colors: n}); }} className="flex-1 h-10 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-3 text-[12px] font-bold outline-none focus:border-[#2D4B3E]" />
+                <button onClick={() => setDesignOptions({...designOptions, colors: designOptions.colors.filter((_, idx) => idx !== i)})} className="text-red-300 p-1.5 hover:text-red-500"><Trash2 size={16}/></button>
+              </div>
+            ))}
+            <button onClick={() => setDesignOptions({...designOptions, colors: [...designOptions.colors, '新しいカラー']})} className="w-full py-2 border-2 border-dashed border-[#EAEAEA] rounded-xl text-[11px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ 追加</button>
+          </div>
+        </div>
+
+        {/* イメージ */}
+        <div className="space-y-3 border-t md:border-t-0 md:border-l border-[#EAEAEA] md:pl-6">
+          <label className="text-[14px] font-bold text-[#2D4B3E] bg-[#FBFAF9] px-4 py-2 rounded-lg inline-block border">イメージ</label>
+          <div className="space-y-2">
+            {designOptions.vibes.map((v, i) => (
+              <div key={i} className="flex gap-2">
+                <input type="text" value={v} onChange={(e) => { const n = [...designOptions.vibes]; n[i] = e.target.value; setDesignOptions({...designOptions, vibes: n}); }} className="flex-1 h-10 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-3 text-[12px] font-bold outline-none focus:border-[#2D4B3E]" />
+                <button onClick={() => setDesignOptions({...designOptions, vibes: designOptions.vibes.filter((_, idx) => idx !== i)})} className="text-red-300 p-1.5 hover:text-red-500"><Trash2 size={16}/></button>
+              </div>
+            ))}
+            <button onClick={() => setDesignOptions({...designOptions, vibes: [...designOptions.vibes, '新しいイメージ']})} className="w-full py-2 border-2 border-dashed border-[#EAEAEA] rounded-xl text-[11px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ 追加</button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -747,6 +812,7 @@ export default function SettingsPage() {
       <main className={`flex-1 max-w-[1000px] mx-auto w-full py-10 px-6 transition-all ${!isAdmin ? 'opacity-40 pointer-events-none grayscale' : ''}`}>
         {activeTab === 'general' && renderGeneralTab()}
         {activeTab === 'status' && renderStatusTab()}
+        {activeTab === 'design' && renderDesignTab()} 
         {activeTab === 'shop' && renderShopTab()}
         {activeTab === 'items' && renderItemsTab()}
         {activeTab === 'shipping' && renderShippingTab()}
