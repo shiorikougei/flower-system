@@ -18,7 +18,8 @@ import {
   Sparkles,
   MessageSquare,
   X,
-  Send
+  Send,
+  Image as ImageIcon // ★ アイコン追加
 } from 'lucide-react';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
@@ -30,7 +31,6 @@ export default function StaffLayout({ children }) {
   const [isPremiumPlan, setIsPremiumPlan] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
-  // フィードバックモーダル用ステート
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackType, setFeedbackType] = useState('アップデート依頼');
   const [feedbackText, setFeedbackText] = useState('');
@@ -63,6 +63,7 @@ export default function StaffLayout({ children }) {
     fetchSettings();
   }, []);
 
+  // ★ メニューに「作品管理」を追加！
   const baseMenuItems = [
     { name: 'ホーム', path: '/staff', icon: Home },
     { name: '店舗注文受付', path: '/staff/new-order', icon: PlusSquare },
@@ -71,6 +72,7 @@ export default function StaffLayout({ children }) {
     { name: '配達管理', path: '/staff/deliveries', icon: Truck },
     { name: '売上管理', path: '/staff/sales', icon: TrendingUp },
     { name: '顧客管理', path: '/staff/customers', icon: Users },
+    { name: '作品管理', path: '/staff/portfolio', icon: ImageIcon }, // ★ ここに追加！
     { name: '各種設定', path: '/staff/settings', icon: Settings },
   ];
 
@@ -80,7 +82,7 @@ export default function StaffLayout({ children }) {
   ];
 
   const activeMenuItems = isPremiumPlan 
-    ? [...baseMenuItems.slice(0, 5), ...premiumMenuItems, ...baseMenuItems.slice(5)]
+    ? [...baseMenuItems.slice(0, 6), ...premiumMenuItems, ...baseMenuItems.slice(6)]
     : baseMenuItems;
 
   const handleUpgradeRequest = async () => {
@@ -148,15 +150,12 @@ export default function StaffLayout({ children }) {
     }
   };
 
-  // ★ 追加：もしログイン画面だったら、サイドバーを出さずに中身（children）だけを返す！
   if (pathname === '/staff/login') {
     return <>{children}</>;
   }
 
   return (
     <div className="min-h-screen bg-[#FBFAF9] flex flex-col md:flex-row font-sans text-[#111111]">
-      
-      {/* 共通サイドバー */}
       <aside className="w-full md:w-64 bg-white border-r border-[#EAEAEA] md:fixed h-full z-40 flex flex-col">
         <div className="p-8 flex flex-col gap-1 border-b border-[#EAEAEA] shrink-0">
           {logoUrl ? (
@@ -170,7 +169,6 @@ export default function StaffLayout({ children }) {
           </span>
         </div>
         
-        {/* メインメニュー */}
         <nav className="p-4 space-y-1.5 flex-1 overflow-y-auto hide-scrollbar">
           {activeMenuItems.map(item => {
             const isActive = item.path === '/staff' 
@@ -191,10 +189,7 @@ export default function StaffLayout({ children }) {
           })}
         </nav>
 
-        {/* 下部アクションエリア */}
         <div className="p-5 bg-[#F7F7F7] border-t border-[#EAEAEA] shrink-0 space-y-3">
-          
-          {/* フィードバックボタン */}
           <button 
             onClick={() => setShowFeedback(true)}
             className="w-full bg-white border border-[#EAEAEA] text-[#555555] text-[11px] font-bold py-2.5 rounded-xl shadow-sm hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all flex items-center justify-center gap-2"
@@ -202,7 +197,6 @@ export default function StaffLayout({ children }) {
             <MessageSquare size={14} /> アプリの要望・バグ報告
           </button>
 
-          {/* プレミアムプラン未加入時のアップグレード案内 */}
           {!isPremiumPlan && (
             <div className="pt-2 border-t border-[#EAEAEA]">
               <p className="text-[10px] font-bold text-[#999999] tracking-widest mb-3 flex items-center gap-1.5">
@@ -231,12 +225,10 @@ export default function StaffLayout({ children }) {
         </div>
       </aside>
       
-      {/* 各ページのメインコンテンツ */}
       <main className="flex-1 md:ml-64 min-w-0">
         {children}
       </main>
 
-      {/* フィードバック送信モーダル */}
       {showFeedback && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#111111]/40 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-[24px] w-full max-w-md shadow-2xl overflow-hidden flex flex-col">

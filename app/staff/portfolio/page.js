@@ -1,69 +1,84 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { supabase } from '../../../utils/supabase';
+import { supabase } from '@/utils/supabase'; // ★ パス修正
 import { 
   Wand2, Copy, ExternalLink, CheckCircle, Trash2, 
   Plus, Link as LinkIcon, Image as ImageIcon, Loader2, Sparkles, LayoutGrid 
 } from 'lucide-react';
-
-const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
-const GALLERY_CACHE_KEY = 'florix_gallery_cache';
 
 export default function PortfolioPage() {
   const [appSettings, setAppSettings] = useState(null);
   const [images, setImages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [currentTenantId, setCurrentTenantId] = useState(null);
 
-  // --- タブ管理 ---
-  const [activeTab, setActiveTab] = useState('list'); // 'list', 'new', 'import'
+  const [activeTab, setActiveTab] = useState('list');
 
-  // --- 新規登録用ステート ---
   const [newImage, setNewImage] = useState({
     id: '', url: '', caption: '', price: '', purpose: '', color: '', vibe: ''
   });
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // --- 過去分登録(URL)用ステート ---
   const [importUrl, setImportUrl] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [importedData, setImportedData] = useState(null);
 
   const [copiedId, setCopiedId] = useState(null);
 
-  // ★ キャッシュ対応のデータ取得ロジック
+  // ★ 新規：設定画面と連動するデザイン選択肢の初期値
+  const defaultDesignOptions = {
+    purposes: ['誕生日', '開店', 'お供え', '就任・昇進祝い', '移転祝い'],
+    colors: ['おまかせ', '暖色系 (赤・ピンク・オレンジ)', '寒色系 (青・紫・白)', 'ホワイト・グリーン系'],
+    vibes: ['おまかせ (用途に合わせる)', 'かわいい', '豪華', '大人っぽい', '元気', '華やか・豪華', '上品・落ち着いた雰囲気']
+  };
+  const designOptions = appSettings?.designOptions || defaultDesignOptions;
+
   useEffect(() => {
     async function fetchData() {
-      // 1. キャッシュから即時復元
-      const cachedSettings = sessionStorage.getItem(SETTINGS_CACHE_KEY);
-      const cachedGallery = sessionStorage.getItem(GALLERY_CACHE_KEY);
-
-      if (cachedSettings) {
-        try { setAppSettings(JSON.parse(cachedSettings)); } catch (e) {}
-      }
-      if (cachedGallery) {
-        try { setImages(JSON.parse(cachedGallery).images || []); } catch (e) {}
-      }
-      
-      if (cachedSettings && cachedGallery) {
-        setIsLoading(false); // 画面を即時表示
-      }
-
-      // 2. バックグラウンドで最新データを取得
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          window.location.href = '/staff/login';
+          return;
+        }
+
+        const { data: profile, error: profileError } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
+        if (profileError) throw profileError;
+        
+        const tId = profile.tenant_id;
+        setCurrentTenantId(tId);
+
+        const CACHE_KEY_SETTINGS = `florix_settings_cache_${tId}`;
+        const CACHE_KEY_GALLERY = `florix_gallery_cache_${tId}`;
+
+        const cachedSettings = sessionStorage.getItem(CACHE_KEY_SETTINGS);
+        const cachedGallery = sessionStorage.getItem(CACHE_KEY_GALLERY);
+
+        if (cachedSettings) {
+          try { setAppSettings(JSON.parse(cachedSettings)); } catch (e) {}
+        }
+        if (cachedGallery) {
+          try { setImages(JSON.parse(cachedGallery).images || []); } catch (e) {}
+        }
+        
+        if (cachedSettings && cachedGallery) {
+          setIsLoading(false);
+        }
+
         const [settingsRes, galleryRes] = await Promise.all([
-          supabase.from('app_settings').select('settings_data').eq('id', 'default').single(),
-          supabase.from('app_settings').select('settings_data').eq('id', 'gallery').single()
+          supabase.from('app_settings').select('settings_data').eq('id', tId).single(),
+          supabase.from('app_settings').select('settings_data').eq('id', `${tId}_gallery`).single()
         ]);
 
         if (settingsRes.data?.settings_data) {
           setAppSettings(settingsRes.data.settings_data);
-          sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(settingsRes.data.settings_data));
+          sessionStorage.setItem(CACHE_KEY_SETTINGS, JSON.stringify(settingsRes.data.settings_data));
         }
         if (galleryRes.data?.settings_data) {
           const galleryImages = galleryRes.data.settings_data.images || [];
           setImages(galleryImages);
-          sessionStorage.setItem(GALLERY_CACHE_KEY, JSON.stringify({ images: galleryImages }));
+          sessionStorage.setItem(CACHE_KEY_GALLERY, JSON.stringify({ images: galleryImages }));
         }
       } catch (err) {
         console.error('データ取得エラー:', err.message);
@@ -77,7 +92,6 @@ export default function PortfolioPage() {
   const generalConfig = appSettings?.generalConfig || {};
   const appName = generalConfig.appName || 'FLORIX';
 
-  // --- 画像アップロード処理 ---
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -89,7 +103,6 @@ export default function PortfolioPage() {
     reader.readAsDataURL(file);
   };
 
-  // --- AIキャプション自動生成 ---
   const handleGenerateCaption = async () => {
     if (!newImage.purpose || !newImage.color || !newImage.vibe) {
       alert('「用途」「カラー」「イメージ」を選択してからAIボタンを押してください。');
@@ -105,16 +118,15 @@ export default function PortfolioPage() {
     }, 1500);
   };
 
-  // --- 保存・削除の共通処理 ---
   const saveGallery = async (updatedImages) => {
     setIsSaving(true);
     try {
       const payload = { images: updatedImages };
-      const { error } = await supabase.from('app_settings').upsert({ id: 'gallery', settings_data: payload });
+      const { error } = await supabase.from('app_settings').upsert({ id: `${currentTenantId}_gallery`, settings_data: payload });
       if (error) throw error;
       
       setImages(updatedImages);
-      sessionStorage.setItem(GALLERY_CACHE_KEY, JSON.stringify(payload)); // キャッシュ同期
+      sessionStorage.setItem(`florix_gallery_cache_${currentTenantId}`, JSON.stringify(payload)); 
       
       setNewImage({ id: '', url: '', caption: '', price: '', purpose: '', color: '', vibe: '' });
       setImportedData(null);
@@ -143,7 +155,6 @@ export default function PortfolioPage() {
     saveGallery(updated);
   };
 
-  // --- 過去分(URL)からのAI読み込み（モック） ---
   const handleImport = async (e) => {
     e.preventDefault();
     if (!importUrl) return;
@@ -153,10 +164,10 @@ export default function PortfolioPage() {
       setImportedData({
         url: 'https://images.unsplash.com/photo-1563241527-3004b7be0ffd?auto=format&fit=crop&w=500&q=80',
         caption: '豪華な赤いバラのスタンド花です🌹\nお値段 33,000円〜承っております✨\n#開店祝い #スタンド花 #赤系',
-        price: '33000', // AIが抽出した想定
-        purpose: '開店祝い',
-        color: '暖色系',
-        vibe: '豪華',
+        price: '33000', 
+        purpose: designOptions.purposes[1] || '開店祝い',
+        color: designOptions.colors[1] || '暖色系',
+        vibe: designOptions.vibes[2] || '豪華',
       });
       setIsImporting(false);
     }, 2000);
@@ -169,11 +180,10 @@ export default function PortfolioPage() {
     saveGallery([newItem, ...images]);
   };
 
-  // --- カタログURLのコピー機能 ---
   const handleCopyUrl = (id) => {
     const shopId = appSettings?.shops?.[0]?.id || 'default';
     const baseUrl = window.location.origin;
-    const targetUrl = `${baseUrl}/order/${shopId}?img=${id}`;
+    const targetUrl = `${baseUrl}/order/${currentTenantId}/${shopId}?img=${id}`;
     
     navigator.clipboard.writeText(targetUrl);
     setCopiedId(id);
@@ -191,7 +201,6 @@ export default function PortfolioPage() {
 
       <div className="max-w-[1000px] mx-auto w-full p-4 md:p-8 space-y-6">
         
-        {/* タブ切り替え */}
         <div className="flex flex-wrap gap-2 bg-[#F7F7F7] p-1.5 rounded-2xl border border-[#EAEAEA] w-fit">
           <button onClick={() => setActiveTab('list')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all ${activeTab === 'list' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}>
             <LayoutGrid size={16}/> 登録済み一覧
@@ -204,7 +213,6 @@ export default function PortfolioPage() {
           </button>
         </div>
 
-        {/* --- タブ1: 登録済み一覧 --- */}
         {activeTab === 'list' && (
           <div className="animate-in fade-in duration-300">
             <h2 className="text-[14px] font-bold text-[#111111] tracking-widest mb-6 border-l-4 border-[#2D4B3E] pl-3">
@@ -243,7 +251,7 @@ export default function PortfolioPage() {
                         </button>
                         
                         <div className="flex justify-between items-center pt-2">
-                          <a href={`/order/${appSettings?.shops?.[0]?.id || 'default'}?img=${img.id}`} target="_blank" rel="noopener noreferrer" className="text-[10px] flex items-center gap-1 text-[#999999] hover:text-[#2D4B3E]">
+                          <a href={`/order/${currentTenantId}/${appSettings?.shops?.[0]?.id || 'default'}?img=${img.id}`} target="_blank" rel="noopener noreferrer" className="text-[10px] flex items-center gap-1 text-[#999999] hover:text-[#2D4B3E]">
                             <ExternalLink size={12}/> お客様画面を確認
                           </a>
                           <button onClick={() => handleDelete(img.id)} className="text-[10px] font-bold text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 transition-colors">
@@ -259,7 +267,6 @@ export default function PortfolioPage() {
           </div>
         )}
 
-        {/* --- タブ2: 新規登録 --- */}
         {activeTab === 'new' && (
           <form onSubmit={handleAddSubmit} className="bg-white p-6 md:p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm max-w-[800px] space-y-6 animate-in fade-in">
             <h2 className="text-[16px] font-bold text-[#2D4B3E] tracking-widest border-b border-[#FBFAF9] pb-4">新規作品の登録</h2>
@@ -290,13 +297,16 @@ export default function PortfolioPage() {
                   </div>
                 </div>
                 
+                {/* ★ ここを設定と連動！ */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-[11px] font-bold text-[#999999] flex items-center justify-between">
                       <span>用途</span> <span className="text-[9px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
                     </label>
                     <select required value={newImage.purpose} onChange={e => setNewImage({...newImage, purpose: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
-                      <option value="">選択</option><option value="開店祝い">開店祝い</option><option value="誕生日">誕生日</option><option value="お供え">お供え</option>
+                      <option value="">選択</option>
+                      {designOptions.purposes.map(p => <option key={p} value={p}>{p}</option>)}
+                      <option value="その他">その他</option>
                     </select>
                   </div>
                   <div className="space-y-1">
@@ -304,7 +314,9 @@ export default function PortfolioPage() {
                       <span>カラー</span> <span className="text-[9px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
                     </label>
                     <select required value={newImage.color} onChange={e => setNewImage({...newImage, color: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
-                      <option value="">選択</option><option value="暖色系">暖色系</option><option value="寒色系">寒色系</option><option value="ホワイト系">ホワイト系</option>
+                      <option value="">選択</option>
+                      {designOptions.colors.map(c => <option key={c} value={c}>{c}</option>)}
+                      <option value="その他">その他</option>
                     </select>
                   </div>
                   <div className="space-y-1 col-span-2">
@@ -312,7 +324,9 @@ export default function PortfolioPage() {
                       <span>イメージ</span> <span className="text-[9px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
                     </label>
                     <select required value={newImage.vibe} onChange={e => setNewImage({...newImage, vibe: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
-                      <option value="">選択</option><option value="豪華">豪華</option><option value="かわいい">かわいい</option><option value="大人っぽい">大人っぽい</option>
+                      <option value="">選択</option>
+                      {designOptions.vibes.map(v => <option key={v} value={v}>{v}</option>)}
+                      <option value="その他">その他</option>
                     </select>
                   </div>
                 </div>
@@ -342,7 +356,6 @@ export default function PortfolioPage() {
           </form>
         )}
 
-        {/* --- タブ3: 過去分登録 (URLから) --- */}
         {activeTab === 'import' && (
           <div className="space-y-6 max-w-[800px] animate-in fade-in">
             <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-4">
@@ -392,13 +405,16 @@ export default function PortfolioPage() {
                       </div>
                     </div>
                     
+                    {/* ★ ここも設定と連動！ */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <label className="text-[11px] font-bold text-[#999999] flex items-center justify-between">
                           <span>用途</span> <span className="text-[9px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
                         </label>
                         <select required value={importedData.purpose} onChange={e => setImportedData({...importedData, purpose: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
-                          <option value="">未設定</option><option value="開店祝い">開店祝い</option><option value="誕生日">誕生日</option><option value="お供え">お供え</option>
+                          <option value="">未設定</option>
+                          {designOptions.purposes.map(p => <option key={p} value={p}>{p}</option>)}
+                          <option value="その他">その他</option>
                         </select>
                       </div>
                       <div className="space-y-1">
@@ -406,7 +422,9 @@ export default function PortfolioPage() {
                           <span>カラー</span> <span className="text-[9px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
                         </label>
                         <select required value={importedData.color} onChange={e => setImportedData({...importedData, color: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
-                          <option value="">未設定</option><option value="暖色系">暖色系</option><option value="寒色系">寒色系</option><option value="ホワイト系">ホワイト系</option>
+                          <option value="">未設定</option>
+                          {designOptions.colors.map(c => <option key={c} value={c}>{c}</option>)}
+                          <option value="その他">その他</option>
                         </select>
                       </div>
                       <div className="space-y-1 col-span-2">
@@ -414,7 +432,9 @@ export default function PortfolioPage() {
                           <span>イメージ</span> <span className="text-[9px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
                         </label>
                         <select required value={importedData.vibe} onChange={e => setImportedData({...importedData, vibe: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
-                          <option value="">未設定</option><option value="豪華">豪華</option><option value="かわいい">かわいい</option><option value="大人っぽい">大人っぽい</option>
+                          <option value="">未設定</option>
+                          {designOptions.vibes.map(v => <option key={v} value={v}>{v}</option>)}
+                          <option value="その他">その他</option>
                         </select>
                       </div>
                     </div>
