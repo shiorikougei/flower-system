@@ -1,12 +1,10 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase'; 
 import { 
-  MapPin, Calendar, ChevronRight, X, Clock, Truck, Store, Package, 
-  CreditCard, MessageSquare, AlertCircle, ListChecks, User, Tag, 
-  Printer, FileText, Send, Trash2, Archive, RotateCcw
+  Calendar, ChevronRight, Truck, Store, Package
 } from 'lucide-react';
-import OrderDetailModal from '@/components/OrderDetailModal';
+import OrderDetailModal from '@/components/OrderDetailModal'; // ★共通モーダルを呼び出し
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -272,6 +270,7 @@ export default function OrdersPage() {
         )}
       </main>
 
+      {/* ★ 共通コンポーネントを呼び出すだけ！スッキリ！ */}
       <OrderDetailModal 
         order={selectedOrder} 
         appSettings={appSettings} 
