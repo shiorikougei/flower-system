@@ -21,13 +21,10 @@ export default function SettingsPage() {
   
   const [currentTenantId, setCurrentTenantId] = useState(null);
 
+  // ★ 変更：不要なダミー項目（zipCode, address, phone, invoiceNumber）を削除しました！
   const [generalConfig, setGeneralConfig] = useState({ 
     tenantId: '', 
     appName: 'FLORIX', 
-    zipCode: '',     
-    address: '',     
-    phone: '',       
-    invoiceNumber: '', 
     logoUrl: '', logoSize: 100, logoTransparent: false, slipBgUrl: '', slipBgOpacity: 50, systemPassword: '7777'
   });
 
@@ -39,7 +36,6 @@ export default function SettingsPage() {
     accountName: ''
   });
 
-  // ★ 変更：標準のステータスを実務に合わせたものに変更！
   const [statusConfig, setStatusConfig] = useState({ type: 'template', customLabels: ['受注', '制作', '配達', '片付', '請求'] });
 
   const [designOptions, setDesignOptions] = useState({
@@ -189,7 +185,7 @@ export default function SettingsPage() {
   const renderGeneralTab = () => (
     <div className="space-y-8 animate-in fade-in">
       <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8">
-        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Building2 size={20}/> 会社情報 (請求書・特商法表示用)</h2>
+        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Building2 size={20}/> システム基本設定 (アプリ名・ID)</h2>
         <div className="space-y-4">
           <div className="space-y-1 bg-[#F7F7F7] p-5 rounded-2xl border border-[#EAEAEA]">
             <label className="text-[11px] font-bold text-[#2D4B3E] flex items-center gap-2">テナントID (URL用システム連携ID)</label>
@@ -197,26 +193,11 @@ export default function SettingsPage() {
             <input type="text" value={generalConfig.tenantId || currentTenantId || ''} readOnly className="w-full h-12 bg-white border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none text-gray-500 transition-colors" />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          {/* ★ 変更：不要な項目を削除し、アプリ名のみにスッキリさせました！ */}
+          <div className="pt-2">
             <div className="space-y-1">
-              <label className="text-[11px] font-bold text-[#999999]">アプリ名 (ショップ名)</label>
+              <label className="text-[11px] font-bold text-[#999999]">アプリ名 (ショップ全体名)</label>
               <input type="text" value={generalConfig.appName} onChange={(e)=>setGeneralConfig({...generalConfig, appName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E] transition-colors" placeholder="花・花OHANA!"/>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[11px] font-bold text-[#999999]">インボイス登録番号</label>
-              <input type="text" value={generalConfig.invoiceNumber} onChange={(e)=>setGeneralConfig({...generalConfig, invoiceNumber: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 font-mono text-[13px] outline-none focus:border-[#2D4B3E] transition-colors" placeholder="T1234567890123"/>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[11px] font-bold text-[#999999]">郵便番号</label>
-              <input type="text" value={generalConfig.zipCode} onChange={(e)=>setGeneralConfig({...generalConfig, zipCode: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E] transition-colors" placeholder="000-0000"/>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[11px] font-bold text-[#999999]">電話番号</label>
-              <input type="tel" value={generalConfig.phone} onChange={(e)=>setGeneralConfig({...generalConfig, phone: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E] transition-colors" placeholder="03-1234-5678"/>
-            </div>
-            <div className="space-y-1 md:col-span-2">
-              <label className="text-[11px] font-bold text-[#999999]">住所 (都道府県・市区町村・番地)</label>
-              <input type="text" value={generalConfig.address} onChange={(e)=>setGeneralConfig({...generalConfig, address: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E] transition-colors" placeholder="東京都渋谷区..."/>
             </div>
           </div>
         </div>
