@@ -45,7 +45,8 @@ export default function OwnerDashboard() {
       if (scanError) throw scanError;
 
       const shopTenants = allRows
-        .filter(row => !['nocolde_owner', 'gallery', 'default'].includes(row.id))
+        // ★ 変更：末尾が '_gallery' のデータを除外するフィルターを追加！
+        .filter(row => !['nocolde_owner', 'gallery', 'default'].includes(row.id) && !row.id.endsWith('_gallery'))
         .map(row => {
           const s = row.settings_data || {};
           const config = s.generalConfig || {};
@@ -356,7 +357,6 @@ export default function OwnerDashboard() {
                           <div className="text-[10px] text-gray-500 font-mono mt-1">{t.id}</div>
                         </td>
                         <td className="px-6 py-5">
-                          {/* ★ 金額変更 ＋ 更新ボタン */}
                           <div className="flex items-center gap-2">
                             <span className="text-gray-500">¥</span>
                             <input 
