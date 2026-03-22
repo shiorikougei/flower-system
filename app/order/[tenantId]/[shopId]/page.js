@@ -1,13 +1,11 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '../../../../utils/supabase'; // パス階層に合わせて適宜調整してください
+import { supabase } from '@/utils/supabase'; 
 import { Calendar, Package, ChevronRight, Store, Truck, AlertCircle } from 'lucide-react';
 
-// ★ 相対パスで共通コンポーネントをインポート
-import TatefudaPreview from '../../../../components/TatefudaPreview';
+import TatefudaPreview from '@/components/TatefudaPreview';
 
-// キャッシュ用のキーを定義
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 const GALLERY_CACHE_KEY = 'florix_gallery_cache';
 
@@ -21,7 +19,6 @@ export default function OrderPage() {
   const [portfolioImages, setPortfolioImages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // --- 状態管理 ---
   const [step, setStep] = useState(1);
   const [flowerType, setFlowerType] = useState('');
   const [isBring, setIsBring] = useState('shop');
@@ -33,7 +30,6 @@ export default function OrderPage() {
   const [selectedTime, setSelectedTime] = useState('');
   const [shippingDate, setShippingDate] = useState('');
   
-  // デザイン詳細
   const [itemPrice, setItemPrice] = useState('');
   const [flowerPurpose, setFlowerPurpose] = useState('');
   const [flowerColor, setFlowerColor] = useState('');
@@ -45,7 +41,6 @@ export default function OrderPage() {
   const [absenceAction, setAbsenceAction] = useState('持ち戻り'); 
   const [absenceNote, setAbsenceNote] = useState(''); 
 
-  // 立札・メッセージ (一般客は空からスタート)
   const [cardType, setCardType] = useState('なし');
   const [cardMessage, setCardMessage] = useState('');
   const [tatePattern, setTatePattern] = useState('');
@@ -55,7 +50,6 @@ export default function OrderPage() {
   const [tateInput3a, setTateInput3a] = useState(''); 
   const [tateInput3b, setTateInput3b] = useState(''); 
 
-  // お客様・お届け先情報
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', email: '', zip: '', address1: '', address2: '' });
   const [isRecipientDifferent, setIsRecipientDifferent] = useState(false);
   const [recipientInfo, setRecipientInfo] = useState({ name: '', phone: '', zip: '', address1: '', address2: '' });
@@ -75,6 +69,13 @@ export default function OrderPage() {
   };
   const [timeSlots, setTimeSlots] = useState(defaultTimeSlots);
 
+  const defaultDesignOptions = {
+    purposes: ['誕生日', '開店', 'お供え', '就任・昇進祝い', '移転祝い'],
+    colors: ['おまかせ', '暖色系 (赤・ピンク・オレンジ)', '寒色系 (青・紫・白)', 'ホワイト・グリーン系'],
+    vibes: ['おまかせ (用途に合わせる)', 'かわいい', '豪華', '大人っぽい', '元気', '華やか・豪華', '上品・落ち着いた雰囲気']
+  };
+  const designOptions = appSettings?.designOptions || defaultDesignOptions;
+
   useEffect(() => {
     let isFirstLoad = true;
 
@@ -92,8 +93,8 @@ export default function OrderPage() {
 
     async function fetchSettings() {
       try {
-        const cachedSettings = sessionStorage.getItem(SETTINGS_CACHE_KEY);
-        const cachedGallery = sessionStorage.getItem(GALLERY_CACHE_KEY);
+        const cachedSettings = sessionStorage.getItem(`${SETTINGS_CACHE_KEY}_${tenantId}`);
+        const cachedGallery = sessionStorage.getItem(`${GALLERY_CACHE_KEY}_${tenantId}`);
 
         if (cachedSettings) {
           applyDataToState(JSON.parse(cachedSettings), cachedGallery ? JSON.parse(cachedGallery) : null);
@@ -103,7 +104,7 @@ export default function OrderPage() {
 
         const [settingsRes, galleryRes] = await Promise.all([
           supabase.from('app_settings').select('settings_data').eq('id', tenantId).single(),
-          supabase.from('app_settings').select('settings_data').eq('id', 'gallery').single()
+          supabase.from('app_settings').select('settings_data').eq('id', `${tenantId}_gallery`).single()
         ]);
 
         const newSettings = settingsRes.data?.settings_data;
@@ -111,9 +112,9 @@ export default function OrderPage() {
 
         if (newSettings) {
           applyDataToState(newSettings, newGallery);
-          sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(newSettings));
+          sessionStorage.setItem(`${SETTINGS_CACHE_KEY}_${tenantId}`, JSON.stringify(newSettings));
           if (newGallery) {
-            sessionStorage.setItem(GALLERY_CACHE_KEY, JSON.stringify(newGallery));
+            sessionStorage.setItem(`${GALLERY_CACHE_KEY}_${tenantId}`, JSON.stringify(newGallery));
           }
         }
       } catch (err) {
@@ -157,8 +158,10 @@ export default function OrderPage() {
     }
   };
 
-  const isOsonae = flowerPurpose === 'お供え';
-  const tateOptions = isOsonae ? [
+  // ★ 修正箇所：キーワードで「お悔やみ・お供え」かどうかを賢く判定する！
+  const isOsonae = flowerPurpose.includes('供') || flowerPurpose.includes('悔') || flowerPurpose.includes('葬') || flowerPurpose.includes('忌');
+  
+  const allTateOptions = isOsonae ? [
     { id: 'p1', label: '① 御供｜横型 (背景あり)', needs: ['3'], layout: 'horizontal' },
     { id: 'p3', label: '② 御供｜縦型 (シンプル)', needs: ['3'], layout: 'vertical' },
     { id: 'p4', label: '③ 御供｜縦型 (会社名入)', needs: ['3a', '3b'], layout: 'vertical' }
@@ -168,7 +171,12 @@ export default function OrderPage() {
     { id: 'p7', label: '⑦ 祝｜縦型 (二列構成)', needs: ['1', '3'], layout: 'vertical' },
     { id: 'p8', label: '⑧ 祝｜縦型 (三列完成版)', needs: ['1', '2', '3'], layout: 'vertical' }
   ];
-  const selectedTateOpt = tateOptions.find(opt => opt.id === tatePattern);
+
+  const currentShopSettings = appSettings?.shops?.find(s => shopId === 'default' ? true : String(s.id) === String(shopId)) || appSettings?.shops?.[0] || {};
+  const enabledTatePatterns = currentShopSettings.enabledTatePatterns || [];
+  
+  const availableTateOptions = allTateOptions.filter(opt => enabledTatePatterns.includes(opt.id));
+  const selectedTateOpt = availableTateOptions.find(opt => opt.id === tatePattern);
   const tateNeeds = selectedTateOpt?.needs || [];
 
   const getPriceOptions = () => {
@@ -217,7 +225,11 @@ export default function OrderPage() {
     }
     const d = new Date(base);
     d.setDate(d.getDate() + prepDays + transitDays);
-    return d.toISOString().split('T')[0];
+    
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
   }, [flowerType, isBring, receiveMethod, selectedItemSettings, transitDays]);
 
   const normalizeAddressText = (text) => {
@@ -401,7 +413,6 @@ export default function OrderPage() {
         status: 'new' 
       };
 
-      // ★ 修正箇所：テナントIDを明示的にセットしてDBに保存
       const { error } = await supabase.from('orders').insert([
         { tenant_id: tenantId, order_data: orderPayload }
       ]);
@@ -567,23 +578,32 @@ export default function OrderPage() {
               <div className="space-y-3">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">ご用途</label>
                 <select value={flowerPurpose} onChange={(e) => setFlowerPurpose(e.target.value)} className="w-full h-12 border-b border-[#EAEAEA] bg-transparent outline-none font-bold focus:border-[#2D4B3E] transition-all">
-                  <option value="">選択...</option><option value="誕生日">誕生日</option><option value="開店">開店</option><option value="お供え">お供え</option><option value="その他">その他</option>
+                  <option value="">選択...</option>
+                  {designOptions.purposes.map(p => <option key={p} value={p}>{p}</option>)}
+                  <option value="その他">その他</option>
                 </select>
                 {flowerPurpose === 'その他' && <input type="text" placeholder="詳細を入力..." value={otherPurpose} onChange={(e) => setOtherPurpose(e.target.value)} className="w-full h-10 mt-2 bg-[#FBFAF9] px-4 rounded-lg outline-none text-sm border border-[#EAEAEA]" />}
               </div>
+              
               <div className="space-y-3">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">メインカラー</label>
                 <select value={flowerColor} onChange={(e) => setFlowerColor(e.target.value)} className="w-full h-12 border-b border-[#EAEAEA] bg-transparent outline-none font-bold focus:border-[#2D4B3E] transition-all">
-                  <option value="">選択...</option><option value="暖色系">暖色系</option><option value="寒色系">寒色系</option><option value="おまかせ">おまかせ</option>
+                  <option value="">選択...</option>
+                  {designOptions.colors.map(c => <option key={c} value={c}>{c}</option>)}
+                  <option value="その他">その他</option>
                 </select>
               </div>
+
               <div className="space-y-3">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">イメージ</label>
                 <select value={flowerVibe} onChange={(e) => setFlowerVibe(e.target.value)} className="w-full h-12 border-b border-[#EAEAEA] bg-transparent outline-none font-bold focus:border-[#2D4B3E] transition-all">
-                  <option value="">選択...</option><option value="かわいい">かわいい</option><option value="豪華">豪華</option><option value="大人っぽい">大人っぽい</option><option value="元気">元気</option><option value="おまかせ">おまかせ</option><option value="その他">その他</option>
+                  <option value="">選択...</option>
+                  {designOptions.vibes.map(v => <option key={v} value={v}>{v}</option>)}
+                  <option value="その他">その他</option>
                 </select>
                 {flowerVibe === 'その他' && <input type="text" placeholder="イメージの詳細をご入力ください" value={otherVibe} onChange={(e) => setOtherVibe(e.target.value)} className="w-full h-10 mt-2 bg-[#FBFAF9] px-4 rounded-lg outline-none text-sm border border-[#EAEAEA]" />}
               </div>
+
               <div className="space-y-3 pt-4">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest flex items-center justify-between">
                   ご予算 (税抜)
@@ -615,12 +635,16 @@ export default function OrderPage() {
                 <div className="space-y-6 bg-white p-6 rounded-[28px] border border-[#EAEAEA] shadow-sm animate-in zoom-in-95 duration-300">
                   <select value={tatePattern} onChange={(e) => setTatePattern(e.target.value)} className="w-full h-14 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none font-bold text-[13px] focus:border-[#2D4B3E]">
                     <option value="">レイアウトを選択</option>
-                    {tateOptions.map(opt => (<option key={opt.id} value={opt.id}>{opt.label}</option>))}
+                    {availableTateOptions.length > 0 ? (
+                      availableTateOptions.map(opt => (<option key={opt.id} value={opt.id}>{opt.label}</option>))
+                    ) : (
+                      <option value="" disabled>現在この店舗で利用可能なテンプレートがありません</option>
+                    )}
                   </select>
                   
                   {tatePattern && (
                     <div className="space-y-3">
-                      {tateNeeds.includes('1') && <input type="text" placeholder="① 内容 (例: 御開店)" value={tateInput1} onChange={(e) => setTateInput1(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
+                      {tateNeeds.includes('1') && <input type="text" placeholder={`① 内容 (例: ${isOsonae ? '御供' : '御開店'})`} value={tateInput1} onChange={(e) => setTateInput1(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       {tateNeeds.includes('2') && <input type="text" placeholder="② 宛名 (例: 〇〇様)" value={tateInput2} onChange={(e) => setTateInput2(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       {tateNeeds.includes('3') && <input type="text" placeholder="③ 贈り主 (例: 株式会社〇〇)" value={tateInput3} onChange={(e) => setTateInput3(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       {tateNeeds.includes('3a') && <input type="text" placeholder="③-1 会社名" value={tateInput3a} onChange={(e) => setTateInput3a(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
