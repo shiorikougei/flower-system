@@ -68,7 +68,6 @@ export default function CorporateOrderPage() {
   };
   const [timeSlots, setTimeSlots] = useState(defaultTimeSlots);
 
-  // ★ 新規：設定画面と連動するデザイン選択肢の初期値
   const defaultDesignOptions = {
     purposes: ['誕生日', '開店', 'お供え', '就任・昇進祝い', '移転祝い'],
     colors: ['おまかせ', '暖色系 (赤・ピンク・オレンジ)', '寒色系 (青・紫・白)', 'ホワイト・グリーン系'],
@@ -76,7 +75,6 @@ export default function CorporateOrderPage() {
   };
   const designOptions = appSettings?.designOptions || defaultDesignOptions;
 
-  // ログイン中の法人情報を取得して自動入力
   useEffect(() => {
     async function loadCorporateUser() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -146,7 +144,33 @@ export default function CorporateOrderPage() {
 
   const selectedItemSettings = useMemo(() => appSettings?.flowerItems?.find(i => i.name === flowerType) || {}, [flowerType, appSettings]);
 
-  // ★ 修正箇所：キーワードで「お悔やみ・お供え」かどうかを賢く判定する！
+  // ★ 追加：おすすめのスタイル（画像）の絞り込み処理
+  const matchingImages = useMemo(() => {
+    if (!portfolioImages || portfolioImages.length === 0) return [];
+    return portfolioImages.filter(img => {
+      let match = true;
+      if (flowerType && img.flowerType && img.flowerType !== flowerType) match = false;
+      if (flowerPurpose && flowerPurpose !== 'その他' && img.purpose && img.purpose !== flowerPurpose) match = false;
+      if (flowerColor && flowerColor !== 'おまかせ' && img.color && img.color !== flowerColor) match = false;
+      if (flowerVibe && flowerVibe !== 'その他' && flowerVibe !== 'おまかせ' && img.vibe && img.vibe !== flowerVibe) match = false;
+      return match;
+    });
+  }, [portfolioImages, flowerType, flowerPurpose, flowerColor, flowerVibe]);
+
+  // ★ 追加：画像を選択したときにお花の種類などを自動セット
+  const handleSelectImage = (img) => {
+    if (selectedImage?.id === img.id) {
+      setSelectedImage(null);
+    } else {
+      setSelectedImage(img);
+      if (img.price > 0) setItemPrice(String(img.price));
+      if (img.flowerType) setFlowerType(img.flowerType); // ★ ここで種類もセット
+      if (img.purpose) setFlowerPurpose(img.purpose);
+      if (img.color) setFlowerColor(img.color);
+      if (img.vibe) setFlowerVibe(img.vibe);
+    }
+  };
+
   const isOsonae = flowerPurpose.includes('供') || flowerPurpose.includes('悔') || flowerPurpose.includes('葬') || flowerPurpose.includes('忌');
   
   const allTateOptions = isOsonae ? [
@@ -160,7 +184,6 @@ export default function CorporateOrderPage() {
     { id: 'p8', label: '⑧ 祝｜縦型 (三列完成版)', needs: ['1', '2', '3'], layout: 'vertical' }
   ];
 
-  // 法人用オーダーでは基本すべての立札を許可（店舗指定がないため）
   const enabledTatePatterns = appSettings?.shops?.[0]?.enabledTatePatterns || allTateOptions.map(opt => opt.id);
   const availableTateOptions = allTateOptions.filter(opt => enabledTatePatterns.includes(opt.id));
   const selectedTateOpt = availableTateOptions.find(opt => opt.id === tatePattern);
@@ -296,16 +319,20 @@ export default function CorporateOrderPage() {
           setShippingDate('');
         }
 
-        let size = selectedItemSettings?.defaultBoxSize || appSettings?.shippingSizes?.[0] || '80';
-        baseFee = Number(rateData['fee' + size]) || 0;
-
-        if (appSettings?.boxFeeConfig?.type === 'flat') {
-          boxFee = Number(appSettings.boxFeeConfig.flatFee) || 0;
-        } else if (appSettings?.boxFeeConfig?.type === 'price_based') {
-          const tiers = appSettings.boxFeeConfig.priceTiers || [];
-          const matchedTier = [...tiers].sort((a, b) => b.minPrice - a.minPrice).find(t => Number(itemPrice) >= t.minPrice);
-          boxFee = matchedTier ? Number(matchedTier.fee) : 0;
+        let size = selectedItemSettings?.defaultBoxSize;
+        if (!size) {
+          size = appSettings?.shippingSizes?.[0] || '80';
+          if (appSettings?.boxFeeConfig?.type === 'flat') {
+            boxFee = Number(appSettings.boxFeeConfig.flatFee) || 0;
+          } else if (appSettings?.boxFeeConfig?.type === 'price_based') {
+            const tiers = appSettings.boxFeeConfig.priceTiers || [];
+            const sortedTiers = [...tiers].sort((a, b) => b.minPrice - a.minPrice);
+            const matchedTier = sortedTiers.find(t => Number(itemPrice) >= t.minPrice);
+            boxFee = matchedTier ? Number(matchedTier.fee) : 0;
+          }
         }
+
+        baseFee = Number(rateData['fee' + size]) || 0;
 
         if (appSettings?.boxFeeConfig?.freeShippingThresholdEnabled && Number(itemPrice) >= (appSettings.boxFeeConfig.freeShippingThreshold || 15000)) {
           baseFee = 0; 
@@ -314,7 +341,8 @@ export default function CorporateOrderPage() {
         if (!selectedItemSettings?.excludeCoolBin && appSettings?.boxFeeConfig?.coolBinEnabled && selectedDate) {
           const dateObj = new Date(selectedDate);
           const mmdd = String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + String(dateObj.getDate()).padStart(2, '0');
-          const isCool = (appSettings.boxFeeConfig.coolBinPeriods || []).some(p => mmdd >= p.start && mmdd <= p.end);
+          const periods = appSettings.boxFeeConfig.coolBinPeriods || [];
+          const isCool = periods.some(p => mmdd >= p.start && mmdd <= p.end);
           if (isCool) coolFee = Number(rateData['cool' + size]) || 0;
         }
 
@@ -361,15 +389,15 @@ export default function CorporateOrderPage() {
     }
     if (step === 3) {
       if (!flowerPurpose) missing.push('ご用途');
-      if (!flowerColor) missing.push('カラー'); 
+      if (!flowerColor) missing.push('カラー');
       if (!flowerVibe) missing.push('イメージ');
       if (!itemPrice) missing.push('ご予算');
       if (cardType === 'メッセージカード' && !cardMessage) missing.push('メッセージ内容');
       if (cardType === '立札' && !tatePattern) missing.push('立札のレイアウト');
     }
     if (step === 4) {
-      if (!customerInfo.name || !customerInfo.phone) missing.push('ご注文者情報');
-      if (isRecipientDifferent && receiveMethod !== 'pickup' && (!recipientInfo.name || !recipientInfo.phone || !recipientInfo.address1)) missing.push('お届け先情報');
+      if (!customerInfo.name || !customerInfo.phone || !customerInfo.email) missing.push('ご注文者情報');
+      if (isRecipientDifferent && (!recipientInfo.name || !recipientInfo.phone || !recipientInfo.address1)) missing.push('お届け先情報');
       if (!selectedDate) missing.push('お届け希望日');
       if (!selectedTime) missing.push('希望時間');
       if ((receiveMethod === 'delivery' || receiveMethod === 'sagawa') && areaError) missing.push('配送エリアの確認');
@@ -390,8 +418,7 @@ export default function CorporateOrderPage() {
         flowerPurpose, flowerColor, flowerVibe, otherPurpose, otherVibe,
         cardType, cardMessage, tatePattern,
         tateInput1, tateInput2, tateInput3, tateInput3a, tateInput3b,
-        customerInfo, isRecipientDifferent, recipientInfo,
-        paymentMethod,
+        customerInfo, isRecipientDifferent, recipientInfo, note,
         referenceImage: selectedImage ? selectedImage.url : null,
         status: 'new',
         isCorporateOrder: true
@@ -452,7 +479,7 @@ export default function CorporateOrderPage() {
               <p className="text-[12px] text-[#555555]">ご希望のアイテムをお選びください。</p>
             </div>
             <div className="space-y-6">
-              <select className="w-full h-16 px-5 bg-white border border-[#EAEAEA] rounded-[20px] outline-none focus:border-[#2D4B3E] transition-all text-[15px] font-bold appearance-none shadow-sm" value={flowerType} onChange={(e) => { setFlowerType(e.target.value); setItemPrice(''); setIsBring('shop'); }}>
+              <select className={`w-full h-16 px-5 bg-white border rounded-[20px] outline-none transition-all text-[15px] font-bold appearance-none shadow-sm ${flowerType ? 'border-[#2D4B3E] text-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#EAEAEA] focus:border-[#2D4B3E]'}`} value={flowerType} onChange={(e) => { setFlowerType(e.target.value); setItemPrice(''); setIsBring('shop'); }}>
                 <option value="">種類を選択してください</option>
                 {appSettings?.flowerItems?.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
               </select>
@@ -514,10 +541,41 @@ export default function CorporateOrderPage() {
 
             <div className="space-y-8 bg-white p-8 rounded-[28px] border border-[#EAEAEA] shadow-sm transition-all duration-500">
               
-              {/* ★ 設定画面のカスタマイズ項目（デザイン選択肢）を反映！ */}
+              {/* ★ ギャラリー機能を追加！ */}
+              {matchingImages.length > 0 && (
+                <div className="bg-[#2D4B3E]/5 -mx-8 -mt-8 p-6 pb-8 mb-6 border-b border-[#EAEAEA] space-y-4">
+                   <p className="text-[11px] font-bold text-[#2D4B3E] tracking-widest flex items-center gap-2">
+                     ✨ 制作例からオーダー内容を自動入力
+                   </p>
+                   <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar">
+                     {matchingImages.map(img => (
+                       <div key={img.id} className="shrink-0 w-[140px] space-y-2 snap-center">
+                         <div 
+                           onClick={() => handleSelectImage(img)}
+                           className={`relative aspect-square rounded-[20px] overflow-hidden border-4 transition-all cursor-pointer ${selectedImage?.id === img.id ? 'border-[#2D4B3E] shadow-lg scale-105' : 'border-transparent hover:scale-105'}`}
+                         >
+                           <img src={img.url} alt="style" className="w-full h-full object-cover" />
+                           {selectedImage?.id === img.id && (
+                             <div className="absolute inset-0 bg-[#2D4B3E]/30 flex items-center justify-center backdrop-blur-[1px]">
+                               <span className="bg-[#2D4B3E] text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-sm tracking-widest">選択中</span>
+                             </div>
+                           )}
+                         </div>
+                         <div className="text-center">
+                           <p className="text-[11px] font-bold text-[#2D4B3E]">¥{img.price.toLocaleString()}</p>
+                           <button onClick={() => handleSelectImage(img)} className="text-[9px] font-bold text-[#999999] hover:text-[#2D4B3E] mt-1 border border-[#EAEAEA] bg-white px-3 py-1 rounded-full shadow-sm">
+                             {selectedImage?.id === img.id ? '選択解除' : 'この設定を使用'}
+                           </button>
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                </div>
+              )}
+
               <div className="space-y-3">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">ご用途</label>
-                <select value={flowerPurpose} onChange={(e) => setFlowerPurpose(e.target.value)} className="w-full h-12 border-b border-[#EAEAEA] bg-transparent outline-none font-bold focus:border-[#2D4B3E] transition-all">
+                <select value={flowerPurpose} onChange={(e) => setFlowerPurpose(e.target.value)} className={`w-full h-12 border-b bg-transparent outline-none font-bold transition-all ${selectedImage && flowerPurpose ? 'border-[#2D4B3E] text-[#2D4B3E]' : 'border-[#EAEAEA] focus:border-[#2D4B3E]'}`}>
                   <option value="">選択...</option>
                   {designOptions.purposes.map(p => <option key={p} value={p}>{p}</option>)}
                   <option value="その他">その他</option>
@@ -527,7 +585,7 @@ export default function CorporateOrderPage() {
               
               <div className="space-y-3">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">カラー</label>
-                <select value={flowerColor} onChange={(e) => setFlowerColor(e.target.value)} className="w-full h-12 border-b border-[#EAEAEA] bg-transparent outline-none font-bold focus:border-[#2D4B3E] transition-all">
+                <select value={flowerColor} onChange={(e) => setFlowerColor(e.target.value)} className={`w-full h-12 border-b bg-transparent outline-none font-bold transition-all ${selectedImage && flowerColor ? 'border-[#2D4B3E] text-[#2D4B3E]' : 'border-[#EAEAEA] focus:border-[#2D4B3E]'}`}>
                   <option value="">選択...</option>
                   {designOptions.colors.map(c => <option key={c} value={c}>{c}</option>)}
                   <option value="その他">その他</option>
@@ -536,7 +594,7 @@ export default function CorporateOrderPage() {
 
               <div className="space-y-3">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">イメージ / ご要望</label>
-                <select value={flowerVibe} onChange={(e) => setFlowerVibe(e.target.value)} className="w-full h-12 border-b border-[#EAEAEA] bg-transparent outline-none font-bold focus:border-[#2D4B3E] transition-all">
+                <select value={flowerVibe} onChange={(e) => setFlowerVibe(e.target.value)} className={`w-full h-12 border-b bg-transparent outline-none font-bold transition-all ${selectedImage && flowerVibe ? 'border-[#2D4B3E] text-[#2D4B3E]' : 'border-[#EAEAEA] focus:border-[#2D4B3E]'}`}>
                   <option value="">選択...</option>
                   {designOptions.vibes.map(v => <option key={v} value={v}>{v}</option>)}
                   <option value="その他">その他</option>
@@ -545,10 +603,16 @@ export default function CorporateOrderPage() {
               </div>
               
               <div className="space-y-3 pt-4">
-                <label className="text-[11px] font-bold text-[#999999] tracking-widest">ご予算 (税抜)</label>
-                <select value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} className="w-full h-14 border rounded-xl px-4 bg-[#FBFAF9] outline-none font-bold text-[16px] transition-all border-[#EAEAEA] focus:border-[#2D4B3E]">
+                <label className="text-[11px] font-bold text-[#999999] tracking-widest flex items-center justify-between">
+                  ご予算 (税抜)
+                  {selectedImage && <span className="bg-[#2D4B3E] text-white px-2 py-0.5 rounded text-[9px]">画像から自動反映</span>}
+                </label>
+                <select value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} className={`w-full h-14 border rounded-xl px-4 bg-[#FBFAF9] outline-none font-bold text-[16px] transition-all ${selectedImage ? 'border-[#2D4B3E] text-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#EAEAEA] focus:border-[#2D4B3E]'}`}>
                   <option value="">選択...</option>
                   {getPriceOptions().map(price => (<option key={price} value={price}>¥{price.toLocaleString()}</option>))}
+                  {selectedImage && itemPrice && !getPriceOptions().includes(Number(itemPrice)) && (
+                    <option value={itemPrice}>¥{Number(itemPrice).toLocaleString()}</option>
+                  )}
                 </select>
               </div>
             </div>
@@ -561,14 +625,19 @@ export default function CorporateOrderPage() {
                 ))}
               </div>
 
+              {cardType === 'メッセージカード' && (
+                <textarea value={cardMessage} onChange={(e) => setCardMessage(e.target.value)} placeholder="カードのメッセージをご入力ください" className="w-full h-32 p-4 bg-white border border-[#EAEAEA] rounded-[24px] text-[13px] resize-none outline-none focus:border-[#2D4B3E] shadow-sm animate-in zoom-in-95"></textarea>
+              )}
+
               {cardType === '立札' && (
                 <div className="space-y-6 bg-white p-6 rounded-[28px] border border-[#EAEAEA] shadow-sm animate-in zoom-in-95 duration-300">
+                  
                   <select value={tatePattern} onChange={(e) => setTatePattern(e.target.value)} className="w-full h-14 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none font-bold text-[13px] focus:border-[#2D4B3E]">
                     <option value="">レイアウトを選択</option>
                     {availableTateOptions.length > 0 ? (
                       availableTateOptions.map(opt => (<option key={opt.id} value={opt.id}>{opt.label}</option>))
                     ) : (
-                      <option value="" disabled>利用可能なテンプレートがありません</option>
+                      <option value="" disabled>現在この店舗で利用可能なテンプレートがありません</option>
                     )}
                   </select>
                   

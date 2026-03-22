@@ -15,7 +15,6 @@ export default function StaffNewOrderPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ★ ログイン中のテナントIDを保持する
   const [currentTenantId, setCurrentTenantId] = useState(null);
 
   const [receptionType, setReceptionType] = useState('phone'); 
@@ -68,7 +67,6 @@ export default function StaffNewOrderPage() {
   };
   const [timeSlots, setTimeSlots] = useState(defaultTimeSlots);
 
-  // ★ 新規：設定画面と連動するデザイン選択肢の初期値
   const defaultDesignOptions = {
     purposes: ['誕生日', '開店', 'お供え', '就任・昇進祝い', '移転祝い'],
     colors: ['おまかせ', '暖色系 (赤・ピンク・オレンジ)', '寒色系 (青・紫・白)', 'ホワイト・グリーン系'],
@@ -76,7 +74,6 @@ export default function StaffNewOrderPage() {
   };
   const designOptions = appSettings?.designOptions || defaultDesignOptions;
 
-  // ★ 認証＆データ取得ロジック（RLS対応）
   useEffect(() => {
     let isFirstLoad = true;
 
@@ -137,30 +134,33 @@ export default function StaffNewOrderPage() {
   const staffConfig = appSettings?.staffOrderConfig || {};
   const selectedItemSettings = useMemo(() => appSettings?.flowerItems?.find(i => i.name === flowerType) || {}, [flowerType, appSettings]);
 
+  // ★ 変更点：「お花の種類」でも絞り込みができるように修正
   const matchingImages = useMemo(() => {
     if (!portfolioImages || portfolioImages.length === 0) return [];
     return portfolioImages.filter(img => {
       let match = true;
+      if (flowerType && img.flowerType && img.flowerType !== flowerType) match = false;
       if (flowerPurpose && flowerPurpose !== 'その他' && img.purpose && img.purpose !== flowerPurpose) match = false;
       if (flowerColor && flowerColor !== 'おまかせ' && img.color && img.color !== flowerColor) match = false;
       if (flowerVibe && flowerVibe !== 'その他' && flowerVibe !== 'おまかせ' && img.vibe && img.vibe !== flowerVibe) match = false;
       return match;
     });
-  }, [portfolioImages, flowerPurpose, flowerColor, flowerVibe]);
+  }, [portfolioImages, flowerType, flowerPurpose, flowerColor, flowerVibe]);
 
+  // ★ 変更点：画像を選択したときに「お花の種類」も自動セットされるように追加！
   const handleSelectImage = (img) => {
     if (selectedImage?.id === img.id) {
       setSelectedImage(null);
     } else {
       setSelectedImage(img);
       if (img.price > 0) { setItemPrice(String(img.price)); setIsCustomPrice(false); }
+      if (img.flowerType) setFlowerType(img.flowerType); // ★ ここを追加！！
       if (img.purpose) setFlowerPurpose(img.purpose);
       if (img.color) setFlowerColor(img.color);
       if (img.vibe) setFlowerVibe(img.vibe);
     }
   };
 
-  // ★ 修正箇所：キーワードで「お悔やみ・お供え」かどうかを賢く判定する！
   const isOsonae = flowerPurpose.includes('供') || flowerPurpose.includes('悔') || flowerPurpose.includes('葬') || flowerPurpose.includes('忌');
   
   const allTateOptions = isOsonae ? [
@@ -486,7 +486,7 @@ export default function StaffNewOrderPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-[#FBFAF9]">
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">お花の種類</label>
-                <select value={flowerType} onChange={(e) => { setFlowerType(e.target.value); setItemPrice(''); }} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
+                <select value={flowerType} onChange={(e) => { setFlowerType(e.target.value); setItemPrice(''); }} className={`w-full h-12 border rounded-xl px-4 text-[13px] font-bold outline-none transition-all ${flowerType ? 'bg-[#2D4B3E]/5 border-[#2D4B3E] text-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] focus:border-[#2D4B3E]'}`}>
                   <option value="">選択してください</option>
                   {appSettings?.flowerItems?.filter(item => {
                     if (!shopId) return true;
@@ -557,7 +557,6 @@ export default function StaffNewOrderPage() {
 
             <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3 tracking-widest">2. 詳細と金額</h2>
             <div className="grid grid-cols-2 gap-4">
-              {/* ★ 設定画面のカスタマイズ項目（デザイン選択肢）を反映！ */}
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">用途</label>
                 <select value={flowerPurpose} onChange={(e) => setFlowerPurpose(e.target.value)} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
@@ -629,7 +628,6 @@ export default function StaffNewOrderPage() {
             {cardType === '立札' && (
               <div className="space-y-6 bg-white p-6 rounded-[28px] border border-[#EAEAEA] shadow-sm animate-in zoom-in-95 duration-300">
                 
-                {/* ★ 立札の出し分け（店舗設定で許可されているもの かつ 用途に合っているものだけを表示） */}
                 <select value={tatePattern} onChange={(e) => setTatePattern(e.target.value)} className="w-full h-14 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none font-bold text-[13px] focus:border-[#2D4B3E]">
                   <option value="">レイアウトを選択</option>
                   {availableTateOptions.length > 0 ? (

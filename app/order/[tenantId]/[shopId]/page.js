@@ -1,6 +1,6 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/utils/supabase'; 
 import { Calendar, Package, ChevronRight, Store, Truck, AlertCircle } from 'lucide-react';
 
@@ -9,9 +9,13 @@ import TatefudaPreview from '@/components/TatefudaPreview';
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 const GALLERY_CACHE_KEY = 'florix_gallery_cache';
 
-export default function OrderPage() {
+// ★ URLパラメータを読み取るためのコンポーネント（Suspenseで囲む必要があります）
+function OrderFormContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const imgId = searchParams.get('img'); // ★ URLから img= のIDを取得
+
   const tenantId = params?.tenantId || 'default';
   const shopId = params?.shopId || 'default';
 
@@ -88,6 +92,19 @@ export default function OrderPage() {
       }
       if (galleryData?.images) {
         setPortfolioImages(galleryData.images);
+        
+        // ★ カタログURLからの引き込み処理
+        if (imgId && isFirstLoad) {
+          const targetImg = galleryData.images.find(img => img.id === imgId);
+          if (targetImg) {
+            setSelectedImage(targetImg);
+            if (targetImg.flowerType) setFlowerType(targetImg.flowerType); // ★ お花の種類を引き込み
+            if (targetImg.purpose) setFlowerPurpose(targetImg.purpose);
+            if (targetImg.color) setFlowerColor(targetImg.color);
+            if (targetImg.vibe) setFlowerVibe(targetImg.vibe);
+            if (targetImg.price) setItemPrice(String(targetImg.price));
+          }
+        }
       }
     };
 
@@ -125,7 +142,7 @@ export default function OrderPage() {
       }
     }
     fetchSettings();
-  }, [tenantId]);
+  }, [tenantId, imgId]);
 
   const generalConfig = appSettings?.generalConfig || {};
   const appName = generalConfig.appName || 'FLORIX';
@@ -139,12 +156,14 @@ export default function OrderPage() {
     if (!portfolioImages || portfolioImages.length === 0) return [];
     return portfolioImages.filter(img => {
       let match = true;
+      // ★ 種類による絞り込みも追加
+      if (flowerType && img.flowerType && img.flowerType !== flowerType) match = false;
       if (flowerPurpose && flowerPurpose !== 'その他' && img.purpose && img.purpose !== flowerPurpose) match = false;
       if (flowerColor && flowerColor !== 'おまかせ' && img.color && img.color !== flowerColor) match = false;
       if (flowerVibe && flowerVibe !== 'その他' && flowerVibe !== 'おまかせ' && img.vibe && img.vibe !== flowerVibe) match = false;
       return match;
     });
-  }, [portfolioImages, flowerPurpose, flowerColor, flowerVibe]);
+  }, [portfolioImages, flowerType, flowerPurpose, flowerColor, flowerVibe]);
 
   const handleSelectImage = (img) => {
     if (selectedImage?.id === img.id) {
@@ -152,13 +171,13 @@ export default function OrderPage() {
     } else {
       setSelectedImage(img);
       if (img.price > 0) setItemPrice(String(img.price));
+      if (img.flowerType) setFlowerType(img.flowerType); // ★手動選択時も自動セット
       if (img.purpose) setFlowerPurpose(img.purpose);
       if (img.color) setFlowerColor(img.color);
       if (img.vibe) setFlowerVibe(img.vibe);
     }
   };
 
-  // ★ 修正箇所：キーワードで「お悔やみ・お供え」かどうかを賢く判定する！
   const isOsonae = flowerPurpose.includes('供') || flowerPurpose.includes('悔') || flowerPurpose.includes('葬') || flowerPurpose.includes('忌');
   
   const allTateOptions = isOsonae ? [
@@ -469,7 +488,7 @@ export default function OrderPage() {
               <p className="text-[12px] text-[#555555]">ご希望のアイテムとお持ち込みの有無をお選びください。</p>
             </div>
             <div className="space-y-6">
-              <select className="w-full h-16 px-5 bg-white border border-[#EAEAEA] rounded-[20px] outline-none focus:border-[#2D4B3E] transition-all text-[15px] font-bold appearance-none shadow-sm" value={flowerType} onChange={(e) => { setFlowerType(e.target.value); setItemPrice(''); setIsBring('shop'); }}>
+              <select className={`w-full h-16 px-5 bg-white border rounded-[20px] outline-none transition-all text-[15px] font-bold appearance-none shadow-sm ${flowerType ? 'border-[#2D4B3E] text-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#EAEAEA] focus:border-[#2D4B3E]'}`} value={flowerType} onChange={(e) => { setFlowerType(e.target.value); setItemPrice(''); setIsBring('shop'); }}>
                 <option value="">種類を選択してください</option>
                 {appSettings?.flowerItems?.filter(item => {
                   if (!shopId || shopId === 'default') return true;
@@ -547,7 +566,7 @@ export default function OrderPage() {
               {matchingImages.length > 0 && (
                 <div className="bg-[#2D4B3E]/5 -mx-8 -mt-8 p-6 pb-8 mb-4 rounded-t-[28px] border-b border-[#EAEAEA] space-y-4">
                    <p className="text-[11px] font-bold text-[#2D4B3E] tracking-widest flex items-center gap-2">
-                     ✨ 条件に合うおすすめのスタイル
+                      ✨ 条件に合うおすすめのスタイル
                    </p>
                    <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar">
                      {matchingImages.map(img => (
@@ -577,7 +596,7 @@ export default function OrderPage() {
 
               <div className="space-y-3">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">ご用途</label>
-                <select value={flowerPurpose} onChange={(e) => setFlowerPurpose(e.target.value)} className="w-full h-12 border-b border-[#EAEAEA] bg-transparent outline-none font-bold focus:border-[#2D4B3E] transition-all">
+                <select value={flowerPurpose} onChange={(e) => setFlowerPurpose(e.target.value)} className={`w-full h-12 border-b bg-transparent outline-none font-bold transition-all ${selectedImage && flowerPurpose ? 'border-[#2D4B3E] text-[#2D4B3E]' : 'border-[#EAEAEA] focus:border-[#2D4B3E]'}`}>
                   <option value="">選択...</option>
                   {designOptions.purposes.map(p => <option key={p} value={p}>{p}</option>)}
                   <option value="その他">その他</option>
@@ -587,7 +606,7 @@ export default function OrderPage() {
               
               <div className="space-y-3">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">メインカラー</label>
-                <select value={flowerColor} onChange={(e) => setFlowerColor(e.target.value)} className="w-full h-12 border-b border-[#EAEAEA] bg-transparent outline-none font-bold focus:border-[#2D4B3E] transition-all">
+                <select value={flowerColor} onChange={(e) => setFlowerColor(e.target.value)} className={`w-full h-12 border-b bg-transparent outline-none font-bold transition-all ${selectedImage && flowerColor ? 'border-[#2D4B3E] text-[#2D4B3E]' : 'border-[#EAEAEA] focus:border-[#2D4B3E]'}`}>
                   <option value="">選択...</option>
                   {designOptions.colors.map(c => <option key={c} value={c}>{c}</option>)}
                   <option value="その他">その他</option>
@@ -596,7 +615,7 @@ export default function OrderPage() {
 
               <div className="space-y-3">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">イメージ</label>
-                <select value={flowerVibe} onChange={(e) => setFlowerVibe(e.target.value)} className="w-full h-12 border-b border-[#EAEAEA] bg-transparent outline-none font-bold focus:border-[#2D4B3E] transition-all">
+                <select value={flowerVibe} onChange={(e) => setFlowerVibe(e.target.value)} className={`w-full h-12 border-b bg-transparent outline-none font-bold transition-all ${selectedImage && flowerVibe ? 'border-[#2D4B3E] text-[#2D4B3E]' : 'border-[#EAEAEA] focus:border-[#2D4B3E]'}`}>
                   <option value="">選択...</option>
                   {designOptions.vibes.map(v => <option key={v} value={v}>{v}</option>)}
                   <option value="その他">その他</option>
@@ -881,5 +900,14 @@ export default function OrderPage() {
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
     </div>
+  );
+}
+
+// ★ Suspense で囲んでエクスポート（Next.jsの仕様対応）
+export default function Page() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-bold text-[#2D4B3E]">読み込み中...</div>}>
+      <OrderFormContent />
+    </Suspense>
   );
 }

@@ -18,8 +18,9 @@ export default function PortfolioPage() {
 
   const [activeTab, setActiveTab] = useState('list');
 
+  // ★ 変更点: flowerType (お花の種類) を追加！
   const [newImage, setNewImage] = useState({
-    id: '', url: '', caption: '', price: '', purpose: '', color: '', vibe: '', uploadFile: null
+    id: '', url: '', caption: '', price: '', flowerType: '', purpose: '', color: '', vibe: '', uploadFile: null
   });
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -31,6 +32,8 @@ export default function PortfolioPage() {
     vibes: ['おまかせ (用途に合わせる)', 'かわいい', '豪華', '大人っぽい', '元気', '華やか・豪華', '上品・落ち着いた雰囲気']
   };
   const designOptions = appSettings?.designOptions || defaultDesignOptions;
+  // ★ 変更点: 設定からお花の種類一覧を取得
+  const flowerItems = appSettings?.flowerItems || [];
 
   useEffect(() => {
     async function fetchData() {
@@ -80,8 +83,9 @@ export default function PortfolioPage() {
   };
 
   const handleGenerateCaption = async () => {
-    if (!newImage.purpose || !newImage.color || !newImage.vibe) {
-      alert('「用途」「カラー」「イメージ」を選択してからAIボタンを押してください。');
+    // ★ バリデーションにお花の種類を追加
+    if (!newImage.flowerType || !newImage.purpose || !newImage.color || !newImage.vibe) {
+      alert('「お花の種類」「用途」「カラー」「イメージ」を選択してからAIボタンを押してください。');
       return;
     }
     setIsGenerating(true);
@@ -91,6 +95,7 @@ export default function PortfolioPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          flowerType: newImage.flowerType, // ★ APIにも送信
           purpose: newImage.purpose,
           color: newImage.color,
           vibe: newImage.vibe,
@@ -112,8 +117,9 @@ export default function PortfolioPage() {
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
-    if (!newImage.uploadFile || !newImage.purpose || !newImage.color || !newImage.vibe || !newImage.price) {
-      alert('画像、金額、用途、カラー、イメージは必須項目です。'); return;
+    // ★ バリデーションにお花の種類を追加
+    if (!newImage.uploadFile || !newImage.flowerType || !newImage.purpose || !newImage.color || !newImage.vibe || !newImage.price) {
+      alert('画像、金額、お花の種類、用途、カラー、イメージは必須項目です。'); return;
     }
 
     setIsSaving(true);
@@ -132,6 +138,7 @@ export default function PortfolioPage() {
         url: publicUrlData.publicUrl,
         caption: newImage.caption,
         price: Number(newImage.price),
+        flowerType: newImage.flowerType, // ★ DBに保存
         purpose: newImage.purpose,
         color: newImage.color,
         vibe: newImage.vibe
@@ -143,7 +150,8 @@ export default function PortfolioPage() {
       if (dbError) throw dbError;
       
       setImages(updatedImages);
-      setNewImage({ id: '', url: '', caption: '', price: '', purpose: '', color: '', vibe: '', uploadFile: null });
+      // ★ 初期化にもお花の種類を追加
+      setNewImage({ id: '', url: '', caption: '', price: '', flowerType: '', purpose: '', color: '', vibe: '', uploadFile: null });
       setActiveTab('list');
       alert('作品データを保存しました。');
 
@@ -224,6 +232,8 @@ export default function PortfolioPage() {
                     </div>
                     <div className="p-5 flex flex-col flex-1">
                       <div className="flex flex-wrap gap-1.5 mb-3">
+                        {/* ★ お花の種類を一番目立つ色で表示 */}
+                        {img.flowerType && <span className="px-2 py-1 bg-[#2D4B3E] border border-[#2D4B3E] rounded text-[10px] font-bold text-white shadow-sm">{img.flowerType}</span>}
                         <span className="px-2 py-1 bg-[#FBFAF9] border border-[#EAEAEA] rounded text-[10px] font-bold text-[#555555]">{img.purpose}</span>
                         <span className="px-2 py-1 bg-[#FBFAF9] border border-[#EAEAEA] rounded text-[10px] font-bold text-[#555555]">{img.color}</span>
                         <span className="px-2 py-1 bg-[#FBFAF9] border border-[#EAEAEA] rounded text-[10px] font-bold text-[#555555]">{img.vibe}</span>
@@ -287,7 +297,18 @@ export default function PortfolioPage() {
                   </div>
                 </div>
                 
+                {/* ★ 4マスのグリッドに変更して「お花の種類」を追加！ */}
                 <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-[#999999] flex items-center justify-between">
+                      <span>お花の種類</span> <span className="text-[9px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
+                    </label>
+                    <select required value={newImage.flowerType} onChange={e => setNewImage({...newImage, flowerType: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
+                      <option value="">選択</option>
+                      {flowerItems.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
+                      <option value="その他">その他</option>
+                    </select>
+                  </div>
                   <div className="space-y-1">
                     <label className="text-[11px] font-bold text-[#999999] flex items-center justify-between">
                       <span>用途</span> <span className="text-[9px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
@@ -308,7 +329,7 @@ export default function PortfolioPage() {
                       <option value="その他">その他</option>
                     </select>
                   </div>
-                  <div className="space-y-1 col-span-2">
+                  <div className="space-y-1">
                     <label className="text-[11px] font-bold text-[#999999] flex items-center justify-between">
                       <span>イメージ</span> <span className="text-[9px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
                     </label>
@@ -345,12 +366,11 @@ export default function PortfolioPage() {
           </form>
         )}
 
-        {/* ★ 変更箇所：開発中（Coming Soon）のオーバーレイを追加！ */}
+        {/* 開発中オーバーレイ付きの過去分登録タブ */}
         {activeTab === 'import' && (
           <div className="space-y-6 max-w-[800px] animate-in fade-in">
             <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-4 relative overflow-hidden">
               
-              {/* 開発中オーバーレイ */}
               <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center gap-3">
                 <div className="bg-[#2D4B3E] text-white px-6 py-3 rounded-full font-bold shadow-lg flex items-center gap-2">
                   <Loader2 className="animate-spin" size={18} />
