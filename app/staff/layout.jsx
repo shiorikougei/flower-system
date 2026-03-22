@@ -83,7 +83,6 @@ export default function StaffLayout({ children }) {
     ? [...baseMenuItems.slice(0, 5), ...premiumMenuItems, ...baseMenuItems.slice(5)]
     : baseMenuItems;
 
-  // ★ オーナー画面へアップグレード依頼を送信
   const handleUpgradeRequest = async () => {
     if (!confirm('アップグレード料金について問い合わせ、機能の解放を依頼しますか？')) return;
     setIsSending(true);
@@ -94,7 +93,7 @@ export default function StaffLayout({ children }) {
 
       const newReq = {
         id: `req_${Date.now()}`,
-        tenantId: 'current_shop', // ※本来は自店舗のID
+        tenantId: 'current_shop', 
         tenantName: appName,
         featureKey: 'premium',
         featureName: 'プレミアムプラン一式 (配達委託・法人管理)',
@@ -115,7 +114,6 @@ export default function StaffLayout({ children }) {
     }
   };
 
-  // ★ オーナー画面へフィードバック(要望・バグ)を送信
   const handleFeedbackSubmit = async (e) => {
     e.preventDefault();
     if (!feedbackText.trim()) return;
@@ -149,6 +147,11 @@ export default function StaffLayout({ children }) {
       setIsSending(false);
     }
   };
+
+  // ★ 追加：もしログイン画面だったら、サイドバーを出さずに中身（children）だけを返す！
+  if (pathname === '/staff/login') {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-screen bg-[#FBFAF9] flex flex-col md:flex-row font-sans text-[#111111]">
