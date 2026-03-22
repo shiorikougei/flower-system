@@ -7,6 +7,7 @@ import {
   Package, Store, Truck, Send, Printer, ListChecks, AlertCircle,
   MessageSquare, CreditCard, Trash2
 } from 'lucide-react';
+import TatefudaPreview from '@/components/TatefudaPreview';
 
 export default function CalendarPage() {
   const [orders, setOrders] = useState([]);
@@ -247,6 +248,9 @@ export default function CalendarPage() {
     } catch (e) { return '日時不明'; }
   };
 
+  // ==========================================
+  // ★ 印刷ロジック (はみ出し防止＆サイン欄広々)
+  // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -413,7 +417,15 @@ export default function CalendarPage() {
           </div>
           ${renderClientBoxes(hidePrice)}
           ${renderItemsBlock(hidePrice)}
-          ${showReceiptNote ? `<div class="receipt-note">上記の商品を確かに受領いたしました。    受領日：    年    月    日      サインまたは印</div>` : ''}
+          ${showReceiptNote ? `
+            <div class="receipt-note" style="margin-top: 3mm; margin-bottom: 2mm;">
+              <div style="font-size: 8.5pt; margin-bottom: 4mm;">上記の商品を確かに受領いたしました。</div>
+              <div style="display: flex; justify-content: flex-end; gap: 8mm; font-size: 10pt;">
+                <div>受領日：<span style="display:inline-block; width:12mm; border-bottom:1px solid #555;"></span>年<span style="display:inline-block; width:8mm; border-bottom:1px solid #555;"></span>月<span style="display:inline-block; width:8mm; border-bottom:1px solid #555;"></span>日</div>
+                <div>サインまたは印：<span style="display:inline-block; width:45mm; border-bottom:1px solid #555;"></span></div>
+              </div>
+            </div>
+          ` : ''}
           ${renderFooter(type, hidePrice)}
         </div>
       `;
@@ -460,7 +472,6 @@ export default function CalendarPage() {
             .amount-label { background: #f9f9f9; text-align: left !important; width: 50%; color:#666; }
             .amount-label-total { background: #f9f9f9; font-weight: bold; color: #117768; text-align: left !important; }
             .amount-val-total { color: #117768; font-size: 11pt; }
-            .receipt-note { margin-top: 2mm; margin-bottom: 2mm; font-size: 8.5pt; color: #333; }
             .footer { margin-top: auto; border-top: 0.5pt dashed #bbb; padding-top: 2mm; display: flex; justify-content: space-between; align-items: flex-end; }
             .shop-block { font-size: 8pt; line-height: 1.4; color: #444; }
             .shop-name { font-size: 12pt; font-weight: 900; color: #222; margin-bottom: 1mm; }
@@ -606,6 +617,20 @@ export default function CalendarPage() {
   const isPickup = modalData.receiveMethod === 'pickup';
   const isDelivery = modalData.receiveMethod === 'delivery';
 
+  // ★ 立札プレビュー用の変数（エラー回避）
+  const isOsonae = modalData.flowerPurpose?.includes('供') || modalData.flowerPurpose?.includes('悔') || modalData.flowerPurpose?.includes('葬') || modalData.flowerPurpose?.includes('忌');
+  const allTateOptions = isOsonae ? [
+    { id: 'p1', label: '① 御供｜横型 (背景あり)', needs: ['3'], layout: 'horizontal' },
+    { id: 'p3', label: '② 御供｜縦型 (シンプル)', needs: ['3'], layout: 'vertical' },
+    { id: 'p4', label: '③ 御供｜縦型 (会社名入)', needs: ['3a', '3b'], layout: 'vertical' }
+  ] : [
+    { id: 'p5', label: '⑤ 祝｜横型 (スタンダード)', needs: ['1', '3'], layout: 'horizontal' },
+    { id: 'p6', label: '⑥ 祝｜横型 (様へ構成)', needs: ['1', '2', '3'], layout: 'horizontal' },
+    { id: 'p7', label: '⑦ 祝｜縦型 (二列構成)', needs: ['1', '3'], layout: 'vertical' },
+    { id: 'p8', label: '⑧ 祝｜縦型 (三列完成版)', needs: ['1', '2', '3'], layout: 'vertical' }
+  ];
+  const selectedTateOpt = allTateOptions.find(opt => opt.id === modalData.tatePattern);
+
   return (
     <div className="pb-32 font-sans">
       <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] flex flex-col md:flex-row md:items-center justify-between px-4 md:px-8 py-3 md:h-20 gap-3 sticky top-0 z-10">
@@ -676,7 +701,6 @@ export default function CalendarPage() {
                 <p className="text-[10px] md:text-[11px] text-[#999999] font-bold mt-1">受付: {safeFormatDate(selectedOrder.created_at, true)} | ID: {selectedOrder.id}</p>
               </div>
 
-              {/* ★ ボタン群 */}
               <div className="flex flex-wrap items-center gap-2 ml-auto">
                 <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all">
                   <Printer size={14} /> <span className="hidden sm:inline">印刷 / PDF出力</span>
@@ -694,7 +718,6 @@ export default function CalendarPage() {
                   <span className="hidden sm:inline">{modalData.status === 'completed' || modalData.status === '完了' ? '未完了に戻す' : '完了にする'}</span>
                 </button>
 
-                {/* ★ 削除ボタンを追加 */}
                 <button 
                   onClick={() => handleDeleteOrder(selectedOrder.id)} 
                   className="flex items-center gap-1.5 px-3 py-2 bg-red-50 border border-red-100 rounded-xl text-[10px] md:text-[11px] font-bold text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm ml-1"
@@ -708,7 +731,7 @@ export default function CalendarPage() {
               </div>
             </div>
             
-            {/* モーダルコンテンツ (スクロール) */}
+            {/* モーダルコンテンツ */}
             <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8 text-left overflow-x-hidden">
               
               <div className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -782,7 +805,6 @@ export default function CalendarPage() {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* 注文者情報 */}
                 <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
                   <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><User size={18}/> 注文者情報</h3>
                   <div className="space-y-4 text-[13px] bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA]">
@@ -793,11 +815,9 @@ export default function CalendarPage() {
                   </div>
                 </div>
 
-                {/* お届け先情報 ＆ Googleマップ */}
                 <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
                   <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><MapPin size={18}/> お届け先情報</h3>
                   <div className="space-y-3 text-[13px]">
-                    
                     {isPickup ? (
                       <div className="bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA]">
                         <p><span className="text-[#999999] text-[10px] block mb-1 tracking-widest">受取店舗</span><span className="font-black text-[16px] text-[#2D4B3E]">{modalData.selectedShop || '未指定'}</span></p>
@@ -868,6 +888,18 @@ export default function CalendarPage() {
                         {modalData.tateInput3 && <div className="flex border-b border-white pb-1"><span className="w-16 text-[#999999] font-bold">贈り主:</span><span className="font-black">{modalData.tateInput3}</span></div>}
                         {modalData.tateInput3a && <div className="flex border-b border-white pb-1"><span className="w-16 text-[#999999] font-bold">会社名:</span><span className="font-black">{modalData.tateInput3a}</span></div>}
                         {modalData.tateInput3b && <div className="flex"><span className="w-16 text-[#999999] font-bold">役職・名:</span><span className="font-black">{modalData.tateInput3b}</span></div>}
+                        
+                        <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4 mb-2">仕上がりプレビュー</p>
+                        <TatefudaPreview 
+                          tatePattern={modalData.tatePattern}
+                          layout={selectedTateOpt?.layout}
+                          isOsonae={isOsonae}
+                          input1={modalData.tateInput1}
+                          input2={modalData.tateInput2}
+                          input3={modalData.tateInput3}
+                          input3a={modalData.tateInput3a}
+                          input3b={modalData.tateInput3b}
+                        />
                       </div>
                     )}
                   </div>
@@ -896,7 +928,6 @@ export default function CalendarPage() {
                 </div>
               </div>
 
-              {/* 対応履歴 */}
               {modalData.statusHistory && modalData.statusHistory.length > 0 && (
                 <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm mb-4">
                   <h3 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2">
@@ -914,7 +945,6 @@ export default function CalendarPage() {
                 </div>
               )}
 
-              {/* メモ */}
               {modalData.note && (
                 <div className="bg-yellow-50 p-6 rounded-[24px] border border-yellow-200 shadow-sm mb-4">
                   <h3 className="text-[12px] font-bold text-yellow-800 mb-2 tracking-widest flex items-center gap-2">社内メモ / お客様要望</h3>
