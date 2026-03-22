@@ -43,7 +43,6 @@ export default function CorporateOrderPage() {
   const [cardMessage, setCardMessage] = useState('');
   const [tatePattern, setTatePattern] = useState('');
   
-  // ★ 初期値を空にしておく（useEffectで上書き）
   const [tateInput1, setTateInput1] = useState(''); 
   const [tateInput2, setTateInput2] = useState(''); 
   const [tateInput3, setTateInput3] = useState(''); 
@@ -69,7 +68,15 @@ export default function CorporateOrderPage() {
   };
   const [timeSlots, setTimeSlots] = useState(defaultTimeSlots);
 
-  // ★ ログイン中の法人情報を取得して、お客様情報＆立札に自動入力する
+  // ★ 新規：設定画面と連動するデザイン選択肢の初期値
+  const defaultDesignOptions = {
+    purposes: ['誕生日', '開店', 'お供え', '就任・昇進祝い', '移転祝い'],
+    colors: ['おまかせ', '暖色系 (赤・ピンク・オレンジ)', '寒色系 (青・紫・白)', 'ホワイト・グリーン系'],
+    vibes: ['おまかせ (用途に合わせる)', 'かわいい', '豪華', '大人っぽい', '元気', '華やか・豪華', '上品・落ち着いた雰囲気']
+  };
+  const designOptions = appSettings?.designOptions || defaultDesignOptions;
+
+  // ログイン中の法人情報を取得して自動入力
   useEffect(() => {
     async function loadCorporateUser() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -139,8 +146,10 @@ export default function CorporateOrderPage() {
 
   const selectedItemSettings = useMemo(() => appSettings?.flowerItems?.find(i => i.name === flowerType) || {}, [flowerType, appSettings]);
 
-  const isOsonae = flowerPurpose === 'お供え';
-  const tateOptions = isOsonae ? [
+  // ★ 修正箇所：キーワードで「お悔やみ・お供え」かどうかを賢く判定する！
+  const isOsonae = flowerPurpose.includes('供') || flowerPurpose.includes('悔') || flowerPurpose.includes('葬') || flowerPurpose.includes('忌');
+  
+  const allTateOptions = isOsonae ? [
     { id: 'p1', label: '① 御供｜横型 (背景あり)', needs: ['3'], layout: 'horizontal' },
     { id: 'p3', label: '② 御供｜縦型 (シンプル)', needs: ['3'], layout: 'vertical' },
     { id: 'p4', label: '③ 御供｜縦型 (会社名入)', needs: ['3a', '3b'], layout: 'vertical' }
@@ -150,7 +159,11 @@ export default function CorporateOrderPage() {
     { id: 'p7', label: '⑦ 祝｜縦型 (二列構成)', needs: ['1', '3'], layout: 'vertical' },
     { id: 'p8', label: '⑧ 祝｜縦型 (三列完成版)', needs: ['1', '2', '3'], layout: 'vertical' }
   ];
-  const selectedTateOpt = tateOptions.find(opt => opt.id === tatePattern);
+
+  // 法人用オーダーでは基本すべての立札を許可（店舗指定がないため）
+  const enabledTatePatterns = appSettings?.shops?.[0]?.enabledTatePatterns || allTateOptions.map(opt => opt.id);
+  const availableTateOptions = allTateOptions.filter(opt => enabledTatePatterns.includes(opt.id));
+  const selectedTateOpt = availableTateOptions.find(opt => opt.id === tatePattern);
   const tateNeeds = selectedTateOpt?.needs || [];
 
   const getPriceOptions = () => {
@@ -183,7 +196,6 @@ export default function CorporateOrderPage() {
     return 1;
   }, [receiveMethod, customerInfo.address1, recipientInfo.address1, isRecipientDifferent, appSettings]);
 
-  // ★ リードタイムのカレンダー制限（タイムゾーンによるズレを修正！）
   const minDateLimit = useMemo(() => {
     const base = new Date();
     let prepDays = 0;
@@ -408,7 +420,6 @@ export default function CorporateOrderPage() {
     return appSettings?.shops?.[0] || {};
   }, [selectedShop, appSettings]);
 
-  // ★ 設定画面の注意事項を反映
   const pickupNote = targetShopData.pickupNote || 'ご来店予定日時に店舗までお越しください。';
   const deliveryNote = targetShopData.deliveryNote || '交通状況により配達時間が前後する場合がございます。';
   const shippingNote = targetShopData.shippingNote || '発送準備期間＋配送日数がかかります。交通状況により遅延する場合がございます。';
@@ -476,7 +487,6 @@ export default function CorporateOrderPage() {
             </div>
             
             <div className="space-y-4">
-              {/* ★ 店頭受取ボタンを復活！ */}
               {selectedItemSettings.canPickup !== false && appSettings?.shops?.length > 0 ? (
                 appSettings.shops.map(shop => (
                   <button key={shop.id} onClick={() => { setReceiveMethod('pickup'); setSelectedShop(shop.name); setStep(3); }} className="w-full p-8 rounded-[24px] bg-white border border-[#EAEAEA] shadow-sm hover:border-[#2D4B3E] transition-all text-left group">
@@ -504,10 +514,13 @@ export default function CorporateOrderPage() {
 
             <div className="space-y-8 bg-white p-8 rounded-[28px] border border-[#EAEAEA] shadow-sm transition-all duration-500">
               
+              {/* ★ 設定画面のカスタマイズ項目（デザイン選択肢）を反映！ */}
               <div className="space-y-3">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">ご用途</label>
                 <select value={flowerPurpose} onChange={(e) => setFlowerPurpose(e.target.value)} className="w-full h-12 border-b border-[#EAEAEA] bg-transparent outline-none font-bold focus:border-[#2D4B3E] transition-all">
-                  <option value="">選択...</option><option value="就任・昇進祝い">就任・昇進祝い</option><option value="開店・開業祝い">開店・開業祝い</option><option value="移転祝い">移転祝い</option><option value="お供え">お供え</option><option value="その他">その他</option>
+                  <option value="">選択...</option>
+                  {designOptions.purposes.map(p => <option key={p} value={p}>{p}</option>)}
+                  <option value="その他">その他</option>
                 </select>
                 {flowerPurpose === 'その他' && <input type="text" placeholder="詳細を入力..." value={otherPurpose} onChange={(e) => setOtherPurpose(e.target.value)} className="w-full h-10 mt-2 bg-[#FBFAF9] px-4 rounded-lg outline-none text-sm border border-[#EAEAEA]" />}
               </div>
@@ -516,17 +529,17 @@ export default function CorporateOrderPage() {
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">カラー</label>
                 <select value={flowerColor} onChange={(e) => setFlowerColor(e.target.value)} className="w-full h-12 border-b border-[#EAEAEA] bg-transparent outline-none font-bold focus:border-[#2D4B3E] transition-all">
                   <option value="">選択...</option>
-                  <option value="おまかせ">おまかせ</option>
-                  <option value="暖色系 (赤・ピンク・オレンジ)">暖色系 (赤・ピンク・オレンジ)</option>
-                  <option value="寒色系 (青・紫・白)">寒色系 (青・紫・白)</option>
-                  <option value="ホワイト・グリーン系">ホワイト・グリーン系</option>
+                  {designOptions.colors.map(c => <option key={c} value={c}>{c}</option>)}
+                  <option value="その他">その他</option>
                 </select>
               </div>
 
               <div className="space-y-3">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">イメージ / ご要望</label>
                 <select value={flowerVibe} onChange={(e) => setFlowerVibe(e.target.value)} className="w-full h-12 border-b border-[#EAEAEA] bg-transparent outline-none font-bold focus:border-[#2D4B3E] transition-all">
-                  <option value="">選択...</option><option value="おまかせ (用途に合わせる)">おまかせ (用途に合わせる)</option><option value="華やか・豪華">華やか・豪華</option><option value="上品・落ち着いた雰囲気">上品・落ち着いた雰囲気</option><option value="その他">その他</option>
+                  <option value="">選択...</option>
+                  {designOptions.vibes.map(v => <option key={v} value={v}>{v}</option>)}
+                  <option value="その他">その他</option>
                 </select>
                 {flowerVibe === 'その他' && <input type="text" placeholder="イメージの詳細をご入力ください" value={otherVibe} onChange={(e) => setOtherVibe(e.target.value)} className="w-full h-10 mt-2 bg-[#FBFAF9] px-4 rounded-lg outline-none text-sm border border-[#EAEAEA]" />}
               </div>
@@ -552,12 +565,16 @@ export default function CorporateOrderPage() {
                 <div className="space-y-6 bg-white p-6 rounded-[28px] border border-[#EAEAEA] shadow-sm animate-in zoom-in-95 duration-300">
                   <select value={tatePattern} onChange={(e) => setTatePattern(e.target.value)} className="w-full h-14 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none font-bold text-[13px] focus:border-[#2D4B3E]">
                     <option value="">レイアウトを選択</option>
-                    {tateOptions.map(opt => (<option key={opt.id} value={opt.id}>{opt.label}</option>))}
+                    {availableTateOptions.length > 0 ? (
+                      availableTateOptions.map(opt => (<option key={opt.id} value={opt.id}>{opt.label}</option>))
+                    ) : (
+                      <option value="" disabled>利用可能なテンプレートがありません</option>
+                    )}
                   </select>
                   
                   {tatePattern && (
                     <div className="space-y-3">
-                      {tateNeeds.includes('1') && <input type="text" placeholder="① 内容 (例: 御開店)" value={tateInput1} onChange={(e) => setTateInput1(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
+                      {tateNeeds.includes('1') && <input type="text" placeholder={`① 内容 (例: ${isOsonae ? '御供' : '御開店'})`} value={tateInput1} onChange={(e) => setTateInput1(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       {tateNeeds.includes('2') && <input type="text" placeholder="② 宛名 (例: 〇〇様)" value={tateInput2} onChange={(e) => setTateInput2(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       
                       <div className="pt-2 pb-1 border-t border-[#FBFAF9]">
