@@ -226,7 +226,7 @@ export default function OrdersPage() {
   };
 
   // ==========================================
-  // ★ 印刷ロジック (はみ出し防止修正版！)
+  // ★ 印刷ロジック (店舗控のチェック欄をステータスと完全連動！)
   // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
@@ -240,9 +240,9 @@ export default function OrdersPage() {
       const totals = getTotals(d);
       
       const history = d.statusHistory || [];
-      const orderStaff = d.staffName || (history.length > 0 ? history[history.length - 1].staff : "");
-      const deliveryHistory = history.find(h => h.status.includes('配達')) || history[0];
-      const deliveryStaff = deliveryHistory ? deliveryHistory.staff : "";
+      
+      // ★ 常に設定から最新のステータスリストを取得する
+      const activeStatuses = getStatusOptions();
 
       const formatText = (txt) => String(txt || '');
       const safeId = String(selectedOrder.id || '').slice(0, 8);
@@ -357,18 +357,27 @@ export default function OrdersPage() {
         </div>
       `;
 
+      // ★ ステータス設定からダイナミックに生成！
       const renderFooter = (type, hidePrice) => {
         let footerActionsHtml = '';
+        
         if (type === 'customer') {
-          footerActionsHtml = `<div class="check-group"><div class="check-label">受注</div><div class="check-box ${orderStaff ? 'filled' : ''}">${orderStaff}</div></div>`;
+          const firstStatus = activeStatuses[0] || '受注';
+          const entry = history.find(h => h.status === firstStatus || h.status === 'new') || history[history.length - 1];
+          const staff = entry ? entry.staff : (d.staffName || '');
+          footerActionsHtml = `<div class="check-group"><div class="check-label">受付</div><div class="check-box ${staff ? 'filled' : ''}">${staff}</div></div>`;
         } else if (type === 'delivery' || type === 'receipt') {
-          footerActionsHtml = `<div class="check-group"><div class="check-label">配達</div><div class="check-box ${deliveryStaff ? 'filled' : ''}" style="border-color:#888;">${deliveryStaff}</div></div>`;
+          const deliveryEntry = history.find(h => h.status.includes('配達'));
+          const staff = deliveryEntry ? deliveryEntry.staff : '';
+          footerActionsHtml = `<div class="check-group"><div class="check-label">配達</div><div class="check-box ${staff ? 'filled' : ''}" style="border-color:#888;">${staff}</div></div>`;
         } else {
-          footerActionsHtml = ['受注','配達','片付','請求'].map(l => {
-            let name = ''; let filled = '';
-            if (l === '受注' && orderStaff) { name = orderStaff; filled = 'filled'; }
-            if (l === '配達' && deliveryStaff) { name = deliveryStaff; filled = 'filled'; }
-            return `<div class="check-group"><div class="check-label">${l}</div><div class="check-box ${filled}">${name}</div></div>`;
+          // 店舗控：カスタマイズされたステータスをそのまま並べる（最大6個まで）
+          footerActionsHtml = activeStatuses.slice(0, 6).map(statusLabel => {
+            const entry = history.find(h => h.status === statusLabel);
+            const staff = entry ? entry.staff : '';
+            // 名前が長すぎないように頭の4文字を取る（例:「制作完了」→「制作完了」）
+            const shortLabel = statusLabel.length > 4 ? statusLabel.substring(0, 4) : statusLabel;
+            return `<div class="check-group"><div class="check-label">${shortLabel}</div><div class="check-box ${staff ? 'filled' : ''}">${staff}</div></div>`;
           }).join('');
         }
 
@@ -394,7 +403,15 @@ export default function OrdersPage() {
           </div>
           ${renderClientBoxes(hidePrice)}
           ${renderItemsBlock(hidePrice)}
-          ${showReceiptNote ? `<div class="receipt-note">上記の商品を確かに受領いたしました。    受領日：    年    月    日      サインまたは印</div>` : ''}
+          ${showReceiptNote ? `
+            <div class="receipt-note" style="margin-top: 2mm; margin-bottom: 1mm;">
+              <div style="font-size: 8.5pt; margin-bottom: 4mm;">上記の商品を確かに受領いたしました。</div>
+              <div style="display: flex; justify-content: flex-end; gap: 8mm; font-size: 10pt;">
+                <div>受領日：<span style="display:inline-block; width:12mm; border-bottom:1px solid #555;"></span>年<span style="display:inline-block; width:8mm; border-bottom:1px solid #555;"></span>月<span style="display:inline-block; width:8mm; border-bottom:1px solid #555;"></span>日</div>
+                <div>サインまたは印：<span style="display:inline-block; width:45mm; border-bottom:1px solid #555;"></span></div>
+              </div>
+            </div>
+          ` : ''}
           ${renderFooter(type, hidePrice)}
         </div>
       `;
@@ -414,7 +431,9 @@ export default function OrdersPage() {
             * { box-sizing: border-box; }
             body { margin: 0; background-color: #f3f4f6; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; color: #222; }
             .page { width: 210mm; height: 296mm; background: #fff; margin: 0 auto 10mm auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; position: relative; overflow: hidden; }
-            .slip { width: 100%; height: 148mm; padding: 10mm 15mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+            
+            /* ★ paddingを削ってスペースを確保 */
+            .slip { width: 100%; height: 148mm; padding: 7mm 15mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
             .slip:first-child { border-bottom: 1px dashed #aaa; }
             .cutline { position: absolute; top: 148mm; left: 10mm; right: 10mm; transform: translateY(-50%); display: flex; justify-content: center; align-items: center; z-index: 10; pointer-events: none; }
             .cutline span { background: #fff; padding: 0 5mm; font-size: 8pt; color: #888; letter-spacing: 0.2em; }
@@ -422,7 +441,7 @@ export default function OrdersPage() {
             .slip-title { font-size: 16pt; font-weight: bold; letter-spacing: 0.3em; }
             .meta-area { font-size: 8pt; text-align: right; line-height: 1.4; font-weight: bold; }
             
-            /* ★ 修正箇所：高さ制限を外し、自動で伸びるように変更 */
+            /* ★ はみ出し防止用CSS修正 */
             .info-grid { display: flex; gap: 4mm; min-height: 28mm; margin-bottom: 3mm; }
             .info-box { flex: 1; border: 0.5pt solid #444; padding: 2mm; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
             
@@ -535,8 +554,23 @@ export default function OrdersPage() {
   const isPickup = modalData.receiveMethod === 'pickup';
   const isDelivery = modalData.receiveMethod === 'delivery';
 
+  // ★ 立札プレビュー用の変数（エラー回避）
+  const isOsonae = modalData.flowerPurpose?.includes('供') || modalData.flowerPurpose?.includes('悔') || modalData.flowerPurpose?.includes('葬') || modalData.flowerPurpose?.includes('忌');
+  const allTateOptions = isOsonae ? [
+    { id: 'p1', label: '① 御供｜横型 (背景あり)', needs: ['3'], layout: 'horizontal' },
+    { id: 'p3', label: '② 御供｜縦型 (シンプル)', needs: ['3'], layout: 'vertical' },
+    { id: 'p4', label: '③ 御供｜縦型 (会社名入)', needs: ['3a', '3b'], layout: 'vertical' }
+  ] : [
+    { id: 'p5', label: '⑤ 祝｜横型 (スタンダード)', needs: ['1', '3'], layout: 'horizontal' },
+    { id: 'p6', label: '⑥ 祝｜横型 (様へ構成)', needs: ['1', '2', '3'], layout: 'horizontal' },
+    { id: 'p7', label: '⑦ 祝｜縦型 (二列構成)', needs: ['1', '3'], layout: 'vertical' },
+    { id: 'p8', label: '⑧ 祝｜縦型 (三列完成版)', needs: ['1', '2', '3'], layout: 'vertical' }
+  ];
+  const selectedTateOpt = allTateOptions.find(opt => opt.id === modalData.tatePattern);
+
   return (
     <div className="min-h-screen bg-[#FBFAF9] font-sans pb-32">
+      {/* --- ヘッダー領域 --- */}
       <div className="bg-white border-b border-[#EAEAEA] sticky top-0 z-30 px-6 py-4 shadow-sm">
         <div className="max-w-[1000px] mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h1 className="text-[20px] font-black text-[#2D4B3E] tracking-widest">受注一覧</h1>
@@ -582,6 +616,7 @@ export default function OrdersPage() {
                       </span>
                       {getReceiveMethodBadge(d.receiveMethod)}
 
+                      {/* 発送日バッジ */}
                       {d.receiveMethod === 'sagawa' && d.shippingDate && (
                         <span className="flex items-center gap-1 bg-green-50 text-green-700 px-3 py-1.5 rounded-lg text-[11px] font-bold border border-green-200 shadow-sm">
                           <Package size={12}/> 発送日: {d.shippingDate.split('-')[1]}/{d.shippingDate.split('-')[2]}
@@ -614,7 +649,7 @@ export default function OrdersPage() {
         )}
       </main>
 
-      {/* --- ★ カレンダーと統一された詳細モーダル --- */}
+      {/* --- ★ 詳細モーダル --- */}
       {selectedOrder && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#111111]/60 backdrop-blur-sm p-3 md:p-4 animate-in fade-in" onClick={() => setSelectedOrder(null)}>
           <div className="bg-[#FBFAF9] rounded-[24px] md:rounded-[32px] w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -662,9 +697,10 @@ export default function OrdersPage() {
               </div>
             </div>
             
-            {/* モーダルコンテンツ (スクロール) */}
+            {/* モーダルコンテンツ */}
             <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8 text-left overflow-x-hidden">
               
+              {/* ステータス更新フォーム（履歴対応） */}
               <div className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className={`px-3 py-1.5 rounded-lg text-[11px] md:text-[12px] font-bold flex items-center gap-1 w-fit ${isPickup ? 'bg-orange-100 text-orange-700' : isDelivery ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
                   {isPickup ? <Store size={14}/> : isDelivery ? <Truck size={14}/> : <Package size={14}/>}
@@ -680,8 +716,6 @@ export default function OrdersPage() {
                   >
                     <option value="new">未対応 (新規)</option>
                     {getStatusOptions().map(l => <option key={l} value={l}>{l}</option>)}
-                    <option value="完了">完了</option>
-                    <option value="キャンセル">キャンセル</option>
                   </select>
                   <select 
                     value={updateForm.staff}
@@ -820,6 +854,18 @@ export default function OrdersPage() {
                         {modalData.tateInput3 && <div className="flex border-b border-white pb-1"><span className="w-16 text-[#999999] font-bold">贈り主:</span><span className="font-black">{modalData.tateInput3}</span></div>}
                         {modalData.tateInput3a && <div className="flex border-b border-white pb-1"><span className="w-16 text-[#999999] font-bold">会社名:</span><span className="font-black">{modalData.tateInput3a}</span></div>}
                         {modalData.tateInput3b && <div className="flex"><span className="w-16 text-[#999999] font-bold">役職・名:</span><span className="font-black">{modalData.tateInput3b}</span></div>}
+                        
+                        <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4 mb-2">仕上がりプレビュー</p>
+                        <TatefudaPreview 
+                          tatePattern={modalData.tatePattern}
+                          layout={selectedTateOpt?.layout}
+                          isOsonae={isOsonae}
+                          input1={modalData.tateInput1}
+                          input2={modalData.tateInput2}
+                          input3={modalData.tateInput3}
+                          input3a={modalData.tateInput3a}
+                          input3b={modalData.tateInput3b}
+                        />
                       </div>
                     )}
                   </div>
@@ -840,7 +886,7 @@ export default function OrdersPage() {
                   </div>
                   {modalData.paymentMethod && (
                     <div className="pt-4 flex justify-end border-t border-[#EAEAEA]">
-                      <span className="inline-block bg-[#2D4B3E]/10 text-[#2D4B3E] px-4 py-2 rounded-xl text-[12px] font-bold border border-[#2D4B3E]/20 shadow-sm">
+                      <span className="inline-block bg-[#2D4B3E]/10 text-[#2D4B3E] px-4 py-2 rounded-xl text-[13px] font-bold border border-[#2D4B3E]/20 shadow-sm">
                         支払方法: {modalData.paymentMethod}
                       </span>
                     </div>

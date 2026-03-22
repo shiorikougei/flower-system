@@ -21,7 +21,6 @@ export default function SettingsPage() {
   
   const [currentTenantId, setCurrentTenantId] = useState(null);
 
-  // --- 1. 基本設定 ---
   const [generalConfig, setGeneralConfig] = useState({ 
     tenantId: '', 
     appName: 'FLORIX', 
@@ -32,7 +31,6 @@ export default function SettingsPage() {
     logoUrl: '', logoSize: 100, logoTransparent: false, slipBgUrl: '', slipBgOpacity: 50, systemPassword: '7777'
   });
 
-  // --- 振込先口座の設定 ---
   const [paymentConfig, setPaymentConfig] = useState({
     bankName: '',
     branchName: '',
@@ -41,23 +39,18 @@ export default function SettingsPage() {
     accountName: ''
   });
 
-  // --- 2. ステータス設定 ---
-  const [statusConfig, setStatusConfig] = useState({ type: 'template', customLabels: ['未対応', '制作中', '制作完了', '配達中'] });
+  // ★ 変更：標準のステータスを実務に合わせたものに変更！
+  const [statusConfig, setStatusConfig] = useState({ type: 'template', customLabels: ['受注', '制作', '配達', '片付', '請求'] });
 
-  // --- ★ 新規：デザイン選択肢（用途・カラー・イメージ）の設定 ---
   const [designOptions, setDesignOptions] = useState({
     purposes: ['誕生日', '開店', 'お供え', '就任・昇進祝い', '移転祝い'],
     colors: ['おまかせ', '暖色系 (赤・ピンク・オレンジ)', '寒色系 (青・紫・白)', 'ホワイト・グリーン系'],
     vibes: ['おまかせ (用途に合わせる)', 'かわいい', '豪華', '大人っぽい', '元気', '華やか・豪華', '上品・落ち着いた雰囲気']
   });
 
-  // --- 3. 店舗管理 ---
   const [shops, setShops] = useState([]); 
-
-  // --- 4. 商品管理 ---
   const [flowerItems, setFlowerItems] = useState([]);
 
-  // --- 5. 配送・送料 ---
   const [deliveryAreas, setDeliveryAreas] = useState([]);
   const [shippingSizes, setShippingSizes] = useState(['80', '100', '120']);
   const [shippingRates, setShippingRates] = useState([]); 
@@ -74,17 +67,16 @@ export default function SettingsPage() {
   });
 
   const tateMaster = [
-    { id: 'p1', label: '御供｜横型 (背景あり)', layout: 'horizontal', color: 'gray' }, 
-    { id: 'p3', label: '御供｜縦型 (シンプル)', layout: 'vertical', color: 'gray' }, 
-    { id: 'p4', label: '御供｜縦型 (会社名入)', layout: 'vertical', color: 'gray' },
-    { id: 'p5', label: '祝｜横型 (スタンダード)', layout: 'horizontal', color: 'red' }, 
-    { id: 'p6', label: '祝｜横型 (様へ構成)', layout: 'horizontal', color: 'red' }, 
-    { id: 'p7', label: '祝｜縦型 (二列構成)', layout: 'vertical', color: 'red' }, 
-    { id: 'p8', label: '祝｜縦型 (三列完成版)', layout: 'vertical', color: 'red' },
+    { id: 'p1', label: '① 御供｜横型 (背景あり)', layout: 'horizontal', color: 'gray' }, 
+    { id: 'p3', label: '② 御供｜縦型 (シンプル)', layout: 'vertical', color: 'gray' }, 
+    { id: 'p4', label: '③ 御供｜縦型 (会社名入)', layout: 'vertical', color: 'gray' },
+    { id: 'p5', label: '⑤ 祝｜横型 (スタンダード)', layout: 'horizontal', color: 'red' }, 
+    { id: 'p6', label: '⑥ 祝｜横型 (様へ構成)', layout: 'horizontal', color: 'red' }, 
+    { id: 'p7', label: '⑦ 祝｜縦型 (二列構成)', layout: 'vertical', color: 'red' }, 
+    { id: 'p8', label: '⑧ 祝｜縦型 (三列完成版)', layout: 'vertical', color: 'red' },
   ];
   const [selectedPreviewTate, setSelectedPreviewTate] = useState(tateMaster[3]);
 
-  // --- 7. その他 ---
   const [staffList, setStaffList] = useState([]);
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffStore, setNewStaffStore] = useState('all');
@@ -97,7 +89,7 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'general', label: '基本・請求情報', icon: SettingsIcon },
     { id: 'status', label: 'ステータス', icon: ListChecks },
-    { id: 'design', label: 'デザイン選択肢', icon: Palette }, // ★ 新規追加
+    { id: 'design', label: 'デザイン選択肢', icon: Palette },
     { id: 'shop', label: '店舗・特別日', icon: Store }, 
     { id: 'items', label: '商品・納期', icon: Tag },
     { id: 'shipping', label: '配送・時間枠', icon: Truck },
@@ -112,7 +104,7 @@ export default function SettingsPage() {
     if (s.generalConfig) setGeneralConfig(prev => ({...prev, ...s.generalConfig}));
     if (s.paymentConfig) setPaymentConfig(prev => ({...prev, ...s.paymentConfig})); 
     if (s.statusConfig) setStatusConfig(s.statusConfig);
-    if (s.designOptions) setDesignOptions(prev => ({...prev, ...s.designOptions})); // ★ 追加
+    if (s.designOptions) setDesignOptions(prev => ({...prev, ...s.designOptions}));
     if (s.shops) setShops(s.shops);
     if (s.flowerItems) setFlowerItems(s.flowerItems);
     if (s.staffList) setStaffList(s.staffList);
@@ -166,7 +158,7 @@ export default function SettingsPage() {
         generalConfig: {...generalConfig, tenantId: currentTenantId}, 
         paymentConfig, 
         statusConfig, 
-        designOptions, // ★ 保存データに追加
+        designOptions,
         shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReplyTemplates, staffOrderConfig, timeSlots 
       };
       await supabase.from('app_settings').upsert({ id: currentTenantId, settings_data: payload });
@@ -196,7 +188,6 @@ export default function SettingsPage() {
 
   const renderGeneralTab = () => (
     <div className="space-y-8 animate-in fade-in">
-      
       <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8">
         <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Building2 size={20}/> 会社情報 (請求書・特商法表示用)</h2>
         <div className="space-y-4">
@@ -316,7 +307,7 @@ export default function SettingsPage() {
         ))}
       </div>
       <div className="space-y-3">
-        {(statusConfig.type === 'template' ? ['未対応', '制作中', '制作完了', '配達中'] : statusConfig.customLabels).map((l, i) => (
+        {(statusConfig.type === 'template' ? ['受注', '制作', '配達', '片付', '請求'] : statusConfig.customLabels).map((l, i) => (
           <div key={i} className="flex gap-2">
             <input type="text" value={l} readOnly={statusConfig.type==='template'} onChange={(e) => { if(statusConfig.type==='custom'){ const n = [...statusConfig.customLabels]; n[i] = e.target.value; setStatusConfig({...statusConfig, customLabels: n}); } }} className={`flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none ${statusConfig.type==='template'?'text-[#999999] cursor-not-allowed':'focus:border-[#2D4B3E]'}`} />
             {statusConfig.type === 'custom' && <button onClick={() => setStatusConfig({...statusConfig, customLabels: statusConfig.customLabels.filter((_, idx) => idx !== i)})} className="text-red-300 p-2 hover:text-red-500"><Trash2 size={18}/></button>}
@@ -327,7 +318,6 @@ export default function SettingsPage() {
     </div>
   );
 
-  // ★ 新規：デザイン選択肢（用途・カラー・イメージ）の設定タブ
   const renderDesignTab = () => (
     <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 animate-in fade-in">
       <div className="border-b pb-4">
@@ -336,7 +326,6 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* 用途 */}
         <div className="space-y-3">
           <label className="text-[14px] font-bold text-[#2D4B3E] bg-[#FBFAF9] px-4 py-2 rounded-lg inline-block border">ご用途</label>
           <div className="space-y-2">
@@ -350,7 +339,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* カラー */}
         <div className="space-y-3 border-t md:border-t-0 md:border-l border-[#EAEAEA] md:pl-6">
           <label className="text-[14px] font-bold text-[#2D4B3E] bg-[#FBFAF9] px-4 py-2 rounded-lg inline-block border">カラー</label>
           <div className="space-y-2">
@@ -364,7 +352,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* イメージ */}
         <div className="space-y-3 border-t md:border-t-0 md:border-l border-[#EAEAEA] md:pl-6">
           <label className="text-[14px] font-bold text-[#2D4B3E] bg-[#FBFAF9] px-4 py-2 rounded-lg inline-block border">イメージ</label>
           <div className="space-y-2">
