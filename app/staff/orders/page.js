@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { supabase } from '@/utils/supabase'; // ★ 絶対パスに統一
+import { supabase } from '@/utils/supabase'; 
 import { 
   MapPin, Calendar, ChevronRight, X, Clock, Truck, Store, Package, 
   CreditCard, MessageSquare, AlertCircle, ListChecks, User, Tag, 
@@ -15,7 +15,7 @@ export default function OrdersPage() {
   const [appSettings, setAppSettings] = useState(null);
   const [currentTenantId, setCurrentTenantId] = useState(null);
 
-  // ★ カレンダーと同じ更新用フォームのStateを追加
+  // ステータス更新フォームのState
   const [updateForm, setUpdateForm] = useState({ status: 'new', staff: '' });
 
   useEffect(() => {
@@ -97,7 +97,7 @@ export default function OrdersPage() {
     return ['未対応', '制作中', '制作完了', '配達中'];
   };
 
-  // ★ カレンダーと同じ履歴付きステータス更新ロジック
+  // 履歴付きステータス更新ロジック
   const executeStatusUpdate = async (orderId) => {
     if (!updateForm.staff) {
       alert('ステータスを更新する担当スタッフを選択してください。');
@@ -132,7 +132,7 @@ export default function OrdersPage() {
     }
   };
 
-  // ★ カレンダーと同じアーカイブ更新ロジック
+  // アーカイブ更新ロジック
   const updateArchiveStatus = async (orderId, isArchive) => {
     const newStatus = isArchive ? 'completed' : 'new';
     if (!confirm(`この注文を${isArchive ? '完了' : '未完了'}にしますか？`)) return;
@@ -216,7 +216,7 @@ export default function OrdersPage() {
       if (!info) return '#';
       const address = `${info.address1 || ''} ${info.address2 || ''}`.trim();
       if (!address) return '#';
-      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+      return `http://googleusercontent.com/maps.google.com/maps?q=${encodeURIComponent(address)}`;
     } catch (e) {
       return '#';
     }
@@ -233,7 +233,7 @@ export default function OrdersPage() {
   };
 
   // ==========================================
-  // ★ カレンダーと同じ印刷ロジック
+  // ★ 印刷ロジック
   // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
@@ -533,6 +533,7 @@ export default function OrdersPage() {
     }
   };
 
+  // ★ クラッシュの原因だった定義を追加！
   const modalData = selectedOrder?.order_data || {};
   const modalTargetInfo = modalData.isRecipientDifferent ? (modalData.recipientInfo || {}) : (modalData.customerInfo || {});
   const isSagawa = modalData.receiveMethod === 'sagawa';
@@ -723,7 +724,7 @@ export default function OrdersPage() {
                   <div className="space-y-1 relative z-10">
                     <span className="text-[12px] font-bold text-green-700 tracking-widest">お客様 お届け日</span>
                     <p className="text-[18px] md:text-[20px] font-bold text-green-800 flex items-center justify-center gap-2 pt-2">
-                      <CalendarIcon size={18} className="text-green-600"/> 
+                      <Calendar size={18} className="text-green-600"/> 
                       {modalData.selectedDate ? `${modalData.selectedDate.split('-')[1]}月${modalData.selectedDate.split('-')[2]}日` : '未指定'}
                     </p>
                     <p className="text-[12px] font-bold text-green-700">{modalData.selectedTime || '時間指定なし'}</p>
@@ -735,7 +736,7 @@ export default function OrdersPage() {
                      {isPickup ? 'ご来店予定日' : '配達予定日'}
                    </span>
                    <p className="text-[28px] font-black text-[#2D4B3E] flex items-center gap-2">
-                     <CalendarIcon size={24}/> {modalData.selectedDate ? `${modalData.selectedDate.split('-')[1]}月${modalData.selectedDate.split('-')[2]}日` : '未設定'}
+                     <Calendar size={24}/> {modalData.selectedDate ? `${modalData.selectedDate.split('-')[1]}月${modalData.selectedDate.split('-')[2]}日` : '未設定'}
                    </p>
                    <p className="text-[14px] font-bold text-[#D97C8F] mt-2">{modalData.selectedTime || '時間指定なし'}</p>
                 </div>
@@ -768,6 +769,7 @@ export default function OrdersPage() {
                         <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">宛名</span><span className="font-black text-[16px]">{modalTargetInfo?.name || '未設定'} 様</span></p>
                         <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">お届け先住所</span><span className="font-bold text-[14px] block leading-relaxed">〒{modalTargetInfo?.zip}<br/>{modalTargetInfo?.address1} {modalTargetInfo?.address2}</span></p>
                         
+                        {/* 📍 Googleマップボタン */}
                         <a 
                           href={getGoogleMapsUrl(modalTargetInfo)}
                           target="_blank"
@@ -837,9 +839,9 @@ export default function OrdersPage() {
                   <h3 className="text-[16px] font-black text-[#2D4B3E] border-b border-[#EAEAEA] pb-3 flex items-center gap-2"><CreditCard size={20}/> お支払い情報</h3>
                   <div className="space-y-3 text-[13px] md:text-[14px] font-medium text-[#555555]">
                     <div className="flex justify-between items-center"><span>商品代 (税抜):</span><span className="font-black text-[#111111] text-[16px]">¥{getTotals(modalData).item.toLocaleString()}</span></div>
-                    {getTotals(modalData).fee > 0 && <div className="flex justify-between items-center text-blue-600"><span>配送料 (箱・クール含):</span><span className="font-bold">¥{getTotals(modalData).fee.toLocaleString()}</span></div>}
-                    {getTotals(modalData).pickup > 0 && <div className="flex justify-between items-center text-orange-600"><span>器回収・返却費:</span><span className="font-bold">¥{getTotals(modalData).pickup.toLocaleString()}</span></div>}
-                    <div className="flex justify-between items-center border-t border-[#EAEAEA] pt-3 text-[#2D4B3E]"><span>消費税 (10%):</span><span className="font-bold">¥{getTotals(modalData).tax.toLocaleString()}</span></div>
+                    {getTotals(modalData).fee > 0 && <div className="flex justify-between items-center text-blue-600"><span>配送料 (箱・クール含):</span><span className="font-bold text-[16px]">¥{getTotals(modalData).fee.toLocaleString()}</span></div>}
+                    {getTotals(modalData).pickup > 0 && <div className="flex justify-between items-center text-orange-600"><span>器回収・返却費:</span><span className="font-bold text-[16px]">¥{getTotals(modalData).pickup.toLocaleString()}</span></div>}
+                    <div className="flex justify-between items-center border-t border-[#EAEAEA] pt-3 text-[#2D4B3E]"><span>消費税 (10%):</span><span className="font-bold text-[16px]">¥{getTotals(modalData).tax.toLocaleString()}</span></div>
                     
                     <div className="flex justify-between border-t-2 border-[#2D4B3E]/20 pt-4 mt-2 items-end">
                       <span className="text-[13px] font-bold text-[#2D4B3E] tracking-widest mb-1">合計 (税込)</span>
