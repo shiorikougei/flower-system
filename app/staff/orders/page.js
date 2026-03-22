@@ -89,7 +89,7 @@ export default function OrdersPage() {
   const getStatusOptions = () => {
     const config = appSettings?.statusConfig;
     if (config?.type === 'custom' && config?.customLabels?.length > 0) return config.customLabels;
-    return ['未対応', '制作中', '制作完了', '配達中'];
+    return ['受注', '制作', '配達', '片付', '請求'];
   };
 
   const executeStatusUpdate = async (orderId) => {
@@ -225,9 +225,6 @@ export default function OrdersPage() {
     return { item, fee, pickup, subTotal, tax, total: subTotal + tax };
   };
 
-  // ==========================================
-  // ★ 印刷ロジック (店舗控のチェック欄をステータスと完全連動！)
-  // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -241,14 +238,15 @@ export default function OrdersPage() {
       
       const history = d.statusHistory || [];
       
-      // ★ 常に設定から最新のステータスリストを取得する
       const activeStatuses = getStatusOptions();
 
       const formatText = (txt) => String(txt || '');
       const safeId = String(selectedOrder.id || '').slice(0, 8);
       const receiveMethodStr = getMethodLabel(d.receiveMethod);
       const datePart = d.selectedDate || '未指定';
-      const paymentStatus = d.paymentMethod ? `${d.paymentMethod}${d.paymentStatus ? `(${d.paymentStatus})` : ''}` : '未設定';
+      
+      // ★ 修正箇所：バックスラッシュ（\）を取り除き、安全な文字列結合に変更！
+      const paymentStatus = d.paymentMethod ? (d.paymentMethod + (d.paymentStatus ? `(${d.paymentStatus})` : '')) : '未設定';
 
       const formatPrice = (price) => `¥${Number(price || 0).toLocaleString()}`;
 
@@ -357,7 +355,6 @@ export default function OrdersPage() {
         </div>
       `;
 
-      // ★ ステータス設定からダイナミックに生成！
       const renderFooter = (type, hidePrice) => {
         let footerActionsHtml = '';
         
@@ -371,11 +368,9 @@ export default function OrdersPage() {
           const staff = deliveryEntry ? deliveryEntry.staff : '';
           footerActionsHtml = `<div class="check-group"><div class="check-label">配達</div><div class="check-box ${staff ? 'filled' : ''}" style="border-color:#888;">${staff}</div></div>`;
         } else {
-          // 店舗控：カスタマイズされたステータスをそのまま並べる（最大6個まで）
           footerActionsHtml = activeStatuses.slice(0, 6).map(statusLabel => {
             const entry = history.find(h => h.status === statusLabel);
             const staff = entry ? entry.staff : '';
-            // 名前が長すぎないように頭の4文字を取る（例:「制作完了」→「制作完了」）
             const shortLabel = statusLabel.length > 4 ? statusLabel.substring(0, 4) : statusLabel;
             return `<div class="check-group"><div class="check-label">${shortLabel}</div><div class="check-box ${staff ? 'filled' : ''}">${staff}</div></div>`;
           }).join('');
@@ -432,7 +427,6 @@ export default function OrdersPage() {
             body { margin: 0; background-color: #f3f4f6; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; color: #222; }
             .page { width: 210mm; height: 296mm; background: #fff; margin: 0 auto 10mm auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; position: relative; overflow: hidden; }
             
-            /* ★ paddingを削ってスペースを確保 */
             .slip { width: 100%; height: 148mm; padding: 7mm 15mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
             .slip:first-child { border-bottom: 1px dashed #aaa; }
             .cutline { position: absolute; top: 148mm; left: 10mm; right: 10mm; transform: translateY(-50%); display: flex; justify-content: center; align-items: center; z-index: 10; pointer-events: none; }
@@ -441,7 +435,6 @@ export default function OrdersPage() {
             .slip-title { font-size: 16pt; font-weight: bold; letter-spacing: 0.3em; }
             .meta-area { font-size: 8pt; text-align: right; line-height: 1.4; font-weight: bold; }
             
-            /* ★ はみ出し防止用CSS修正 */
             .info-grid { display: flex; gap: 4mm; min-height: 28mm; margin-bottom: 3mm; }
             .info-box { flex: 1; border: 0.5pt solid #444; padding: 2mm; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
             
@@ -554,7 +547,6 @@ export default function OrdersPage() {
   const isPickup = modalData.receiveMethod === 'pickup';
   const isDelivery = modalData.receiveMethod === 'delivery';
 
-  // ★ 立札プレビュー用の変数（エラー回避）
   const isOsonae = modalData.flowerPurpose?.includes('供') || modalData.flowerPurpose?.includes('悔') || modalData.flowerPurpose?.includes('葬') || modalData.flowerPurpose?.includes('忌');
   const allTateOptions = isOsonae ? [
     { id: 'p1', label: '① 御供｜横型 (背景あり)', needs: ['3'], layout: 'horizontal' },
@@ -649,7 +641,7 @@ export default function OrdersPage() {
         )}
       </main>
 
-      {/* --- ★ 詳細モーダル --- */}
+      {/* --- 詳細モーダル --- */}
       {selectedOrder && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#111111]/60 backdrop-blur-sm p-3 md:p-4 animate-in fade-in" onClick={() => setSelectedOrder(null)}>
           <div className="bg-[#FBFAF9] rounded-[24px] md:rounded-[32px] w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -700,7 +692,6 @@ export default function OrdersPage() {
             {/* モーダルコンテンツ */}
             <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8 text-left overflow-x-hidden">
               
-              {/* ステータス更新フォーム（履歴対応） */}
               <div className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className={`px-3 py-1.5 rounded-lg text-[11px] md:text-[12px] font-bold flex items-center gap-1 w-fit ${isPickup ? 'bg-orange-100 text-orange-700' : isDelivery ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
                   {isPickup ? <Store size={14}/> : isDelivery ? <Truck size={14}/> : <Package size={14}/>}
@@ -716,6 +707,8 @@ export default function OrdersPage() {
                   >
                     <option value="new">未対応 (新規)</option>
                     {getStatusOptions().map(l => <option key={l} value={l}>{l}</option>)}
+                    <option value="完了">完了</option>
+                    <option value="キャンセル">キャンセル</option>
                   </select>
                   <select 
                     value={updateForm.staff}

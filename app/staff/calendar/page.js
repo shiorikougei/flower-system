@@ -96,10 +96,11 @@ export default function CalendarPage() {
     }
   };
 
+  // ★ 修正箇所：標準ステータスを実務に合わせた最新版に変更！
   const getStatusOptions = () => {
     const config = appSettings?.statusConfig;
     if (config?.type === 'custom' && config?.customLabels?.length > 0) return config.customLabels;
-    return ['未対応', '制作中', '制作完了', '配達中'];
+    return ['受注', '制作', '配達', '片付', '請求'];
   };
 
   const executeStatusUpdate = async (orderId) => {
@@ -248,9 +249,6 @@ export default function CalendarPage() {
     } catch (e) { return '日時不明'; }
   };
 
-  // ==========================================
-  // ★ 印刷ロジック (はみ出し防止＆サイン欄広々)
-  // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -263,9 +261,7 @@ export default function CalendarPage() {
       const totals = getTotals(d);
       
       const history = d.statusHistory || [];
-      const orderStaff = d.staffName || (history.length > 0 ? history[history.length - 1].staff : "");
-      const deliveryHistory = history.find(h => h.status.includes('配達')) || history[0];
-      const deliveryStaff = deliveryHistory ? deliveryHistory.staff : "";
+      const activeStatuses = getStatusOptions();
 
       const formatText = (txt) => String(txt || '');
       const safeId = String(selectedOrder.id || '').slice(0, 8);
@@ -382,16 +378,22 @@ export default function CalendarPage() {
 
       const renderFooter = (type, hidePrice) => {
         let footerActionsHtml = '';
+        
         if (type === 'customer') {
-          footerActionsHtml = `<div class="check-group"><div class="check-label">受注</div><div class="check-box ${orderStaff ? 'filled' : ''}">${orderStaff}</div></div>`;
+          const firstStatus = activeStatuses[0] || '受注';
+          const entry = history.find(h => h.status === firstStatus || h.status === 'new') || history[history.length - 1];
+          const staff = entry ? entry.staff : (d.staffName || '');
+          footerActionsHtml = `<div class="check-group"><div class="check-label">受付</div><div class="check-box ${staff ? 'filled' : ''}">${staff}</div></div>`;
         } else if (type === 'delivery' || type === 'receipt') {
-          footerActionsHtml = `<div class="check-group"><div class="check-label">配達</div><div class="check-box ${deliveryStaff ? 'filled' : ''}" style="border-color:#888;">${deliveryStaff}</div></div>`;
+          const deliveryEntry = history.find(h => h.status.includes('配達'));
+          const staff = deliveryEntry ? deliveryEntry.staff : '';
+          footerActionsHtml = `<div class="check-group"><div class="check-label">配達</div><div class="check-box ${staff ? 'filled' : ''}" style="border-color:#888;">${staff}</div></div>`;
         } else {
-          footerActionsHtml = ['受注','配達','片付','請求'].map(l => {
-            let name = ''; let filled = '';
-            if (l === '受注' && orderStaff) { name = orderStaff; filled = 'filled'; }
-            if (l === '配達' && deliveryStaff) { name = deliveryStaff; filled = 'filled'; }
-            return `<div class="check-group"><div class="check-label">${l}</div><div class="check-box ${filled}">${name}</div></div>`;
+          footerActionsHtml = activeStatuses.slice(0, 6).map(statusLabel => {
+            const entry = history.find(h => h.status === statusLabel);
+            const staff = entry ? entry.staff : '';
+            const shortLabel = statusLabel.length > 4 ? statusLabel.substring(0, 4) : statusLabel;
+            return `<div class="check-group"><div class="check-label">${shortLabel}</div><div class="check-box ${staff ? 'filled' : ''}">${staff}</div></div>`;
           }).join('');
         }
 
@@ -418,7 +420,7 @@ export default function CalendarPage() {
           ${renderClientBoxes(hidePrice)}
           ${renderItemsBlock(hidePrice)}
           ${showReceiptNote ? `
-            <div class="receipt-note" style="margin-top: 3mm; margin-bottom: 2mm;">
+            <div class="receipt-note" style="margin-top: 2mm; margin-bottom: 1mm;">
               <div style="font-size: 8.5pt; margin-bottom: 4mm;">上記の商品を確かに受領いたしました。</div>
               <div style="display: flex; justify-content: flex-end; gap: 8mm; font-size: 10pt;">
                 <div>受領日：<span style="display:inline-block; width:12mm; border-bottom:1px solid #555;"></span>年<span style="display:inline-block; width:8mm; border-bottom:1px solid #555;"></span>月<span style="display:inline-block; width:8mm; border-bottom:1px solid #555;"></span>日</div>
@@ -445,7 +447,7 @@ export default function CalendarPage() {
             * { box-sizing: border-box; }
             body { margin: 0; background-color: #f3f4f6; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; color: #222; }
             .page { width: 210mm; height: 296mm; background: #fff; margin: 0 auto 10mm auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; position: relative; overflow: hidden; }
-            .slip { width: 100%; height: 148mm; padding: 10mm 15mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+            .slip { width: 100%; height: 148mm; padding: 7mm 15mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
             .slip:first-child { border-bottom: 1px dashed #aaa; }
             .cutline { position: absolute; top: 148mm; left: 10mm; right: 10mm; transform: translateY(-50%); display: flex; justify-content: center; align-items: center; z-index: 10; pointer-events: none; }
             .cutline span { background: #fff; padding: 0 5mm; font-size: 8pt; color: #888; letter-spacing: 0.2em; }
@@ -472,6 +474,7 @@ export default function CalendarPage() {
             .amount-label { background: #f9f9f9; text-align: left !important; width: 50%; color:#666; }
             .amount-label-total { background: #f9f9f9; font-weight: bold; color: #117768; text-align: left !important; }
             .amount-val-total { color: #117768; font-size: 11pt; }
+            .receipt-note { margin-top: 2mm; margin-bottom: 2mm; font-size: 8.5pt; color: #333; }
             .footer { margin-top: auto; border-top: 0.5pt dashed #bbb; padding-top: 2mm; display: flex; justify-content: space-between; align-items: flex-end; }
             .shop-block { font-size: 8pt; line-height: 1.4; color: #444; }
             .shop-name { font-size: 12pt; font-weight: 900; color: #222; margin-bottom: 1mm; }
@@ -617,7 +620,6 @@ export default function CalendarPage() {
   const isPickup = modalData.receiveMethod === 'pickup';
   const isDelivery = modalData.receiveMethod === 'delivery';
 
-  // ★ 立札プレビュー用の変数（エラー回避）
   const isOsonae = modalData.flowerPurpose?.includes('供') || modalData.flowerPurpose?.includes('悔') || modalData.flowerPurpose?.includes('葬') || modalData.flowerPurpose?.includes('忌');
   const allTateOptions = isOsonae ? [
     { id: 'p1', label: '① 御供｜横型 (背景あり)', needs: ['3'], layout: 'horizontal' },
@@ -684,12 +686,10 @@ export default function CalendarPage() {
         )}
       </div>
 
-      {/* --- 詳細モーダル --- */}
       {selectedOrder && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#111111]/60 backdrop-blur-sm p-3 md:p-4 animate-in fade-in" onClick={() => setSelectedOrder(null)}>
           <div className="bg-[#FBFAF9] rounded-[24px] md:rounded-[32px] w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative flex flex-col" onClick={(e) => e.stopPropagation()}>
             
-            {/* モーダルヘッダー */}
             <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-[#EAEAEA] p-4 md:p-6 flex flex-wrap items-center justify-between gap-3 z-20 rounded-t-[24px] md:rounded-t-[32px]">
               <div>
                 <div className="flex items-center gap-3">
@@ -731,7 +731,6 @@ export default function CalendarPage() {
               </div>
             </div>
             
-            {/* モーダルコンテンツ */}
             <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8 text-left overflow-x-hidden">
               
               <div className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -818,6 +817,7 @@ export default function CalendarPage() {
                 <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
                   <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><MapPin size={18}/> お届け先情報</h3>
                   <div className="space-y-3 text-[13px]">
+                    
                     {isPickup ? (
                       <div className="bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA]">
                         <p><span className="text-[#999999] text-[10px] block mb-1 tracking-widest">受取店舗</span><span className="font-black text-[16px] text-[#2D4B3E]">{modalData.selectedShop || '未指定'}</span></p>
