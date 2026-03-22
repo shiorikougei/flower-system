@@ -45,7 +45,6 @@ export default function OwnerDashboard() {
       if (scanError) throw scanError;
 
       const shopTenants = allRows
-        // ★ 変更：末尾が '_gallery' のデータを除外するフィルターを追加！
         .filter(row => !['nocolde_owner', 'gallery', 'default'].includes(row.id) && !row.id.endsWith('_gallery'))
         .map(row => {
           const s = row.settings_data || {};
@@ -150,12 +149,10 @@ export default function OwnerDashboard() {
     }
   };
 
-  // ★ 料金の画面入力用
   const handlePriceChange = (tenantId, newPrice) => {
     setTenants(prev => prev.map(t => t.id === tenantId ? { ...t, price: newPrice } : t));
   };
 
-  // ★ 「更新」ボタンを押したときのデータベース保存用
   const handleSavePrice = async (tenantId, newPrice) => {
     setSavingPriceId(tenantId);
     try {
@@ -229,6 +226,13 @@ export default function OwnerDashboard() {
     
     navigator.clipboard.writeText(`システムのご案内です。以下のURLから初期設定を行ってください。\n${setupUrl}`);
     alert('招待URLを発行し、クリップボードにコピーしました！');
+  };
+
+  // ★ 追加：招待履歴の削除処理
+  const handleDeleteInvite = (inviteId) => {
+    if (!confirm('この招待履歴を削除しますか？')) return;
+    const updated = invitations.filter(inv => inv.id !== inviteId);
+    saveOwnerMetaData(updated, upgradeRequests, clientRequests);
   };
 
   const handleApproveUpgrade = (reqId) => {
@@ -455,6 +459,10 @@ export default function OwnerDashboard() {
                       <div className="mt-3 flex items-center gap-2">
                         <input type="text" value={inv.url} readOnly className="w-full max-w-md bg-black text-[#2D4B3E] border border-[#333333] text-[11px] p-2.5 rounded-lg outline-none font-mono" />
                         <button onClick={() => {navigator.clipboard.writeText(inv.url); alert('URLをコピーしました！')}} className="text-xs bg-[#222222] hover:bg-[#333333] text-gray-300 px-3 py-2.5 rounded-lg transition-all whitespace-nowrap">コピー</button>
+                        {/* ★ ここに削除ボタンを追加！ */}
+                        <button onClick={() => handleDeleteInvite(inv.id)} className="text-red-400 hover:text-red-500 bg-[#222222] hover:bg-[#333333] px-3 py-2.5 rounded-lg transition-all" title="削除">
+                          <Trash2 size={14}/>
+                        </button>
                       </div>
                     </div>
                     <div>
@@ -470,7 +478,6 @@ export default function OwnerDashboard() {
           </div>
         )}
 
-        {/* 3. アップグレード・4. フィードバック は省略可（そのまま） */}
         {activeTab === 'upgrades' && (
           <div className="space-y-6 animate-in fade-in">
             {upgradeRequests.length === 0 ? <div className="text-center py-20 text-gray-600 font-mono tracking-widest border border-dashed border-[#333333] rounded-2xl">NO PENDING REQUESTS.</div> : (
@@ -507,7 +514,6 @@ export default function OwnerDashboard() {
           </div>
         )}
 
-        {/* 5. AIプロンプト */}
         {activeTab === 'ai' && (
           <div className="space-y-6 animate-in fade-in">
             <header className="mb-6 space-y-2">
@@ -528,7 +534,6 @@ export default function OwnerDashboard() {
           </div>
         )}
 
-        {/* 6. デンジャーゾーン */}
         {activeTab === 'danger' && (
           <div className="space-y-6 animate-in fade-in">
             <header className="mb-6 space-y-2">
