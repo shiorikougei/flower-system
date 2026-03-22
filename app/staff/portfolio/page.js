@@ -18,7 +18,6 @@ export default function PortfolioPage() {
 
   const [activeTab, setActiveTab] = useState('list');
 
-  // ★ uploadFile(実際のファイルデータ)を保持するように変更
   const [newImage, setNewImage] = useState({
     id: '', url: '', caption: '', price: '', purpose: '', color: '', vibe: '', uploadFile: null
   });
@@ -81,11 +80,10 @@ export default function PortfolioPage() {
     if (file.size > 3 * 1024 * 1024) {
       alert('3MB以下の画像を選択してください。'); return;
     }
-    // プレビュー用にローカルURLを生成し、実際のファイルも保持する
     setNewImage({ ...newImage, url: URL.createObjectURL(file), uploadFile: file });
   };
 
-  // ※AI機能は現状ダミー（モック）のままです。本番で動かすには別途API連携が必要です。
+  // ★ API通信処理（本番仕様）
   const handleGenerateCaption = async () => {
     if (!newImage.purpose || !newImage.color || !newImage.vibe) {
       alert('「用途」「カラー」「イメージ」を選択してからAIボタンを押してください。');
@@ -93,15 +91,30 @@ export default function PortfolioPage() {
     }
     setIsGenerating(true);
     
-    setTimeout(() => {
-      const generatedText = `【${newImage.purpose}のご注文】\n今回は${newImage.color}をメインに、${newImage.vibe}雰囲気でお作りしました✨\n\n大切な方への贈り物として当店を選んでいただき、本当にありがとうございます。\nお花が空間を華やかに彩り、皆様に笑顔をお届けできますように。\n\n---\n▼ こちらの商品（¥${newImage.price || '金額未設定'}）はプロフィールURLから簡単にご注文いただけます！\n\n#${appName} #お花屋さん #フラワーアレンジメント #スタンド花 #${newImage.purpose} #${newImage.vibe} #${newImage.color}のブーケ #花のある暮らし`;
+    try {
+      const response = await fetch('/api/generate-caption', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          purpose: newImage.purpose,
+          color: newImage.color,
+          vibe: newImage.vibe,
+          price: newImage.price,
+          appName: appName
+        })
+      });
       
-      setNewImage({ ...newImage, caption: generatedText });
+      const data = await response.json();
+      if (data.caption) {
+        setNewImage({ ...newImage, caption: data.caption });
+      }
+    } catch (err) {
+      alert('AI生成に失敗しました。');
+    } finally {
       setIsGenerating(false);
-    }, 1500);
+    }
   };
 
-  // ★ 画像をStorageにアップロードして、URLを取得する本番仕様に変更！
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newImage.uploadFile || !newImage.purpose || !newImage.color || !newImage.vibe || !newImage.price) {
@@ -110,7 +123,6 @@ export default function PortfolioPage() {
 
     setIsSaving(true);
     try {
-      // 1. 画像をSupabase Storage('portfolio'バケット)にアップロード
       const fileExt = newImage.uploadFile.name.split('.').pop();
       const fileName = `${Date.now()}.${fileExt}`;
       const filePath = `${currentTenantId}/${fileName}`;
@@ -118,14 +130,11 @@ export default function PortfolioPage() {
       const { error: uploadError } = await supabase.storage.from('portfolio').upload(filePath, newImage.uploadFile);
       if (uploadError) throw uploadError;
 
-      // 2. アップロードした画像の公開URLを取得
       const { data: publicUrlData } = supabase.storage.from('portfolio').getPublicUrl(filePath);
-      const publicUrl = publicUrlData.publicUrl;
-
-      // 3. データを作成してDBに保存
+      
       const newItem = { 
         id: `img_${Date.now()}`, 
-        url: publicUrl, // StorageのURLを保存
+        url: publicUrlData.publicUrl,
         caption: newImage.caption,
         price: Number(newImage.price),
         purpose: newImage.purpose,
@@ -134,8 +143,7 @@ export default function PortfolioPage() {
       };
 
       const updatedImages = [newItem, ...images];
-      const payload = { images: updatedImages };
-      const { error: dbError } = await supabase.from('app_settings').upsert({ id: `${currentTenantId}_gallery`, settings_data: payload });
+      const { error: dbError } = await supabase.from('app_settings').upsert({ id: `${currentTenantId}_gallery`, settings_data: { images: updatedImages } });
       
       if (dbError) throw dbError;
       
@@ -152,14 +160,12 @@ export default function PortfolioPage() {
     }
   };
 
-  // ★ 削除時、可能であればStorageの画像も消すのがベストですが、今回はDBからの登録解除のみ
   const handleDelete = async (id) => {
     if (!confirm('この作品データを削除しますか？')) return;
     setIsSaving(true);
     try {
       const updated = images.filter(img => img.id !== id);
-      const payload = { images: updated };
-      const { error } = await supabase.from('app_settings').upsert({ id: `${currentTenantId}_gallery`, settings_data: payload });
+      const { error } = await supabase.from('app_settings').upsert({ id: `${currentTenantId}_gallery`, settings_data: { images: updated } });
       if (error) throw error;
       setImages(updated);
     } catch(err) {
@@ -169,23 +175,27 @@ export default function PortfolioPage() {
     }
   };
 
-  // ※URL読込も現状ダミー（モック）のままです。
+  // ★ API通信処理（本番仕様）
   const handleImport = async (e) => {
     e.preventDefault();
     if (!importUrl) return;
     setIsImporting(true);
 
-    setTimeout(() => {
-      setImportedData({
-        url: 'https://images.unsplash.com/photo-1563241527-3004b7be0ffd?auto=format&fit=crop&w=500&q=80',
-        caption: '豪華な赤いバラのスタンド花です🌹\nお値段 33,000円〜承っております✨\n#開店祝い #スタンド花 #赤系',
-        price: '33000', 
-        purpose: designOptions.purposes[1] || '開店祝い',
-        color: designOptions.colors[1] || '暖色系',
-        vibe: designOptions.vibes[2] || '豪華',
+    try {
+      const response = await fetch('/api/import-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: importUrl })
       });
+      const data = await response.json();
+      if (data && data.url) {
+        setImportedData(data);
+      }
+    } catch (err) {
+      alert('URLの読み込みに失敗しました。');
+    } finally {
       setIsImporting(false);
-    }, 2000);
+    }
   };
 
   const handleSaveImported = async (e) => {
@@ -195,8 +205,7 @@ export default function PortfolioPage() {
     try {
       const newItem = { ...importedData, id: `img_${Date.now()}`, price: Number(importedData.price) };
       const updatedImages = [newItem, ...images];
-      const payload = { images: updatedImages };
-      await supabase.from('app_settings').upsert({ id: `${currentTenantId}_gallery`, settings_data: payload });
+      await supabase.from('app_settings').upsert({ id: `${currentTenantId}_gallery`, settings_data: { images: updatedImages } });
       setImages(updatedImages);
       setImportedData(null);
       setImportUrl('');
@@ -363,7 +372,7 @@ export default function PortfolioPage() {
                   <div className="flex justify-between items-end mb-2">
                     <label className="text-[11px] font-bold text-[#999999]">キャプション</label>
                     <button type="button" onClick={handleGenerateCaption} disabled={isGenerating} className="flex items-center gap-1 bg-[#2D4B3E]/10 text-[#2D4B3E] px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-[#2D4B3E] hover:text-white transition-all disabled:opacity-50">
-                      <Wand2 size={12} /> {isGenerating ? '生成中...' : 'AIで自動生成'}
+                      <Wand2 size={12} /> {isGenerating ? '生成中...' : 'APIで自動生成'}
                     </button>
                   </div>
                   <textarea 
@@ -388,7 +397,7 @@ export default function PortfolioPage() {
           <div className="space-y-6 max-w-[800px] animate-in fade-in">
             <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-4">
               <h2 className="text-[16px] font-black text-[#2D4B3E] flex items-center gap-2"><Sparkles size={18}/> URLから自動取り込み</h2>
-              <p className="text-[12px] text-[#555555]">※現在この機能はモック（ダミー）です。InstagramなどのURLを入力すると、仮のデータが読み込まれます。</p>
+              <p className="text-[12px] text-[#555555]">※APIルートを作成すると本番環境で実際に動作します。</p>
               
               <form onSubmit={handleImport} className="flex gap-2 pt-2">
                 <input 

@@ -1,13 +1,12 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/utils/supabase'; 
 import { 
   MapPin, Calendar, ChevronRight, X, Clock, Truck, Store, Package, 
   CreditCard, MessageSquare, AlertCircle, ListChecks, User, Tag, 
   Printer, FileText, Send, Trash2, Archive, RotateCcw
 } from 'lucide-react';
-
-import OrderDetailModal from '@/components/OrderDetailModal'; // ★ コンポーネントをインポート！
+import OrderDetailModal from '@/components/OrderDetailModal';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -77,7 +76,6 @@ export default function OrdersPage() {
     initData();
   }, []);
 
-  // 親でステータス更新関数を用意し、モーダルに渡す
   const handleUpdateStatus = async (orderId, newStatus, staffName) => {
     if (!staffName) {
       alert('ステータスを更新する担当スタッフを選択してください。');
@@ -112,7 +110,6 @@ export default function OrdersPage() {
     }
   };
 
-  // 親でアーカイブ関数を用意
   const handleArchive = async (orderId, isArchive) => {
     const newStatus = isArchive ? 'completed' : 'new';
     if (!confirm(`この注文を${isArchive ? '完了' : '未完了'}にしますか？`)) return;
@@ -129,7 +126,6 @@ export default function OrdersPage() {
     } catch (err) { alert('更新失敗'); }
   };
 
-  // 親で削除関数を用意
   const handleDelete = async (orderId) => {
     const inputPass = prompt('この注文を削除しますか？\n実行するには管理者パスワードを入力してください。');
     if (inputPass === null) return; 
@@ -276,7 +272,6 @@ export default function OrdersPage() {
         )}
       </main>
 
-      {/* ★ ここで共通コンポーネントを呼び出す！ */}
       <OrderDetailModal 
         order={selectedOrder} 
         appSettings={appSettings} 

@@ -36,7 +36,6 @@ export default function OrderDetailModal({
   const isPickup = modalData.receiveMethod === 'pickup';
   const isDelivery = modalData.receiveMethod === 'delivery';
 
-  // ユーティリティ関数
   const safeFormatDate = (dateString, withTime = false) => {
     try {
       if (!dateString) return '日時不明';
@@ -76,7 +75,6 @@ export default function OrderDetailModal({
     return ['受注', '制作', '配達', '片付', '請求'];
   };
 
-  // 立札用の判定
   const isOsonae = modalData.flowerPurpose?.includes('供') || modalData.flowerPurpose?.includes('悔') || modalData.flowerPurpose?.includes('葬') || modalData.flowerPurpose?.includes('忌');
   const allTateOptions = isOsonae ? [
     { id: 'p1', label: '① 御供｜横型 (背景あり)', needs: ['3'], layout: 'horizontal' },
@@ -90,7 +88,6 @@ export default function OrderDetailModal({
   ];
   const selectedTateOpt = allTateOptions.find(opt => opt.id === modalData.tatePattern);
 
-  // 印刷・メール機能
   const handlePrint = (e) => {
     e.preventDefault(); e.stopPropagation();
     try {
@@ -104,7 +101,14 @@ export default function OrderDetailModal({
       const safeId = String(order.id || '').slice(0, 8);
       const receiveMethodStr = getMethodLabel(modalData.receiveMethod);
       const datePart = modalData.selectedDate || '未指定';
-      const paymentStatus = modalData.paymentMethod ? (modalData.paymentMethod + (modalData.paymentStatus ? `(${modalData.paymentStatus})` : '')) : '未設定';
+      
+      // ★ ここがエラーの原因だった箇所を安全に修正！！
+      let paymentStatus = '未設定';
+      if (modalData.paymentMethod) {
+        paymentStatus = modalData.paymentMethod;
+        if (modalData.paymentStatus) paymentStatus += ' (' + modalData.paymentStatus + ')';
+      }
+
       const formatPrice = (price) => `¥${Number(price || 0).toLocaleString()}`;
 
       const shop = (appSettings?.shops || [])[0] || {};
@@ -347,7 +351,6 @@ export default function OrderDetailModal({
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#111111]/60 backdrop-blur-sm p-3 md:p-4 animate-in fade-in" onClick={onClose}>
       <div className="bg-[#FBFAF9] rounded-[24px] md:rounded-[32px] w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative flex flex-col" onClick={(e) => e.stopPropagation()}>
         
-        {/* モーダルヘッダー */}
         <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-[#EAEAEA] p-4 md:p-6 flex flex-wrap items-center justify-between gap-3 z-20 rounded-t-[24px] md:rounded-t-[32px]">
           <div>
             <div className="flex items-center gap-3">
@@ -386,7 +389,6 @@ export default function OrderDetailModal({
           </div>
         </div>
         
-        {/* モーダルコンテンツ */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8 text-left overflow-x-hidden">
           
           <div className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -484,7 +486,9 @@ export default function OrderDetailModal({
                     <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">お届け先住所</span><span className="font-bold text-[14px] block leading-relaxed">〒{modalTargetInfo?.zip}<br/>{modalTargetInfo?.address1} {modalTargetInfo?.address2}</span></p>
                     
                     <a 
-                      href={getGoogleMapsUrl(modalTargetInfo)} target="_blank" rel="noopener noreferrer"
+                      href={getGoogleMapsUrl(modalTargetInfo)}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 mt-3 text-[12px] font-bold text-white bg-[#4285F4] px-4 py-2.5 rounded-xl hover:bg-[#3367D6] transition-all shadow-md active:scale-95 w-full justify-center"
                     >
                       <MapPin size={16} /> Googleマップで場所を確認
