@@ -1,10 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/utils/supabase'; // ★ パス修正
+import { supabase } from '@/utils/supabase';
 import { 
   Wand2, Copy, ExternalLink, CheckCircle, Trash2, 
   Plus, Link as LinkIcon, Image as ImageIcon, Loader2, Sparkles, LayoutGrid 
 } from 'lucide-react';
+
+const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
+const GALLERY_CACHE_KEY = 'florix_gallery_cache';
 
 export default function PortfolioPage() {
   const [appSettings, setAppSettings] = useState(null);
@@ -15,8 +18,9 @@ export default function PortfolioPage() {
 
   const [activeTab, setActiveTab] = useState('list');
 
+  // ★ uploadFile(実際のファイルデータ)を保持するように変更
   const [newImage, setNewImage] = useState({
-    id: '', url: '', caption: '', price: '', purpose: '', color: '', vibe: ''
+    id: '', url: '', caption: '', price: '', purpose: '', color: '', vibe: '', uploadFile: null
   });
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -26,7 +30,6 @@ export default function PortfolioPage() {
 
   const [copiedId, setCopiedId] = useState(null);
 
-  // ★ 新規：設定画面と連動するデザイン選択肢の初期値
   const defaultDesignOptions = {
     purposes: ['誕生日', '開店', 'お供え', '就任・昇進祝い', '移転祝い'],
     colors: ['おまかせ', '暖色系 (赤・ピンク・オレンジ)', '寒色系 (青・紫・白)', 'ホワイト・グリーン系'],
@@ -49,23 +52,6 @@ export default function PortfolioPage() {
         const tId = profile.tenant_id;
         setCurrentTenantId(tId);
 
-        const CACHE_KEY_SETTINGS = `florix_settings_cache_${tId}`;
-        const CACHE_KEY_GALLERY = `florix_gallery_cache_${tId}`;
-
-        const cachedSettings = sessionStorage.getItem(CACHE_KEY_SETTINGS);
-        const cachedGallery = sessionStorage.getItem(CACHE_KEY_GALLERY);
-
-        if (cachedSettings) {
-          try { setAppSettings(JSON.parse(cachedSettings)); } catch (e) {}
-        }
-        if (cachedGallery) {
-          try { setImages(JSON.parse(cachedGallery).images || []); } catch (e) {}
-        }
-        
-        if (cachedSettings && cachedGallery) {
-          setIsLoading(false);
-        }
-
         const [settingsRes, galleryRes] = await Promise.all([
           supabase.from('app_settings').select('settings_data').eq('id', tId).single(),
           supabase.from('app_settings').select('settings_data').eq('id', `${tId}_gallery`).single()
@@ -73,12 +59,9 @@ export default function PortfolioPage() {
 
         if (settingsRes.data?.settings_data) {
           setAppSettings(settingsRes.data.settings_data);
-          sessionStorage.setItem(CACHE_KEY_SETTINGS, JSON.stringify(settingsRes.data.settings_data));
         }
         if (galleryRes.data?.settings_data) {
-          const galleryImages = galleryRes.data.settings_data.images || [];
-          setImages(galleryImages);
-          sessionStorage.setItem(CACHE_KEY_GALLERY, JSON.stringify({ images: galleryImages }));
+          setImages(galleryRes.data.settings_data.images || []);
         }
       } catch (err) {
         console.error('データ取得エラー:', err.message);
@@ -98,11 +81,11 @@ export default function PortfolioPage() {
     if (file.size > 3 * 1024 * 1024) {
       alert('3MB以下の画像を選択してください。'); return;
     }
-    const reader = new FileReader();
-    reader.onload = (event) => setNewImage({ ...newImage, url: event.target.result });
-    reader.readAsDataURL(file);
+    // プレビュー用にローカルURLを生成し、実際のファイルも保持する
+    setNewImage({ ...newImage, url: URL.createObjectURL(file), uploadFile: file });
   };
 
+  // ※AI機能は現状ダミー（モック）のままです。本番で動かすには別途API連携が必要です。
   const handleGenerateCaption = async () => {
     if (!newImage.purpose || !newImage.color || !newImage.vibe) {
       alert('「用途」「カラー」「イメージ」を選択してからAIボタンを押してください。');
@@ -118,43 +101,75 @@ export default function PortfolioPage() {
     }, 1500);
   };
 
-  const saveGallery = async (updatedImages) => {
+  // ★ 画像をStorageにアップロードして、URLを取得する本番仕様に変更！
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+    if (!newImage.uploadFile || !newImage.purpose || !newImage.color || !newImage.vibe || !newImage.price) {
+      alert('画像、金額、用途、カラー、イメージは必須項目です。'); return;
+    }
+
     setIsSaving(true);
     try {
+      // 1. 画像をSupabase Storage('portfolio'バケット)にアップロード
+      const fileExt = newImage.uploadFile.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `${currentTenantId}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage.from('portfolio').upload(filePath, newImage.uploadFile);
+      if (uploadError) throw uploadError;
+
+      // 2. アップロードした画像の公開URLを取得
+      const { data: publicUrlData } = supabase.storage.from('portfolio').getPublicUrl(filePath);
+      const publicUrl = publicUrlData.publicUrl;
+
+      // 3. データを作成してDBに保存
+      const newItem = { 
+        id: `img_${Date.now()}`, 
+        url: publicUrl, // StorageのURLを保存
+        caption: newImage.caption,
+        price: Number(newImage.price),
+        purpose: newImage.purpose,
+        color: newImage.color,
+        vibe: newImage.vibe
+      };
+
+      const updatedImages = [newItem, ...images];
       const payload = { images: updatedImages };
-      const { error } = await supabase.from('app_settings').upsert({ id: `${currentTenantId}_gallery`, settings_data: payload });
-      if (error) throw error;
+      const { error: dbError } = await supabase.from('app_settings').upsert({ id: `${currentTenantId}_gallery`, settings_data: payload });
+      
+      if (dbError) throw dbError;
       
       setImages(updatedImages);
-      sessionStorage.setItem(`florix_gallery_cache_${currentTenantId}`, JSON.stringify(payload)); 
-      
-      setNewImage({ id: '', url: '', caption: '', price: '', purpose: '', color: '', vibe: '' });
-      setImportedData(null);
-      setImportUrl('');
+      setNewImage({ id: '', url: '', caption: '', price: '', purpose: '', color: '', vibe: '', uploadFile: null });
       setActiveTab('list');
       alert('作品データを保存しました。');
+
     } catch (err) {
+      console.error(err);
       alert('保存に失敗しました。');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleAddSubmit = (e) => {
-    e.preventDefault();
-    if (!newImage.url || !newImage.purpose || !newImage.color || !newImage.vibe || !newImage.price) {
-      alert('画像、金額、用途、カラー、イメージは必須項目です。'); return;
-    }
-    const newItem = { ...newImage, id: `img_${Date.now()}`, price: Number(newImage.price) };
-    saveGallery([newItem, ...images]);
-  };
-
-  const handleDelete = (id) => {
+  // ★ 削除時、可能であればStorageの画像も消すのがベストですが、今回はDBからの登録解除のみ
+  const handleDelete = async (id) => {
     if (!confirm('この作品データを削除しますか？')) return;
-    const updated = images.filter(img => img.id !== id);
-    saveGallery(updated);
+    setIsSaving(true);
+    try {
+      const updated = images.filter(img => img.id !== id);
+      const payload = { images: updated };
+      const { error } = await supabase.from('app_settings').upsert({ id: `${currentTenantId}_gallery`, settings_data: payload });
+      if (error) throw error;
+      setImages(updated);
+    } catch(err) {
+      alert('削除に失敗しました');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
+  // ※URL読込も現状ダミー（モック）のままです。
   const handleImport = async (e) => {
     e.preventDefault();
     if (!importUrl) return;
@@ -173,11 +188,25 @@ export default function PortfolioPage() {
     }, 2000);
   };
 
-  const handleSaveImported = (e) => {
+  const handleSaveImported = async (e) => {
     e.preventDefault();
     if (!importedData) return;
-    const newItem = { ...importedData, id: `img_${Date.now()}`, price: Number(importedData.price) };
-    saveGallery([newItem, ...images]);
+    setIsSaving(true);
+    try {
+      const newItem = { ...importedData, id: `img_${Date.now()}`, price: Number(importedData.price) };
+      const updatedImages = [newItem, ...images];
+      const payload = { images: updatedImages };
+      await supabase.from('app_settings').upsert({ id: `${currentTenantId}_gallery`, settings_data: payload });
+      setImages(updatedImages);
+      setImportedData(null);
+      setImportUrl('');
+      setActiveTab('list');
+      alert('インポートした作品を保存しました。');
+    } catch(err) {
+      alert('保存に失敗しました');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCopyUrl = (id) => {
@@ -297,7 +326,6 @@ export default function PortfolioPage() {
                   </div>
                 </div>
                 
-                {/* ★ ここを設定と連動！ */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-[11px] font-bold text-[#999999] flex items-center justify-between">
@@ -360,7 +388,7 @@ export default function PortfolioPage() {
           <div className="space-y-6 max-w-[800px] animate-in fade-in">
             <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-4">
               <h2 className="text-[16px] font-black text-[#2D4B3E] flex items-center gap-2"><Sparkles size={18}/> URLから自動取り込み</h2>
-              <p className="text-[12px] text-[#555555]">InstagramなどのURLを入力すると、画像とキャプションを自動で取得します。設定したAIプロンプトにより、金額や用途も自動推測されます。</p>
+              <p className="text-[12px] text-[#555555]">※現在この機能はモック（ダミー）です。InstagramなどのURLを入力すると、仮のデータが読み込まれます。</p>
               
               <form onSubmit={handleImport} className="flex gap-2 pt-2">
                 <input 
@@ -405,7 +433,6 @@ export default function PortfolioPage() {
                       </div>
                     </div>
                     
-                    {/* ★ ここも設定と連動！ */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <label className="text-[11px] font-bold text-[#999999] flex items-center justify-between">
