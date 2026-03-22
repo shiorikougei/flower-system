@@ -1,11 +1,14 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '../../../../../utils/supabase';
+import { supabase } from '@/utils/supabase'; // ★絶対パス推奨
 
 export default function ThanksPage() {
   const params = useParams();
   const router = useRouter();
+  
+  // ★ テナントIDとショップIDの両方をURLから取得
+  const tenantId = params?.tenantId || 'default';
   const shopId = params?.shopId || 'default';
 
   const [appSettings, setAppSettings] = useState(null);
@@ -14,7 +17,8 @@ export default function ThanksPage() {
   useEffect(() => {
     async function fetchSettings() {
       try {
-        const { data, error } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
+        // ★ 'default'固定ではなく、URLのテナントIDを使って設定を読み込む
+        const { data, error } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
         if (error) throw error;
         if (data && data.settings_data) setAppSettings(data.settings_data);
       } catch (err) {
@@ -24,7 +28,7 @@ export default function ThanksPage() {
       }
     }
     fetchSettings();
-  }, []);
+  }, [tenantId]);
 
   // ローディング画面
   if (isLoading) return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-sans"><div className="text-[#2D4B3E] font-bold tracking-widest animate-pulse">読み込み中...</div></div>;
@@ -47,23 +51,23 @@ export default function ThanksPage() {
   return (
     <div className="min-h-screen bg-[#FBFAF9] flex flex-col font-sans text-[#111111]">
       
-      {/* ★ 変更：ロゴサイズ・透過設定を反映したヘッダー */}
+      {/* ヘッダー */}
       <header className="h-16 bg-white/80 backdrop-blur-md border-b border-[#EAEAEA] flex items-center justify-center px-6 sticky top-0 z-50">
         <div className="flex items-center gap-3 h-full">
           {logoUrl ? (
             <img 
               src={logoUrl} 
-              alt={appName} 
+              alt={targetShop.name} // ★ 画像の代替テキストも店舗名に
               style={{ 
-                // 100%のとき高さを32pxとし、スライダーの値で拡大縮小させる
                 height: `${(logoSize / 100) * 32}px`, 
-                maxHeight: '50px', // ヘッダーをはみ出さないように制限
+                maxHeight: '50px', 
                 mixBlendMode: logoTransparent ? 'multiply' : 'normal' 
               }} 
               className="object-contain" 
             />
           ) : (
-            <span className="font-serif font-bold tracking-tight text-[18px] text-[#2D4B3E]">{appName}</span>
+            // ★ アプリ全体名(FLORIX)ではなく、設定した「店舗名」を表示！
+            <span className="font-serif font-bold tracking-tight text-[18px] text-[#2D4B3E]">{targetShop.name}</span>
           )}
         </div>
       </header>
@@ -85,7 +89,7 @@ export default function ThanksPage() {
             <p>ご入力いただいた内容を確認の上、スタッフより手配を進めさせていただきます。</p>
           </div>
 
-          {/* ★ 新規追加：お支払い情報パネル（動的表示） */}
+          {/* お支払い情報パネル */}
           {(paymentUrl || bankInfo) && (
             <div className="mt-10 mb-8 w-full text-left space-y-6 bg-[#FBFAF9] p-6 md:p-8 rounded-[24px] border border-[#EAEAEA]">
               <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2 text-center tracking-widest">お支払いについて</h2>
@@ -121,7 +125,7 @@ export default function ThanksPage() {
 
           <div className="mt-8">
             <button 
-              onClick={() => router.push(`/order/${shopId}`)} 
+              onClick={() => router.push(`/order/${tenantId}/${shopId}`)} 
               className="w-full py-4 rounded-[16px] bg-white border-2 border-[#EAEAEA] text-[#555555] font-bold text-[13px] tracking-widest hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all"
             >
               最初の画面に戻る
