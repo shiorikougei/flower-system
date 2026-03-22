@@ -15,7 +15,6 @@ export default function OrdersPage() {
   const [appSettings, setAppSettings] = useState(null);
   const [currentTenantId, setCurrentTenantId] = useState(null);
 
-  // ステータス更新フォームのState
   const [updateForm, setUpdateForm] = useState({ status: 'new', staff: '' });
 
   useEffect(() => {
@@ -52,16 +51,12 @@ export default function OrdersPage() {
           try {
             setOrders(JSON.parse(cachedOrders));
             setIsLoading(false); 
-          } catch (e) {
-            console.error("注文キャッシュのパース失敗", e);
-          }
+          } catch (e) {}
         }
         if (cachedSettings) {
           try {
             setAppSettings(JSON.parse(cachedSettings));
-          } catch (e) {
-            console.error("設定キャッシュのパース失敗", e);
-          }
+          } catch (e) {}
         }
 
         const [ordersRes, settingsRes] = await Promise.all([
@@ -97,7 +92,6 @@ export default function OrdersPage() {
     return ['未対応', '制作中', '制作完了', '配達中'];
   };
 
-  // 履歴付きステータス更新ロジック
   const executeStatusUpdate = async (orderId) => {
     if (!updateForm.staff) {
       alert('ステータスを更新する担当スタッフを選択してください。');
@@ -132,7 +126,6 @@ export default function OrdersPage() {
     }
   };
 
-  // アーカイブ更新ロジック
   const updateArchiveStatus = async (orderId, isArchive) => {
     const newStatus = isArchive ? 'completed' : 'new';
     if (!confirm(`この注文を${isArchive ? '完了' : '未完了'}にしますか？`)) return;
@@ -233,7 +226,7 @@ export default function OrdersPage() {
   };
 
   // ==========================================
-  // ★ 印刷ロジック
+  // ★ 印刷ロジック (はみ出し防止修正版！)
   // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
@@ -428,11 +421,14 @@ export default function OrdersPage() {
             .slip-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3mm; }
             .slip-title { font-size: 16pt; font-weight: bold; letter-spacing: 0.3em; }
             .meta-area { font-size: 8pt; text-align: right; line-height: 1.4; font-weight: bold; }
-            .info-grid { display: flex; gap: 4mm; height: 24mm; margin-bottom: 4mm; }
-            .info-box { flex: 1; border: 0.5pt solid #444; padding: 2mm; display: flex; flex-direction: column; position: relative; }
+            
+            /* ★ 修正箇所：高さ制限を外し、自動で伸びるように変更 */
+            .info-grid { display: flex; gap: 4mm; min-height: 28mm; margin-bottom: 3mm; }
+            .info-box { flex: 1; border: 0.5pt solid #444; padding: 2mm; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+            
             .info-title { font-size: 7.5pt; font-weight: bold; color: #444; margin-bottom: 1mm; }
             .info-main { font-size: 12pt; font-weight: bold; }
-            .info-sub-bottom { margin-top: auto; font-size: 8pt; line-height: 1.3; }
+            .info-sub-bottom { margin-top: 1mm; font-size: 8pt; line-height: 1.25; }
             .same-text { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 12pt; color: #888; font-weight: bold; letter-spacing: 0.1em; }
             .items-area { flex-grow: 1; display: flex; flex-direction: column; margin-bottom: 1mm; }
             .items-table { width: 100%; border-collapse: collapse; }
@@ -533,7 +529,6 @@ export default function OrdersPage() {
     }
   };
 
-  // ★ クラッシュの原因だった定義を追加！
   const modalData = selectedOrder?.order_data || {};
   const modalTargetInfo = modalData.isRecipientDifferent ? (modalData.recipientInfo || {}) : (modalData.customerInfo || {});
   const isSagawa = modalData.receiveMethod === 'sagawa';
@@ -542,7 +537,6 @@ export default function OrdersPage() {
 
   return (
     <div className="min-h-screen bg-[#FBFAF9] font-sans pb-32">
-      {/* --- ヘッダー領域 --- */}
       <div className="bg-white border-b border-[#EAEAEA] sticky top-0 z-30 px-6 py-4 shadow-sm">
         <div className="max-w-[1000px] mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h1 className="text-[20px] font-black text-[#2D4B3E] tracking-widest">受注一覧</h1>
@@ -588,7 +582,6 @@ export default function OrdersPage() {
                       </span>
                       {getReceiveMethodBadge(d.receiveMethod)}
 
-                      {/* 発送日バッジ */}
                       {d.receiveMethod === 'sagawa' && d.shippingDate && (
                         <span className="flex items-center gap-1 bg-green-50 text-green-700 px-3 py-1.5 rounded-lg text-[11px] font-bold border border-green-200 shadow-sm">
                           <Package size={12}/> 発送日: {d.shippingDate.split('-')[1]}/{d.shippingDate.split('-')[2]}
@@ -672,7 +665,6 @@ export default function OrdersPage() {
             {/* モーダルコンテンツ (スクロール) */}
             <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8 text-left overflow-x-hidden">
               
-              {/* ステータス更新フォーム（履歴対応） */}
               <div className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className={`px-3 py-1.5 rounded-lg text-[11px] md:text-[12px] font-bold flex items-center gap-1 w-fit ${isPickup ? 'bg-orange-100 text-orange-700' : isDelivery ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
                   {isPickup ? <Store size={14}/> : isDelivery ? <Truck size={14}/> : <Package size={14}/>}
@@ -688,6 +680,8 @@ export default function OrdersPage() {
                   >
                     <option value="new">未対応 (新規)</option>
                     {getStatusOptions().map(l => <option key={l} value={l}>{l}</option>)}
+                    <option value="完了">完了</option>
+                    <option value="キャンセル">キャンセル</option>
                   </select>
                   <select 
                     value={updateForm.staff}
@@ -706,7 +700,6 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              {/* 巨大な発送日パネル（業者配送の場合） */}
               {isSagawa ? (
                 <div className="bg-green-50 border-2 border-green-200 p-6 md:p-8 rounded-[24px] flex flex-col md:flex-row items-center gap-6 justify-center text-center shadow-inner relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-bl-[64px] -mr-4 -mt-4"></div>
@@ -743,7 +736,6 @@ export default function OrdersPage() {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* 注文者情報 */}
                 <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
                   <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><User size={18}/> 注文者情報</h3>
                   <div className="space-y-4 text-[13px] bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA]">
@@ -754,7 +746,6 @@ export default function OrdersPage() {
                   </div>
                 </div>
 
-                {/* お届け先情報 ＆ Googleマップ */}
                 <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
                   <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><MapPin size={18}/> お届け先情報</h3>
                   <div className="space-y-3 text-[13px]">
@@ -769,7 +760,6 @@ export default function OrdersPage() {
                         <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">宛名</span><span className="font-black text-[16px]">{modalTargetInfo?.name || '未設定'} 様</span></p>
                         <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">お届け先住所</span><span className="font-bold text-[14px] block leading-relaxed">〒{modalTargetInfo?.zip}<br/>{modalTargetInfo?.address1} {modalTargetInfo?.address2}</span></p>
                         
-                        {/* 📍 Googleマップボタン */}
                         <a 
                           href={getGoogleMapsUrl(modalTargetInfo)}
                           target="_blank"
@@ -858,7 +848,6 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              {/* ステータス対応履歴の表示 */}
               {modalData.statusHistory && modalData.statusHistory.length > 0 && (
                 <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm mb-4">
                   <h3 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2">
