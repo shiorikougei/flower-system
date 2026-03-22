@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { supabase } from '../../../utils/supabase'; // パス階層に合わせて適宜調整
+import { supabase } from '@/utils/supabase'; 
 import { 
   ChevronLeft, ChevronRight, RefreshCw, X, Calendar as CalendarIcon, 
   User, MapPin, Tag, FileText, Smartphone, Archive, RotateCcw, 
@@ -15,17 +15,14 @@ export default function CalendarPage() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  // ★ 新規: ログイン中のテナントIDを保持する
   const [currentTenantId, setCurrentTenantId] = useState(null);
 
-  // ステータス更新用のフォーム状態
   const [updateForm, setUpdateForm] = useState({ status: 'new', staff: '' });
 
   useEffect(() => {
     fetchData();
   }, []);
 
-  // 選択された注文が変わったときに、更新フォームをリセット
   useEffect(() => {
     if (selectedOrder) {
       setUpdateForm({
@@ -38,21 +35,18 @@ export default function CalendarPage() {
   const fetchData = async (forceRefresh = false) => {
     setIsLoading(true);
     try {
-      // 1. ログインチェック
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         window.location.href = '/staff/login';
         return;
       }
 
-      // 2. プロフィールからテナントIDを取得
       const { data: profile, error: profileError } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
       if (profileError) throw profileError;
       
       const tId = profile.tenant_id;
       setCurrentTenantId(tId);
 
-      // キャッシュがあるか確認し、初回ロード以外（forceRefreshがfalse）ならそれを使う
       const CACHE_KEY_ORDERS = `florix_orders_cache_${tId}`;
       const CACHE_KEY_SETTINGS = `florix_settings_cache_${tId}`;
 
@@ -64,20 +58,17 @@ export default function CalendarPage() {
           setOrders(JSON.parse(cachedOrders));
           setAppSettings(JSON.parse(cachedSettings));
           setIsLoading(false);
-          // 裏で静かに最新データを取得してキャッシュを更新しておく
           fetchLatestDataSilently(tId, CACHE_KEY_ORDERS);
           return;
         }
       }
 
-      // 3. テナント固有の設定データを取得
       const { data: settings } = await supabase.from('app_settings').select('settings_data').eq('id', tId).single();
       if (settings) {
         setAppSettings(settings.settings_data);
         sessionStorage.setItem(CACHE_KEY_SETTINGS, JSON.stringify(settings.settings_data));
       }
 
-      // 4. 注文データを取得（★RLSがかかっているので自動的に自店舗のデータだけが取れます！）
       const { data: ordersData, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       
@@ -92,7 +83,6 @@ export default function CalendarPage() {
     }
   };
 
-  // 裏でこっそり最新データを取得する関数
   const fetchLatestDataSilently = async (tId, cacheKey) => {
     try {
       const { data: ordersData } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
@@ -111,7 +101,6 @@ export default function CalendarPage() {
     return ['未対応', '制作中', '制作完了', '配達中'];
   };
 
-  // ★ ステータスを履歴付きで更新する新ロジック
   const executeStatusUpdate = async (orderId) => {
     if (!updateForm.staff) {
       alert('ステータスを更新する担当スタッフを選択してください。');
@@ -162,12 +151,10 @@ export default function CalendarPage() {
     } catch (err) { alert('更新失敗'); }
   };
 
-  // ★ 注文の削除処理
   const handleDeleteOrder = async (id) => {
     const inputPass = prompt('この注文を削除しますか？\n実行するには管理者パスワードを入力してください。');
-    if (inputPass === null) return; // キャンセル時
+    if (inputPass === null) return; 
 
-    // 設定からパスワードを取得（未設定時は初期値 '7777'）
     const systemPass = appSettings?.generalConfig?.systemPassword || '7777';
 
     if (inputPass !== systemPass) {
@@ -181,11 +168,10 @@ export default function CalendarPage() {
       const { error } = await supabase.from('orders').delete().eq('id', id);
       if (error) throw error;
 
-      // 画面とキャッシュから削除
       const newOrders = orders.filter(o => o.id !== id);
       setOrders(newOrders);
       sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders));
-      setSelectedOrder(null); // モーダルを閉じる
+      setSelectedOrder(null); 
       alert('注文を削除しました。');
     } catch (error) {
       console.error('削除エラー:', error);
@@ -236,7 +222,7 @@ export default function CalendarPage() {
       if (!info) return '#';
       const address = `${info.address1 || ''} ${info.address2 || ''}`.trim();
       if (!address) return '#';
-      return `https://google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+      return `http://googleusercontent.com/maps.google.com/maps?q=${encodeURIComponent(address)}`;
     } catch (e) {
       return '#';
     }
@@ -261,9 +247,6 @@ export default function CalendarPage() {
     } catch (e) { return '日時不明'; }
   };
 
-  // ==========================================
-  // ★ 印刷ロジック (A4にピッタリ2伝票・スタッフ名正確反映版)
-  // ==========================================
   const handlePrint = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -275,11 +258,8 @@ export default function CalendarPage() {
       const recipient = d.isRecipientDifferent ? (d.recipientInfo || {}) : customer;
       const totals = getTotals(d);
       
-      // ★ 履歴から担当スタッフを抽出
       const history = d.statusHistory || [];
-      // 受注スタッフ（一番最初のスタッフか、元のデータ）
       const orderStaff = d.staffName || (history.length > 0 ? history[history.length - 1].staff : "");
-      // 配達スタッフ（「配達中」等のステータスに変更した最新のスタッフ）
       const deliveryHistory = history.find(h => h.status.includes('配達')) || history[0];
       const deliveryStaff = deliveryHistory ? deliveryHistory.staff : "";
 
@@ -396,7 +376,6 @@ export default function CalendarPage() {
         </div>
       `;
 
-      // ★ スタッフの出し分けをHTMLに反映
       const renderFooter = (type, hidePrice) => {
         let footerActionsHtml = '';
         if (type === 'customer') {
@@ -404,7 +383,6 @@ export default function CalendarPage() {
         } else if (type === 'delivery' || type === 'receipt') {
           footerActionsHtml = `<div class="check-group"><div class="check-label">配達</div><div class="check-box ${deliveryStaff ? 'filled' : ''}" style="border-color:#888;">${deliveryStaff}</div></div>`;
         } else {
-          // 店舗控
           footerActionsHtml = ['受注','配達','片付','請求'].map(l => {
             let name = ''; let filled = '';
             if (l === '受注' && orderStaff) { name = orderStaff; filled = 'filled'; }
@@ -435,7 +413,7 @@ export default function CalendarPage() {
           </div>
           ${renderClientBoxes(hidePrice)}
           ${renderItemsBlock(hidePrice)}
-          ${showReceiptNote ? `<div class="receipt-note">上記の商品を確かに受領いたしました。     受領日：    年    月    日      サインまたは印</div>` : ''}
+          ${showReceiptNote ? `<div class="receipt-note">上記の商品を確かに受領いたしました。    受領日：    年    月    日      サインまたは印</div>` : ''}
           ${renderFooter(type, hidePrice)}
         </div>
       `;
@@ -462,11 +440,11 @@ export default function CalendarPage() {
             .slip-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3mm; }
             .slip-title { font-size: 16pt; font-weight: bold; letter-spacing: 0.3em; }
             .meta-area { font-size: 8pt; text-align: right; line-height: 1.4; font-weight: bold; }
-            .info-grid { display: flex; gap: 4mm; height: 24mm; margin-bottom: 4mm; }
-            .info-box { flex: 1; border: 0.5pt solid #444; padding: 2mm; display: flex; flex-direction: column; position: relative; }
+            .info-grid { display: flex; gap: 4mm; min-height: 28mm; margin-bottom: 3mm; }
+            .info-box { flex: 1; border: 0.5pt solid #444; padding: 2mm; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
             .info-title { font-size: 7.5pt; font-weight: bold; color: #444; margin-bottom: 1mm; }
             .info-main { font-size: 12pt; font-weight: bold; }
-            .info-sub-bottom { margin-top: auto; font-size: 8pt; line-height: 1.3; }
+            .info-sub-bottom { margin-top: 1mm; font-size: 8pt; line-height: 1.25; }
             .same-text { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 12pt; color: #888; font-weight: bold; letter-spacing: 0.1em; }
             .items-area { flex-grow: 1; display: flex; flex-direction: column; margin-bottom: 1mm; }
             .items-table { width: 100%; border-collapse: collapse; }
@@ -527,7 +505,6 @@ export default function CalendarPage() {
       alert(`エラーが発生しました: ${err.message}`);
     }
   };
-  // ==========================================
 
   const handleSendEmail = (e) => {
     e.preventDefault();
@@ -630,7 +607,7 @@ export default function CalendarPage() {
   const isDelivery = modalData.receiveMethod === 'delivery';
 
   return (
-    <main className="pb-32 font-sans">
+    <div className="pb-32 font-sans">
       <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] flex flex-col md:flex-row md:items-center justify-between px-4 md:px-8 py-3 md:h-20 gap-3 sticky top-0 z-10">
         <div className="flex items-center justify-between w-full md:w-auto">
           <h1 className="text-[16px] md:text-[18px] font-bold tracking-tight text-[#2D4B3E]">納品カレンダー</h1>
@@ -731,9 +708,9 @@ export default function CalendarPage() {
               </div>
             </div>
             
-            <div className="p-4 md:p-8 space-y-6 md:space-y-8 text-left overflow-x-hidden">
+            {/* モーダルコンテンツ (スクロール) */}
+            <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8 text-left overflow-x-hidden">
               
-              {/* ステータス更新フォーム（履歴対応） */}
               <div className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className={`px-3 py-1.5 rounded-lg text-[11px] md:text-[12px] font-bold flex items-center gap-1 w-fit ${isPickup ? 'bg-orange-100 text-orange-700' : isDelivery ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
                   {isPickup ? <Store size={14}/> : isDelivery ? <Truck size={14}/> : <Package size={14}/>}
@@ -749,6 +726,8 @@ export default function CalendarPage() {
                   >
                     <option value="new">未対応 (新規)</option>
                     {getStatusOptions().map(l => <option key={l} value={l}>{l}</option>)}
+                    <option value="完了">完了</option>
+                    <option value="キャンセル">キャンセル</option>
                   </select>
                   <select 
                     value={updateForm.staff}
@@ -829,7 +808,6 @@ export default function CalendarPage() {
                         <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">宛名</span><span className="font-black text-[16px]">{modalTargetInfo?.name || '未設定'} 様</span></p>
                         <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">お届け先住所</span><span className="font-bold text-[14px] block leading-relaxed">〒{modalTargetInfo?.zip}<br/>{modalTargetInfo?.address1} {modalTargetInfo?.address2}</span></p>
                         
-                        {/* 📍 Googleマップボタン */}
                         <a 
                           href={getGoogleMapsUrl(modalTargetInfo)}
                           target="_blank"
@@ -899,9 +877,9 @@ export default function CalendarPage() {
                   <h3 className="text-[16px] font-black text-[#2D4B3E] border-b border-[#EAEAEA] pb-3 flex items-center gap-2"><CreditCard size={20}/> お支払い情報</h3>
                   <div className="space-y-3 text-[13px] md:text-[14px] font-medium text-[#555555]">
                     <div className="flex justify-between items-center"><span>商品代 (税抜):</span><span className="font-black text-[#111111] text-[16px]">¥{getTotals(modalData).item.toLocaleString()}</span></div>
-                    {getTotals(modalData).fee > 0 && <div className="flex justify-between items-center text-blue-600"><span>配送料 (箱・クール含):</span><span className="font-bold">¥{getTotals(modalData).fee.toLocaleString()}</span></div>}
-                    {getTotals(modalData).pickup > 0 && <div className="flex justify-between items-center text-orange-600"><span>器回収・返却費:</span><span className="font-bold">¥{getTotals(modalData).pickup.toLocaleString()}</span></div>}
-                    <div className="flex justify-between items-center border-t border-[#EAEAEA] pt-3 text-[#2D4B3E]"><span>消費税 (10%):</span><span className="font-bold">¥{getTotals(modalData).tax.toLocaleString()}</span></div>
+                    {getTotals(modalData).fee > 0 && <div className="flex justify-between items-center text-blue-600"><span>配送料 (箱・クール含):</span><span className="font-bold text-[16px]">¥{getTotals(modalData).fee.toLocaleString()}</span></div>}
+                    {getTotals(modalData).pickup > 0 && <div className="flex justify-between items-center text-orange-600"><span>器回収・返却費:</span><span className="font-bold text-[16px]">¥{getTotals(modalData).pickup.toLocaleString()}</span></div>}
+                    <div className="flex justify-between items-center border-t border-[#EAEAEA] pt-3 text-[#2D4B3E]"><span>消費税 (10%):</span><span className="font-bold text-[16px]">¥{getTotals(modalData).tax.toLocaleString()}</span></div>
                     
                     <div className="flex justify-between border-t-2 border-[#2D4B3E]/20 pt-4 mt-2 items-end">
                       <span className="text-[13px] font-bold text-[#2D4B3E] tracking-widest mb-1">合計 (税込)</span>
@@ -918,7 +896,7 @@ export default function CalendarPage() {
                 </div>
               </div>
 
-              {/* ★ 新機能：ステータス対応履歴の表示 */}
+              {/* 対応履歴 */}
               {modalData.statusHistory && modalData.statusHistory.length > 0 && (
                 <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm mb-4">
                   <h3 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2">
@@ -936,6 +914,7 @@ export default function CalendarPage() {
                 </div>
               )}
 
+              {/* メモ */}
               {modalData.note && (
                 <div className="bg-yellow-50 p-6 rounded-[24px] border border-yellow-200 shadow-sm mb-4">
                   <h3 className="text-[12px] font-bold text-yellow-800 mb-2 tracking-widest flex items-center gap-2">社内メモ / お客様要望</h3>
@@ -950,7 +929,11 @@ export default function CalendarPage() {
       <style jsx global>{`
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @media print {
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; }
+          .fixed { position: absolute !important; }
+        }
       `}</style>
-    </main>
+    </div>
   );
 }
