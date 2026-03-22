@@ -15,7 +15,7 @@ export default function StaffNewOrderPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ★ 新規: ログイン中のテナントIDを保持する
+  // ★ ログイン中のテナントIDを保持する
   const [currentTenantId, setCurrentTenantId] = useState(null);
 
   const [receptionType, setReceptionType] = useState('phone'); 
@@ -68,6 +68,14 @@ export default function StaffNewOrderPage() {
   };
   const [timeSlots, setTimeSlots] = useState(defaultTimeSlots);
 
+  // ★ 新規：設定画面と連動するデザイン選択肢の初期値
+  const defaultDesignOptions = {
+    purposes: ['誕生日', '開店', 'お供え', '就任・昇進祝い', '移転祝い'],
+    colors: ['おまかせ', '暖色系 (赤・ピンク・オレンジ)', '寒色系 (青・紫・白)', 'ホワイト・グリーン系'],
+    vibes: ['おまかせ (用途に合わせる)', 'かわいい', '豪華', '大人っぽい', '元気', '華やか・豪華', '上品・落ち着いた雰囲気']
+  };
+  const designOptions = appSettings?.designOptions || defaultDesignOptions;
+
   // ★ 認証＆データ取得ロジック（RLS対応）
   useEffect(() => {
     let isFirstLoad = true;
@@ -96,24 +104,21 @@ export default function StaffNewOrderPage() {
 
     async function fetchSettings() {
       try {
-        // 1. ログインチェック
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
           window.location.href = '/staff/login';
           return;
         }
 
-        // 2. プロフィールからテナントIDを取得
         const { data: profile, error: profileError } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
         if (profileError) throw profileError;
         
         const tId = profile.tenant_id;
         setCurrentTenantId(tId);
 
-        // 3. テナント固有の設定データを取得
         const [settingsRes, galleryRes] = await Promise.all([
           supabase.from('app_settings').select('settings_data').eq('id', tId).single(),
-          supabase.from('app_settings').select('settings_data').eq('id', 'gallery').single() // ギャラリーは一旦共通
+          supabase.from('app_settings').select('settings_data').eq('id', `${tId}_gallery`).single()
         ]);
 
         if (settingsRes.data?.settings_data) {
@@ -155,8 +160,10 @@ export default function StaffNewOrderPage() {
     }
   };
 
-  const isOsonae = flowerPurpose === 'お供え';
-  const tateOptions = isOsonae ? [
+  // ★ 修正箇所：キーワードで「お悔やみ・お供え」かどうかを賢く判定する！
+  const isOsonae = flowerPurpose.includes('供') || flowerPurpose.includes('悔') || flowerPurpose.includes('葬') || flowerPurpose.includes('忌');
+  
+  const allTateOptions = isOsonae ? [
     { id: 'p1', label: '① 御供｜横型 (背景あり)', needs: ['3'], layout: 'horizontal' },
     { id: 'p3', label: '② 御供｜縦型 (シンプル)', needs: ['3'], layout: 'vertical' },
     { id: 'p4', label: '③ 御供｜縦型 (会社名入)', needs: ['3a', '3b'], layout: 'vertical' }
@@ -166,7 +173,12 @@ export default function StaffNewOrderPage() {
     { id: 'p7', label: '⑦ 祝｜縦型 (二列構成)', needs: ['1', '3'], layout: 'vertical' },
     { id: 'p8', label: '⑧ 祝｜縦型 (三列完成版)', needs: ['1', '2', '3'], layout: 'vertical' }
   ];
-  const selectedTateOpt = tateOptions.find(opt => opt.id === tatePattern);
+
+  const currentShopSettings = appSettings?.shops?.find(s => shopId === 'default' ? true : String(s.id) === String(shopId)) || appSettings?.shops?.[0] || {};
+  const enabledTatePatterns = currentShopSettings.enabledTatePatterns || [];
+  
+  const availableTateOptions = allTateOptions.filter(opt => enabledTatePatterns.includes(opt.id));
+  const selectedTateOpt = availableTateOptions.find(opt => opt.id === tatePattern);
   const tateNeeds = selectedTateOpt?.needs || [];
 
   const transitDays = useMemo(() => {
@@ -204,7 +216,11 @@ export default function StaffNewOrderPage() {
     }
     const d = new Date(base);
     d.setDate(d.getDate() + prepDays + transitDays);
-    return d.toISOString().split('T')[0];
+    
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
   }, [flowerType, isBring, receiveMethod, selectedItemSettings, transitDays]);
 
   const minDateLimit = useMemo(() => {
@@ -311,16 +327,20 @@ export default function StaffNewOrderPage() {
           setShippingDate('');
         }
 
-        let size = selectedItemSettings?.defaultBoxSize || appSettings?.shippingSizes?.[0] || '80';
-        baseFee = Number(rateData['fee' + size]) || 0;
-
-        if (appSettings?.boxFeeConfig?.type === 'flat') {
-          boxFee = Number(appSettings.boxFeeConfig.flatFee) || 0;
-        } else if (appSettings?.boxFeeConfig?.type === 'price_based') {
-          const tiers = appSettings.boxFeeConfig.priceTiers || [];
-          const matchedTier = [...tiers].sort((a, b) => b.minPrice - a.minPrice).find(t => Number(itemPrice) >= t.minPrice);
-          boxFee = matchedTier ? Number(matchedTier.fee) : 0;
+        let size = selectedItemSettings?.defaultBoxSize;
+        if (!size) {
+          size = appSettings?.shippingSizes?.[0] || '80';
+          if (appSettings?.boxFeeConfig?.type === 'flat') {
+            boxFee = Number(appSettings.boxFeeConfig.flatFee) || 0;
+          } else if (appSettings?.boxFeeConfig?.type === 'price_based') {
+            const tiers = appSettings.boxFeeConfig.priceTiers || [];
+            const sortedTiers = [...tiers].sort((a, b) => b.minPrice - a.minPrice);
+            const matchedTier = sortedTiers.find(t => Number(itemPrice) >= t.minPrice);
+            boxFee = matchedTier ? Number(matchedTier.fee) : 0;
+          }
         }
+
+        baseFee = Number(rateData['fee' + size]) || 0;
 
         if (appSettings?.boxFeeConfig?.freeShippingThresholdEnabled && Number(itemPrice) >= (appSettings.boxFeeConfig.freeShippingThreshold || 15000)) {
           baseFee = 0; 
@@ -329,7 +349,8 @@ export default function StaffNewOrderPage() {
         if (!selectedItemSettings?.excludeCoolBin && appSettings?.boxFeeConfig?.coolBinEnabled && selectedDate) {
           const dateObj = new Date(selectedDate);
           const mmdd = String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + String(dateObj.getDate()).padStart(2, '0');
-          const isCool = (appSettings.boxFeeConfig.coolBinPeriods || []).some(p => mmdd >= p.start && mmdd <= p.end);
+          const periods = appSettings.boxFeeConfig.coolBinPeriods || [];
+          const isCool = periods.some(p => mmdd >= p.start && mmdd <= p.end);
           if (isCool) coolFee = Number(rateData['cool' + size]) || 0;
         }
 
@@ -395,7 +416,6 @@ export default function StaffNewOrderPage() {
         isStaffEntered: true 
       };
 
-      // ★ 新規: tenant_id を明示的に指定して登録する
       const { error } = await supabase.from('orders').insert([
         { tenant_id: currentTenantId, order_data: orderPayload }
       ]);
@@ -403,7 +423,7 @@ export default function StaffNewOrderPage() {
       if (error) throw error;
 
       alert('店舗注文を受付し、データを保存しました。');
-      router.push('/staff/orders'); // スタッフの受注一覧画面へ
+      router.push('/staff/orders'); 
       
     } catch (error) {
       console.error('注文エラー:', error.message);
@@ -537,19 +557,32 @@ export default function StaffNewOrderPage() {
 
             <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3 tracking-widest">2. 詳細と金額</h2>
             <div className="grid grid-cols-2 gap-4">
+              {/* ★ 設定画面のカスタマイズ項目（デザイン選択肢）を反映！ */}
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">用途</label>
-                <select value={flowerPurpose} onChange={(e) => setFlowerPurpose(e.target.value)} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none"><option value="">用途...</option><option value="誕生日">誕生日</option><option value="開店">開店</option><option value="お供え">お供え</option><option value="その他">その他</option></select>
+                <select value={flowerPurpose} onChange={(e) => setFlowerPurpose(e.target.value)} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
+                  <option value="">用途...</option>
+                  {designOptions.purposes.map(p => <option key={p} value={p}>{p}</option>)}
+                  <option value="その他">その他</option>
+                </select>
                 {flowerPurpose === 'その他' && <input type="text" placeholder="詳細を入力..." value={otherPurpose} onChange={(e) => setOtherPurpose(e.target.value)} className="w-full h-10 mt-2 bg-[#FBFAF9] px-4 rounded-lg outline-none text-[13px] border border-[#EAEAEA]" />}
               </div>
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">イメージ</label>
-                <select value={flowerVibe} onChange={(e) => setFlowerVibe(e.target.value)} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none"><option value="">イメージ...</option><option value="かわいい">かわいい</option><option value="豪華">豪華</option><option value="大人っぽい">大人っぽい</option><option value="元気">元気</option><option value="おまかせ">おまかせ</option><option value="その他">その他</option></select>
+                <select value={flowerVibe} onChange={(e) => setFlowerVibe(e.target.value)} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
+                  <option value="">イメージ...</option>
+                  {designOptions.vibes.map(v => <option key={v} value={v}>{v}</option>)}
+                  <option value="その他">その他</option>
+                </select>
                 {flowerVibe === 'その他' && <input type="text" placeholder="詳細を入力..." value={otherVibe} onChange={(e) => setOtherVibe(e.target.value)} className="w-full h-10 mt-2 bg-[#FBFAF9] px-4 rounded-lg outline-none text-[13px] border border-[#EAEAEA]" />}
               </div>
               <div className="space-y-2 col-span-2">
                 <label className="text-[11px] font-bold text-[#999999] tracking-widest">メインカラー</label>
-                <select value={flowerColor} onChange={(e) => setFlowerColor(e.target.value)} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none"><option value="">カラー...</option><option value="暖色系">暖色系</option><option value="寒色系">寒色系</option><option value="おまかせ">おまかせ</option></select>
+                <select value={flowerColor} onChange={(e) => setFlowerColor(e.target.value)} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
+                  <option value="">カラー...</option>
+                  {designOptions.colors.map(c => <option key={c} value={c}>{c}</option>)}
+                  <option value="その他">その他</option>
+                </select>
               </div>
             </div>
             
@@ -595,14 +628,20 @@ export default function StaffNewOrderPage() {
 
             {cardType === '立札' && (
               <div className="space-y-6 bg-white p-6 rounded-[28px] border border-[#EAEAEA] shadow-sm animate-in zoom-in-95 duration-300">
+                
+                {/* ★ 立札の出し分け（店舗設定で許可されているもの かつ 用途に合っているものだけを表示） */}
                 <select value={tatePattern} onChange={(e) => setTatePattern(e.target.value)} className="w-full h-14 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none font-bold text-[13px] focus:border-[#2D4B3E]">
                   <option value="">レイアウトを選択</option>
-                  {tateOptions.map(opt => (<option key={opt.id} value={opt.id}>{opt.label}</option>))}
+                  {availableTateOptions.length > 0 ? (
+                    availableTateOptions.map(opt => (<option key={opt.id} value={opt.id}>{opt.label}</option>))
+                  ) : (
+                    <option value="" disabled>現在この店舗で利用可能なテンプレートがありません</option>
+                  )}
                 </select>
                 
                 {tatePattern && (
                   <div className="space-y-3">
-                    {tateNeeds.includes('1') && <input type="text" placeholder="① 内容 (例: 御開店)" value={tateInput1} onChange={(e) => setTateInput1(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
+                    {tateNeeds.includes('1') && <input type="text" placeholder={`① 内容 (例: ${isOsonae ? '御供' : '御開店'})`} value={tateInput1} onChange={(e) => setTateInput1(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
                     {tateNeeds.includes('2') && <input type="text" placeholder="② 宛名 (例: 〇〇様)" value={tateInput2} onChange={(e) => setTateInput2(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
                     {tateNeeds.includes('3') && <input type="text" placeholder="③ 贈り主 (例: 株式会社〇〇)" value={tateInput3} onChange={(e) => setTateInput3(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
                     {tateNeeds.includes('3a') && <input type="text" placeholder="③-1 会社名" value={tateInput3a} onChange={(e) => setTateInput3a(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
