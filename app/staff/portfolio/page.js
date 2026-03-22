@@ -23,10 +23,6 @@ export default function PortfolioPage() {
   });
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const [importUrl, setImportUrl] = useState('');
-  const [isImporting, setIsImporting] = useState(false);
-  const [importedData, setImportedData] = useState(null);
-
   const [copiedId, setCopiedId] = useState(null);
 
   const defaultDesignOptions = {
@@ -83,7 +79,6 @@ export default function PortfolioPage() {
     setNewImage({ ...newImage, url: URL.createObjectURL(file), uploadFile: file });
   };
 
-  // ★ API通信処理（本番仕様）
   const handleGenerateCaption = async () => {
     if (!newImage.purpose || !newImage.color || !newImage.vibe) {
       alert('「用途」「カラー」「イメージ」を選択してからAIボタンを押してください。');
@@ -170,49 +165,6 @@ export default function PortfolioPage() {
       setImages(updated);
     } catch(err) {
       alert('削除に失敗しました');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // ★ API通信処理（本番仕様）
-  const handleImport = async (e) => {
-    e.preventDefault();
-    if (!importUrl) return;
-    setIsImporting(true);
-
-    try {
-      const response = await fetch('/api/import-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: importUrl })
-      });
-      const data = await response.json();
-      if (data && data.url) {
-        setImportedData(data);
-      }
-    } catch (err) {
-      alert('URLの読み込みに失敗しました。');
-    } finally {
-      setIsImporting(false);
-    }
-  };
-
-  const handleSaveImported = async (e) => {
-    e.preventDefault();
-    if (!importedData) return;
-    setIsSaving(true);
-    try {
-      const newItem = { ...importedData, id: `img_${Date.now()}`, price: Number(importedData.price) };
-      const updatedImages = [newItem, ...images];
-      await supabase.from('app_settings').upsert({ id: `${currentTenantId}_gallery`, settings_data: { images: updatedImages } });
-      setImages(updatedImages);
-      setImportedData(null);
-      setImportUrl('');
-      setActiveTab('list');
-      alert('インポートした作品を保存しました。');
-    } catch(err) {
-      alert('保存に失敗しました');
     } finally {
       setIsSaving(false);
     }
@@ -393,98 +345,35 @@ export default function PortfolioPage() {
           </form>
         )}
 
+        {/* ★ 変更箇所：開発中（Coming Soon）のオーバーレイを追加！ */}
         {activeTab === 'import' && (
           <div className="space-y-6 max-w-[800px] animate-in fade-in">
-            <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-4">
-              <h2 className="text-[16px] font-black text-[#2D4B3E] flex items-center gap-2"><Sparkles size={18}/> URLから自動取り込み</h2>
-              <p className="text-[12px] text-[#555555]">※APIルートを作成すると本番環境で実際に動作します。</p>
+            <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-4 relative overflow-hidden">
               
-              <form onSubmit={handleImport} className="flex gap-2 pt-2">
+              {/* 開発中オーバーレイ */}
+              <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center gap-3">
+                <div className="bg-[#2D4B3E] text-white px-6 py-3 rounded-full font-bold shadow-lg flex items-center gap-2">
+                  <Loader2 className="animate-spin" size={18} />
+                  現在開発中の機能です
+                </div>
+                <p className="text-[12px] font-bold text-[#555555] bg-white px-4 py-2 rounded-xl shadow-sm">
+                  当面は「新規登録 (画像)」タブから手動で登録をお願いします！
+                </p>
+              </div>
+
+              <h2 className="text-[16px] font-black text-[#2D4B3E] flex items-center gap-2"><Sparkles size={18}/> URLから自動取り込み</h2>
+              <p className="text-[12px] text-[#555555]">InstagramなどのURLを入力すると、画像とキャプションを自動で取得します。設定したAIプロンプトにより、金額や用途も自動推測されます。</p>
+              
+              <form className="flex gap-2 pt-2 opacity-50 pointer-events-none">
                 <input 
-                  type="url" required placeholder="https://instagram.com/p/..." 
-                  value={importUrl} onChange={e => setImportUrl(e.target.value)}
-                  className="flex-1 h-14 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] outline-none focus:border-[#2D4B3E]"
+                  type="url" placeholder="https://instagram.com/p/..." disabled
+                  className="flex-1 h-14 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] outline-none"
                 />
-                <button type="submit" disabled={isImporting || !importUrl} className="bg-[#2D4B3E] text-white px-6 md:px-8 rounded-xl font-bold text-[13px] hover:bg-[#1f352b] transition-all shadow-md disabled:opacity-50 flex items-center gap-2">
-                  {isImporting ? <><Loader2 size={16} className="animate-spin" /> 読込中</> : '読み込む'}
+                <button type="button" disabled className="bg-[#2D4B3E] text-white px-6 md:px-8 rounded-xl font-bold text-[13px] shadow-md flex items-center gap-2">
+                  読み込む
                 </button>
               </form>
             </div>
-
-            {importedData && (
-              <form onSubmit={handleSaveImported} className="bg-white p-8 rounded-[32px] border-2 border-[#2D4B3E]/20 shadow-md animate-in slide-in-from-bottom-4">
-                <h3 className="text-[14px] font-bold text-[#2D4B3E] mb-6 flex items-center gap-2"><CheckCircle size={18}/> 読み込み成功（内容を確認してください）</h3>
-                
-                <div className="flex flex-col md:flex-row gap-8">
-                  <div className="shrink-0 w-full md:w-[240px] space-y-4">
-                    <div className="aspect-square bg-[#F7F7F7] rounded-[24px] overflow-hidden border border-[#EAEAEA]">
-                      <img src={importedData.url} alt="インポート画像" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="p-4 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA]">
-                      <p className="text-[10px] font-bold text-[#999999] mb-1">取得したキャプション</p>
-                      <p className="text-[11px] text-[#555555] whitespace-pre-wrap leading-relaxed">{importedData.caption}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 space-y-4">
-                    <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-start gap-2">
-                      <Sparkles size={16} className="text-emerald-500 shrink-0 mt-0.5"/>
-                      <p className="text-[11px] text-emerald-800 font-bold leading-relaxed">AIがキャプションから金額と用途を推測しました。間違っている場合は手動で修正してください。</p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-[#999999] flex items-center justify-between">
-                        <span>金額 (税抜)</span> <span className="text-[9px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold">¥</span>
-                        <input type="number" required value={importedData.price} onChange={e => setImportedData({...importedData, price: e.target.value})} className="flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold focus:border-[#2D4B3E] outline-none" />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-[#999999] flex items-center justify-between">
-                          <span>用途</span> <span className="text-[9px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
-                        </label>
-                        <select required value={importedData.purpose} onChange={e => setImportedData({...importedData, purpose: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
-                          <option value="">未設定</option>
-                          {designOptions.purposes.map(p => <option key={p} value={p}>{p}</option>)}
-                          <option value="その他">その他</option>
-                        </select>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-[#999999] flex items-center justify-between">
-                          <span>カラー</span> <span className="text-[9px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
-                        </label>
-                        <select required value={importedData.color} onChange={e => setImportedData({...importedData, color: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
-                          <option value="">未設定</option>
-                          {designOptions.colors.map(c => <option key={c} value={c}>{c}</option>)}
-                          <option value="その他">その他</option>
-                        </select>
-                      </div>
-                      <div className="space-y-1 col-span-2">
-                        <label className="text-[11px] font-bold text-[#999999] flex items-center justify-between">
-                          <span>イメージ</span> <span className="text-[9px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
-                        </label>
-                        <select required value={importedData.vibe} onChange={e => setImportedData({...importedData, vibe: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
-                          <option value="">未設定</option>
-                          {designOptions.vibes.map(v => <option key={v} value={v}>{v}</option>)}
-                          <option value="その他">その他</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="pt-6 mt-4 border-t border-[#FBFAF9]">
-                      <button type="submit" disabled={isSaving} className="w-full bg-[#2D4B3E] text-white px-8 py-3.5 rounded-xl font-bold text-[14px] hover:bg-[#1f352b] transition-all shadow-md disabled:opacity-50">
-                        {isSaving ? '保存中...' : '登録を確定する'}
-                      </button>
-                    </div>
-
-                  </div>
-                </div>
-              </form>
-            )}
           </div>
         )}
 
