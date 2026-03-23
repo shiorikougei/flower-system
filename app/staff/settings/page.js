@@ -20,6 +20,9 @@ export default function SettingsPage() {
   const [showPassword, setShowPassword] = useState(false); 
   
   const [currentTenantId, setCurrentTenantId] = useState(null);
+  
+  // ★ 追加：法人機能（B2B）が有効かどうかを保持する
+  const [isB2BEnabled, setIsB2BEnabled] = useState(false);
 
   const [generalConfig, setGeneralConfig] = useState({ 
     tenantId: '', 
@@ -105,6 +108,9 @@ export default function SettingsPage() {
     if (s.staffOrderConfig) setStaffOrderConfig(s.staffOrderConfig);
     if (s.autoReplyTemplates) setAutoReplyTemplates(s.autoReplyTemplates);
     if (s.timeSlots) setTimeSlots(s.timeSlots);
+    
+    // ★ 追加：機能権限から法人機能（B2B）がONか確認
+    if (s.features && s.features.b2b) setIsB2BEnabled(true);
   };
 
   useEffect(() => {
@@ -140,17 +146,15 @@ export default function SettingsPage() {
     else alert('パスワードが違います');
   };
 
-  // ★ 修正箇所：現在の設定（料金や権限など）を取得して、上書きで消えないように合体させる！
   const saveSettings = async () => {
     if (!isAdmin || !currentTenantId) return;
     setIsSaving(true);
     try {
-      // 現在のデータベースの中身を取得
       const { data: current } = await supabase.from('app_settings').select('settings_data').eq('id', currentTenantId).single();
       const currentData = current?.settings_data || {};
 
       const payload = { 
-        ...currentData, // ★ ここで現在のデータ（料金・権限など）を保持！
+        ...currentData, 
         generalConfig: {...generalConfig, tenantId: currentTenantId}, 
         paymentConfig, 
         statusConfig, 
@@ -698,23 +702,27 @@ export default function SettingsPage() {
       <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 animate-in fade-in text-left">
         <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><LinkIcon size={20}/> URL・リンク発行</h2>
         <div className="space-y-6">
-          <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] space-y-4">
-            <h3 className="text-[14px] font-bold text-[#111111] flex items-center gap-2"><Building2 size={16}/> 法人のお客様向け</h3>
-            <div className="space-y-2">
-               <label className="text-[11px] font-bold text-[#999999]">法人ポータル・注文画面</label>
-               <div className="flex gap-2">
-                 <input type="text" readOnly value={`${baseUrl}/corporate/${tid}`} className="flex-1 h-12 px-4 bg-white border border-[#EAEAEA] rounded-xl text-[13px] font-mono outline-none text-[#555555]" />
-                 <button onClick={() => { navigator.clipboard.writeText(`${baseUrl}/corporate/${tid}`); alert('コピーしました！'); }} className="px-6 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold hover:bg-[#1f352b] transition-all">コピー</button>
-               </div>
+          
+          {/* ★ 追加：法人がONの時だけ表示される */}
+          {isB2BEnabled && (
+            <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] space-y-4">
+              <h3 className="text-[14px] font-bold text-[#111111] flex items-center gap-2"><Building2 size={16}/> 法人のお客様向け</h3>
+              <div className="space-y-2">
+                 <label className="text-[11px] font-bold text-[#999999]">法人ポータル・注文画面</label>
+                 <div className="flex gap-2">
+                   <input type="text" readOnly value={`${baseUrl}/corporate/${tid}`} className="flex-1 h-12 px-4 bg-white border border-[#EAEAEA] rounded-xl text-[13px] font-mono outline-none text-[#555555]" />
+                   <button onClick={() => { navigator.clipboard.writeText(`${baseUrl}/corporate/${tid}`); alert('コピーしました！'); }} className="px-6 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold hover:bg-[#1f352b] transition-all">コピー</button>
+                 </div>
+              </div>
+              <div className="space-y-2 pt-2">
+                 <label className="text-[11px] font-bold text-[#999999]">法人アカウント 新規登録フォーム</label>
+                 <div className="flex gap-2">
+                   <input type="text" readOnly value={`${baseUrl}/corporate/register/${tid}`} className="flex-1 h-12 px-4 bg-white border border-[#EAEAEA] rounded-xl text-[13px] font-mono outline-none text-[#555555]" />
+                   <button onClick={() => { navigator.clipboard.writeText(`${baseUrl}/corporate/register/${tid}`); alert('コピーしました！'); }} className="px-6 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold hover:bg-[#1f352b] transition-all">コピー</button>
+                 </div>
+              </div>
             </div>
-            <div className="space-y-2 pt-2">
-               <label className="text-[11px] font-bold text-[#999999]">法人アカウント 新規登録フォーム</label>
-               <div className="flex gap-2">
-                 <input type="text" readOnly value={`${baseUrl}/corporate/register/${tid}`} className="flex-1 h-12 px-4 bg-white border border-[#EAEAEA] rounded-xl text-[13px] font-mono outline-none text-[#555555]" />
-                 <button onClick={() => { navigator.clipboard.writeText(`${baseUrl}/corporate/register/${tid}`); alert('コピーしました！'); }} className="px-6 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold hover:bg-[#1f352b] transition-all">コピー</button>
-               </div>
-            </div>
-          </div>
+          )}
 
           <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] space-y-4">
             <h3 className="text-[14px] font-bold text-[#111111] flex items-center gap-2"><Store size={16}/> 一般のお客様向け (店舗別注文ページ)</h3>
