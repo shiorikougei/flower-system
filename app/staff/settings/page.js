@@ -21,7 +21,6 @@ export default function SettingsPage() {
   
   const [currentTenantId, setCurrentTenantId] = useState(null);
 
-  // ★ 変更：不要なダミー項目（zipCode, address, phone, invoiceNumber）を削除しました！
   const [generalConfig, setGeneralConfig] = useState({ 
     tenantId: '', 
     appName: 'FLORIX', 
@@ -29,11 +28,7 @@ export default function SettingsPage() {
   });
 
   const [paymentConfig, setPaymentConfig] = useState({
-    bankName: '',
-    branchName: '',
-    accountType: '普通',
-    accountNumber: '',
-    accountName: ''
+    bankName: '', branchName: '', accountType: '普通', accountNumber: '', accountName: ''
   });
 
   const [statusConfig, setStatusConfig] = useState({ type: 'template', customLabels: ['受注', '制作', '配達', '片付', '請求'] });
@@ -46,7 +41,6 @@ export default function SettingsPage() {
 
   const [shops, setShops] = useState([]); 
   const [flowerItems, setFlowerItems] = useState([]);
-
   const [deliveryAreas, setDeliveryAreas] = useState([]);
   const [shippingSizes, setShippingSizes] = useState(['80', '100', '120']);
   const [shippingRates, setShippingRates] = useState([]); 
@@ -146,11 +140,17 @@ export default function SettingsPage() {
     else alert('パスワードが違います');
   };
 
+  // ★ 修正箇所：現在の設定（料金や権限など）を取得して、上書きで消えないように合体させる！
   const saveSettings = async () => {
     if (!isAdmin || !currentTenantId) return;
     setIsSaving(true);
     try {
+      // 現在のデータベースの中身を取得
+      const { data: current } = await supabase.from('app_settings').select('settings_data').eq('id', currentTenantId).single();
+      const currentData = current?.settings_data || {};
+
       const payload = { 
+        ...currentData, // ★ ここで現在のデータ（料金・権限など）を保持！
         generalConfig: {...generalConfig, tenantId: currentTenantId}, 
         paymentConfig, 
         statusConfig, 
@@ -180,8 +180,6 @@ export default function SettingsPage() {
   const addTimeSlot = (method) => { setTimeSlots(prev => ({ ...prev, [method]: [...prev[method], ''] })); };
   const removeTimeSlot = (method, index) => { setTimeSlots(prev => ({ ...prev, [method]: prev[method].filter((_, i) => i !== index) })); };
 
-  // --- タブレンダリング用関数群 ---
-
   const renderGeneralTab = () => (
     <div className="space-y-8 animate-in fade-in">
       <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8">
@@ -192,8 +190,6 @@ export default function SettingsPage() {
             <p className="text-[10px] text-[#999999] mb-2">※法人ページやお客様の注文ページのURLに使用されます。</p>
             <input type="text" value={generalConfig.tenantId || currentTenantId || ''} readOnly className="w-full h-12 bg-white border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none text-gray-500 transition-colors" />
           </div>
-
-          {/* ★ 変更：不要な項目を削除し、アプリ名のみにスッキリさせました！ */}
           <div className="pt-2">
             <div className="space-y-1">
               <label className="text-[11px] font-bold text-[#999999]">アプリ名 (ショップ全体名)</label>
@@ -206,30 +202,16 @@ export default function SettingsPage() {
       <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8">
         <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={20}/> 振込先口座情報 (法人請求書用)</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="text-[11px] font-bold text-[#999999]">銀行名</label>
-            <input type="text" value={paymentConfig.bankName} onChange={(e)=>setPaymentConfig({...paymentConfig, bankName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E] transition-colors" placeholder="〇〇銀行"/>
-          </div>
-          <div className="space-y-1">
-            <label className="text-[11px] font-bold text-[#999999]">支店名</label>
-            <input type="text" value={paymentConfig.branchName} onChange={(e)=>setPaymentConfig({...paymentConfig, branchName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E] transition-colors" placeholder="〇〇支店"/>
-          </div>
+          <div className="space-y-1"><label className="text-[11px] font-bold text-[#999999]">銀行名</label><input type="text" value={paymentConfig.bankName} onChange={(e)=>setPaymentConfig({...paymentConfig, bankName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="〇〇銀行"/></div>
+          <div className="space-y-1"><label className="text-[11px] font-bold text-[#999999]">支店名</label><input type="text" value={paymentConfig.branchName} onChange={(e)=>setPaymentConfig({...paymentConfig, branchName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="〇〇支店"/></div>
           <div className="space-y-1">
             <label className="text-[11px] font-bold text-[#999999]">口座種別</label>
-            <select value={paymentConfig.accountType} onChange={(e)=>setPaymentConfig({...paymentConfig, accountType: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E] transition-colors">
-              <option value="普通">普通</option>
-              <option value="当座">当座</option>
-              <option value="貯蓄">貯蓄</option>
+            <select value={paymentConfig.accountType} onChange={(e)=>setPaymentConfig({...paymentConfig, accountType: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]">
+              <option value="普通">普通</option><option value="当座">当座</option><option value="貯蓄">貯蓄</option>
             </select>
           </div>
-          <div className="space-y-1">
-            <label className="text-[11px] font-bold text-[#999999]">口座番号</label>
-            <input type="text" value={paymentConfig.accountNumber} onChange={(e)=>setPaymentConfig({...paymentConfig, accountNumber: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-mono outline-none focus:border-[#2D4B3E] transition-colors" placeholder="1234567"/>
-          </div>
-          <div className="space-y-1 md:col-span-2">
-            <label className="text-[11px] font-bold text-[#999999]">口座名義 (カナ等)</label>
-            <input type="text" value={paymentConfig.accountName} onChange={(e)=>setPaymentConfig({...paymentConfig, accountName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E] transition-colors" placeholder="カ）ハナハナオハナ"/>
-          </div>
+          <div className="space-y-1"><label className="text-[11px] font-bold text-[#999999]">口座番号</label><input type="text" value={paymentConfig.accountNumber} onChange={(e)=>setPaymentConfig({...paymentConfig, accountNumber: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-mono outline-none focus:border-[#2D4B3E]" placeholder="1234567"/></div>
+          <div className="space-y-1 md:col-span-2"><label className="text-[11px] font-bold text-[#999999]">口座名義 (カナ等)</label><input type="text" value={paymentConfig.accountName} onChange={(e)=>setPaymentConfig({...paymentConfig, accountName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="カ）ハナハナオハナ"/></div>
         </div>
       </div>
 
@@ -240,7 +222,7 @@ export default function SettingsPage() {
           {!generalConfig.logoUrl && <input type="file" accept="image/*" onChange={(e)=>handleImg(e, 'logoUrl')} className="block w-full text-xs" />}
           {generalConfig.logoUrl && (
             <div className="p-6 bg-[#FBFAF9] rounded-2xl border space-y-6 relative">
-              <button onClick={() => setGeneralConfig({...generalConfig, logoUrl: ''})} className="absolute top-4 right-4 text-red-400 hover:text-red-600 bg-white p-2 rounded-full shadow-sm transition-colors"><Trash2 size={16}/></button>
+              <button onClick={() => setGeneralConfig({...generalConfig, logoUrl: ''})} className="absolute top-4 right-4 text-red-400 hover:text-red-600 bg-white p-2 rounded-full shadow-sm"><Trash2 size={16}/></button>
               <div className="flex items-center justify-between"><span className="text-[12px] font-bold">表示サイズ: {generalConfig.logoSize}%</span><input type="range" min="30" max="150" value={generalConfig.logoSize} onChange={(e)=>setGeneralConfig({...generalConfig, logoSize: Number(e.target.value)})} className="w-40 accent-[#2D4B3E]"/></div>
               <div className="flex items-center justify-between"><span className="text-[12px] font-bold">白背景を透過</span><button onClick={()=>setGeneralConfig({...generalConfig, logoTransparent: !generalConfig.logoTransparent})} className={`w-12 h-6 rounded-full transition-all ${generalConfig.logoTransparent ? 'bg-[#2D4B3E]' : 'bg-gray-300'}`}><div className={`w-4 h-4 bg-white rounded-full mx-1 transition-all ${generalConfig.logoTransparent ? 'translate-x-6' : ''}`}/></button></div>
               <div className="flex justify-center border-t pt-4 bg-white rounded-xl p-4"><img src={generalConfig.logoUrl} style={{width: `${generalConfig.logoSize}%`, mixBlendMode: generalConfig.logoTransparent ? 'multiply' : 'normal'}} className="max-h-24 object-contain" /></div>
@@ -275,7 +257,6 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
-
     </div>
   );
 
