@@ -2,9 +2,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase'; 
 import { 
-  Calendar, ChevronRight, Truck, Store, Package
+  Calendar, ChevronRight, Truck, Store, Package, AlertCircle, CheckCircle2
 } from 'lucide-react';
-import OrderDetailModal from '@/components/OrderDetailModal'; // ★共通モーダルを呼び出し
+import OrderDetailModal from '@/components/OrderDetailModal'; 
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -105,6 +105,32 @@ export default function OrdersPage() {
       setSelectedOrder({ ...targetOrder, order_data: updatedData });
     } catch (err) { 
       alert('更新に失敗しました。'); 
+    }
+  };
+
+  // ★ 新規追加：入金ステータス更新処理
+  const handleUpdatePayment = async (orderId, currentData) => {
+    if (!confirm('この注文を「入金済」として処理しますか？')) return;
+    try {
+      let newStatus = '入金済';
+      if (currentData.paymentStatus) {
+        newStatus = currentData.paymentStatus.replace('未', '済');
+        if (newStatus === currentData.paymentStatus) newStatus = '入金済';
+      }
+
+      const updatedData = { ...currentData, paymentStatus: newStatus };
+      
+      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId);
+      
+      const newOrders = orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o);
+      setOrders(newOrders);
+      sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders)); 
+      
+      setSelectedOrder(prev => ({ ...prev, order_data: updatedData }));
+      alert('入金済みに更新しました！🎉');
+    } catch (error) {
+      console.error(error);
+      alert('更新に失敗しました。');
     }
   };
 
@@ -225,6 +251,8 @@ export default function OrdersPage() {
           <div className="grid grid-cols-1 gap-4">
             {filteredOrders.map(order => {
               const d = order?.order_data || {};
+              const isUnpaid = !d.paymentStatus || d.paymentStatus.includes('未') || d.paymentStatus === '';
+              
               return (
                 <div 
                   key={order.id} 
@@ -247,6 +275,17 @@ export default function OrdersPage() {
                       <span className="text-[11px] font-bold text-[#555555] border border-[#EAEAEA] px-3 py-1.5 rounded-lg bg-[#FBFAF9] shadow-sm">
                         {d.status === 'new' ? '未対応' : (d.status || '未対応')}
                       </span>
+                      
+                      {/* ★ 入金ステータスバッジを追加 */}
+                      {isUnpaid ? (
+                        <span className="text-[10px] font-bold bg-[#D97D54]/10 text-[#D97D54] px-2 py-1 rounded border border-[#D97D54]/20 flex items-center gap-1">
+                          <AlertCircle size={12}/> {d.paymentStatus || '未設定'}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded border border-green-200 flex items-center gap-1">
+                          <CheckCircle2 size={12}/> {d.paymentStatus}
+                        </span>
+                      )}
                     </div>
                     <div className="text-[16px] md:text-[18px] font-black text-[#111111] group-hover:text-[#2D4B3E] transition-colors">
                       {d.customerInfo?.name || 'お名前未設定'} 様 <span className="text-[12px] text-[#999999] font-medium ml-2">({d.flowerType || '商品未設定'})</span>
@@ -270,12 +309,13 @@ export default function OrdersPage() {
         )}
       </main>
 
-      {/* ★ 共通コンポーネントを呼び出すだけ！スッキリ！ */}
+      {/* ★ onUpdatePayment を新たに追加！ */}
       <OrderDetailModal 
         order={selectedOrder} 
         appSettings={appSettings} 
         onClose={() => setSelectedOrder(null)} 
         onUpdateStatus={handleUpdateStatus} 
+        onUpdatePayment={handleUpdatePayment} 
         onArchive={handleArchive} 
         onDelete={handleDelete} 
       />

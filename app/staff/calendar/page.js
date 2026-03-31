@@ -4,7 +4,7 @@ import { supabase } from '@/utils/supabase';
 import { 
   ChevronLeft, ChevronRight, RefreshCw, Calendar as CalendarIcon, 
 } from 'lucide-react';
-import OrderDetailModal from '@/components/OrderDetailModal'; // ★ コンポーネントをインポート！
+import OrderDetailModal from '@/components/OrderDetailModal'; 
 
 export default function CalendarPage() {
   const [orders, setOrders] = useState([]);
@@ -82,7 +82,6 @@ export default function CalendarPage() {
     }
   };
 
-  // 親でステータス更新関数を用意し、モーダルに渡す
   const handleUpdateStatus = async (orderId, newStatus, staffName) => {
     if (!staffName) {
       alert('ステータスを更新する担当スタッフを選択してください。');
@@ -117,7 +116,32 @@ export default function CalendarPage() {
     }
   };
 
-  // 親でアーカイブ関数を用意
+  // ★ 新規追加：入金ステータス更新処理
+  const handleUpdatePayment = async (orderId, currentData) => {
+    if (!confirm('この注文を「入金済」として処理しますか？')) return;
+    try {
+      let newStatus = '入金済';
+      if (currentData.paymentStatus) {
+        newStatus = currentData.paymentStatus.replace('未', '済');
+        if (newStatus === currentData.paymentStatus) newStatus = '入金済';
+      }
+
+      const updatedData = { ...currentData, paymentStatus: newStatus };
+      
+      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId);
+      
+      const newOrders = orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o);
+      setOrders(newOrders);
+      sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders)); 
+      
+      setSelectedOrder(prev => ({ ...prev, order_data: updatedData }));
+      alert('入金済みに更新しました！🎉');
+    } catch (error) {
+      console.error(error);
+      alert('更新に失敗しました。');
+    }
+  };
+
   const handleArchive = async (orderId, isArchive) => {
     const newStatus = isArchive ? 'completed' : 'new';
     if (!confirm(`この注文を${isArchive ? '完了' : '未完了'}にしますか？`)) return;
@@ -134,7 +158,6 @@ export default function CalendarPage() {
     } catch (err) { alert('更新失敗'); }
   };
 
-  // 親で削除関数を用意
   const handleDelete = async (orderId) => {
     const inputPass = prompt('この注文を削除しますか？\n実行するには管理者パスワードを入力してください。');
     if (inputPass === null) return; 
@@ -304,12 +327,13 @@ export default function CalendarPage() {
         )}
       </div>
 
-      {/* ★ ここで共通コンポーネントを呼び出す！ */}
+      {/* ★ onUpdatePayment を新たに追加！ */}
       <OrderDetailModal 
         order={selectedOrder} 
         appSettings={appSettings} 
         onClose={() => setSelectedOrder(null)} 
         onUpdateStatus={handleUpdateStatus} 
+        onUpdatePayment={handleUpdatePayment} 
         onArchive={handleArchive} 
         onDelete={handleDelete} 
       />

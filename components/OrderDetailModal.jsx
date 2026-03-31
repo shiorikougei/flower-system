@@ -4,7 +4,7 @@ import {
   X, Printer, Send, Archive, RotateCcw, Trash2, 
   Store, Truck, Package, ListChecks, ChevronRight, 
   Calendar as CalendarIcon, User, MapPin, AlertCircle, 
-  Tag, MessageSquare, CreditCard 
+  Tag, MessageSquare, CreditCard, CheckCircle2 // ★ CheckCircle2 を追加
 } from 'lucide-react';
 import TatefudaPreview from '@/components/TatefudaPreview';
 
@@ -13,6 +13,7 @@ export default function OrderDetailModal({
   appSettings, 
   onClose, 
   onUpdateStatus, 
+  onUpdatePayment, // ★ 追加：親から渡される入金更新関数
   onArchive, 
   onDelete 
 }) {
@@ -35,6 +36,10 @@ export default function OrderDetailModal({
   const isSagawa = modalData.receiveMethod === 'sagawa';
   const isPickup = modalData.receiveMethod === 'pickup';
   const isDelivery = modalData.receiveMethod === 'delivery';
+
+  // ★ 入金ステータスの判定
+  const isUnpaid = !modalData.paymentStatus || modalData.paymentStatus.includes('未') || modalData.paymentStatus === '';
+  const currentPaymentStatus = modalData.paymentStatus || '未設定';
 
   const safeFormatDate = (dateString, withTime = false) => {
     try {
@@ -102,7 +107,6 @@ export default function OrderDetailModal({
       const receiveMethodStr = getMethodLabel(modalData.receiveMethod);
       const datePart = modalData.selectedDate || '未指定';
       
-      // ★ ここがエラーの原因だった箇所を安全に修正！！
       let paymentStatus = '未設定';
       if (modalData.paymentMethod) {
         paymentStatus = modalData.paymentMethod;
@@ -358,6 +362,17 @@ export default function OrderDetailModal({
               <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${modalData.status === 'completed' || modalData.status === '完了' ? 'bg-gray-100 text-gray-500' : 'bg-orange-50 text-orange-600 border border-orange-100'}`}>
                 {modalData.status === 'completed' || modalData.status === '完了' ? '完了' : '未完了'}
               </span>
+              
+              {/* ★ ヘッダーにも入金バッジを配置 */}
+              {isUnpaid ? (
+                <span className="text-[10px] font-bold bg-[#D97D54]/10 text-[#D97D54] px-2 py-0.5 rounded border border-[#D97D54]/20 flex items-center gap-1">
+                  <AlertCircle size={12}/> {currentPaymentStatus}
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded border border-green-200 flex items-center gap-1">
+                  <CheckCircle2 size={12}/> {currentPaymentStatus}
+                </span>
+              )}
             </div>
             <p className="text-[10px] md:text-[11px] text-[#999999] font-bold mt-1">受付: {safeFormatDate(order.created_at, true)} | ID: {order.id}</p>
           </div>
@@ -575,11 +590,35 @@ export default function OrderDetailModal({
                   <span className="text-[32px] md:text-[36px] font-black text-[#2D4B3E] leading-none">¥{getTotals(modalData).total.toLocaleString()}</span>
                 </div>
               </div>
+              
+              {/* ★ ここを大改造！入金状況の表示と更新ボタンを設置 */}
               {modalData.paymentMethod && (
-                <div className="pt-4 flex justify-end border-t border-[#EAEAEA]">
-                  <span className="inline-block bg-[#2D4B3E]/10 text-[#2D4B3E] px-4 py-2 rounded-xl text-[12px] font-bold border border-[#2D4B3E]/20 shadow-sm">
+                <div className="pt-4 flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-[#EAEAEA]">
+                  <span className="inline-block bg-[#F7F7F7] text-[#555555] px-4 py-2 rounded-xl text-[12px] font-bold border border-[#EAEAEA] shadow-sm">
                     支払方法: {modalData.paymentMethod}
                   </span>
+                  
+                  <div className="flex items-center gap-3">
+                    {isUnpaid ? (
+                      <>
+                        <span className="text-[12px] font-bold text-[#D97D54] flex items-center gap-1">
+                          <AlertCircle size={16}/> {currentPaymentStatus}
+                        </span>
+                        {onUpdatePayment && (
+                          <button 
+                            onClick={() => onUpdatePayment(order.id, modalData)}
+                            className="px-4 py-2 bg-[#D97D54] text-white text-[12px] font-bold rounded-xl hover:bg-[#c26d48] transition-all shadow-sm flex items-center gap-1.5 active:scale-95"
+                          >
+                            <CheckCircle2 size={16}/> 入金済にする
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-[12px] font-bold text-green-600 bg-green-50 px-3 py-2 rounded-xl border border-green-200 flex items-center gap-1">
+                        <CheckCircle2 size={16}/> {currentPaymentStatus}
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
