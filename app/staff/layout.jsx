@@ -4,22 +4,8 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 import { 
-  Home,
-  ClipboardList, 
-  PlusSquare, 
-  CalendarDays, 
-  Truck, 
-  Briefcase, 
-  Users, 
-  Building2, 
-  Settings,
-  TrendingUp,
-  Lock,
-  Sparkles,
-  MessageSquare,
-  X,
-  Send,
-  Image as ImageIcon // ★ アイコン追加
+  Home, ClipboardList, PlusSquare, CalendarDays, Truck, Briefcase, 
+  Users, Building2, Settings, TrendingUp, Lock, Sparkles, MessageSquare, X, Send, Image as ImageIcon 
 } from 'lucide-react';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
@@ -46,15 +32,25 @@ export default function StaffLayout({ children }) {
 
     async function fetchSettings() {
       try {
-        const cached = sessionStorage.getItem(SETTINGS_CACHE_KEY);
+        // ★修正：セッションからログインユーザーのtenant_idを取得して、正しい店舗のデータを引っ張る！
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
+        if (!profile?.tenant_id) return;
+
+        const tenantId = profile.tenant_id;
+
+        const cached = sessionStorage.getItem(`${SETTINGS_CACHE_KEY}_${tenantId}`);
         if (cached) {
           applySettings(JSON.parse(cached));
         }
 
-        const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'default').single();
+        // ★修正：'default'ではなく、実際のtenantIdで検索！
+        const { data } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
         if (data?.settings_data) {
           applySettings(data.settings_data);
-          sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(data.settings_data));
+          sessionStorage.setItem(`${SETTINGS_CACHE_KEY}_${tenantId}`, JSON.stringify(data.settings_data));
         }
       } catch (error) {
         console.error('設定の取得に失敗しました', error);
@@ -63,7 +59,6 @@ export default function StaffLayout({ children }) {
     fetchSettings();
   }, []);
 
-  // ★ メニューに「作品管理」を追加！
   const baseMenuItems = [
     { name: 'ホーム', path: '/staff', icon: Home },
     { name: '店舗注文受付', path: '/staff/new-order', icon: PlusSquare },
@@ -72,7 +67,7 @@ export default function StaffLayout({ children }) {
     { name: '配達管理', path: '/staff/deliveries', icon: Truck },
     { name: '売上管理', path: '/staff/sales', icon: TrendingUp },
     { name: '顧客管理', path: '/staff/customers', icon: Users },
-    { name: '作品管理', path: '/staff/portfolio', icon: ImageIcon }, // ★ ここに追加！
+    { name: '作品管理', path: '/staff/portfolio', icon: ImageIcon },
     { name: '各種設定', path: '/staff/settings', icon: Settings },
   ];
 

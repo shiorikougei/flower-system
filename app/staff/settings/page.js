@@ -21,7 +21,6 @@ export default function SettingsPage() {
   
   const [currentTenantId, setCurrentTenantId] = useState(null);
   
-  // ★ 追加：法人機能（B2B）が有効かどうかを保持する
   const [isB2BEnabled, setIsB2BEnabled] = useState(false);
 
   const [generalConfig, setGeneralConfig] = useState({ 
@@ -30,6 +29,7 @@ export default function SettingsPage() {
     logoUrl: '', logoSize: 100, logoTransparent: false, slipBgUrl: '', slipBgOpacity: 50, systemPassword: '7777'
   });
 
+  // ★ 削除せずに残す（後で法人側のコードを直すまでの繋ぎとして、一応保存データには持たせておきます）
   const [paymentConfig, setPaymentConfig] = useState({
     bankName: '', branchName: '', accountType: '普通', accountNumber: '', accountName: ''
   });
@@ -80,10 +80,10 @@ export default function SettingsPage() {
   ]);
 
   const tabs = [
-    { id: 'general', label: '基本・請求情報', icon: SettingsIcon },
+    { id: 'general', label: '基本・ロゴ', icon: SettingsIcon }, // ★ラベルを少し短くしました
     { id: 'status', label: 'ステータス', icon: ListChecks },
     { id: 'design', label: 'デザイン選択肢', icon: Palette },
-    { id: 'shop', label: '店舗・特別日', icon: Store }, 
+    { id: 'shop', label: '店舗・口座・特別日', icon: Store }, 
     { id: 'items', label: '商品・納期', icon: Tag },
     { id: 'shipping', label: '配送・時間枠', icon: Truck },
     { id: 'rules', label: '立札デザイン', icon: LayoutTemplate },
@@ -109,7 +109,6 @@ export default function SettingsPage() {
     if (s.autoReplyTemplates) setAutoReplyTemplates(s.autoReplyTemplates);
     if (s.timeSlots) setTimeSlots(s.timeSlots);
     
-    // ★ 追加：機能権限から法人機能（B2B）がONか確認
     if (s.features && s.features.b2b) setIsB2BEnabled(true);
   };
 
@@ -156,7 +155,7 @@ export default function SettingsPage() {
       const payload = { 
         ...currentData, 
         generalConfig: {...generalConfig, tenantId: currentTenantId}, 
-        paymentConfig, 
+        paymentConfig, // 一旦消さずに残します（法人側修正の繋ぎ）
         statusConfig, 
         designOptions,
         shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReplyTemplates, staffOrderConfig, timeSlots 
@@ -203,21 +202,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8">
-        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={20}/> 振込先口座情報 (法人請求書用)</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-1"><label className="text-[11px] font-bold text-[#999999]">銀行名</label><input type="text" value={paymentConfig.bankName} onChange={(e)=>setPaymentConfig({...paymentConfig, bankName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="〇〇銀行"/></div>
-          <div className="space-y-1"><label className="text-[11px] font-bold text-[#999999]">支店名</label><input type="text" value={paymentConfig.branchName} onChange={(e)=>setPaymentConfig({...paymentConfig, branchName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="〇〇支店"/></div>
-          <div className="space-y-1">
-            <label className="text-[11px] font-bold text-[#999999]">口座種別</label>
-            <select value={paymentConfig.accountType} onChange={(e)=>setPaymentConfig({...paymentConfig, accountType: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]">
-              <option value="普通">普通</option><option value="当座">当座</option><option value="貯蓄">貯蓄</option>
-            </select>
-          </div>
-          <div className="space-y-1"><label className="text-[11px] font-bold text-[#999999]">口座番号</label><input type="text" value={paymentConfig.accountNumber} onChange={(e)=>setPaymentConfig({...paymentConfig, accountNumber: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-mono outline-none focus:border-[#2D4B3E]" placeholder="1234567"/></div>
-          <div className="space-y-1 md:col-span-2"><label className="text-[11px] font-bold text-[#999999]">口座名義 (カナ等)</label><input type="text" value={paymentConfig.accountName} onChange={(e)=>setPaymentConfig({...paymentConfig, accountName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="カ）ハナハナオハナ"/></div>
-        </div>
-      </div>
+      {/* ★ ここにあった口座情報を削除し、店舗(Shop)タブへ移動しました！ */}
 
       <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8">
         <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><ImageIcon size={20}/> ロゴ・画像・セキュリティ</h2>
@@ -395,9 +380,21 @@ export default function SettingsPage() {
             <div className="space-y-1 md:col-span-2"><label className="text-[10px] font-bold text-[#999999]">インボイス番号</label><input type="text" value={shop.invoiceNumber || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, invoiceNumber:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="T12345..."/></div>
           </div>
           
-          <div className="space-y-1 border-t pt-4 border-[#EAEAEA]">
-            <label className="text-[10px] font-bold text-[#999999]">振込先口座情報</label>
-            <textarea value={shop.bankInfo || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, bankInfo:e.target.value}:s))} className="w-full h-24 bg-[#FBFAF9] border rounded-xl p-3 text-[12px] outline-none resize-none focus:border-[#2D4B3E]" placeholder="銀行名 支店名..."/>
+          {/* ★ 店舗ごとの口座情報設定をここに追加！ */}
+          <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
+            <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={16}/> 振込先口座情報 (法人請求書等用)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+              <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">銀行名</label><input type="text" value={shop.bankName || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, bankName:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="〇〇銀行"/></div>
+              <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">支店名</label><input type="text" value={shop.branchName || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, branchName:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="〇〇支店"/></div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-[#999999]">口座種別</label>
+                <select value={shop.accountType || '普通'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, accountType:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]">
+                  <option value="普通">普通</option><option value="当座">当座</option><option value="貯蓄">貯蓄</option>
+                </select>
+              </div>
+              <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">口座番号</label><input type="text" value={shop.accountNumber || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, accountNumber:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-mono outline-none focus:border-[#2D4B3E]" placeholder="1234567"/></div>
+              <div className="space-y-1 md:col-span-2"><label className="text-[10px] font-bold text-[#999999]">口座名義 (カナ等)</label><input type="text" value={shop.accountName || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, accountName:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="カ）ハナハナオハナ"/></div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-[#FBFAF9]">
@@ -452,6 +449,8 @@ export default function SettingsPage() {
         onClick={()=>setShops([...shops, {
           id:Date.now(), name:'', isActive:true, openTime:'10:00', closeTime:'19:00', deliveryOpenTime:'11:00', deliveryCloseTime:'18:00', 
           specialHours:[], deliverySpecialHours:[], enabledTatePatterns: ['p5', 'p7'],
+          // ★ 追加時の初期値に口座情報を空欄でセット
+          bankName: '', branchName: '', accountType: '普通', accountNumber: '', accountName: '',
           pickupNote: 'ご来店予定日時に店舗までお越しください。', deliveryNote: '交通状況により配達時間が前後する場合がございます。', shippingNote: '発送準備期間＋配送日数がかかります。交通状況により遅延する場合がございます。',
           absenceInstruction: '生花のため、ご不在時は原則として置き配または宅配ボックスへのお届けとなります。ご希望の対応をお選びください。'
         }])} 
@@ -703,7 +702,6 @@ export default function SettingsPage() {
         <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><LinkIcon size={20}/> URL・リンク発行</h2>
         <div className="space-y-6">
           
-          {/* ★ 追加：法人がONの時だけ表示される */}
           {isB2BEnabled && (
             <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] space-y-4">
               <h3 className="text-[14px] font-bold text-[#111111] flex items-center gap-2"><Building2 size={16}/> 法人のお客様向け</h3>
