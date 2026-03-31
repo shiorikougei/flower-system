@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 import { 
   Wand2, Copy, ExternalLink, CheckCircle, Trash2, 
-  Plus, Link as LinkIcon, Image as ImageIcon, Loader2, Sparkles, LayoutGrid 
+  Plus, Link as LinkIcon, Image as ImageIcon, Loader2, Sparkles, LayoutGrid,
+  Camera, ArrowRight // ★ アイコン追加
 } from 'lucide-react';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
@@ -12,13 +13,16 @@ const GALLERY_CACHE_KEY = 'florix_gallery_cache';
 export default function PortfolioPage() {
   const [appSettings, setAppSettings] = useState(null);
   const [images, setImages] = useState([]);
+  
+  // ★ 新規追加：完成写真がアップロードされた注文のリスト
+  const [completedOrders, setCompletedOrders] = useState([]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [currentTenantId, setCurrentTenantId] = useState(null);
 
   const [activeTab, setActiveTab] = useState('list');
 
-  // ★ 変更点: flowerType (お花の種類) を追加！
   const [newImage, setNewImage] = useState({
     id: '', url: '', caption: '', price: '', flowerType: '', purpose: '', color: '', vibe: '', uploadFile: null
   });
@@ -32,7 +36,6 @@ export default function PortfolioPage() {
     vibes: ['おまかせ (用途に合わせる)', 'かわいい', '豪華', '大人っぽい', '元気', '華やか・豪華', '上品・落ち着いた雰囲気']
   };
   const designOptions = appSettings?.designOptions || defaultDesignOptions;
-  // ★ 変更点: 設定からお花の種類一覧を取得
   const flowerItems = appSettings?.flowerItems || [];
 
   useEffect(() => {
@@ -50,9 +53,11 @@ export default function PortfolioPage() {
         const tId = profile.tenant_id;
         setCurrentTenantId(tId);
 
-        const [settingsRes, galleryRes] = await Promise.all([
+        // ★ 注文データも一緒に取得して、完成写真があるものだけを抽出！
+        const [settingsRes, galleryRes, ordersRes] = await Promise.all([
           supabase.from('app_settings').select('settings_data').eq('id', tId).single(),
-          supabase.from('app_settings').select('settings_data').eq('id', `${tId}_gallery`).single()
+          supabase.from('app_settings').select('settings_data').eq('id', `${tId}_gallery`).single(),
+          supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(200)
         ]);
 
         if (settingsRes.data?.settings_data) {
@@ -60,6 +65,11 @@ export default function PortfolioPage() {
         }
         if (galleryRes.data?.settings_data) {
           setImages(galleryRes.data.settings_data.images || []);
+        }
+        if (ordersRes.data) {
+          // 完成写真 (completionImage) がある注文だけをフィルター
+          const withImages = ordersRes.data.filter(o => o.order_data?.completionImage);
+          setCompletedOrders(withImages);
         }
       } catch (err) {
         console.error('データ取得エラー:', err.message);
@@ -82,8 +92,24 @@ export default function PortfolioPage() {
     setNewImage({ ...newImage, url: URL.createObjectURL(file), uploadFile: file });
   };
 
+  // ★ 新規追加：注文リストから写真と情報を引き継いでセットする関数
+  const handleSelectOrderImage = (order) => {
+    const d = order.order_data;
+    setNewImage({
+      id: '',
+      url: d.completionImage, // URLをそのまま引き継ぐ
+      caption: '', // キャプションは空（あとでAI生成する）
+      price: d.itemPrice || '',
+      flowerType: d.flowerType || '',
+      purpose: d.flowerPurpose || '',
+      color: d.flowerColor || '',
+      vibe: d.flowerVibe || '',
+      uploadFile: 'from_order' // 注文からの引き継ぎであることを示すフラグ
+    });
+    setActiveTab('new'); // 新規登録タブに移動！
+  };
+
   const handleGenerateCaption = async () => {
-    // ★ バリデーションにお花の種類を追加
     if (!newImage.flowerType || !newImage.purpose || !newImage.color || !newImage.vibe) {
       alert('「お花の種類」「用途」「カラー」「イメージ」を選択してからAIボタンを押してください。');
       return;
@@ -95,7 +121,7 @@ export default function PortfolioPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          flowerType: newImage.flowerType, // ★ APIにも送信
+          flowerType: newImage.flowerType,
           purpose: newImage.purpose,
           color: newImage.color,
           vibe: newImage.vibe,
@@ -117,28 +143,35 @@ export default function PortfolioPage() {
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
-    // ★ バリデーションにお花の種類を追加
-    if (!newImage.uploadFile || !newImage.flowerType || !newImage.purpose || !newImage.color || !newImage.vibe || !newImage.price) {
+    
+    // ★ urlが存在すればOKに変更（uploadFile必須ではない）
+    if (!newImage.url || !newImage.flowerType || !newImage.purpose || !newImage.color || !newImage.vibe || !newImage.price) {
       alert('画像、金額、お花の種類、用途、カラー、イメージは必須項目です。'); return;
     }
 
     setIsSaving(true);
     try {
-      const fileExt = newImage.uploadFile.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `${currentTenantId}/${fileName}`;
+      let finalImageUrl = newImage.url;
 
-      const { error: uploadError } = await supabase.storage.from('portfolio').upload(filePath, newImage.uploadFile);
-      if (uploadError) throw uploadError;
+      // 手動でアップロードされた画像（from_orderフラグがない）場合のみ、Storageに保存する
+      if (newImage.uploadFile && newImage.uploadFile !== 'from_order') {
+        const fileExt = newImage.uploadFile.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `${currentTenantId}/${fileName}`;
 
-      const { data: publicUrlData } = supabase.storage.from('portfolio').getPublicUrl(filePath);
+        const { error: uploadError } = await supabase.storage.from('portfolio').upload(filePath, newImage.uploadFile);
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage.from('portfolio').getPublicUrl(filePath);
+        finalImageUrl = publicUrlData.publicUrl;
+      }
       
       const newItem = { 
         id: `img_${Date.now()}`, 
-        url: publicUrlData.publicUrl,
+        url: finalImageUrl,
         caption: newImage.caption,
         price: Number(newImage.price),
-        flowerType: newImage.flowerType, // ★ DBに保存
+        flowerType: newImage.flowerType,
         purpose: newImage.purpose,
         color: newImage.color,
         vibe: newImage.vibe
@@ -150,10 +183,9 @@ export default function PortfolioPage() {
       if (dbError) throw dbError;
       
       setImages(updatedImages);
-      // ★ 初期化にもお花の種類を追加
       setNewImage({ id: '', url: '', caption: '', price: '', flowerType: '', purpose: '', color: '', vibe: '', uploadFile: null });
       setActiveTab('list');
-      alert('作品データを保存しました。');
+      alert('作品データを保存しました！🎉');
 
     } catch (err) {
       console.error(err);
@@ -203,8 +235,13 @@ export default function PortfolioPage() {
           <button onClick={() => setActiveTab('list')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all ${activeTab === 'list' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}>
             <LayoutGrid size={16}/> 登録済み一覧
           </button>
+          {/* ★ 新規追加：納品写真から作成タブ */}
+          <button onClick={() => setActiveTab('from_orders')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all ${activeTab === 'from_orders' ? 'bg-white shadow-sm text-[#D97D54]' : 'text-[#999999] hover:text-[#555555]'}`}>
+            <Camera size={16}/> 納品写真から作成
+            {completedOrders.length > 0 && <span className={`ml-1 px-1.5 rounded-full text-[10px] ${activeTab === 'from_orders' ? 'bg-[#D97D54]/10 text-[#D97D54]' : 'bg-[#D97D54] text-white'}`}>{completedOrders.length}</span>}
+          </button>
           <button onClick={() => setActiveTab('new')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all ${activeTab === 'new' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}>
-            <Plus size={16}/> 新規登録 (画像)
+            <Plus size={16}/> 手動で新規登録
           </button>
           <button onClick={() => setActiveTab('import')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all ${activeTab === 'import' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}>
             <LinkIcon size={16}/> 過去分登録 (URL)
@@ -232,7 +269,6 @@ export default function PortfolioPage() {
                     </div>
                     <div className="p-5 flex flex-col flex-1">
                       <div className="flex flex-wrap gap-1.5 mb-3">
-                        {/* ★ お花の種類を一番目立つ色で表示 */}
                         {img.flowerType && <span className="px-2 py-1 bg-[#2D4B3E] border border-[#2D4B3E] rounded text-[10px] font-bold text-white shadow-sm">{img.flowerType}</span>}
                         <span className="px-2 py-1 bg-[#FBFAF9] border border-[#EAEAEA] rounded text-[10px] font-bold text-[#555555]">{img.purpose}</span>
                         <span className="px-2 py-1 bg-[#FBFAF9] border border-[#EAEAEA] rounded text-[10px] font-bold text-[#555555]">{img.color}</span>
@@ -267,8 +303,68 @@ export default function PortfolioPage() {
           </div>
         )}
 
+        {/* =========================================================
+            ★ 新機能：納品写真から作成するタブ
+            ========================================================= */}
+        {activeTab === 'from_orders' && (
+          <div className="animate-in fade-in duration-300">
+            <h2 className="text-[14px] font-bold text-[#D97D54] tracking-widest mb-6 border-l-4 border-[#D97D54] pl-3 flex items-center gap-2">
+              <Camera size={18}/> 注文詳細でアップロードされた完成写真
+            </h2>
+            
+            {completedOrders.length === 0 ? (
+              <div className="bg-white p-12 text-center rounded-[32px] border border-dashed border-[#EAEAEA] text-[#999999] text-[13px] font-bold tracking-widest">
+                まだ完成写真がアップロードされた注文はありません。<br/>
+                <span className="text-[11px] font-normal block mt-2">注文詳細画面から完成写真をアップロードすると、ここに自動的に表示されます。</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {completedOrders.map(order => {
+                  const d = order.order_data;
+                  return (
+                    <div key={order.id} className="bg-white rounded-[24px] border border-[#EAEAEA] overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col group">
+                      <div className="relative aspect-square bg-[#FBFAF9]">
+                        <img src={d.completionImage} alt="Completion" className="w-full h-full object-cover" />
+                        <div className="absolute top-3 left-3 bg-[#111111]/70 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold text-white flex items-center gap-1">
+                          ID: {order.id.slice(0, 6)}
+                        </div>
+                      </div>
+                      <div className="p-5 space-y-4">
+                        <div>
+                          <p className="text-[14px] font-black text-[#2D4B3E] truncate">{d.customerInfo?.name} 様のご注文</p>
+                          <p className="text-[11px] font-bold text-[#999999] mt-1">{d.flowerType || '未設定'} / ¥{Number(d.itemPrice || 0).toLocaleString()}</p>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          <span className="px-2 py-0.5 bg-[#F7F7F7] text-[#555] rounded text-[9px]">{d.flowerPurpose || '用途未定'}</span>
+                          <span className="px-2 py-0.5 bg-[#F7F7F7] text-[#555] rounded text-[9px]">{d.flowerColor || '色未定'}</span>
+                          <span className="px-2 py-0.5 bg-[#F7F7F7] text-[#555] rounded text-[9px]">{d.flowerVibe || 'イメージ未定'}</span>
+                        </div>
+                        <button 
+                          onClick={() => handleSelectOrderImage(order)}
+                          className="w-full flex items-center justify-center gap-2 py-3 bg-[#D97D54]/10 text-[#D97D54] rounded-xl font-bold text-[12px] hover:bg-[#D97D54] hover:text-white transition-all group-hover:shadow-md"
+                        >
+                          この写真で作品を登録 <ArrowRight size={14}/>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 手動登録（＆ 納品写真からの編集画面） */}
         {activeTab === 'new' && (
-          <form onSubmit={handleAddSubmit} className="bg-white p-6 md:p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm max-w-[800px] space-y-6 animate-in fade-in">
+          <form onSubmit={handleAddSubmit} className="bg-white p-6 md:p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm max-w-[800px] space-y-6 animate-in fade-in relative">
+            
+            {/* 納品写真から引き継いだ場合のお知らせバッジ */}
+            {newImage.uploadFile === 'from_order' && (
+              <div className="absolute -top-3 -right-3 md:top-6 md:right-8 bg-[#D97D54] text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-md flex items-center gap-1">
+                <CheckCircle size={12}/> 注文情報を引き継ぎました
+              </div>
+            )}
+
             <h2 className="text-[16px] font-bold text-[#2D4B3E] tracking-widest border-b border-[#FBFAF9] pb-4">新規作品の登録</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -282,8 +378,12 @@ export default function PortfolioPage() {
                       <span className="text-[12px] font-bold block">クリックして選択</span>
                     </div>
                   )}
+                  {/* from_orderの時は再アップロードできないようにカバーするか、上書き許可する。ここでは上書き許可 */}
                   <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
                 </div>
+                {newImage.uploadFile === 'from_order' && (
+                  <p className="text-[10px] font-bold text-[#999999] text-center">※完成写真がセットされています</p>
+                )}
               </div>
               
               <div className="space-y-4">
@@ -297,7 +397,6 @@ export default function PortfolioPage() {
                   </div>
                 </div>
                 
-                {/* ★ 4マスのグリッドに変更して「お花の種類」を追加！ */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-[11px] font-bold text-[#999999] flex items-center justify-between">
@@ -352,7 +451,7 @@ export default function PortfolioPage() {
                     value={newImage.caption} 
                     onChange={e => setNewImage({ ...newImage, caption: e.target.value })} 
                     placeholder="AIボタンを押すか、直接入力してください。"
-                    className="w-full h-24 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-4 text-[13px] resize-none focus:border-[#2D4B3E] outline-none"
+                    className="w-full h-32 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-4 text-[13px] resize-none focus:border-[#2D4B3E] outline-none"
                   ></textarea>
                 </div>
               </div>
@@ -377,7 +476,7 @@ export default function PortfolioPage() {
                   現在開発中の機能です
                 </div>
                 <p className="text-[12px] font-bold text-[#555555] bg-white px-4 py-2 rounded-xl shadow-sm">
-                  当面は「新規登録 (画像)」タブから手動で登録をお願いします！
+                  当面は「手動で新規登録」タブをご利用ください！
                 </p>
               </div>
 
