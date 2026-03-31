@@ -6,7 +6,6 @@ import {
   Calendar, ChevronRight, X, Filter, PieChart
 } from 'lucide-react';
 
-// ★ キャッシュ用のキーを定義
 const CUSTOMERS_ORDERS_CACHE_KEY = 'florix_customers_orders_cache';
 
 export default function CustomersPage() {
@@ -14,10 +13,9 @@ export default function CustomersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // 新しいフィルター＆ソート状態
-  const [sortOption, setSortOption] = useState('recent'); // recent, frequent, spend
+  const [sortOption, setSortOption] = useState('recent');
   const [filterMonth, setFilterMonth] = useState('all');
-  const [filterType, setFilterType] = useState('all'); // all, new, repeat
+  const [filterType, setFilterType] = useState('all');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   useEffect(() => {
@@ -25,20 +23,18 @@ export default function CustomersPage() {
   }, []);
 
   const fetchOrders = async () => {
-    // 1. まずは sessionStorage (キャッシュ) から復元して高速表示
     const cached = sessionStorage.getItem(CUSTOMERS_ORDERS_CACHE_KEY);
     if (cached) {
       try {
         setOrders(JSON.parse(cached));
-        setIsLoading(false); // キャッシュがあればローディングを即解除
+        setIsLoading(false);
       } catch (e) {
         console.error("キャッシュパース失敗", e);
       }
     } else {
-      setIsLoading(true); // キャッシュがない初回のみローディングを表示
+      setIsLoading(true);
     }
 
-    // 2. バックグラウンドで最新データをDBから取得
     try {
       const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
       if (error) throw error;
@@ -46,7 +42,6 @@ export default function CustomersPage() {
       const fetchedOrders = data || [];
       setOrders(fetchedOrders);
       
-      // キャッシュを最新データで上書き保存
       sessionStorage.setItem(CUSTOMERS_ORDERS_CACHE_KEY, JSON.stringify(fetchedOrders));
     } catch (error) {
       console.error('取得エラー:', error.message);
@@ -55,7 +50,6 @@ export default function CustomersPage() {
     }
   };
 
-  // 注文データから「顧客ごとの名寄せ・集計」を自動で行うロジック
   const customers = useMemo(() => {
     const cmap = {};
     
@@ -104,7 +98,6 @@ export default function CustomersPage() {
     return Object.values(cmap);
   }, [orders]);
 
-  // 存在する「注文月」のリストを生成（セレクトボックス用）
   const availableMonths = useMemo(() => {
     const months = new Set();
     orders.forEach(o => {
@@ -114,14 +107,11 @@ export default function CustomersPage() {
     return Array.from(months).sort().reverse();
   }, [orders]);
 
-  // 検索 ＋ 月別 ＋ 新規/リピート ＋ 並び替え の複合フィルター
   const filteredAndSortedCustomers = useMemo(() => {
     let result = customers.filter(c => {
-      // 1. テキスト検索
       const matchSearch = c.name.includes(searchQuery) || c.phone.includes(searchQuery) || c.email.includes(searchQuery);
       if (!matchSearch) return false;
 
-      // 2. 月別フィルター（その月に注文した人だけを残す）
       if (filterMonth !== 'all') {
         const orderedInMonth = c.orders.some(o => {
           const d = new Date(o.created_at);
@@ -130,14 +120,12 @@ export default function CustomersPage() {
         if (!orderedInMonth) return false;
       }
 
-      // 3. 新規/リピート フィルター
       if (filterType === 'new' && c.orderCount > 1) return false;
       if (filterType === 'repeat' && c.orderCount < 2) return false;
 
       return true;
     });
 
-    // 並び替え
     switch (sortOption) {
       case 'recent': result.sort((a, b) => new Date(b.lastOrderDate) - new Date(a.lastOrderDate)); break;
       case 'frequent': result.sort((a, b) => b.orderCount - a.orderCount); break;
@@ -146,7 +134,6 @@ export default function CustomersPage() {
     return result;
   }, [customers, searchQuery, sortOption, filterMonth, filterType]);
 
-  // 円グラフ用のデータ計算
   const chartData = useMemo(() => {
     const total = filteredAndSortedCustomers.length;
     const repeatCount = filteredAndSortedCustomers.filter(c => c.orderCount >= 2).length;
@@ -154,7 +141,6 @@ export default function CustomersPage() {
     const repeatPercent = total === 0 ? 0 : Math.round((repeatCount / total) * 100);
     const newPercent = total === 0 ? 0 : 100 - repeatPercent;
     
-    // SVGの円周計算 (半径40の場合、2 * π * 40 ≈ 251.2)
     const circumference = 251.2;
     const repeatDash = (repeatPercent / 100) * circumference;
 
@@ -169,10 +155,11 @@ export default function CustomersPage() {
     } catch (e) { return '-'; }
   };
 
+  // ★変更：顧客ランクのタグも、画像通りにおしゃれな塗りつぶしカラーに変更
   const getCustomerRank = (c) => {
-    if (c.orderCount >= 5 || c.totalSpent >= 50000) return { label: 'VIP顧客', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' };
-    if (c.orderCount >= 2) return { label: 'リピーター', color: 'bg-blue-100 text-blue-800 border-blue-200' };
-    return { label: '新規顧客', color: 'bg-green-100 text-green-800 border-green-200' };
+    if (c.orderCount >= 5 || c.totalSpent >= 50000) return { label: 'VIP顧客', color: 'bg-yellow-500 text-white border-transparent' };
+    if (c.orderCount >= 2) return { label: 'リピーター', color: 'bg-[#2D4B3E] text-white border-transparent' };
+    return { label: '新規顧客', color: 'bg-[#D97D54] text-white border-transparent' };
   };
 
   return (
@@ -184,7 +171,6 @@ export default function CustomersPage() {
         </div>
         
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          {/* 月別フィルター */}
           <div className="flex items-center bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl overflow-hidden shadow-sm">
             <div className="px-3 text-[#999]"><Calendar size={14}/></div>
             <select 
@@ -197,7 +183,6 @@ export default function CustomersPage() {
             </select>
           </div>
 
-          {/* 検索バー */}
           <div className="relative flex-1 md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999]" size={16} />
             <input 
@@ -213,17 +198,16 @@ export default function CustomersPage() {
 
       <div className="p-4 md:p-8 max-w-[1200px] mx-auto space-y-6">
         
-        {/* 分析ダッシュボード（円グラフ付き） */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
-          {/* 円グラフセクション */}
           <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm flex items-center justify-between col-span-1 md:col-span-2">
             <div className="space-y-4 flex-1">
               <h2 className="text-[14px] font-black text-[#2D4B3E] flex items-center gap-2"><PieChart size={18}/> 新規・リピート比率</h2>
               <div className="flex gap-6">
                 <div className="space-y-1">
-                  <div className="flex items-center gap-1 text-[11px] font-bold text-[#999]"><span className="w-2.5 h-2.5 rounded-full bg-[#D97C8F]"></span>新規顧客</div>
-                  <div className="text-[20px] font-black text-[#333]">{chartData.newCount}<span className="text-[12px] font-bold text-[#999]">人</span> <span className="text-[12px] text-[#D97C8F]">({chartData.newPercent}%)</span></div>
+                  {/* ★変更：ピンクをテラコッタ(#D97D54)に変更 */}
+                  <div className="flex items-center gap-1 text-[11px] font-bold text-[#999]"><span className="w-2.5 h-2.5 rounded-full bg-[#D97D54]"></span>新規顧客</div>
+                  <div className="text-[20px] font-black text-[#333]">{chartData.newCount}<span className="text-[12px] font-bold text-[#999]">人</span> <span className="text-[12px] text-[#D97D54]">({chartData.newPercent}%)</span></div>
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center gap-1 text-[11px] font-bold text-[#999]"><span className="w-2.5 h-2.5 rounded-full bg-[#2D4B3E]"></span>リピーター</div>
@@ -232,12 +216,10 @@ export default function CustomersPage() {
               </div>
             </div>
             
-            {/* CSSとSVGで作るドーナツチャート */}
             <div className="relative w-28 h-28 shrink-0 mr-4">
               <svg width="100%" height="100%" viewBox="0 0 100 100" className="transform -rotate-90">
-                {/* 背景（新規顧客カラー） */}
-                <circle cx="50" cy="50" r="40" stroke="#fce4e4" strokeWidth="16" fill="transparent" />
-                {/* グラフ部分（リピーターカラー） */}
+                {/* ★変更：グラフの背景色をテラコッタに合う淡い色(#F4E0D6)に変更 */}
+                <circle cx="50" cy="50" r="40" stroke="#F4E0D6" strokeWidth="16" fill="transparent" />
                 <circle 
                   cx="50" cy="50" r="40" 
                   stroke="#2D4B3E" strokeWidth="16" fill="transparent"
@@ -252,7 +234,6 @@ export default function CustomersPage() {
             </div>
           </div>
 
-          {/* 売上サマリー */}
           <div className="bg-[#2D4B3E] p-6 rounded-[24px] shadow-md flex flex-col justify-center text-white relative overflow-hidden">
             <ShoppingBag size={80} className="absolute -right-4 -bottom-4 text-white/10" />
             <span className="text-[11px] font-bold text-white/70 tracking-widest mb-1 relative z-10">表示中の累計売上</span>
@@ -260,13 +241,13 @@ export default function CustomersPage() {
           </div>
         </div>
 
-        {/* 顧客リストの上部ツールバー */}
         <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-[20px] border border-[#EAEAEA] shadow-sm">
           <div className="flex items-center gap-2">
             <Filter size={16} className="text-[#999] ml-2"/>
             <div className="flex bg-[#FBFAF9] p-1 rounded-xl border border-[#EAEAEA]">
               <button onClick={() => setFilterType('all')} className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${filterType === 'all' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999]'}`}>すべて</button>
-              <button onClick={() => setFilterType('new')} className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${filterType === 'new' ? 'bg-white shadow-sm text-[#D97C8F]' : 'text-[#999]'}`}>新規のみ</button>
+              {/* ★変更：ピンクをテラコッタ(#D97D54)に変更 */}
+              <button onClick={() => setFilterType('new')} className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${filterType === 'new' ? 'bg-white shadow-sm text-[#D97D54]' : 'text-[#999]'}`}>新規のみ</button>
               <button onClick={() => setFilterType('repeat')} className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${filterType === 'repeat' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999]'}`}>リピートのみ</button>
             </div>
           </div>
@@ -282,7 +263,6 @@ export default function CustomersPage() {
           </select>
         </div>
 
-        {/* 顧客リスト */}
         {isLoading ? (
           <div className="p-20 text-center text-[#999] font-bold animate-pulse tracking-widest">顧客データを集計中...</div>
         ) : filteredAndSortedCustomers.length === 0 ? (
@@ -342,7 +322,6 @@ export default function CustomersPage() {
         )}
       </div>
 
-      {/* 詳細モーダル（注文履歴） */}
       {selectedCustomer && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#111111]/60 backdrop-blur-sm p-4 animate-in fade-in text-left" onClick={() => setSelectedCustomer(null)}>
           <div className="bg-[#FBFAF9] rounded-[32px] w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl relative flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -366,7 +345,6 @@ export default function CustomersPage() {
 
             <div className="p-6 md:p-8 space-y-8">
               
-              {/* 顧客基本情報 */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-3">
                   <h3 className="text-[12px] font-bold text-[#999] tracking-widest flex items-center gap-2"><User size={14}/> 連絡先情報</h3>
@@ -384,7 +362,6 @@ export default function CustomersPage() {
                 </div>
               </div>
 
-              {/* 統計サマリー */}
               <div className="flex bg-[#2D4B3E]/5 border border-[#2D4B3E]/20 rounded-2xl p-4 divide-x divide-[#2D4B3E]/10">
                 <div className="flex-1 text-center space-y-1">
                   <p className="text-[10px] font-bold text-[#555] tracking-widest">注文回数</p>
@@ -400,19 +377,18 @@ export default function CustomersPage() {
                 </div>
               </div>
 
-              {/* 注文履歴タイムライン */}
               <div className="bg-white rounded-[24px] border border-[#EAEAEA] shadow-sm p-6">
                 <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#F7F7F7] pb-3 mb-4 flex items-center gap-2">
                   <CalendarIcon size={16} /> 過去の注文履歴
                 </h3>
                 <div className="space-y-4">
-                  {selectedCustomer.orders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map((order, idx) => {
+                  {/* ★修正：エラーの原因だった破壊的変更(sort)を防ぐために [... ] でコピーを作成！ */}
+                  {([...selectedCustomer.orders]).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map((order, idx) => {
                     const d = order.order_data || {};
                     const methodLabel = d.receiveMethod === 'pickup' ? '店頭受取' : d.receiveMethod === 'delivery' ? '自社配達' : '業者配送';
                     
                     return (
                       <div key={order.id} className="relative pl-6 pb-6 last:pb-0 group">
-                        {/* タイムラインの線と点 */}
                         <div className="absolute left-[7px] top-2 bottom-0 w-[2px] bg-[#EAEAEA] group-last:bg-transparent"></div>
                         <div className="absolute left-0 top-1.5 w-4 h-4 rounded-full bg-white border-4 border-[#2D4B3E] z-10 shadow-sm"></div>
 
