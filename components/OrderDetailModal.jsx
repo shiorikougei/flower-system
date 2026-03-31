@@ -1,10 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { supabase } from '@/utils/supabase'; // ★ Storage用にインポート追加
 import { 
   X, Printer, Send, Archive, RotateCcw, Trash2, 
   Store, Truck, Package, ListChecks, ChevronRight, 
   Calendar as CalendarIcon, User, MapPin, AlertCircle, 
-  Tag, MessageSquare, CreditCard, CheckCircle2 // ★ CheckCircle2 を追加
+  Tag, MessageSquare, CreditCard, CheckCircle2, Upload, ImageIcon // ★ アイコン追加
 } from 'lucide-react';
 import TatefudaPreview from '@/components/TatefudaPreview';
 
@@ -13,7 +14,7 @@ export default function OrderDetailModal({
   appSettings, 
   onClose, 
   onUpdateStatus, 
-  onUpdatePayment, // ★ 追加：親から渡される入金更新関数
+  onUpdatePayment, 
   onArchive, 
   onDelete 
 }) {
@@ -21,6 +22,9 @@ export default function OrderDetailModal({
     status: order?.order_data?.currentStatus || order?.order_data?.status || 'new', 
     staff: '' 
   });
+  
+  // ★ 完成写真のアップロード状態を管理するState
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     setUpdateForm({
@@ -37,7 +41,6 @@ export default function OrderDetailModal({
   const isPickup = modalData.receiveMethod === 'pickup';
   const isDelivery = modalData.receiveMethod === 'delivery';
 
-  // ★ 入金ステータスの判定
   const isUnpaid = !modalData.paymentStatus || modalData.paymentStatus.includes('未') || modalData.paymentStatus === '';
   const currentPaymentStatus = modalData.paymentStatus || '未設定';
 
@@ -92,6 +95,52 @@ export default function OrderDetailModal({
     { id: 'p8', label: '⑧ 祝｜縦型 (三列完成版)', needs: ['1', '2', '3'], layout: 'vertical' }
   ];
   const selectedTateOpt = allTateOptions.find(opt => opt.id === modalData.tatePattern);
+
+  // ==========================================
+  // ★ 完成画像のアップロード処理
+  // ==========================================
+  const handleUploadCompletionImage = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      // ファイル名をユニークにする (completion_注文ID_タイムスタンプ.jpg)
+      const fileExt = file.name.split('.').pop();
+      const fileName = `completion_${order.id}_${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`; // portfolioバケットの直下に保存
+
+      // Supabaseの「portfolio」バケットに画像をアップロード
+      const { error: uploadError } = await supabase.storage
+        .from('portfolio')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // 誰でも見れる「公開URL」を取得する
+      const { data: { publicUrl } } = supabase.storage
+        .from('portfolio')
+        .getPublicUrl(filePath);
+
+      // 今の注文データ(modalData)に completionImage のURLを追加して、DBを更新！
+      const updatedData = { ...modalData, completionImage: publicUrl };
+      const { error: dbError } = await supabase.from('orders')
+        .update({ order_data: updatedData })
+        .eq('id', order.id);
+
+      if (dbError) throw dbError;
+
+      // 画面の表示をすぐに書き換えるためのちょっとした裏技
+      order.order_data.completionImage = publicUrl;
+      alert('完成写真をアップロードしました！🎉\nこれでメールの {CompletionImage} タグにこの写真のURLが差し込まれます！');
+      
+    } catch (error) {
+      console.error('Upload Error:', error);
+      alert('画像のアップロードに失敗しました。');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handlePrint = (e) => {
     e.preventDefault(); e.stopPropagation();
@@ -345,7 +394,16 @@ export default function OrderDetailModal({
       const totals = getTotals(modalData);
       
       const orderDetails = `【ご注文内容】\n商品: ${modalData.flowerType || '未設定'}\n合計金額: ¥${totals.total.toLocaleString()} (税込)\n受取方法: ${getMethodLabel(modalData.receiveMethod)}\n予定日: ${modalData.selectedDate || '未定'} ${modalData.selectedTime || ''}`;
-      const bodyText = (template.body || '').replace(/\{CustomerName\}/g, modalData.customerInfo?.name || 'お客様').replace(/\{OrderDetails\}/g, orderDetails);
+      
+      // ★ 完成写真URLの出し分け（アップロードされていなければ「まだ」の案内にする）
+      const completionImageUrl = modalData.completionImage || '※完成写真は現在準備中です。';
+
+      // ★ タグの置換処理に {CompletionImage} を追加！
+      const bodyText = (template.body || '')
+        .replace(/\{CustomerName\}/g, modalData.customerInfo?.name || 'お客様')
+        .replace(/\{OrderDetails\}/g, orderDetails)
+        .replace(/\{CompletionImage\}/g, completionImageUrl); 
+
       const body = encodeURIComponent(bodyText);
       window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
     } catch (err) { alert(`メールの起動に失敗しました: ${err.message}`); }
@@ -363,7 +421,6 @@ export default function OrderDetailModal({
                 {modalData.status === 'completed' || modalData.status === '完了' ? '完了' : '未完了'}
               </span>
               
-              {/* ★ ヘッダーにも入金バッジを配置 */}
               {isUnpaid ? (
                 <span className="text-[10px] font-bold bg-[#D97D54]/10 text-[#D97D54] px-2 py-0.5 rounded border border-[#D97D54]/20 flex items-center gap-1">
                   <AlertCircle size={12}/> {currentPaymentStatus}
@@ -526,11 +583,43 @@ export default function OrderDetailModal({
           <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
             <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><Tag size={18}/> オーダー内容</h3>
             <div className="flex flex-col sm:flex-row gap-6">
-              {modalData.referenceImage ? (
-                <img src={modalData.referenceImage} alt="参考" className="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-2xl border border-[#EAEAEA] shadow-sm shrink-0" />
-              ) : (
-                <div className="w-24 h-24 sm:w-32 sm:h-32 bg-[#FBFAF9] border border-[#EAEAEA] rounded-2xl flex items-center justify-center text-[#999999] text-[11px] font-bold shrink-0">画像なし</div>
-              )}
+              
+              {/* ★ ここから：画像の表示エリア（参考画像 or 完成写真） */}
+              <div className="flex flex-col gap-2 shrink-0">
+                {/* 完成写真があれば優先して大きく表示 */}
+                {modalData.completionImage ? (
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-[#2D4B3E] bg-[#2D4B3E]/10 px-2 py-0.5 rounded inline-block">完成写真</span>
+                    <img src={modalData.completionImage} alt="完成写真" className="w-full sm:w-40 h-32 sm:h-40 object-cover rounded-2xl border border-[#EAEAEA] shadow-sm" />
+                  </div>
+                ) : modalData.referenceImage ? (
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-[#999999] bg-[#F7F7F7] px-2 py-0.5 rounded inline-block">お客様からの参考画像</span>
+                    <img src={modalData.referenceImage} alt="参考画像" className="w-full sm:w-40 h-32 sm:h-40 object-cover rounded-2xl border border-[#EAEAEA] shadow-sm" />
+                  </div>
+                ) : (
+                  <div className="w-full sm:w-40 h-32 sm:h-40 bg-[#FBFAF9] border border-[#EAEAEA] rounded-2xl flex flex-col items-center justify-center text-[#999999] text-[11px] font-bold gap-2">
+                    <ImageIcon size={24}/> 画像なし
+                  </div>
+                )}
+                
+                {/* ★ 新規追加：完成写真のアップロードボタン */}
+                <div className="relative mt-2">
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={handleUploadCompletionImage}
+                    disabled={isUploading}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed" 
+                  />
+                  <div className={`flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl text-[11px] font-bold transition-all border ${isUploading ? 'bg-gray-100 text-gray-400 border-gray-200' : 'bg-white text-[#2D4B3E] border-[#2D4B3E]/30 hover:bg-[#2D4B3E]/5 shadow-sm'}`}>
+                    <Upload size={14} />
+                    {isUploading ? '送信中...' : '完成写真を登録'}
+                  </div>
+                </div>
+              </div>
+              {/* ★ ここまで */}
+
               <div className="flex-1 grid grid-cols-2 gap-4 text-[13px]">
                 <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block tracking-widest mb-1">お花の種類</span><span className="font-black text-[#2D4B3E] text-[14px]">{modalData.flowerType || '未設定'}</span></div>
                 <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block tracking-widest mb-1">用途</span><span className="font-bold">{modalData.flowerPurpose} {modalData.otherPurpose && `(${modalData.otherPurpose})`}</span></div>
@@ -591,7 +680,7 @@ export default function OrderDetailModal({
                 </div>
               </div>
               
-              {/* ★ ここを大改造！入金状況の表示と更新ボタンを設置 */}
+              {/* ★ 入金状況と更新ボタン */}
               {modalData.paymentMethod && (
                 <div className="pt-4 flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-[#EAEAEA]">
                   <span className="inline-block bg-[#F7F7F7] text-[#555555] px-4 py-2 rounded-xl text-[12px] font-bold border border-[#EAEAEA] shadow-sm">
