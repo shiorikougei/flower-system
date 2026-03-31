@@ -76,7 +76,7 @@ export default function SettingsPage() {
   const [staffOrderConfig, setStaffOrderConfig] = useState({ ignoreLeadTime: true, allowCustomPrice: true, paymentMethods: ['店頭支払い(済)', '銀行振込(請求書)', '代金引換'], sendAutoReply: false });
   
   const [autoReplyTemplates, setAutoReplyTemplates] = useState([
-    { id: 't1', trigger: '注文受付時', subject: 'ご注文ありがとうございます', body: '{CustomerName} 様\n\nご注文ありがとうございます。' }
+    { id: 't1', trigger: '注文受付（自動返信）', targetShops: 'all', subject: 'ご注文ありがとうございます', body: '{CustomerName} 様\n\nご注文ありがとうございます。' }
   ]);
 
   const tabs = [
@@ -89,7 +89,7 @@ export default function SettingsPage() {
     { id: 'rules', label: '立札デザイン', icon: LayoutTemplate },
     { id: 'staff_order', label: '店舗受付', icon: Clock },
     { id: 'staff', label: 'スタッフ', icon: User },
-    { id: 'message', label: '通知メール', icon: Mail },
+    { id: 'message', label: '案内文管理', icon: Mail },
     { id: 'links', label: 'URL発行', icon: LinkIcon }, 
   ];
 
@@ -684,11 +684,75 @@ export default function SettingsPage() {
 
   const renderMessageTab = () => (
     <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-6 animate-in fade-in text-left">
-      <div className="flex justify-between items-center border-b border-[#EAEAEA] pb-4"><h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Mail size={20}/> 通知メール管理</h2><button onClick={() => setAutoReplyTemplates([...autoReplyTemplates, { id: `t_${Date.now()}`, trigger: 'カスタム', subject: '新しいテンプレート', body: '' }])} className="text-[11px] bg-[#2D4B3E] text-white px-4 py-2 rounded-full font-bold shadow-sm transition-all hover:bg-[#1f352b]">+ 追加</button></div>
+      <div className="flex justify-between items-center border-b border-[#EAEAEA] pb-4">
+        <div>
+          <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Mail size={20}/> 案内文・テンプレート管理</h2>
+          <p className="text-[11px] text-[#999999] mt-1">注文画面や通知メールで使用する定型文を管理します。店舗ごとに内容を変えることも可能です。</p>
+        </div>
+        <button onClick={() => setAutoReplyTemplates([...autoReplyTemplates, { id: `t_${Date.now()}`, trigger: '店頭受取の案内', targetShops: 'all', subject: '新しいテンプレート', body: '' }])} className="text-[11px] bg-[#2D4B3E] text-white px-4 py-2 rounded-full font-bold shadow-sm transition-all hover:bg-[#1f352b]">+ 追加</button>
+      </div>
       <div className="space-y-8">
-        {autoReplyTemplates.map((template, index) => (
-          <div key={template.id} className="bg-[#FBFAF9] p-6 rounded-[24px] border border-[#EAEAEA] space-y-4 relative group"><button onClick={() => setAutoReplyTemplates(autoReplyTemplates.filter(t => t.id !== template.id))} className="absolute top-6 right-6 text-red-300 hover:text-red-500 bg-white p-2 rounded-full shadow-sm"><Trash2 size={16}/></button><div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-12"><div className="space-y-1"><label className="text-[11px] font-bold text-[#999999]">送信用途</label><input type="text" value={template.trigger} onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].trigger = e.target.value; setAutoReplyTemplates(newT); }} className="w-full h-12 bg-white border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E]" /></div><div className="space-y-1"><label className="text-[11px] font-bold text-[#999999]">件名</label><input type="text" value={template.subject} onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].subject = e.target.value; setAutoReplyTemplates(newT); }} className="w-full h-12 bg-white border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E]" /></div></div><div className="space-y-1"><label className="text-[11px] font-bold text-[#999999]">本文 (利用可能タグ: {"{CustomerName}"} {"{OrderDetails}"})</label><textarea value={template.body} onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].body = e.target.value; setAutoReplyTemplates(newT); }} className="w-full h-48 bg-white border border-[#EAEAEA] rounded-[20px] p-5 text-[13px] font-bold outline-none resize-none leading-relaxed focus:border-[#2D4B3E]" /></div></div>
-        ))}
+        {autoReplyTemplates.map((template, index) => {
+          const isAllShops = template.targetShops === 'all' || template.targetShops === undefined;
+          return (
+            <div key={template.id} className="bg-[#FBFAF9] p-6 rounded-[24px] border border-[#EAEAEA] space-y-4 relative group">
+              <button onClick={() => setAutoReplyTemplates(autoReplyTemplates.filter(t => t.id !== template.id))} className="absolute top-6 right-6 text-red-300 hover:text-red-500 bg-white p-2 rounded-full shadow-sm"><Trash2 size={16}/></button>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-12">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-[#999999]">案内の種類（いつ使うか）</label>
+                  <select value={template.trigger} onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].trigger = e.target.value; setAutoReplyTemplates(newT); }} className="w-full h-12 bg-white border border-[#EAEAEA] rounded-xl px-4 font-bold text-[13px] outline-none focus:border-[#2D4B3E]">
+                    <option value="注文受付（自動返信）">注文受付（自動返信）</option>
+                    <option value="店頭受取の案内">店頭受取の案内</option>
+                    <option value="自社配達の案内">自社配達の案内</option>
+                    <option value="業者配送の案内">業者配送の案内</option>
+                    <option value="銀行振込のご案内">銀行振込のご案内</option>
+                    <option value="その他">その他</option>
+                  </select>
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-[#999999]">適用する店舗</label>
+                  <div className="flex gap-2 p-1 bg-white rounded-xl border border-[#EAEAEA]">
+                    <button onClick={() => { const newT = [...autoReplyTemplates]; newT[index].targetShops = 'all'; setAutoReplyTemplates(newT); }} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${isAllShops ? 'bg-[#2D4B3E] text-white' : 'text-[#999999]'}`}>全店舗</button>
+                    <button onClick={() => { const newT = [...autoReplyTemplates]; newT[index].targetShops = Array.isArray(template.targetShops) && template.targetShops !== 'all' ? template.targetShops : []; setAutoReplyTemplates(newT); }} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${!isAllShops ? 'bg-[#2D4B3E] text-white' : 'text-[#999999]'}`}>指定店舗のみ</button>
+                  </div>
+                </div>
+              </div>
+
+              {!isAllShops && (
+                <div className="flex flex-wrap gap-2 p-4 bg-white rounded-2xl border border-[#EAEAEA] animate-in slide-in-from-top-2">
+                  {shops.length === 0 ? <p className="text-[11px] text-[#999999]">店舗が登録されていません</p> : shops.map(shop => {
+                    const isChecked = Array.isArray(template.targetShops) && template.targetShops.includes(shop.id);
+                    return (
+                      <label key={shop.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer transition-all ${isChecked ? 'bg-[#2D4B3E]/5 border-[#2D4B3E] text-[#2D4B3E] shadow-sm' : 'text-[#999999] border-transparent hover:bg-gray-50'}`}>
+                        <input type="checkbox" checked={isChecked} onChange={(e)=>{const current = Array.isArray(template.targetShops) ? template.targetShops : []; const next = e.target.checked ? [...current, shop.id] : current.filter(id => id !== shop.id); const newT = [...autoReplyTemplates]; newT[index].targetShops = next; setAutoReplyTemplates(newT);}} className="accent-[#2D4B3E] w-3.5 h-3.5"/>
+                        <span className="text-[11px] font-bold">{shop.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-[#999999]">件名 / 表示タイトル</label>
+                <input type="text" value={template.subject} onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].subject = e.target.value; setAutoReplyTemplates(newT); }} className="w-full h-12 bg-white border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E]" />
+              </div>
+              
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-[#999999]">本文設定</label>
+                <div className="relative">
+                  <textarea value={template.body} onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].body = e.target.value; setAutoReplyTemplates(newT); }} className="w-full h-64 bg-white border border-[#EAEAEA] rounded-[20px] p-5 pb-16 text-[13px] font-bold outline-none resize-none leading-relaxed focus:border-[#2D4B3E]" />
+                  <div className="absolute bottom-4 left-4 right-4 flex flex-wrap gap-1.5 pointer-events-none">
+                    {[{ tag: '{CustomerName}', label: 'お客様名' }, { tag: '{ShopName}', label: '店舗名' }, { tag: '{TotalAmount}', label: '合計金額' }, { tag: '{OrderDetails}', label: '注文内容' }, { tag: '{ShopPhone}', label: '店舗電話' }].map(t => (
+                      <span key={t.tag} className="px-2 py-1 bg-[#F7F7F7] border border-[#EAEAEA] text-[9px] font-bold text-[#2D4B3E] rounded-md">{t.tag}: {t.label}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
