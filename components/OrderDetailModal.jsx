@@ -5,7 +5,7 @@ import {
   X, Printer, Send, Archive, RotateCcw, Trash2, 
   Store, Truck, Package, ListChecks, ChevronRight, 
   Calendar as CalendarIcon, User, MapPin, AlertCircle, 
-  Tag, MessageSquare, CreditCard, CheckCircle2, Upload, ImageIcon // ★ アイコン追加
+  Tag, MessageSquare, CreditCard, CheckCircle2, Upload, ImageIcon 
 } from 'lucide-react';
 import TatefudaPreview from '@/components/TatefudaPreview';
 
@@ -58,12 +58,13 @@ export default function OrderDetailModal({
     return map[method] || method;
   };
 
+  // ★ 修正：正しいGoogleマップのURLを生成するように直しました！！
   const getGoogleMapsUrl = (info) => {
     try {
       if (!info) return '#';
       const address = `${info.address1 || ''} ${info.address2 || ''}`.trim();
       if (!address) return '#';
-      return `http://googleusercontent.com/maps.google.com/maps?q=${encodeURIComponent(address)}`;
+      return `https://maps.google.com/maps?q=${encodeURIComponent(address)}`;
     } catch (e) { return '#'; }
   };
 
@@ -96,33 +97,26 @@ export default function OrderDetailModal({
   ];
   const selectedTateOpt = allTateOptions.find(opt => opt.id === modalData.tatePattern);
 
-  // ==========================================
-  // ★ 完成画像のアップロード処理
-  // ==========================================
   const handleUploadCompletionImage = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     setIsUploading(true);
     try {
-      // ファイル名をユニークにする (completion_注文ID_タイムスタンプ.jpg)
       const fileExt = file.name.split('.').pop();
       const fileName = `completion_${order.id}_${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`; // portfolioバケットの直下に保存
+      const filePath = `${fileName}`; 
 
-      // Supabaseの「portfolio」バケットに画像をアップロード
       const { error: uploadError } = await supabase.storage
         .from('portfolio')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      // 誰でも見れる「公開URL」を取得する
       const { data: { publicUrl } } = supabase.storage
         .from('portfolio')
         .getPublicUrl(filePath);
 
-      // 今の注文データ(modalData)に completionImage のURLを追加して、DBを更新！
       const updatedData = { ...modalData, completionImage: publicUrl };
       const { error: dbError } = await supabase.from('orders')
         .update({ order_data: updatedData })
@@ -130,7 +124,6 @@ export default function OrderDetailModal({
 
       if (dbError) throw dbError;
 
-      // 画面の表示をすぐに書き換えるためのちょっとした裏技
       order.order_data.completionImage = publicUrl;
       alert('完成写真をアップロードしました！🎉\nこれでメールの {CompletionImage} タグにこの写真のURLが差し込まれます！');
       
@@ -395,10 +388,8 @@ export default function OrderDetailModal({
       
       const orderDetails = `【ご注文内容】\n商品: ${modalData.flowerType || '未設定'}\n合計金額: ¥${totals.total.toLocaleString()} (税込)\n受取方法: ${getMethodLabel(modalData.receiveMethod)}\n予定日: ${modalData.selectedDate || '未定'} ${modalData.selectedTime || ''}`;
       
-      // ★ 完成写真URLの出し分け（アップロードされていなければ「まだ」の案内にする）
       const completionImageUrl = modalData.completionImage || '※完成写真は現在準備中です。';
 
-      // ★ タグの置換処理に {CompletionImage} を追加！
       const bodyText = (template.body || '')
         .replace(/\{CustomerName\}/g, modalData.customerInfo?.name || 'お客様')
         .replace(/\{OrderDetails\}/g, orderDetails)
@@ -584,9 +575,7 @@ export default function OrderDetailModal({
             <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><Tag size={18}/> オーダー内容</h3>
             <div className="flex flex-col sm:flex-row gap-6">
               
-              {/* ★ ここから：画像の表示エリア（参考画像 or 完成写真） */}
               <div className="flex flex-col gap-2 shrink-0">
-                {/* 完成写真があれば優先して大きく表示 */}
                 {modalData.completionImage ? (
                   <div className="space-y-1">
                     <span className="text-[10px] font-bold text-[#2D4B3E] bg-[#2D4B3E]/10 px-2 py-0.5 rounded inline-block">完成写真</span>
@@ -603,7 +592,6 @@ export default function OrderDetailModal({
                   </div>
                 )}
                 
-                {/* ★ 新規追加：完成写真のアップロードボタン */}
                 <div className="relative mt-2">
                   <input 
                     type="file" 
@@ -618,7 +606,6 @@ export default function OrderDetailModal({
                   </div>
                 </div>
               </div>
-              {/* ★ ここまで */}
 
               <div className="flex-1 grid grid-cols-2 gap-4 text-[13px]">
                 <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block tracking-widest mb-1">お花の種類</span><span className="font-black text-[#2D4B3E] text-[14px]">{modalData.flowerType || '未設定'}</span></div>
@@ -680,7 +667,6 @@ export default function OrderDetailModal({
                 </div>
               </div>
               
-              {/* ★ 入金状況と更新ボタン */}
               {modalData.paymentMethod && (
                 <div className="pt-4 flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-[#EAEAEA]">
                   <span className="inline-block bg-[#F7F7F7] text-[#555555] px-4 py-2 rounded-xl text-[12px] font-bold border border-[#EAEAEA] shadow-sm">
