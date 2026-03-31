@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/utils/supabase'; // ★ Storage用にインポート追加
+import { supabase } from '@/utils/supabase';
 import { 
   X, Printer, Send, Archive, RotateCcw, Trash2, 
   Store, Truck, Package, ListChecks, ChevronRight, 
@@ -23,7 +23,6 @@ export default function OrderDetailModal({
     staff: '' 
   });
   
-  // ★ 完成写真のアップロード状態を管理するState
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
@@ -58,13 +57,12 @@ export default function OrderDetailModal({
     return map[method] || method;
   };
 
-  // ★ 修正：正しいGoogleマップのURLを生成するように直しました！！
   const getGoogleMapsUrl = (info) => {
     try {
       if (!info) return '#';
       const address = `${info.address1 || ''} ${info.address2 || ''}`.trim();
       if (!address) return '#';
-      return `https://maps.google.com/maps?q=${encodeURIComponent(address)}`;
+      return `http://maps.google.com/maps?q=${encodeURIComponent(address)}`;
     } catch (e) { return '#'; }
   };
 
@@ -562,7 +560,8 @@ export default function OrderDetailModal({
             </div>
           </div>
 
-          {(isDelivery || isSagawa) && (
+          {/* ★ 変更：自社配達(isDelivery)の時のみ置き配表示を出す */}
+          {isDelivery && (
             <div className="bg-orange-50 p-6 rounded-[24px] border border-orange-200 shadow-sm space-y-2">
               <h3 className="text-[12px] font-bold text-orange-800 flex items-center gap-2"><AlertCircle size={16}/> ご不在時の対応</h3>
               <p className="text-[15px] font-black text-orange-900">
