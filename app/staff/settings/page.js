@@ -22,6 +22,9 @@ export default function SettingsPage() {
   const [currentTenantId, setCurrentTenantId] = useState(null);
   
   const [isB2BEnabled, setIsB2BEnabled] = useState(false);
+  
+  // ★追加：コピーしたタグの名前を一時的に保持するステート
+  const [copiedTag, setCopiedTag] = useState(null);
 
   const [generalConfig, setGeneralConfig] = useState({ 
     tenantId: '', 
@@ -29,7 +32,6 @@ export default function SettingsPage() {
     logoUrl: '', logoSize: 100, logoTransparent: false, slipBgUrl: '', slipBgOpacity: 50, systemPassword: '7777'
   });
 
-  // ★ 削除せずに残す（後で法人側のコードを直すまでの繋ぎとして、一応保存データには持たせておきます）
   const [paymentConfig, setPaymentConfig] = useState({
     bankName: '', branchName: '', accountType: '普通', accountNumber: '', accountName: ''
   });
@@ -80,7 +82,7 @@ export default function SettingsPage() {
   ]);
 
   const tabs = [
-    { id: 'general', label: '基本・ロゴ', icon: SettingsIcon }, // ★ラベルを少し短くしました
+    { id: 'general', label: '基本・ロゴ', icon: SettingsIcon }, 
     { id: 'status', label: 'ステータス', icon: ListChecks },
     { id: 'design', label: 'デザイン選択肢', icon: Palette },
     { id: 'shop', label: '店舗・口座・特別日', icon: Store }, 
@@ -155,7 +157,7 @@ export default function SettingsPage() {
       const payload = { 
         ...currentData, 
         generalConfig: {...generalConfig, tenantId: currentTenantId}, 
-        paymentConfig, // 一旦消さずに残します（法人側修正の繋ぎ）
+        paymentConfig, 
         statusConfig, 
         designOptions,
         shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReplyTemplates, staffOrderConfig, timeSlots 
@@ -183,6 +185,13 @@ export default function SettingsPage() {
   const addTimeSlot = (method) => { setTimeSlots(prev => ({ ...prev, [method]: [...prev[method], ''] })); };
   const removeTimeSlot = (method, index) => { setTimeSlots(prev => ({ ...prev, [method]: prev[method].filter((_, i) => i !== index) })); };
 
+  // ★ コピー機能のハンドラー
+  const handleCopyTag = (tag) => {
+    navigator.clipboard.writeText(tag);
+    setCopiedTag(tag);
+    setTimeout(() => setCopiedTag(null), 2000); // 2秒後に「コピーしました」表示を消す
+  };
+
   const renderGeneralTab = () => (
     <div className="space-y-8 animate-in fade-in">
       <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8">
@@ -201,8 +210,6 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
-
-      {/* ★ ここにあった口座情報を削除し、店舗(Shop)タブへ移動しました！ */}
 
       <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8">
         <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><ImageIcon size={20}/> ロゴ・画像・セキュリティ</h2>
@@ -380,7 +387,6 @@ export default function SettingsPage() {
             <div className="space-y-1 md:col-span-2"><label className="text-[10px] font-bold text-[#999999]">インボイス番号</label><input type="text" value={shop.invoiceNumber || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, invoiceNumber:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="T12345..."/></div>
           </div>
           
-          {/* ★ 店舗ごとの口座情報設定をここに追加！ */}
           <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
             <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={16}/> 振込先口座情報 (法人請求書等用)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
@@ -449,7 +455,6 @@ export default function SettingsPage() {
         onClick={()=>setShops([...shops, {
           id:Date.now(), name:'', isActive:true, openTime:'10:00', closeTime:'19:00', deliveryOpenTime:'11:00', deliveryCloseTime:'18:00', 
           specialHours:[], deliverySpecialHours:[], enabledTatePatterns: ['p5', 'p7'],
-          // ★ 追加時の初期値に口座情報を空欄でセット
           bankName: '', branchName: '', accountType: '普通', accountNumber: '', accountName: '',
           pickupNote: 'ご来店予定日時に店舗までお越しください。', deliveryNote: '交通状況により配達時間が前後する場合がございます。', shippingNote: '発送準備期間＋配送日数がかかります。交通状況により遅延する場合がございます。',
           absenceInstruction: '生花のため、ご不在時は原則として置き配または宅配ボックスへのお届けとなります。ご希望の対応をお選びください。'
@@ -743,11 +748,31 @@ export default function SettingsPage() {
                 <label className="text-[11px] font-bold text-[#999999]">本文設定</label>
                 <div className="relative">
                   <textarea value={template.body} onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].body = e.target.value; setAutoReplyTemplates(newT); }} className="w-full h-64 bg-white border border-[#EAEAEA] rounded-[20px] p-5 pb-16 text-[13px] font-bold outline-none resize-none leading-relaxed focus:border-[#2D4B3E]" />
-                  <div className="absolute bottom-4 left-4 right-4 flex flex-wrap gap-1.5 pointer-events-none">
-                    {[{ tag: '{CustomerName}', label: 'お客様名' }, { tag: '{ShopName}', label: '店舗名' }, { tag: '{TotalAmount}', label: '合計金額' }, { tag: '{OrderDetails}', label: '注文内容' }, { tag: '{ShopPhone}', label: '店舗電話' }].map(t => (
-                      <span key={t.tag} className="px-2 py-1 bg-[#F7F7F7] border border-[#EAEAEA] text-[9px] font-bold text-[#2D4B3E] rounded-md">{t.tag}: {t.label}</span>
+                  
+                  {/* ★修正：タグをクリックでコピーできるように変更 */}
+                  <div className="absolute bottom-4 left-4 right-4 flex flex-wrap gap-1.5">
+                    {[
+                      { tag: '{CustomerName}', label: 'お客様名' }, 
+                      { tag: '{ShopName}', label: '店舗名' }, 
+                      { tag: '{TotalAmount}', label: '合計金額' }, 
+                      { tag: '{OrderDetails}', label: '注文内容' }, 
+                      { tag: '{ShopPhone}', label: '店舗電話' }
+                    ].map(t => (
+                      <button 
+                        key={t.tag}
+                        type="button"
+                        onClick={() => handleCopyTag(t.tag)}
+                        className="px-2 py-1 bg-[#F7F7F7] border border-[#EAEAEA] text-[9px] font-bold text-[#2D4B3E] rounded-md hover:bg-[#EAEAEA] transition-colors cursor-pointer flex items-center gap-1"
+                      >
+                        {copiedTag === t.tag ? (
+                          <span className="text-green-600">✓ コピーしました</span>
+                        ) : (
+                          `${t.tag}: ${t.label}`
+                        )}
+                      </button>
                     ))}
                   </div>
+
                 </div>
               </div>
             </div>
