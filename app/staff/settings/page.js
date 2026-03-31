@@ -185,7 +185,6 @@ export default function SettingsPage() {
   const addTimeSlot = (method) => { setTimeSlots(prev => ({ ...prev, [method]: [...prev[method], ''] })); };
   const removeTimeSlot = (method, index) => { setTimeSlots(prev => ({ ...prev, [method]: prev[method].filter((_, i) => i !== index) })); };
 
-  // ★ コピー機能のハンドラー
   const handleCopyTag = (tag) => {
     navigator.clipboard.writeText(tag);
     setCopiedTag(tag);
@@ -416,14 +415,15 @@ export default function SettingsPage() {
             </div>
             
             <div className="space-y-4">
-              <label className="text-[12px] font-bold text-[#D97C8F] flex items-center gap-2"><Truck size={14}/> 配達可能時間・特別日</label>
-              <div className="flex gap-2 bg-[#D97C8F]/5 p-3 rounded-xl border border-[#D97C8F]/20 mb-2">
-                <input type="time" value={shop.deliveryOpenTime || '11:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryOpenTime:e.target.value}:s))} className="border border-[#D97C8F]/30 rounded p-1 text-xs outline-none bg-white"/>
+              {/* ★変更箇所★ ピンク色を #D97D54（テラコッタオレンジ）に変更 */}
+              <label className="text-[12px] font-bold text-[#D97D54] flex items-center gap-2"><Truck size={14}/> 配達可能時間・特別日</label>
+              <div className="flex gap-2 bg-[#D97D54]/5 p-3 rounded-xl border border-[#D97D54]/20 mb-2">
+                <input type="time" value={shop.deliveryOpenTime || '11:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryOpenTime:e.target.value}:s))} className="border border-[#D97D54]/30 rounded p-1 text-xs outline-none bg-white"/>
                 <span>〜</span>
-                <input type="time" value={shop.deliveryCloseTime || '18:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryCloseTime:e.target.value}:s))} className="border border-[#D97C8F]/30 rounded p-1 text-xs outline-none bg-white"/>
+                <input type="time" value={shop.deliveryCloseTime || '18:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryCloseTime:e.target.value}:s))} className="border border-[#D97D54]/30 rounded p-1 text-xs outline-none bg-white"/>
               </div>
               {renderSpecialHoursList(shop, 'deliverySpecialHours')}
-              <button onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:[...(s.deliverySpecialHours||[]), {id:Date.now(), date:'', type:'closed', repeatType:'今年のみ', note:''}]}:s))} className="w-full py-2 bg-[#D97C8F]/5 border-dashed border border-[#D97C8F]/30 rounded-xl text-[10px] font-bold text-[#D97C8F]/80 hover:text-[#D97C8F] transition-all">+ 配達特別ルールを追加</button>
+              <button onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:[...(s.deliverySpecialHours||[]), {id:Date.now(), date:'', type:'closed', repeatType:'今年のみ', note:''}]}:s))} className="w-full py-2 bg-[#D97D54]/5 border-dashed border border-[#D97D54]/30 rounded-xl text-[10px] font-bold text-[#D97D54]/80 hover:text-[#D97D54] transition-all">+ 配達特別ルールを追加</button>
             </div>
           </div>
 
@@ -748,16 +748,8 @@ export default function SettingsPage() {
                 <label className="text-[11px] font-bold text-[#999999]">本文設定</label>
                 <div className="relative">
                   <textarea value={template.body} onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].body = e.target.value; setAutoReplyTemplates(newT); }} className="w-full h-64 bg-white border border-[#EAEAEA] rounded-[20px] p-5 pb-16 text-[13px] font-bold outline-none resize-none leading-relaxed focus:border-[#2D4B3E]" />
-                  
-                  {/* ★修正：タグをクリックでコピーできるように変更 */}
                   <div className="absolute bottom-4 left-4 right-4 flex flex-wrap gap-1.5">
-                    {[
-                      { tag: '{CustomerName}', label: 'お客様名' }, 
-                      { tag: '{ShopName}', label: '店舗名' }, 
-                      { tag: '{TotalAmount}', label: '合計金額' }, 
-                      { tag: '{OrderDetails}', label: '注文内容' }, 
-                      { tag: '{ShopPhone}', label: '店舗電話' }
-                    ].map(t => (
+                    {[{ tag: '{CustomerName}', label: 'お客様名' }, { tag: '{ShopName}', label: '店舗名' }, { tag: '{TotalAmount}', label: '合計金額' }, { tag: '{OrderDetails}', label: '注文内容' }, { tag: '{ShopPhone}', label: '店舗電話' }].map(t => (
                       <button 
                         key={t.tag}
                         type="button"
@@ -772,7 +764,6 @@ export default function SettingsPage() {
                       </button>
                     ))}
                   </div>
-
                 </div>
               </div>
             </div>
