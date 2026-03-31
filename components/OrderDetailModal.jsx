@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/utils/supabase';
+import { supabase } from '@/utils/supabase'; 
 import { 
   X, Printer, Send, Archive, RotateCcw, Trash2, 
   Store, Truck, Package, ListChecks, ChevronRight, 
@@ -24,12 +24,16 @@ export default function OrderDetailModal({
   });
   
   const [isUploading, setIsUploading] = useState(false);
+  
+  // ★ 新規追加：メールテンプレート選択メニューの表示状態
+  const [showMailTemplates, setShowMailTemplates] = useState(false);
 
   useEffect(() => {
     setUpdateForm({
       status: order?.order_data?.currentStatus || order?.order_data?.status || 'new',
       staff: ''
     });
+    setShowMailTemplates(false);
   }, [order]);
 
   if (!order) return null;
@@ -375,32 +379,45 @@ export default function OrderDetailModal({
     }
   };
 
-  const handleSendEmail = (e) => {
-    e.preventDefault(); e.stopPropagation();
+  // ★ 修正：テンプレートを選択してメールを作成する関数
+  const handleSendEmail = (template) => {
+    setShowMailTemplates(false); // ドロップダウンを閉じる
     if (!modalData?.customerInfo?.email) return alert("この注文にはお客様のメールアドレスが登録されていません。");
+    
     try {
       const email = modalData.customerInfo.email;
-      const template = appSettings?.autoReply || { subject: 'ご注文ありがとうございます', body: '{CustomerName} 様\n\nご注文ありがとうございます。' };
-      const subject = encodeURIComponent(template.subject || 'ご注文ありがとうございます');
+      const subject = encodeURIComponent(template.subject || '');
       const totals = getTotals(modalData);
       
       const orderDetails = `【ご注文内容】\n商品: ${modalData.flowerType || '未設定'}\n合計金額: ¥${totals.total.toLocaleString()} (税込)\n受取方法: ${getMethodLabel(modalData.receiveMethod)}\n予定日: ${modalData.selectedDate || '未定'} ${modalData.selectedTime || ''}`;
       
+      const shopPhone = appSettings?.shops?.[0]?.phone || '未設定';
+      const shopName = appSettings?.shops?.[0]?.name || appSettings?.generalConfig?.appName || '店舗名未設定';
       const completionImageUrl = modalData.completionImage || '※完成写真は現在準備中です。';
 
+      // ★ すべてのタグを置換する処理
       const bodyText = (template.body || '')
         .replace(/\{CustomerName\}/g, modalData.customerInfo?.name || 'お客様')
         .replace(/\{OrderDetails\}/g, orderDetails)
-        .replace(/\{CompletionImage\}/g, completionImageUrl); 
+        .replace(/\{CompletionImage\}/g, completionImageUrl)
+        .replace(/\{ShopName\}/g, shopName)
+        .replace(/\{TotalAmount\}/g, `¥${totals.total.toLocaleString()}`)
+        .replace(/\{ShopPhone\}/g, shopPhone);
 
       const body = encodeURIComponent(bodyText);
       window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
-    } catch (err) { alert(`メールの起動に失敗しました: ${err.message}`); }
+    } catch (err) { 
+      alert(`メールの起動に失敗しました: ${err.message}`); 
+    }
   };
 
   return (
+    // ★ モーダルクリック時にドロップダウンを閉じる処理を追加
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#111111]/60 backdrop-blur-sm p-3 md:p-4 animate-in fade-in" onClick={onClose}>
-      <div className="bg-[#FBFAF9] rounded-[24px] md:rounded-[32px] w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div 
+        className="bg-[#FBFAF9] rounded-[24px] md:rounded-[32px] w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative flex flex-col" 
+        onClick={(e) => { e.stopPropagation(); setShowMailTemplates(false); }}
+      >
         
         <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-[#EAEAEA] p-4 md:p-6 flex flex-wrap items-center justify-between gap-3 z-20 rounded-t-[24px] md:rounded-t-[32px]">
           <div>
@@ -427,10 +444,39 @@ export default function OrderDetailModal({
             <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all">
               <Printer size={14} /> <span className="hidden sm:inline">印刷 / PDF出力</span>
             </button>
+            
+            {/* ★ 新規追加：メール作成ボタン＆ドロップダウンメニュー */}
             {modalData.customerInfo?.email && (
-              <button onClick={handleSendEmail} className="flex items-center gap-1.5 px-3 py-2 bg-[#2D4B3E] text-white rounded-xl text-[10px] md:text-[11px] font-bold hover:bg-[#1f352b] transition-all shadow-sm">
-                <Send size={14} /> <span className="hidden sm:inline">メール作成</span>
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setShowMailTemplates(!showMailTemplates); }} 
+                  className="flex items-center gap-1.5 px-3 py-2 bg-[#2D4B3E] text-white rounded-xl text-[10px] md:text-[11px] font-bold hover:bg-[#1f352b] transition-all shadow-sm"
+                >
+                  <Send size={14} /> <span className="hidden sm:inline">メール作成</span>
+                </button>
+                
+                {showMailTemplates && (
+                  <div className="absolute top-full right-0 mt-2 w-56 md:w-64 bg-white border border-[#EAEAEA] rounded-xl shadow-xl z-50 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-[#FBFAF9] px-4 py-2 border-b border-[#EAEAEA] text-[10px] font-bold text-[#999999]">
+                      送信する案内文を選択
+                    </div>
+                    <div className="max-h-60 overflow-y-auto hide-scrollbar">
+                      {(appSettings?.autoReplyTemplates || []).length > 0 ? (appSettings.autoReplyTemplates).map(t => (
+                        <button 
+                          key={t.id}
+                          onClick={() => handleSendEmail(t)}
+                          className="w-full text-left px-4 py-3 hover:bg-[#FBFAF9] border-b border-[#EAEAEA] last:border-0 transition-colors"
+                        >
+                          <div className="text-[12px] font-bold text-[#2D4B3E] mb-1">{t.trigger}</div>
+                          <div className="text-[10px] text-[#555555] truncate">{t.subject}</div>
+                        </button>
+                      )) : (
+                        <div className="px-4 py-3 text-[11px] text-[#999999]">設定画面で案内文を追加してください</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
             
             <div className="w-[1px] h-6 bg-[#EAEAEA] mx-1"></div>
@@ -560,7 +606,6 @@ export default function OrderDetailModal({
             </div>
           </div>
 
-          {/* ★ 変更：自社配達(isDelivery)の時のみ置き配表示を出す */}
           {isDelivery && (
             <div className="bg-orange-50 p-6 rounded-[24px] border border-orange-200 shadow-sm space-y-2">
               <h3 className="text-[12px] font-bold text-orange-800 flex items-center gap-2"><AlertCircle size={16}/> ご不在時の対応</h3>
