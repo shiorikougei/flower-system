@@ -10,7 +10,8 @@ import {
 export default function SalesPage() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+  const [currentTenantId, setCurrentTenantId] = useState(null);
+
   // ★ 表示モードに 'unpaid' (未入金一覧) を追加！
   const [viewMode, setViewMode] = useState('monthly'); // 'monthly', 'daily', or 'unpaid'
   const [targetMonth, setTargetMonth] = useState('');
@@ -22,7 +23,19 @@ export default function SalesPage() {
   const fetchOrders = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+      // ★ セキュリティ修正: tenant_id を取得
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = '/staff/login';
+        return;
+      }
+      const { data: profile, error: profileError } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
+      if (profileError) throw profileError;
+      const tId = profile.tenant_id;
+      if (!tId) throw new Error('tenant_id が取得できませんでした');
+      setCurrentTenantId(tId);
+
+      const { data, error } = await supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false });
       if (error) throw error;
       setOrders(data || []);
     } catch (error) {
@@ -56,6 +69,8 @@ export default function SalesPage() {
     return orders.filter(o => {
       const d = o.order_data || {};
       if (d.status === 'キャンセル') return false;
+      // ★ Stripe決済反映: DB の payment_status='paid' は除外（入金済扱い）
+      if (o.payment_status === 'paid') return false;
       // 支払いステータスが空、または「未」という文字が含まれている場合を未入金とする
       return !d.paymentStatus || d.paymentStatus.includes('未') || d.paymentStatus === '';
     }).map(o => {
@@ -119,7 +134,8 @@ export default function SalesPage() {
       map[key].shippingFees += (fee + pickup);
       map[key].orderCount += 1;
 
-      if (!d.paymentStatus || d.paymentStatus.includes('未') || d.paymentStatus === '') {
+      // ★ Stripe決済反映: payment_status='paid' は未入金カウントに含めない
+      if (order.payment_status !== 'paid' && (!d.paymentStatus || d.paymentStatus.includes('未') || d.paymentStatus === '')) {
         map[key].unpaidCount += 1;
       }
     });
@@ -145,23 +161,23 @@ export default function SalesPage() {
     if (!confirm('この注文を「入金済」として処理しますか？')) return;
     
     try {
-      // 現在のステータスに「未」が含まれていれば「済」に置換、なければ「入金済」にする気の利いた処理
+      // ★ 入金済への遷移ロジック（"未入金（引き取り時）"→"入金済（引き取り時受領）"）
+      const oldStatus = currentData.paymentStatus || '';
       let newStatus = '入金済';
-      if (currentData.paymentStatus) {
-        newStatus = currentData.paymentStatus.replace('未', '済');
-        if (newStatus === currentData.paymentStatus) newStatus = '入金済';
+      if (oldStatus.includes('引き取り時')) {
+        newStatus = '入金済（引き取り時受領）';
       }
 
       const updatedData = { ...currentData, paymentStatus: newStatus };
       
-      // Supabaseを更新
-      const { error } = await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId);
+      // Supabaseを更新（★ tenant_id でも絞り込み）
+      const { error } = await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId).eq('tenant_id', currentTenantId);
       if (error) throw error;
 
       // ローカルのStateも更新して画面を即座に反映させる
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o));
       
-      alert('入金済みに更新しました！🎉');
+      alert('入金済みに更新しました！');
     } catch (error) {
       console.error(error);
       alert('更新に失敗しました。時間をおいて再度お試しください。');
@@ -303,8 +319,8 @@ export default function SalesPage() {
     <main className="pb-32 font-sans text-left">
       <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] flex flex-col md:flex-row md:items-center justify-between px-6 md:px-8 py-4 sticky top-0 z-10 gap-4">
         <div>
-          <h1 className="text-[18px] md:text-[20px] font-black text-[#2D4B3E] tracking-tight">売上ダッシュボード</h1>
-          <p className="text-[11px] font-bold text-[#999] mt-1 tracking-widest">月別・日別 売上の自動集計・入金管理</p>
+          <h1 className="text-[18px] md:text-[20px] font-bold text-[#2D4B3E] tracking-tight">売上ダッシュボード</h1>
+          <p className="text-[11px] font-bold text-[#999] mt-1">月別・日別 売上の自動集計・入金管理</p>
         </div>
         
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
@@ -353,35 +369,35 @@ export default function SalesPage() {
         
         {/* 上部サマリー（現在表示中のリスト合計） */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className={`text-white p-6 rounded-[24px] shadow-md relative overflow-hidden transition-colors ${viewMode === 'unpaid' ? 'bg-[#D97D54]' : 'bg-[#2D4B3E]'}`}>
+          <div className={`text-white p-6 rounded-2xl shadow-md relative overflow-hidden transition-colors ${viewMode === 'unpaid' ? 'bg-[#D97D54]' : 'bg-[#2D4B3E]'}`}>
             <TrendingUp size={100} className="absolute -right-4 -bottom-4 text-white/10" />
-            <h3 className="text-[12px] font-bold text-white/80 tracking-widest mb-2 flex items-center gap-2">
+            <h3 className="text-[12px] font-bold text-white/80 mb-2 flex items-center gap-2">
               <DollarSign size={16}/> {viewMode === 'monthly' ? '全期間 累計売上' : viewMode === 'daily' ? `${targetMonth.replace('-','年')}月 合計売上` : '未回収 合計金額'}
             </h3>
-            <p className="text-[32px] font-black tracking-tight">¥{currentTotalSales.toLocaleString()}</p>
+            <p className="text-[32px] font-bold tracking-tight">¥{currentTotalSales.toLocaleString()}</p>
           </div>
-          <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm flex flex-col justify-center">
-            <h3 className="text-[12px] font-bold text-[#999] tracking-widest mb-1 flex items-center gap-2">
+          <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] shadow-sm flex flex-col justify-center">
+            <h3 className="text-[12px] font-bold text-[#999] mb-1 flex items-center gap-2">
               <ShoppingBag size={14}/> {viewMode === 'unpaid' ? '未入金 件数' : '合計受注件数'}
             </h3>
-            <p className={`text-[24px] font-black ${viewMode === 'unpaid' ? 'text-[#D97D54]' : 'text-[#2D4B3E]'}`}>{currentTotalOrders} <span className="text-[12px] font-bold text-[#999]">件</span></p>
+            <p className={`text-[24px] font-bold ${viewMode === 'unpaid' ? 'text-[#D97D54]' : 'text-[#2D4B3E]'}`}>{currentTotalOrders} <span className="text-[12px] font-bold text-[#999]">件</span></p>
           </div>
-          <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm flex flex-col justify-center">
-            <h3 className="text-[12px] font-bold text-[#999] tracking-widest mb-1 flex items-center gap-2"><BarChart3 size={14}/> 平均客単価</h3>
-            <p className={`text-[24px] font-black ${viewMode === 'unpaid' ? 'text-[#D97D54]' : 'text-[#2D4B3E]'}`}>
+          <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] shadow-sm flex flex-col justify-center">
+            <h3 className="text-[12px] font-bold text-[#999] mb-1 flex items-center gap-2"><BarChart3 size={14}/> 平均客単価</h3>
+            <p className={`text-[24px] font-bold ${viewMode === 'unpaid' ? 'text-[#D97D54]' : 'text-[#2D4B3E]'}`}>
               ¥{currentTotalOrders > 0 ? Math.floor(currentTotalSales / currentTotalOrders).toLocaleString() : 0}
             </p>
           </div>
         </div>
 
         {isLoading ? (
-          <div className="p-20 text-center text-[#999] font-bold animate-pulse tracking-widest">データを計算中...</div>
+          <div className="p-20 text-center text-[#999] font-bold animate-pulse">データを計算中...</div>
         ) : viewMode === 'unpaid' ? (
           /* ========================================================
              ★ 未入金一覧モード の表示
              ======================================================== */
           <div className="space-y-4 animate-in fade-in">
-            <h2 className="text-[16px] font-black text-[#D97D54] flex items-center gap-2 border-b border-[#EAEAEA] pb-2">
+            <h2 className="text-[16px] font-bold text-[#D97D54] flex items-center gap-2 border-b border-[#EAEAEA] pb-2">
               <AlertCircle size={18} /> 未入金オーダー一覧
             </h2>
             
@@ -396,7 +412,7 @@ export default function SalesPage() {
                   const d = order.order_data || {};
                   const c = d.customerInfo || {};
                   return (
-                    <div key={order.id} className="bg-white rounded-[24px] border border-[#D97D54]/30 shadow-sm overflow-hidden flex flex-col md:flex-row items-center relative">
+                    <div key={order.id} className="bg-white rounded-2xl border border-[#D97D54]/30 shadow-sm overflow-hidden flex flex-col md:flex-row items-center relative">
                       <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#D97D54]"></div>
                       
                       <div className="p-6 md:w-1/3 flex flex-col justify-center w-full border-b md:border-b-0 md:border-r border-[#EAEAEA]">
@@ -404,19 +420,19 @@ export default function SalesPage() {
                           <span className="text-[10px] font-bold bg-[#D97D54]/10 text-[#D97D54] px-2 py-1 rounded-md">{d.paymentStatus || '未設定'}</span>
                           <span className="text-[12px] font-bold text-[#999]">{safeFormatDate(order.created_at)}</span>
                         </div>
-                        <span className="text-[24px] font-black text-[#D97D54] leading-none mb-1">¥{order.computedTotal.toLocaleString()}</span>
+                        <span className="text-[24px] font-bold text-[#D97D54] leading-none mb-1">¥{order.computedTotal.toLocaleString()}</span>
                       </div>
 
                       <div className="p-6 md:w-1/3 flex flex-col justify-center w-full space-y-2 border-b md:border-b-0 md:border-r border-[#EAEAEA]">
-                        <p className="text-[14px] font-black text-[#333] flex items-center gap-2"><User size={14} className="text-[#999]"/> {c.name || '名称未設定'} 様</p>
+                        <p className="text-[14px] font-bold text-[#333] flex items-center gap-2"><User size={14} className="text-[#999]"/> {c.name || '名称未設定'} 様</p>
                         <p className="text-[12px] font-bold text-[#555] flex items-center gap-2"><Phone size={14} className="text-[#999]"/> {c.phone || '電話番号なし'}</p>
-                        <p className="text-[11px] font-bold text-[#999] tracking-widest pt-1 border-t border-[#F7F7F7] truncate">{d.flowerType} / {d.receiveMethod === 'pickup' ? '店頭受取' : '配送・配達'}</p>
+                        <p className="text-[11px] font-bold text-[#999] pt-1 border-t border-[#F7F7F7] truncate">{d.flowerType} / {d.receiveMethod === 'pickup' ? '店頭受取' : '配送・配達'}</p>
                       </div>
 
                       <div className="p-6 md:w-1/3 flex flex-col justify-center w-full">
                         <button 
                           onClick={() => handleUpdatePayment(order.id, d)}
-                          className="w-full py-4 bg-[#2D4B3E] hover:bg-[#1f352b] text-white rounded-xl font-bold text-[13px] tracking-widest flex items-center justify-center gap-2 transition-all shadow-md active:scale-95"
+                          className="w-full py-4 bg-[#2D4B3E] hover:bg-[#1f352b] text-white rounded-xl font-bold text-[13px] flex items-center justify-center gap-2 transition-all shadow-md active:scale-95"
                         >
                           <CheckCircle2 size={18} /> 入金済にする
                         </button>
@@ -436,36 +452,36 @@ export default function SalesPage() {
              ★ 通常の 月別・日別 モードの表示
              ======================================================== */
           <div className="space-y-4 animate-in fade-in">
-            <h2 className="text-[16px] font-black text-[#2D4B3E] flex items-center gap-2 border-b border-[#EAEAEA] pb-2">
+            <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2 border-b border-[#EAEAEA] pb-2">
               {viewMode === 'monthly' ? <><Calendar size={18} /> 月別売上一覧</> : <><CalendarDays size={18} /> 日別売上一覧</>}
             </h2>
 
             <div className="grid grid-cols-1 gap-4">
               {displayedSales.map((item, index) => (
-                <div key={item.key} className="bg-white rounded-[24px] border border-[#EAEAEA] shadow-sm overflow-hidden flex flex-col md:flex-row">
+                <div key={item.key} className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm overflow-hidden flex flex-col md:flex-row">
                   
                   {/* 左側：タイトルとメイン売上 */}
                   <div className={`p-6 md:w-1/3 flex flex-col justify-center border-b md:border-b-0 md:border-r border-[#EAEAEA] ${index === 0 ? 'bg-[#FBFAF9]' : ''}`}>
-                    <span className="text-[14px] font-black text-[#555] tracking-widest mb-2">{item.label}</span>
-                    <span className="text-[28px] font-black text-[#2D4B3E] leading-none mb-1">¥{item.totalSales.toLocaleString()}</span>
+                    <span className="text-[14px] font-bold text-[#555] mb-2">{item.label}</span>
+                    <span className="text-[28px] font-bold text-[#2D4B3E] leading-none mb-1">¥{item.totalSales.toLocaleString()}</span>
                     <span className="text-[11px] font-bold text-[#999]">受注件数: {item.orderCount}件</span>
                   </div>
 
                   {/* 右側：内訳詳細 */}
                   <div className="p-6 md:w-2/3 grid grid-cols-2 gap-x-6 gap-y-4">
                     <div>
-                      <p className="text-[10px] font-bold text-[#999] tracking-widest mb-1">商品代（税抜）</p>
-                      <p className="text-[16px] font-black text-[#444]">¥{item.itemSales.toLocaleString()}</p>
+                      <p className="text-[10px] font-bold text-[#999] mb-1">商品代（税抜）</p>
+                      <p className="text-[16px] font-bold text-[#444]">¥{item.itemSales.toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold text-[#999] tracking-widest mb-1">送料・手数料（税抜）</p>
-                      <p className="text-[16px] font-black text-[#444]">¥{item.shippingFees.toLocaleString()}</p>
+                      <p className="text-[10px] font-bold text-[#999] mb-1">送料・手数料（税抜）</p>
+                      <p className="text-[16px] font-bold text-[#444]">¥{item.shippingFees.toLocaleString()}</p>
                     </div>
                     
                     <div className="col-span-2 pt-4 border-t border-[#F7F7F7] flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-bold text-[#999] tracking-widest">客単価:</span>
-                        <span className="text-[14px] font-black text-[#2D4B3E]">¥{Math.floor(item.totalSales / item.orderCount).toLocaleString()}</span>
+                        <span className="text-[11px] font-bold text-[#999]">客単価:</span>
+                        <span className="text-[14px] font-bold text-[#2D4B3E]">¥{Math.floor(item.totalSales / item.orderCount).toLocaleString()}</span>
                       </div>
                       
                       {/* 未入金アラート */}

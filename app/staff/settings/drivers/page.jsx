@@ -342,7 +342,7 @@ export default function DriversPage() {
       {/* 新規登録モーダル */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6" onClick={() => setIsModalOpen(false)}>
-          <div className="bg-white rounded-[24px] shadow-2xl p-8 max-w-md w-full space-y-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full space-y-6" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-[18px] font-bold text-[#2D4B3E]">新規ドライバー追加</h2>
             <div className="space-y-4">
               <div className="space-y-1"><label className="text-[11px] font-bold text-[#999999]">氏名</label><input type="text" value={newDriver.name} onChange={(e)=>setNewDriver({...newDriver, name: e.target.value})} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl outline-none focus:border-[#2D4B3E] text-[14px]" placeholder="例：鈴木 太郎" /></div>

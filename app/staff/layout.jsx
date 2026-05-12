@@ -3,9 +3,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
-import { 
-  Home, ClipboardList, PlusSquare, CalendarDays, Truck, Briefcase, 
-  Users, Building2, Settings, TrendingUp, Lock, Sparkles, MessageSquare, X, Send, Image as ImageIcon 
+import {
+  Home, ClipboardList, PlusSquare, CalendarDays, Truck, Briefcase,
+  Users, Building2, Settings, TrendingUp, Lock, Sparkles, MessageSquare, X, Send, Image as ImageIcon, ShoppingBag
 } from 'lucide-react';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
@@ -68,6 +68,7 @@ export default function StaffLayout({ children }) {
     { name: '売上管理', path: '/staff/sales', icon: TrendingUp },
     { name: '顧客管理', path: '/staff/customers', icon: Users },
     { name: '作品管理', path: '/staff/portfolio', icon: ImageIcon },
+    { name: '商品管理（EC）', path: '/staff/products', icon: ShoppingBag },
     { name: '各種設定', path: '/staff/settings', icon: Settings },
   ];
 
@@ -156,7 +157,7 @@ export default function StaffLayout({ children }) {
           {logoUrl ? (
             <img src={logoUrl} alt={appName} className="h-8 object-contain object-left mb-1" />
           ) : (
-            <span className="font-serif italic text-[24px] font-black tracking-tight text-[#2D4B3E]">{appName}</span>
+            <span className="font-serif italic text-[24px] font-bold tracking-tight text-[#2D4B3E]">{appName}</span>
           )}
           <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#999999] pt-1 flex items-center gap-1">
             管理ワークスペース
@@ -194,7 +195,7 @@ export default function StaffLayout({ children }) {
 
           {!isPremiumPlan && (
             <div className="pt-2 border-t border-[#EAEAEA]">
-              <p className="text-[10px] font-bold text-[#999999] tracking-widest mb-3 flex items-center gap-1.5">
+              <p className="text-[10px] font-bold text-[#999999] mb-3 flex items-center gap-1.5">
                 <Lock size={12} /> プレミアム機能
               </p>
               <div className="space-y-2 mb-4">
@@ -226,14 +227,14 @@ export default function StaffLayout({ children }) {
 
       {showFeedback && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#111111]/40 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-[24px] w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
             <div className="p-6 border-b border-[#EAEAEA] flex justify-between items-center bg-[#FBFAF9]">
               <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2"><MessageSquare size={18}/> フィードバックを送信</h2>
               <button onClick={() => setShowFeedback(false)} className="text-[#999999] hover:text-[#111111]"><X size={20}/></button>
             </div>
             <form onSubmit={handleFeedbackSubmit} className="p-6 space-y-4">
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-[#999999] tracking-widest">種類</label>
+                <label className="text-[11px] font-bold text-[#999999]">種類</label>
                 <select 
                   value={feedbackType} onChange={(e) => setFeedbackType(e.target.value)}
                   className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl font-bold text-[13px] outline-none focus:border-[#2D4B3E]"
@@ -244,14 +245,14 @@ export default function StaffLayout({ children }) {
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-[#999999] tracking-widest">内容</label>
+                <label className="text-[11px] font-bold text-[#999999]">内容</label>
                 <textarea 
                   required value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)}
                   placeholder="追加してほしい機能や、発生しているエラーの詳細を具体的にご記入ください。"
                   className="w-full h-32 px-4 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E] resize-none leading-relaxed"
                 />
               </div>
-              <button type="submit" disabled={isSending} className="w-full h-12 bg-[#2D4B3E] text-white rounded-xl font-bold text-[13px] tracking-widest flex items-center justify-center gap-2 hover:bg-[#1f352b] transition-all shadow-md disabled:opacity-50 mt-4">
+              <button type="submit" disabled={isSending} className="w-full h-12 bg-[#2D4B3E] text-white rounded-xl font-bold text-[13px] flex items-center justify-center gap-2 hover:bg-[#1f352b] transition-all shadow-md disabled:opacity-50 mt-4">
                 <Send size={16}/> {isSending ? '送信中...' : '開発元へ送信する'}
               </button>
             </form>

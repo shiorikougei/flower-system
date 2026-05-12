@@ -23,21 +23,54 @@ export default function DeliveriesPage() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [appSettings, setAppSettings] = useState(null);
+  const [currentTenantId, setCurrentTenantId] = useState(null);
 
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [viewRange, setViewRange] = useState(3);
 
   useEffect(() => {
-    fetchOrders();
-    fetchSettings();
+    initData();
   }, []);
 
+  // ★ セキュリティ修正: tenant_id を取得して、orders / settings の両方をテナントスコープに
+  const initData = async () => {
+    setIsLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = '/staff/login';
+        return;
+      }
+      const { data: profile, error: profileError } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
+      if (profileError) throw profileError;
+      const tId = profile.tenant_id;
+      if (!tId) throw new Error('tenant_id が取得できませんでした');
+      setCurrentTenantId(tId);
+
+      const [ordersRes, settingsRes] = await Promise.all([
+        supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false }),
+        // ★ バグ修正: 'default' ではなく実際の tenant_id で settings を取得
+        supabase.from('app_settings').select('settings_data').eq('id', tId).single()
+      ]);
+
+      if (ordersRes.error) throw ordersRes.error;
+      setOrders(ordersRes.data || []);
+      if (settingsRes.data?.settings_data) setAppSettings(settingsRes.data.settings_data);
+    } catch (error) {
+      console.error('データ取得に失敗しました', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const fetchOrders = async () => {
+    if (!currentTenantId) return initData();
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('orders')
         .select('*')
+        .eq('tenant_id', currentTenantId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -49,20 +82,6 @@ export default function DeliveriesPage() {
     }
   };
 
-  const fetchSettings = async () => {
-    try {
-      const { data } = await supabase
-        .from('app_settings')
-        .select('settings_data')
-        .eq('id', 'default')
-        .single();
-
-      if (data) setAppSettings(data.settings_data);
-    } catch (error) {
-      console.error('設定の取得に失敗しました', error);
-    }
-  };
-
   const updateOrderStatus = async (id, newStatus) => {
     try {
       const targetOrder = orders.find(o => o.id === id);
@@ -70,10 +89,12 @@ export default function DeliveriesPage() {
 
       const updatedData = { ...(targetOrder.order_data || {}), status: newStatus };
 
+      // ★ セキュリティ: tenant_id でも絞り込み（多層防御）
       const { error } = await supabase
         .from('orders')
         .update({ order_data: updatedData })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('tenant_id', currentTenantId);
 
       if (error) throw error;
 
@@ -222,7 +243,7 @@ export default function DeliveriesPage() {
                 <Truck size={20} />
               </div>
               <div>
-                <h1 className="text-[20px] font-black text-[#1F4D3A] tracking-wide">配達管理</h1>
+                <h1 className="text-[20px] font-bold text-[#1F4D3A] tracking-wide">配達管理</h1>
                 <p className="text-[12px] text-[#6B7280] font-medium">自社配達案件を日付ごとに確認</p>
               </div>
             </div>
@@ -290,19 +311,19 @@ export default function DeliveriesPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="bg-white border border-[#E5E7EB] rounded-2xl px-4 py-3">
               <div className="text-[11px] text-[#6B7280] font-bold">対象件数</div>
-              <div className="text-[24px] font-black text-[#111827]">{summary.total}</div>
+              <div className="text-[24px] font-bold text-[#111827]">{summary.total}</div>
             </div>
             <div className="bg-white border border-[#E5E7EB] rounded-2xl px-4 py-3">
               <div className="text-[11px] text-[#6B7280] font-bold">未対応</div>
-              <div className="text-[24px] font-black text-[#B45309]">{summary.newCount}</div>
+              <div className="text-[24px] font-bold text-[#B45309]">{summary.newCount}</div>
             </div>
             <div className="bg-white border border-[#E5E7EB] rounded-2xl px-4 py-3">
               <div className="text-[11px] text-[#6B7280] font-bold">置き配あり</div>
-              <div className="text-[24px] font-black text-[#DC2626]">{summary.absenceCount}</div>
+              <div className="text-[24px] font-bold text-[#DC2626]">{summary.absenceCount}</div>
             </div>
             <div className="bg-white border border-[#E5E7EB] rounded-2xl px-4 py-3">
               <div className="text-[11px] text-[#6B7280] font-bold">器回収あり</div>
-              <div className="text-[24px] font-black text-[#2563EB]">{summary.pickupNeedCount}</div>
+              <div className="text-[24px] font-bold text-[#2563EB]">{summary.pickupNeedCount}</div>
             </div>
           </div>
         </div>
@@ -324,7 +345,7 @@ export default function DeliveriesPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className={`w-2.5 h-2.5 rounded-full ${isToday(group.date) ? 'bg-red-500' : 'bg-[#1F4D3A]'}`}></div>
-                      <h2 className="text-[16px] font-black text-[#1F4D3A] tracking-wide">
+                      <h2 className="text-[16px] font-bold text-[#1F4D3A] tracking-wide">
                         {formatDateWithDay(group.date)}
                       </h2>
                     </div>
@@ -356,7 +377,7 @@ export default function DeliveriesPage() {
                           <div className="px-4 py-3 border-b border-[#F1F5F9] bg-white">
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex items-start gap-3 min-w-0">
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[12px] font-black ${
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[12px] font-bold ${
                                   isDone ? 'bg-[#E5E7EB] text-[#6B7280]' : 'bg-[#1F4D3A] text-white'
                                 }`}>
                                   {index + 1}
@@ -380,7 +401,7 @@ export default function DeliveriesPage() {
                                     )}
                                   </div>
 
-                                  <div className="text-[18px] font-black text-[#111827] truncate">
+                                  <div className="text-[18px] font-bold text-[#111827] truncate">
                                     {targetInfo?.name || '未設定'} 様
                                   </div>
 
@@ -416,7 +437,7 @@ export default function DeliveriesPage() {
                                   <div className="flex items-start gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2.5">
                                     <AlertCircle size={15} className="text-orange-600 shrink-0 mt-0.5" />
                                     <div>
-                                      <div className="text-[11px] font-black text-orange-800">置き配指定</div>
+                                      <div className="text-[11px] font-bold text-orange-800">置き配指定</div>
                                       <div className="text-[12px] font-bold text-orange-900 leading-relaxed">
                                         {d.absenceNote || '指定あり'}
                                       </div>
@@ -428,7 +449,7 @@ export default function DeliveriesPage() {
                                   <div className="flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5">
                                     <RotateCcw size={15} className="text-blue-600 shrink-0 mt-0.5" />
                                     <div>
-                                      <div className="text-[11px] font-black text-blue-800">器回収あり</div>
+                                      <div className="text-[11px] font-bold text-blue-800">器回収あり</div>
                                       <div className="text-[12px] font-bold text-blue-900">
                                         後日、器の回収が必要です
                                       </div>
@@ -440,7 +461,7 @@ export default function DeliveriesPage() {
                                   <div className="flex items-start gap-2 rounded-xl border border-yellow-200 bg-yellow-50 px-3 py-2.5">
                                     <MessageSquare size={15} className="text-yellow-700 shrink-0 mt-0.5" />
                                     <div>
-                                      <div className="text-[11px] font-black text-yellow-800">メモ</div>
+                                      <div className="text-[11px] font-bold text-yellow-800">メモ</div>
                                       <div className="text-[12px] font-bold text-yellow-900 leading-relaxed whitespace-pre-wrap">
                                         {d.note}
                                       </div>

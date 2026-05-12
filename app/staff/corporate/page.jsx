@@ -28,7 +28,7 @@ export default function CorporatePortalPage() {
 
   // 予約漏れアラート（ワンクリック営業）の機能
   const handleSendReminder = (event) => {
-    const message = `【お花の予約のご案内】\nいつもお世話になっております。FLORIXです。\n\n来たる ${event.date.split('-')[1]}月${event.date.split('-')[2]}日 は、${event.clientName}の ${event.targetPerson !== '-' ? event.targetPerson + 'の' : ''}${event.type} とのことで、誠におめでとうございます！🎉\n\nお祝いのお花（スタンド花や胡蝶蘭など）のご準備はお済みでしょうか？\n当店で承ることも可能ですので、もしよろしければご相談くださいませ！\n\n▼ 簡単オーダーはこちらから\nhttps://florix.example.com/order/default\n\nよろしくお願いいたします。`;
+    const message = `【お花の予約のご案内】\nいつもお世話になっております。FLORIXです。\n\n来たる ${event.date.split('-')[1]}月${event.date.split('-')[2]}日 は、${event.clientName}の ${event.targetPerson !== '-' ? event.targetPerson + 'の' : ''}${event.type} とのことで、誠におめでとうございます！\n\nお祝いのお花（スタンド花や胡蝶蘭など）のご準備はお済みでしょうか？\n当店で承ることも可能ですので、もしよろしければご相談くださいませ！\n\n▼ 簡単オーダーはこちらから\nhttps://florix.example.com/order/default\n\nよろしくお願いいたします。`;
     
     navigator.clipboard.writeText(message);
     alert('営業用のメッセージテキストをコピーしました！\nLINEやメールに貼り付けて送信してください。');
@@ -86,11 +86,11 @@ export default function CorporatePortalPage() {
           <table className="w-full text-left text-[13px] min-w-[800px]">
             <thead className="bg-[#FBFAF9] border-b border-[#EAEAEA]">
               <tr>
-                <th className="p-4 text-[11px] font-bold text-[#999999] tracking-widest">日付</th>
-                <th className="p-4 text-[11px] font-bold text-[#999999] tracking-widest">イベント内容</th>
-                <th className="p-4 text-[11px] font-bold text-[#999999] tracking-widest">顧客・対象者</th>
-                <th className="p-4 text-[11px] font-bold text-[#999999] tracking-widest">ステータス</th>
-                <th className="p-4 text-[11px] font-bold text-[#999999] tracking-widest text-center">アクション</th>
+                <th className="p-4 text-[11px] font-bold text-[#999999]">日付</th>
+                <th className="p-4 text-[11px] font-bold text-[#999999]">イベント内容</th>
+                <th className="p-4 text-[11px] font-bold text-[#999999]">顧客・対象者</th>
+                <th className="p-4 text-[11px] font-bold text-[#999999]">ステータス</th>
+                <th className="p-4 text-[11px] font-bold text-[#999999] text-center">アクション</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F7F7F7]">

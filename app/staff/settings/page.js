@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 
 import TatefudaPreview from '@/components/TatefudaPreview';
+import PaymentTab from '@/components/settings/PaymentTab';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 
@@ -82,17 +83,18 @@ export default function SettingsPage() {
   ]);
 
   const tabs = [
-    { id: 'general', label: '基本・ロゴ', icon: SettingsIcon }, 
+    { id: 'general', label: '基本・ロゴ', icon: SettingsIcon },
     { id: 'status', label: 'ステータス', icon: ListChecks },
     { id: 'design', label: 'デザイン選択肢', icon: Palette },
-    { id: 'shop', label: '店舗・口座・特別日', icon: Store }, 
+    { id: 'shop', label: '店舗・口座・特別日', icon: Store },
     { id: 'items', label: '商品・納期', icon: Tag },
     { id: 'shipping', label: '配送・時間枠', icon: Truck },
     { id: 'rules', label: '立札デザイン', icon: LayoutTemplate },
     { id: 'staff_order', label: '店舗受付', icon: Clock },
     { id: 'staff', label: 'スタッフ', icon: User },
     { id: 'message', label: '案内文管理', icon: Mail },
-    { id: 'links', label: 'URL発行', icon: LinkIcon }, 
+    { id: 'payment', label: '決済設定', icon: CreditCard },
+    { id: 'links', label: 'URL発行', icon: LinkIcon },
   ];
 
   const applySettings = (s) => {
@@ -194,7 +196,7 @@ export default function SettingsPage() {
 
   const renderGeneralTab = () => (
     <div className="space-y-8 animate-in fade-in">
-      <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8">
+      <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-8">
         <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Building2 size={20}/> システム基本設定 (アプリ名・ID)</h2>
         <div className="space-y-4">
           <div className="space-y-1 bg-[#F7F7F7] p-5 rounded-2xl border border-[#EAEAEA]">
@@ -211,7 +213,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8">
+      <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-8">
         <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><ImageIcon size={20}/> ロゴ・画像・セキュリティ</h2>
         <div className="space-y-4">
           <label className="text-[11px] font-bold text-[#999999]">ロゴ画像</label>
@@ -244,7 +246,7 @@ export default function SettingsPage() {
             <div className="space-y-1">
               <label className="text-[11px] font-bold text-red-800">管理者パスワード (設定変更・注文削除用)</label>
               <div className="relative w-full max-w-[240px]">
-                <input type={showPassword ? "text" : "password"} value={generalConfig.systemPassword || ''} onChange={(e)=>setGeneralConfig({...generalConfig, systemPassword: e.target.value})} className="w-full h-12 bg-white border border-red-200 rounded-xl px-4 font-bold outline-none focus:border-red-400 text-red-700 tracking-widest pr-10"/>
+                <input type={showPassword ? "text" : "password"} value={generalConfig.systemPassword || ''} onChange={(e)=>setGeneralConfig({...generalConfig, systemPassword: e.target.value})} className="w-full h-12 bg-white border border-red-200 rounded-xl px-4 font-bold outline-none focus:border-red-400 text-red-700 pr-10"/>
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600">
                   {showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}
                 </button>
@@ -257,7 +259,7 @@ export default function SettingsPage() {
   );
 
   const renderStatusTab = () => (
-    <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-6 animate-in fade-in">
+    <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-6 animate-in fade-in">
       <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><ListChecks size={20}/> 受注ステータス管理</h2>
       <div className="flex gap-2 p-1 bg-[#F7F7F7] rounded-xl mb-4">
         {['template', 'custom'].map(t => (
@@ -277,7 +279,7 @@ export default function SettingsPage() {
   );
 
   const renderDesignTab = () => (
-    <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 animate-in fade-in">
+    <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-8 animate-in fade-in">
       <div className="border-b pb-4">
         <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Palette size={20}/> デザイン選択肢の設定</h2>
         <p className="text-[11px] text-[#999999] mt-2">注文フォームでお客様が選択する「用途」「カラー」「イメージ」の選択肢を自由にカスタマイズできます。「その他」は自動で追加されます。</p>
@@ -368,10 +370,13 @@ export default function SettingsPage() {
     </div>
   );
 
+  // ★ 決済設定タブ（Stripe Connect）
+  const renderPaymentTab = () => <PaymentTab />;
+
   const renderShopTab = () => (
     <div className="space-y-8 animate-in fade-in">
       {shops.map(shop => (
-        <div key={shop.id} className="bg-white rounded-[32px] border p-8 shadow-sm relative space-y-8 text-left">
+        <div key={shop.id} className="bg-white rounded-2xl border p-8 shadow-sm relative space-y-8 text-left">
           <button onClick={()=>setShops(shops.filter(s=>s.id!==shop.id))} className="absolute top-6 right-6 p-2 text-red-300 hover:text-red-500 transition-colors"><Trash2 size={20}/></button>
           
           <div className="flex items-center gap-3">
@@ -416,14 +421,14 @@ export default function SettingsPage() {
             </div>
             
             <div className="space-y-4">
-              <label className="text-[12px] font-bold text-[#D97C8F] flex items-center gap-2"><Truck size={14}/> 配達可能時間・特別日</label>
-              <div className="flex gap-2 bg-[#D97C8F]/5 p-3 rounded-xl border border-[#D97C8F]/20 mb-2">
-                <input type="time" value={shop.deliveryOpenTime || '11:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryOpenTime:e.target.value}:s))} className="border border-[#D97C8F]/30 rounded p-1 text-xs outline-none bg-white"/>
+              <label className="text-[12px] font-bold text-[#D97D54] flex items-center gap-2"><Truck size={14}/> 配達可能時間・特別日</label>
+              <div className="flex gap-2 bg-[#D97D54]/5 p-3 rounded-xl border border-[#D97D54]/20 mb-2">
+                <input type="time" value={shop.deliveryOpenTime || '11:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryOpenTime:e.target.value}:s))} className="border border-[#D97D54]/30 rounded p-1 text-xs outline-none bg-white"/>
                 <span>〜</span>
-                <input type="time" value={shop.deliveryCloseTime || '18:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryCloseTime:e.target.value}:s))} className="border border-[#D97C8F]/30 rounded p-1 text-xs outline-none bg-white"/>
+                <input type="time" value={shop.deliveryCloseTime || '18:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryCloseTime:e.target.value}:s))} className="border border-[#D97D54]/30 rounded p-1 text-xs outline-none bg-white"/>
               </div>
               {renderSpecialHoursList(shop, 'deliverySpecialHours')}
-              <button onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:[...(s.deliverySpecialHours||[]), {id:Date.now(), date:'', type:'closed', repeatType:'今年のみ', note:''}]}:s))} className="w-full py-2 bg-[#D97C8F]/5 border-dashed border border-[#D97C8F]/30 rounded-xl text-[10px] font-bold text-[#D97C8F]/80 hover:text-[#D97C8F] transition-all">+ 配達特別ルールを追加</button>
+              <button onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:[...(s.deliverySpecialHours||[]), {id:Date.now(), date:'', type:'closed', repeatType:'今年のみ', note:''}]}:s))} className="w-full py-2 bg-[#D97D54]/5 border-dashed border border-[#D97D54]/30 rounded-xl text-[10px] font-bold text-[#D97D54]/80 hover:text-[#D97D54] transition-all">+ 配達特別ルールを追加</button>
             </div>
           </div>
 
@@ -459,7 +464,7 @@ export default function SettingsPage() {
           pickupNote: 'ご来店予定日時に店舗までお越しください。', deliveryNote: '交通状況により配達時間が前後する場合がございます。', shippingNote: '発送準備期間＋配送日数がかかります。交通状況により遅延する場合がございます。',
           absenceInstruction: '生花のため、ご不在時は原則として置き配または宅配ボックスへのお届けとなります。ご希望の対応をお選びください。'
         }])} 
-        className="w-full py-10 border-2 border-dashed border-[#EAEAEA] rounded-[32px] text-[#999999] font-bold transition-all hover:border-[#2D4B3E] shadow-sm"
+        className="w-full py-10 border-2 border-dashed border-[#EAEAEA] rounded-2xl text-[#999999] font-bold transition-all hover:border-[#2D4B3E] shadow-sm"
       >
         + 店舗を新規追加
       </button>
@@ -472,7 +477,7 @@ export default function SettingsPage() {
         const isAllShops = item.targetShops === 'all' || item.targetShops === undefined;
 
         return (
-          <div key={item.id} className="bg-white rounded-[32px] border p-8 shadow-sm relative space-y-6 text-left">
+          <div key={item.id} className="bg-white rounded-2xl border p-8 shadow-sm relative space-y-6 text-left">
             <button onClick={()=>setFlowerItems(flowerItems.filter(i=>i.id!==item.id))} className="absolute top-6 right-6 p-2 text-red-300 hover:text-red-500 transition-colors"><Trash2 size={18}/></button>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-10 md:pr-14 pt-2">
@@ -532,13 +537,27 @@ export default function SettingsPage() {
                 <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={16}/> 納期設定</p>
                 <div className="space-y-2"><label className="text-[9px] font-bold text-[#999999]">通常納期 (日後)</label><input type="number" value={item.normalLeadDays} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, normalLeadDays:Number(e.target.value)}:i))} className="w-full bg-[#FBFAF9] border rounded-lg h-10 px-3 font-bold outline-none focus:border-[#2D4B3E]"/></div>
                 <div className="space-y-2"><label className="text-[9px] font-bold text-[#999999]">業者配送 発送準備(日)</label><input type="number" value={item.shippingLeadDays} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, shippingLeadDays:Number(e.target.value)}:i))} className="w-full bg-[#FBFAF9] border rounded-lg h-10 px-3 font-bold outline-none focus:border-[#2D4B3E]"/></div>
+
+                {/* ★ 要件⑤: お急ぎ電話案内のON/OFF（デフォルトON） */}
+                <div className="bg-[#FBFAF9] p-3 rounded-xl border space-y-1">
+                  <label className="flex items-center justify-between text-[11px] font-bold cursor-pointer">
+                    お急ぎ電話案内を表示
+                    <input
+                      type="checkbox"
+                      checked={item.showRushCallNotice !== false}
+                      onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, showRushCallNotice:e.target.checked}:i))}
+                      className="accent-[#2D4B3E] w-4 h-4"
+                    />
+                  </label>
+                  <p className="text-[9px] text-[#999999] leading-tight">納期より早くご希望の場合に「店舗へ直接お電話ください」と注文画面に表示します。</p>
+                </div>
               </div>
               <div className="space-y-4 px-4 border-l border-r border-[#FBFAF9]">
                 <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2"><ShieldCheck size={16}/> 持込設定</p>
                 {['canBringFlowers', 'canBringVase'].map(key => (
                   <div key={key} className="bg-[#FBFAF9] p-3 rounded-xl border space-y-2">
                     <label className="flex items-center justify-between text-[12px] font-bold">{key==='canBringFlowers'?'花材持込':'花器持込'}<input type="checkbox" checked={item[key]} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, [key]:e.target.checked}:i))} className="accent-[#2D4B3E] w-4 h-4"/></label>
-                    {item[key] && <div className="flex items-center justify-between text-[10px] font-bold text-[#555555]"><span>持込時納期</span><div className="flex items-center gap-1"><input type="number" value={item[key+'LeadDays']||7} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, [key+'LeadDays']:Number(e.target.value)}:i))} className="w-10 border rounded text-center h-8 font-black"/>日後</div></div>}
+                    {item[key] && <div className="flex items-center justify-between text-[10px] font-bold text-[#555555]"><span>持込時納期</span><div className="flex items-center gap-1"><input type="number" value={item[key+'LeadDays']||7} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, [key+'LeadDays']:Number(e.target.value)}:i))} className="w-10 border rounded text-center h-8 font-bold"/>日後</div></div>}
                   </div>
                 ))}
               </div>
@@ -553,12 +572,12 @@ export default function SettingsPage() {
           </div>
         );
       })}
-      <button onClick={()=>setFlowerItems([...flowerItems, {id:Date.now(), name:'', targetShops: 'all', normalLeadDays:2, shippingLeadDays:3, canBringFlowers:false, hasReturn:false, canPickup:true, canDelivery:true, canShipping:true, minPrice:3000, maxPrice:50000, stepPrice:1000}])} className="w-full py-10 border-2 border-dashed border-[#EAEAEA] rounded-[32px] text-[#999999] font-bold transition-all hover:border-[#2D4B3E]">+ 商品を追加</button>
+      <button onClick={()=>setFlowerItems([...flowerItems, {id:Date.now(), name:'', targetShops: 'all', normalLeadDays:2, shippingLeadDays:3, canBringFlowers:false, hasReturn:false, canPickup:true, canDelivery:true, canShipping:true, minPrice:3000, maxPrice:50000, stepPrice:1000}])} className="w-full py-10 border-2 border-dashed border-[#EAEAEA] rounded-2xl text-[#999999] font-bold transition-all hover:border-[#2D4B3E]">+ 商品を追加</button>
     </div>
   );
 
   const renderShippingTab = () => (
-    <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-10 animate-in fade-in text-left">
+    <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-10 animate-in fade-in text-left">
       <h2 className="text-[18px] font-bold text-[#2D4B3E] border-b pb-4 flex items-center gap-2"><Truck size={20}/> 配送・送料・時間枠</h2>
       <section className="space-y-6">
         <label className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={16}/> 受取・配達の時間枠</label>
@@ -612,16 +631,16 @@ export default function SettingsPage() {
           ))}
         </div>
       </div>
-      <div className="bg-[#2D4B3E]/5 p-6 rounded-[24px] border border-[#2D4B3E]/10 space-y-4">
+      <div className="bg-[#2D4B3E]/5 p-6 rounded-2xl border border-[#2D4B3E]/10 space-y-4">
         <div className="font-bold text-[#2D4B3E] text-[14px] flex items-center gap-2"><RotateCcw size={18}/> 器回収/返却時の加算送料</div>
         <div className="grid grid-cols-2 gap-4"><div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">計算タイプ</label><select value={boxFeeConfig.returnFeeType} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, returnFeeType:e.target.value})} className="w-full h-10 bg-white border rounded-xl px-3 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"><option value="flat">固定金額 (¥)</option><option value="percent">基本送料の○%</option></select></div><div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">{boxFeeConfig.returnFeeType === 'flat' ? '加算金額 (¥)' : '加算率 (%)'}</label><input type="number" value={boxFeeConfig.returnFeeValue} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, returnFeeValue:Number(e.target.value)})} className="w-full h-10 bg-white border rounded-xl px-3 text-[13px] font-bold text-right outline-none focus:border-[#2D4B3E]"/></div></div>
       </div>
       <div className="space-y-6 pt-4 border-t border-[#EAEAEA]">
         <div className="flex justify-between items-center"><label className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Ruler size={16}/> 業者配送 サイズ・地域マスタ</label><div className="flex gap-2"><button onClick={()=>{const s=prompt('サイズを入力(例:140)'); if(s) setShippingSizes([...shippingSizes, s]);}} className="text-[10px] bg-[#2D4B3E] text-white px-3 py-1.5 rounded-full font-bold shadow-sm hover:bg-[#1f352b] transition-all">+ サイズ追加</button><button onClick={()=>{const r=prompt('新しい地域名を入力'); if(r) setShippingRates([...shippingRates, {region:r, leadDays:1}]);}} className="text-[10px] bg-[#2D4B3E] text-white px-3 py-1.5 rounded-full font-bold shadow-sm hover:bg-[#1f352b] transition-all">+ 地域追加</button></div></div>
-        <div className="flex flex-wrap gap-2 mb-4 bg-[#FBFAF9] p-4 rounded-2xl border border-[#EAEAEA]"><span className="text-[11px] font-bold text-[#999999] w-full mb-1">登録サイズ (×で削除可):</span>{shippingSizes.map((s, i) => (<div key={i} className="flex items-center gap-2 bg-white border rounded-full pl-3 pr-1 py-1 shadow-sm transition-all hover:border-red-200"><span className="text-[11px] font-black text-[#2D4B3E]">{s}サイズ</span><button onClick={() => { if(confirm(`${s}サイズを削除しますか？`)){ setShippingSizes(shippingSizes.filter((_, idx)=>idx!==i)); }}} className="w-5 h-5 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"><X size={12}/></button></div>))}</div>
-        <div className="overflow-x-auto border rounded-[24px]">
+        <div className="flex flex-wrap gap-2 mb-4 bg-[#FBFAF9] p-4 rounded-2xl border border-[#EAEAEA]"><span className="text-[11px] font-bold text-[#999999] w-full mb-1">登録サイズ (×で削除可):</span>{shippingSizes.map((s, i) => (<div key={i} className="flex items-center gap-2 bg-white border rounded-full pl-3 pr-1 py-1 shadow-sm transition-all hover:border-red-200"><span className="text-[11px] font-bold text-[#2D4B3E]">{s}サイズ</span><button onClick={() => { if(confirm(`${s}サイズを削除しますか？`)){ setShippingSizes(shippingSizes.filter((_, idx)=>idx!==i)); }}} className="w-5 h-5 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"><X size={12}/></button></div>))}</div>
+        <div className="overflow-x-auto border rounded-2xl">
           <table className="w-full text-left text-[10px] min-w-[1100px] bg-white">
-            <thead className="bg-[#FBFAF9] border-b text-[#999999]"><tr><th className="p-3 w-32 font-black">地域・地方名</th><th className="p-3 text-center border-l bg-green-50 text-green-800">配送日数</th>{shippingSizes.map(s=><th key={s} className="p-3 text-center border-l bg-gray-50">{s}サイズ</th>)}{shippingSizes.map(s=><th key={'c'+s} className="p-3 text-center border-l bg-blue-50 text-blue-500">{s}クール加算</th>)}<th className="p-3"></th></tr></thead>
+            <thead className="bg-[#FBFAF9] border-b text-[#999999]"><tr><th className="p-3 w-32 font-bold">地域・地方名</th><th className="p-3 text-center border-l bg-green-50 text-green-800">配送日数</th>{shippingSizes.map(s=><th key={s} className="p-3 text-center border-l bg-gray-50">{s}サイズ</th>)}{shippingSizes.map(s=><th key={'c'+s} className="p-3 text-center border-l bg-blue-50 text-blue-500">{s}クール加算</th>)}<th className="p-3"></th></tr></thead>
             <tbody className="divide-y">{shippingRates.map((r, i) => (<tr key={i} className="hover:bg-gray-50/50 transition-colors"><td className="p-3"><input type="text" value={r.region} onChange={(e)=>{const n=[...shippingRates]; n[i].region=e.target.value; setShippingRates(n);}} className="w-full border-none bg-transparent font-bold text-[11px] outline-none" /></td><td className="p-1 border-l bg-green-50/30"><div className="flex items-center justify-center gap-1"><input type="number" value={r.leadDays || 1} onChange={(e)=>{const n=[...shippingRates]; n[i].leadDays=Number(e.target.value); setShippingRates(n);}} className="w-12 border rounded p-1.5 text-center font-bold text-green-900 outline-none"/></div></td>{shippingSizes.map(s => <td key={s} className="p-1 border-l"><input type="number" value={r['fee'+s]||0} onChange={(e)=>{const n=[...shippingRates]; n[i]['fee'+s]=Number(e.target.value); setShippingRates(n);}} className="w-16 border rounded p-1.5 mx-auto block text-right font-bold outline-none focus:border-[#2D4B3E]"/></td>)}{shippingSizes.map(s => <td key={'c'+s} className="p-1 border-l bg-blue-50/10"><input type="number" value={r['cool'+s]||0} onChange={(e)=>{const n=[...shippingRates]; n[i]['cool'+s]=Number(e.target.value); setShippingRates(n);}} className="w-16 border border-blue-100 rounded p-1.5 mx-auto block text-right text-blue-500 font-bold outline-none focus:border-blue-400"/></td>)}<td className="p-1 text-center"><button onClick={()=>{if(confirm('削除しますか？')){setShippingRates(shippingRates.filter((_, idx)=>idx!==i))}}} className="text-red-300 hover:text-red-500 p-2"><Trash2 size={14}/></button></td></tr>))}</tbody>
           </table>
         </div>
@@ -632,7 +651,7 @@ export default function SettingsPage() {
   const renderRulesTab = () => {
     return (
       <div className="space-y-8 animate-in fade-in">
-        <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 text-left">
+        <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-8 text-left">
           <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><LayoutTemplate size={20}/> 立札デザイン・店舗紐付け</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             <div className="space-y-4">
@@ -652,8 +671,8 @@ export default function SettingsPage() {
                 </div>
               ))}
             </div>
-            <div className="sticky top-24 h-fit bg-[#FBFAF9] p-8 rounded-[32px] border border-[#EAEAEA] shadow-inner text-center">
-              <span className="text-[10px] font-bold text-[#999999] tracking-widest block mb-4">プレビュー ({selectedPreviewTate.label})</span>
+            <div className="sticky top-24 h-fit bg-[#FBFAF9] p-8 rounded-2xl border border-[#EAEAEA] shadow-inner text-center">
+              <span className="text-[10px] font-bold text-[#999999] block mb-4">プレビュー ({selectedPreviewTate.label})</span>
               <TatefudaPreview tatePattern={selectedPreviewTate.id} layout={selectedPreviewTate.layout} isOsonae={['p1', 'p3', 'p4'].includes(selectedPreviewTate.id)} input1="御開店" input2="山田太郎" input3="株式会社〇〇" input3a="株式会社〇〇" input3b="代表 山田太郎" />
             </div>
           </div>
@@ -663,20 +682,20 @@ export default function SettingsPage() {
   };
 
   const renderStaffOrderTab = () => (
-    <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 animate-in fade-in text-left">
+    <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-8 animate-in fade-in text-left">
       <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={20}/> 代理入力の特別ルール</h2>
       <div className="space-y-4">
         {[{ label: '最短納期の制限を完全に無視する', key: 'ignoreLeadTime' }, { label: '注文金額の自由入力を許可', key: 'allowCustomPrice' }].map(item => (
-          <label key={item.key} className="flex items-center justify-between bg-[#FBFAF9] p-5 rounded-[24px] cursor-pointer border border-transparent hover:border-[#EAEAEA] shadow-sm"><span className="font-bold text-[14px]">{item.label}</span><input type="checkbox" checked={staffOrderConfig[item.key]} onChange={(e)=>setStaffOrderConfig({...staffOrderConfig, [item.key]:e.target.checked})} className="w-6 h-6 accent-[#2D4B3E]"/></label>
+          <label key={item.key} className="flex items-center justify-between bg-[#FBFAF9] p-5 rounded-2xl cursor-pointer border border-transparent hover:border-[#EAEAEA] shadow-sm"><span className="font-bold text-[14px]">{item.label}</span><input type="checkbox" checked={staffOrderConfig[item.key]} onChange={(e)=>setStaffOrderConfig({...staffOrderConfig, [item.key]:e.target.checked})} className="w-6 h-6 accent-[#2D4B3E]"/></label>
         ))}
-        <label className="flex items-center justify-between bg-[#FBFAF9] p-5 rounded-[24px] cursor-pointer border border-transparent hover:border-[#EAEAEA] shadow-sm"><span className="font-bold text-[14px]">お客様への自動返信メールを送らない</span><input type="checkbox" checked={!staffOrderConfig.sendAutoReply} onChange={(e)=>setStaffOrderConfig({...staffOrderConfig, sendAutoReply:!e.target.checked})} className="w-6 h-6 accent-[#2D4B3E]"/></label>
+        <label className="flex items-center justify-between bg-[#FBFAF9] p-5 rounded-2xl cursor-pointer border border-transparent hover:border-[#EAEAEA] shadow-sm"><span className="font-bold text-[14px]">お客様への自動返信メールを送らない</span><input type="checkbox" checked={!staffOrderConfig.sendAutoReply} onChange={(e)=>setStaffOrderConfig({...staffOrderConfig, sendAutoReply:!e.target.checked})} className="w-6 h-6 accent-[#2D4B3E]"/></label>
         <div className="pt-4 space-y-1"><label className="text-[11px] font-bold text-[#999999]">スタッフ専用 支払い方法（カンマ区切り）</label><input type="text" value={(staffOrderConfig.paymentMethods||[]).join(', ')} onChange={(e)=>setStaffOrderConfig({...staffOrderConfig, paymentMethods:e.target.value.split(',').map(s=>s.trim()).filter(Boolean)})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/></div>
       </div>
     </div>
   );
 
   const renderStaffTab = () => (
-    <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-6 animate-in fade-in text-left">
+    <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-6 animate-in fade-in text-left">
       <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><User size={20}/> スタッフ管理</h2>
       <div className="space-y-3">
         {staffList.map((s, i) => (
@@ -688,7 +707,7 @@ export default function SettingsPage() {
   );
 
   const renderMessageTab = () => (
-    <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-6 animate-in fade-in text-left">
+    <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-6 animate-in fade-in text-left">
       <div className="flex justify-between items-center border-b border-[#EAEAEA] pb-4">
         <div>
           <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Mail size={20}/> 案内文・テンプレート管理</h2>
@@ -700,7 +719,7 @@ export default function SettingsPage() {
         {autoReplyTemplates.map((template, index) => {
           const isAllShops = template.targetShops === 'all' || template.targetShops === undefined;
           return (
-            <div key={template.id} className="bg-[#FBFAF9] p-6 rounded-[24px] border border-[#EAEAEA] space-y-4 relative group">
+            <div key={template.id} className="bg-[#FBFAF9] p-6 rounded-2xl border border-[#EAEAEA] space-y-4 relative group">
               <button onClick={() => setAutoReplyTemplates(autoReplyTemplates.filter(t => t.id !== template.id))} className="absolute top-6 right-6 text-red-300 hover:text-red-500 bg-white p-2 rounded-full shadow-sm"><Trash2 size={16}/></button>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-12">
@@ -747,7 +766,7 @@ export default function SettingsPage() {
               <div className="space-y-1">
                 <label className="text-[11px] font-bold text-[#999999]">本文設定</label>
                 <div className="relative">
-                  <textarea value={template.body} onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].body = e.target.value; setAutoReplyTemplates(newT); }} className="w-full h-64 bg-white border border-[#EAEAEA] rounded-[20px] p-5 pb-16 text-[13px] font-bold outline-none resize-none leading-relaxed focus:border-[#2D4B3E]" />
+                  <textarea value={template.body} onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].body = e.target.value; setAutoReplyTemplates(newT); }} className="w-full h-64 bg-white border border-[#EAEAEA] rounded-2xl p-5 pb-16 text-[13px] font-bold outline-none resize-none leading-relaxed focus:border-[#2D4B3E]" />
                   
                   {/* ★修正：タグをクリックでコピーできるように変更 */}
                   <div className="absolute bottom-4 left-4 right-4 flex flex-wrap gap-1.5">
@@ -787,12 +806,12 @@ export default function SettingsPage() {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
     return (
-      <div className="bg-white rounded-[32px] border p-8 shadow-sm space-y-8 animate-in fade-in text-left">
+      <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-8 animate-in fade-in text-left">
         <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><LinkIcon size={20}/> URL・リンク発行</h2>
         <div className="space-y-6">
           
           {isB2BEnabled && (
-            <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] space-y-4">
+            <div className="p-6 bg-[#FBFAF9] rounded-2xl border border-[#EAEAEA] space-y-4">
               <h3 className="text-[14px] font-bold text-[#111111] flex items-center gap-2"><Building2 size={16}/> 法人のお客様向け</h3>
               <div className="space-y-2">
                  <label className="text-[11px] font-bold text-[#999999]">法人ポータル・注文画面</label>
@@ -811,7 +830,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          <div className="p-6 bg-[#FBFAF9] rounded-[24px] border border-[#EAEAEA] space-y-4">
+          <div className="p-6 bg-[#FBFAF9] rounded-2xl border border-[#EAEAEA] space-y-4">
             <h3 className="text-[14px] font-bold text-[#111111] flex items-center gap-2"><Store size={16}/> 一般のお客様向け (店舗別注文ページ)</h3>
             {shops.length === 0 ? <p className="text-[12px] text-[#999999]">店舗を登録してください。</p> : shops.map(shop => (
                <div key={shop.id} className="space-y-1">
@@ -844,7 +863,7 @@ export default function SettingsPage() {
               <button onClick={handleLogin} className="px-3 h-8 bg-[#2D4B3E] text-white text-[11px] font-bold rounded-lg transition-all hover:bg-[#1f352b] active:scale-95">解除</button>
             </div>
           ) : (
-            <button onClick={saveSettings} disabled={isSaving} className={`px-6 py-2.5 rounded-xl text-[12px] font-bold tracking-widest shadow-md transition-all ${isSaving ? 'bg-gray-400' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b] active:scale-95'}`}>{isSaving ? '保存中...' : '変更を保存'}</button>
+            <button onClick={saveSettings} disabled={isSaving} className={`px-6 py-2.5 rounded-xl text-[12px] font-bold shadow-md transition-all ${isSaving ? 'bg-gray-400' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b] active:scale-95'}`}>{isSaving ? '保存中...' : '変更を保存'}</button>
           )}
         </div>
       </header>
@@ -864,6 +883,7 @@ export default function SettingsPage() {
         {activeTab === 'staff_order' && renderStaffOrderTab()}
         {activeTab === 'staff' && renderStaffTab()}
         {activeTab === 'message' && renderMessageTab()}
+        {activeTab === 'payment' && renderPaymentTab()}
         {activeTab === 'links' && renderLinksTab()}
       </main>
 

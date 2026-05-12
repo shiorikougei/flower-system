@@ -84,9 +84,8 @@ export default function StaffNewOrderPage() {
         
         if (isFirstLoad) {
           if (settingsData.staffOrderConfig?.sendAutoReply) setSendAutoReply(true);
-          if (settingsData.staffOrderConfig?.paymentMethods?.length > 0) {
-            setPaymentMethod(settingsData.staffOrderConfig.paymentMethods[0]);
-          }
+          // ★ デフォルトで「前払い済み」を初期選択
+          if (!paymentMethod) setPaymentMethod('前払い済み');
           if (settingsData.shops?.length > 0) {
             const defaultShop = settingsData.shops[0];
             setShopId(defaultShop.id);
@@ -411,9 +410,12 @@ export default function StaffNewOrderPage() {
         tateInput1, tateInput2, tateInput3, tateInput3a, tateInput3b,
         customerInfo, isRecipientDifferent, recipientInfo, note,
         paymentMethod, sendAutoReply,
+        // ★ 入金状況: 「前払い済み」→入金済扱い / 「引き取り時に支払い」→未入金扱い
+        //    受注一覧の判定は paymentStatus に「未」が含まれているかで分岐
+        paymentStatus: paymentMethod === '前払い済み' ? '前払い済み' : '未入金（引き取り時）',
         referenceImage: selectedImage ? selectedImage.url : null,
         status: 'new',
-        isStaffEntered: true 
+        isStaffEntered: true
       };
 
       const { error } = await supabase.from('orders').insert([
@@ -432,7 +434,7 @@ export default function StaffNewOrderPage() {
     }
   };
 
-  if (isLoading) return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-sans text-[#2D4B3E] font-bold tracking-widest animate-pulse">読み込み中...</div>;
+  if (isLoading) return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-sans text-[#2D4B3E] font-bold animate-pulse">読み込み中...</div>;
 
   return (
     <div className="flex flex-col font-sans text-[#111111] pb-32">
@@ -449,19 +451,19 @@ export default function StaffNewOrderPage() {
 
         <div className="max-w-[700px] mx-auto w-full p-8 space-y-8">
           
-          <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-6">
-            <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3 tracking-widest">1. 受付情報と商品</h2>
+          <div className="bg-white p-8 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-6">
+            <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3">1. 受付情報と商品</h2>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-[#999999] tracking-widest">受付区分</label>
+                <label className="text-[11px] font-bold text-[#999999]">受付区分</label>
                 <div className="flex gap-2">
                   <button onClick={() => setReceptionType('phone')} className={`flex-1 py-3 text-[13px] font-bold rounded-xl border transition-all ${receptionType === 'phone' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>電話受付</button>
                   <button onClick={() => setReceptionType('store')} className={`flex-1 py-3 text-[13px] font-bold rounded-xl border transition-all ${receptionType === 'store' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>店頭受付</button>
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-[#999999] tracking-widest">受付スタッフ</label>
+                <label className="text-[11px] font-bold text-[#999999]">受付スタッフ</label>
                 <select value={staffName} onChange={(e) => setStaffName(e.target.value)} className="w-full h-[50px] bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
                   <option value="">担当者を選択</option>
                   {appSettings?.staffList?.map(staff => (
@@ -472,7 +474,7 @@ export default function StaffNewOrderPage() {
             </div>
 
             <div className="space-y-2 pt-2">
-              <label className="text-[11px] font-bold text-[#999999] tracking-widest">受付した店舗</label>
+              <label className="text-[11px] font-bold text-[#999999]">受付した店舗</label>
               <select value={shopId} onChange={(e) => {
                 setShopId(e.target.value);
                 const s = appSettings?.shops?.find(shop => String(shop.id) === String(e.target.value));
@@ -485,7 +487,7 @@ export default function StaffNewOrderPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-[#FBFAF9]">
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-[#999999] tracking-widest">お花の種類</label>
+                <label className="text-[11px] font-bold text-[#999999]">お花の種類</label>
                 <select value={flowerType} onChange={(e) => { setFlowerType(e.target.value); setItemPrice(''); }} className={`w-full h-12 border rounded-xl px-4 text-[13px] font-bold outline-none transition-all ${flowerType ? 'bg-[#2D4B3E]/5 border-[#2D4B3E] text-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] focus:border-[#2D4B3E]'}`}>
                   <option value="">選択してください</option>
                   {appSettings?.flowerItems?.filter(item => {
@@ -496,7 +498,7 @@ export default function StaffNewOrderPage() {
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-[#999999] tracking-widest">受取方法</label>
+                <label className="text-[11px] font-bold text-[#999999]">受取方法</label>
                 <div className="flex gap-2">
                   <button onClick={() => setReceiveMethod('pickup')} className={`flex-1 py-3 text-[12px] font-bold rounded-xl border ${receiveMethod === 'pickup' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>店頭受取</button>
                   <button onClick={() => setReceiveMethod('delivery')} className={`flex-1 py-3 text-[12px] font-bold rounded-xl border ${receiveMethod === 'delivery' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>自社配達</button>
@@ -516,7 +518,7 @@ export default function StaffNewOrderPage() {
             </div>
             
             <div className="flex items-center gap-4 pt-2">
-               <span className="text-[11px] font-bold text-[#999999] tracking-widest">持ち込み</span>
+               <span className="text-[11px] font-bold text-[#999999]">持ち込み</span>
                <div className="flex items-center gap-3">
                  <label className="flex items-center gap-2 text-[13px] font-bold cursor-pointer"><input type="radio" checked={isBring === 'shop'} onChange={() => setIsBring('shop')} className="accent-[#2D4B3E]" /> なし</label>
                  <label className="flex items-center gap-2 text-[13px] font-bold cursor-pointer"><input type="radio" checked={isBring === 'bring'} onChange={() => setIsBring('bring')} className="accent-[#2D4B3E]" /> あり</label>
@@ -524,22 +526,22 @@ export default function StaffNewOrderPage() {
             </div>
           </div>
 
-          <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-6 overflow-hidden">
+          <div className="bg-white p-8 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-6 overflow-hidden">
             
             {matchingImages.length > 0 && (
               <div className="bg-[#2D4B3E]/5 -mx-8 -mt-8 p-6 pb-8 mb-6 border-b border-[#EAEAEA] space-y-4">
-                 <p className="text-[11px] font-bold text-[#2D4B3E] tracking-widest flex items-center gap-2">✨ 制作例からオーダー内容を自動入力</p>
+                 <p className="text-[11px] font-bold text-[#2D4B3E] flex items-center gap-2">制作例からオーダー内容を自動入力</p>
                  <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar">
                    {matchingImages.map(img => (
                      <div key={img.id} className="shrink-0 w-[140px] space-y-2 snap-center">
                        <div 
                          onClick={() => handleSelectImage(img)}
-                         className={`relative aspect-square rounded-[20px] overflow-hidden border-4 transition-all cursor-pointer ${selectedImage?.id === img.id ? 'border-[#2D4B3E] shadow-lg scale-105' : 'border-transparent hover:scale-105'}`}
+                         className={`relative aspect-square rounded-2xl overflow-hidden border-4 transition-all cursor-pointer ${selectedImage?.id === img.id ? 'border-[#2D4B3E] shadow-lg scale-105' : 'border-transparent hover:scale-105'}`}
                        >
                          <img src={img.url} alt="style" className="w-full h-full object-cover" />
                          {selectedImage?.id === img.id && (
                            <div className="absolute inset-0 bg-[#2D4B3E]/30 flex items-center justify-center backdrop-blur-[1px]">
-                             <span className="bg-[#2D4B3E] text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-sm tracking-widest">選択中</span>
+                             <span className="bg-[#2D4B3E] text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-sm">選択中</span>
                            </div>
                          )}
                        </div>
@@ -555,10 +557,10 @@ export default function StaffNewOrderPage() {
               </div>
             )}
 
-            <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3 tracking-widest">2. 詳細と金額</h2>
+            <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3">2. 詳細と金額</h2>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-[#999999] tracking-widest">用途</label>
+                <label className="text-[11px] font-bold text-[#999999]">用途</label>
                 <select value={flowerPurpose} onChange={(e) => setFlowerPurpose(e.target.value)} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
                   <option value="">用途...</option>
                   {designOptions.purposes.map(p => <option key={p} value={p}>{p}</option>)}
@@ -567,7 +569,7 @@ export default function StaffNewOrderPage() {
                 {flowerPurpose === 'その他' && <input type="text" placeholder="詳細を入力..." value={otherPurpose} onChange={(e) => setOtherPurpose(e.target.value)} className="w-full h-10 mt-2 bg-[#FBFAF9] px-4 rounded-lg outline-none text-[13px] border border-[#EAEAEA]" />}
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-[#999999] tracking-widest">イメージ</label>
+                <label className="text-[11px] font-bold text-[#999999]">イメージ</label>
                 <select value={flowerVibe} onChange={(e) => setFlowerVibe(e.target.value)} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
                   <option value="">イメージ...</option>
                   {designOptions.vibes.map(v => <option key={v} value={v}>{v}</option>)}
@@ -576,7 +578,7 @@ export default function StaffNewOrderPage() {
                 {flowerVibe === 'その他' && <input type="text" placeholder="詳細を入力..." value={otherVibe} onChange={(e) => setOtherVibe(e.target.value)} className="w-full h-10 mt-2 bg-[#FBFAF9] px-4 rounded-lg outline-none text-[13px] border border-[#EAEAEA]" />}
               </div>
               <div className="space-y-2 col-span-2">
-                <label className="text-[11px] font-bold text-[#999999] tracking-widest">メインカラー</label>
+                <label className="text-[11px] font-bold text-[#999999]">メインカラー</label>
                 <select value={flowerColor} onChange={(e) => setFlowerColor(e.target.value)} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
                   <option value="">カラー...</option>
                   {designOptions.colors.map(c => <option key={c} value={c}>{c}</option>)}
@@ -587,7 +589,7 @@ export default function StaffNewOrderPage() {
             
             <div className="space-y-2 pt-4 border-t border-[#FBFAF9]">
               <div className="flex justify-between items-center">
-                <label className="text-[11px] font-bold text-[#999999] tracking-widest">ご予算 (税抜)</label>
+                <label className="text-[11px] font-bold text-[#999999]">ご予算 (税抜)</label>
                 {staffConfig.allowCustomPrice && (
                   <button onClick={() => setIsCustomPrice(!isCustomPrice)} className="text-[10px] text-[#2D4B3E] border border-[#2D4B3E]/30 bg-[#2D4B3E]/5 px-3 py-1 rounded-full font-bold hover:bg-[#2D4B3E] hover:text-white transition-all">
                     {isCustomPrice ? 'リストから選ぶ' : '金額を直接入力する'}
@@ -613,8 +615,8 @@ export default function StaffNewOrderPage() {
             </div>
           </div>
 
-          <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-6">
-            <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3 tracking-widest">3. メッセージ・立札</h2>
+          <div className="bg-white p-8 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-6">
+            <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3">3. メッセージ・立札</h2>
             <div className="flex gap-2 p-1 bg-[#FBFAF9] rounded-2xl border border-[#EAEAEA]">
               {['なし', 'メッセージカード', '立札'].map(t => (
                 <button key={t} onClick={() => setCardType(t)} className={`flex-1 py-3 text-[12px] font-bold rounded-xl transition-all ${cardType === t ? 'bg-[#2D4B3E] text-white shadow-md' : 'text-[#555555]'}`}>{t}</button>
@@ -626,7 +628,7 @@ export default function StaffNewOrderPage() {
             )}
 
             {cardType === '立札' && (
-              <div className="space-y-6 bg-white p-6 rounded-[28px] border border-[#EAEAEA] shadow-sm animate-in zoom-in-95 duration-300">
+              <div className="space-y-6 bg-white p-6 rounded-2xl border border-[#EAEAEA] shadow-sm animate-in zoom-in-95 duration-300">
                 
                 <select value={tatePattern} onChange={(e) => setTatePattern(e.target.value)} className="w-full h-14 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none font-bold text-[13px] focus:border-[#2D4B3E]">
                   <option value="">レイアウトを選択</option>
@@ -645,7 +647,7 @@ export default function StaffNewOrderPage() {
                     {tateNeeds.includes('3a') && <input type="text" placeholder="③-1 会社名" value={tateInput3a} onChange={(e) => setTateInput3a(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
                     {tateNeeds.includes('3b') && <input type="text" placeholder="③-2 役職・氏名" value={tateInput3b} onChange={(e) => setTateInput3b(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
                     
-                    <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4">仕上がりプレビュー</p>
+                    <p className="text-[10px] font-bold text-[#999999] text-center pt-4">仕上がりプレビュー</p>
                     <TatefudaPreview 
                       tatePattern={tatePattern}
                       layout={selectedTateOpt?.layout}
@@ -662,11 +664,11 @@ export default function StaffNewOrderPage() {
             )}
           </div>
 
-          <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-6">
-            <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3 tracking-widest">4. スケジュール・情報</h2>
+          <div className="bg-white p-8 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-6">
+            <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3">4. スケジュール・情報</h2>
             
             <div className="space-y-3 pb-4 border-b border-[#FBFAF9]">
-              <label className="text-[11px] font-bold text-[#999999] tracking-widest">注文者情報</label>
+              <label className="text-[11px] font-bold text-[#999999]">注文者情報</label>
               <input type="text" placeholder="お名前（必須）" value={customerInfo.name} onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none" />
               <input type="tel" placeholder="電話番号" value={customerInfo.phone} onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
               <input type="email" placeholder="メールアドレス (任意)" value={customerInfo.email} onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
@@ -693,7 +695,7 @@ export default function StaffNewOrderPage() {
 
             {isRecipientDifferent && receiveMethod !== 'pickup' && (
               <div className="space-y-3 p-6 bg-white border border-[#EAEAEA] shadow-sm rounded-2xl animate-in fade-in zoom-in-95">
-                <label className="text-[11px] font-bold text-[#2D4B3E] tracking-widest">お届け先情報</label>
+                <label className="text-[11px] font-bold text-[#2D4B3E]">お届け先情報</label>
                 <input type="text" placeholder="お届け先 お名前" value={recipientInfo.name} onChange={(e) => setRecipientInfo({...recipientInfo, name: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none" />
                 <input type="tel" placeholder="お届け先 電話番号" value={recipientInfo.phone} onChange={(e) => setRecipientInfo({...recipientInfo, phone: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
                 <input type="text" placeholder="郵便番号 (7桁)" value={recipientInfo.zip} onChange={(e) => { setRecipientInfo({...recipientInfo, zip: e.target.value}); if(e.target.value.length === 7) fetchAddress(e.target.value, 'recipient'); }} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
@@ -704,7 +706,7 @@ export default function StaffNewOrderPage() {
 
             <div className="grid grid-cols-2 gap-4 mt-6">
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-[#999999] tracking-widest">納品希望日</label>
+                <label className="text-[11px] font-bold text-[#999999]">納品希望日</label>
                 <input type="date" min={minDateLimit} value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none" />
                 {selectedDate && properMinDate && selectedDate < properMinDate && (
                   <div className="bg-orange-50 text-orange-700 px-3 py-2.5 rounded-xl text-[11px] font-bold flex items-start gap-1.5 border border-orange-200 mt-2">
@@ -714,7 +716,7 @@ export default function StaffNewOrderPage() {
                 )}
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-[#999999] tracking-widest">希望時間</label>
+                <label className="text-[11px] font-bold text-[#999999]">希望時間</label>
                 <select value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
                   <option value="">選択...</option>
                   {getTimeOptions().map(t => (<option key={t} value={t}>{t}</option>))}
@@ -728,7 +730,7 @@ export default function StaffNewOrderPage() {
                    <Calendar size={16}/> お届け指定: {selectedDate}
                 </div>
                 <ChevronRight size={14} className="hidden sm:block text-green-600"/>
-                <div className="flex items-center gap-2 text-green-900 font-black text-[14px]">
+                <div className="flex items-center gap-2 text-green-900 font-bold text-[14px]">
                    <Package size={18}/> 発送予定日: {shippingDate}
                 </div>
               </div>
@@ -737,7 +739,7 @@ export default function StaffNewOrderPage() {
             {receiveMethod === 'delivery' && (
               <div className="pt-6 border-t border-[#FBFAF9] space-y-4 animate-in fade-in">
                 <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-[#2D4B3E] tracking-widest flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-[#2D4B3E] flex items-center justify-between">
                     ご不在時の対応 (置き配)
                   </label>
                   <p className="text-[11px] text-[#999999] mb-2">生花のため、ご不在時は原則として置き配または宅配ボックスへのお届けとなります。</p>
@@ -761,29 +763,41 @@ export default function StaffNewOrderPage() {
             )}
           </div>
 
-          <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-6">
-            <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3 tracking-widest">5. 決済ステータス・社内メモ</h2>
+          <div className="bg-white p-8 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-6">
+            <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3">5. 入金状況・社内メモ</h2>
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-[#999999] tracking-widest">支払方法・状態</label>
-                <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="w-full h-12 bg-[#2D4B3E]/5 text-[#2D4B3E] border border-[#2D4B3E]/20 rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
-                  {staffConfig.paymentMethods?.map(method => (
-                    <option key={method} value={method}>{method}</option>
-                  ))}
-                </select>
+                <label className="text-[11px] font-bold text-[#999999]">入金状況</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('前払い済み')}
+                    className={`p-4 rounded-xl border text-[13px] font-bold transition-all ${paymentMethod === '前払い済み' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] shadow-md' : 'bg-white border-[#EAEAEA] text-[#555555] hover:border-[#2D4B3E]/50'}`}
+                  >
+                    前払い済み
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('引き取り時に支払い')}
+                    className={`p-4 rounded-xl border text-[13px] font-bold transition-all ${paymentMethod === '引き取り時に支払い' ? 'bg-[#D97D54] text-white border-[#D97D54] shadow-md' : 'bg-white border-[#EAEAEA] text-[#555555] hover:border-[#D97D54]/50'}`}
+                  >
+                    引き取り時に支払い
+                  </button>
+                </div>
+                <p className="text-[10px] text-[#999999] mt-1">受注一覧の入金ステータスに反映されます</p>
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-[#999999] tracking-widest">社内メモ / 要望</label>
+                <label className="text-[11px] font-bold text-[#999999]">社内メモ / 要望</label>
                 <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="例：予算オーバーだけどサービスでバラ増量" className="w-full h-24 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-4 text-[13px] resize-none focus:border-[#2D4B3E] outline-none"></textarea>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-8 rounded-[32px] border-2 border-[#2D4B3E]/30 shadow-md">
+          <div className="bg-white p-8 rounded-2xl border-2 border-[#2D4B3E]/30 shadow-md">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               
               <div className="space-y-2 w-full md:w-auto">
-                <p className="text-[11px] font-bold text-[#999999] tracking-widest text-center md:text-left">お支払い内訳</p>
+                <p className="text-[11px] font-bold text-[#999999] text-center md:text-left">お支払い内訳</p>
                 <div className="bg-[#FBFAF9] p-4 rounded-xl space-y-2 text-[13px] text-[#555555] font-medium w-full md:w-64">
                   <div className="flex justify-between">
                     <span>商品代 (税抜):</span>
@@ -809,7 +823,7 @@ export default function StaffNewOrderPage() {
               </div>
 
               <div className="text-center md:text-right flex-shrink-0">
-                <p className="text-[11px] font-bold text-[#2D4B3E] tracking-widest mb-1">合計金額 (税込)</p>
+                <p className="text-[11px] font-bold text-[#2D4B3E] mb-1">合計金額 (税込)</p>
                 <div className="text-[40px] font-bold text-[#2D4B3E] font-sans leading-none">
                   ¥{totalAmount.toLocaleString()}
                 </div>
@@ -821,7 +835,7 @@ export default function StaffNewOrderPage() {
           <button 
             disabled={isSubmitting} 
             onClick={handleSubmitStaffOrder} 
-            className="w-full h-16 bg-[#2D4B3E] hover:bg-[#1f352b] text-white rounded-[24px] font-bold text-[16px] tracking-widest shadow-xl transition-all active:scale-[0.98] disabled:opacity-50"
+            className="w-full h-16 bg-[#2D4B3E] hover:bg-[#1f352b] text-white rounded-2xl font-bold text-[16px] shadow-xl transition-all active:scale-[0.98] disabled:opacity-50"
           >
             {isSubmitting ? '保存中...' : '注文を登録する'}
           </button>

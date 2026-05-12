@@ -57,7 +57,8 @@ export default function PortfolioPage() {
         const [settingsRes, galleryRes, ordersRes] = await Promise.all([
           supabase.from('app_settings').select('settings_data').eq('id', tId).single(),
           supabase.from('app_settings').select('settings_data').eq('id', `${tId}_gallery`).single(),
-          supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(200)
+          // ★ セキュリティ修正: tenant_id でフィルタ
+          supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false }).limit(200)
         ]);
 
         if (settingsRes.data?.settings_data) {
@@ -185,7 +186,7 @@ export default function PortfolioPage() {
       setImages(updatedImages);
       setNewImage({ id: '', url: '', caption: '', price: '', flowerType: '', purpose: '', color: '', vibe: '', uploadFile: null });
       setActiveTab('list');
-      alert('作品データを保存しました！🎉');
+      alert('作品データを保存しました！');
 
     } catch (err) {
       console.error(err);
@@ -220,7 +221,7 @@ export default function PortfolioPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  if (isLoading) return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-bold text-[#2D4B3E] tracking-widest animate-pulse">読み込み中...</div>;
+  if (isLoading) return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-bold text-[#2D4B3E] animate-pulse">読み込み中...</div>;
 
   return (
     <div className="bg-[#FBFAF9] flex flex-col font-sans text-[#111111] pb-32 min-h-screen">
@@ -250,17 +251,17 @@ export default function PortfolioPage() {
 
         {activeTab === 'list' && (
           <div className="animate-in fade-in duration-300">
-            <h2 className="text-[14px] font-bold text-[#111111] tracking-widest mb-6 border-l-4 border-[#2D4B3E] pl-3">
+            <h2 className="text-[14px] font-bold text-[#111111] mb-6 border-l-4 border-[#2D4B3E] pl-3">
               登録済みの作品 ＆ カタログURL
             </h2>
             {images.length === 0 ? (
-              <div className="bg-white p-12 text-center rounded-[32px] border border-dashed border-[#EAEAEA] text-[#999999] text-[13px] font-bold tracking-widest">
+              <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#EAEAEA] text-[#999999] text-[13px] font-bold">
                 作品が登録されていません。タブから新規追加してください。
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {images.map(img => (
-                  <div key={img.id} className="bg-white rounded-[24px] border border-[#EAEAEA] overflow-hidden shadow-sm hover:shadow-md transition-all group flex flex-col">
+                  <div key={img.id} className="bg-white rounded-2xl border border-[#EAEAEA] overflow-hidden shadow-sm hover:shadow-md transition-all group flex flex-col">
                     <div className="relative aspect-square bg-[#FBFAF9]">
                       <img src={img.url} alt="Portfolio" className="w-full h-full object-cover" />
                       <div className="absolute top-3 right-3 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-[12px] font-bold text-[#2D4B3E] shadow-sm">
@@ -308,12 +309,12 @@ export default function PortfolioPage() {
             ========================================================= */}
         {activeTab === 'from_orders' && (
           <div className="animate-in fade-in duration-300">
-            <h2 className="text-[14px] font-bold text-[#D97D54] tracking-widest mb-6 border-l-4 border-[#D97D54] pl-3 flex items-center gap-2">
+            <h2 className="text-[14px] font-bold text-[#D97D54] mb-6 border-l-4 border-[#D97D54] pl-3 flex items-center gap-2">
               <Camera size={18}/> 注文詳細でアップロードされた完成写真
             </h2>
             
             {completedOrders.length === 0 ? (
-              <div className="bg-white p-12 text-center rounded-[32px] border border-dashed border-[#EAEAEA] text-[#999999] text-[13px] font-bold tracking-widest">
+              <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#EAEAEA] text-[#999999] text-[13px] font-bold">
                 まだ完成写真がアップロードされた注文はありません。<br/>
                 <span className="text-[11px] font-normal block mt-2">注文詳細画面から完成写真をアップロードすると、ここに自動的に表示されます。</span>
               </div>
@@ -322,7 +323,7 @@ export default function PortfolioPage() {
                 {completedOrders.map(order => {
                   const d = order.order_data;
                   return (
-                    <div key={order.id} className="bg-white rounded-[24px] border border-[#EAEAEA] overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col group">
+                    <div key={order.id} className="bg-white rounded-2xl border border-[#EAEAEA] overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col group">
                       <div className="relative aspect-square bg-[#FBFAF9]">
                         <img src={d.completionImage} alt="Completion" className="w-full h-full object-cover" />
                         <div className="absolute top-3 left-3 bg-[#111111]/70 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold text-white flex items-center gap-1">
@@ -331,7 +332,7 @@ export default function PortfolioPage() {
                       </div>
                       <div className="p-5 space-y-4">
                         <div>
-                          <p className="text-[14px] font-black text-[#2D4B3E] truncate">{d.customerInfo?.name} 様のご注文</p>
+                          <p className="text-[14px] font-bold text-[#2D4B3E] truncate">{d.customerInfo?.name} 様のご注文</p>
                           <p className="text-[11px] font-bold text-[#999999] mt-1">{d.flowerType || '未設定'} / ¥{Number(d.itemPrice || 0).toLocaleString()}</p>
                         </div>
                         <div className="flex flex-wrap gap-1">
@@ -356,7 +357,7 @@ export default function PortfolioPage() {
 
         {/* 手動登録（＆ 納品写真からの編集画面） */}
         {activeTab === 'new' && (
-          <form onSubmit={handleAddSubmit} className="bg-white p-6 md:p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm max-w-[800px] space-y-6 animate-in fade-in relative">
+          <form onSubmit={handleAddSubmit} className="bg-white p-6 md:p-8 rounded-2xl border border-[#EAEAEA] shadow-sm max-w-[800px] space-y-6 animate-in fade-in relative">
             
             {/* 納品写真から引き継いだ場合のお知らせバッジ */}
             {newImage.uploadFile === 'from_order' && (
@@ -365,11 +366,11 @@ export default function PortfolioPage() {
               </div>
             )}
 
-            <h2 className="text-[16px] font-bold text-[#2D4B3E] tracking-widest border-b border-[#FBFAF9] pb-4">新規作品の登録</h2>
+            <h2 className="text-[16px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-4">新規作品の登録</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-6">
-                <div className="relative w-full aspect-square bg-[#FBFAF9] border-2 border-dashed border-[#EAEAEA] rounded-[24px] flex items-center justify-center overflow-hidden hover:bg-gray-50 transition-colors">
+                <div className="relative w-full aspect-square bg-[#FBFAF9] border-2 border-dashed border-[#EAEAEA] rounded-2xl flex items-center justify-center overflow-hidden hover:bg-gray-50 transition-colors">
                   {newImage.url ? (
                     <img src={newImage.url} alt="Preview" className="w-full h-full object-cover" />
                   ) : (
@@ -458,7 +459,7 @@ export default function PortfolioPage() {
             </div>
 
             <div className="pt-4 border-t border-[#EAEAEA]">
-              <button type="submit" disabled={isSaving} className="w-full md:w-auto md:px-12 h-14 bg-[#2D4B3E] text-white rounded-xl font-bold text-[14px] tracking-widest shadow-md hover:bg-[#1f352b] transition-all active:scale-[0.98] disabled:opacity-50 mx-auto block">
+              <button type="submit" disabled={isSaving} className="w-full md:w-auto md:px-12 h-14 bg-[#2D4B3E] text-white rounded-xl font-bold text-[14px] shadow-md hover:bg-[#1f352b] transition-all active:scale-[0.98] disabled:opacity-50 mx-auto block">
                 {isSaving ? '保存中...' : '作品を登録する'}
               </button>
             </div>
@@ -468,7 +469,7 @@ export default function PortfolioPage() {
         {/* 開発中オーバーレイ付きの過去分登録タブ */}
         {activeTab === 'import' && (
           <div className="space-y-6 max-w-[800px] animate-in fade-in">
-            <div className="bg-white p-8 rounded-[32px] border border-[#EAEAEA] shadow-sm space-y-4 relative overflow-hidden">
+            <div className="bg-white p-8 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-4 relative overflow-hidden">
               
               <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center gap-3">
                 <div className="bg-[#2D4B3E] text-white px-6 py-3 rounded-full font-bold shadow-lg flex items-center gap-2">
@@ -480,7 +481,7 @@ export default function PortfolioPage() {
                 </p>
               </div>
 
-              <h2 className="text-[16px] font-black text-[#2D4B3E] flex items-center gap-2"><Sparkles size={18}/> URLから自動取り込み</h2>
+              <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2"><Sparkles size={18}/> URLから自動取り込み</h2>
               <p className="text-[12px] text-[#555555]">InstagramなどのURLを入力すると、画像とキャプションを自動で取得します。設定したAIプロンプトにより、金額や用途も自動推測されます。</p>
               
               <form className="flex gap-2 pt-2 opacity-50 pointer-events-none">

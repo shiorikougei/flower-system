@@ -37,12 +37,12 @@ export default function UpdatePasswordPage() {
 
   return (
     <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center p-4 font-sans text-[#111111]">
-      <div className="bg-white w-full max-w-[400px] p-8 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-[#EAEAEA] relative overflow-hidden">
+      <div className="bg-white w-full max-w-[400px] p-8 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-[#EAEAEA] relative overflow-hidden">
         
         <div className="absolute top-0 left-0 w-full h-2 bg-[#2D4B3E]"></div>
 
         <div className="text-center mb-8 mt-2">
-          <h1 className="text-[20px] font-black text-[#2D4B3E] tracking-tight mb-2">新しいパスワードの設定</h1>
+          <h1 className="text-[20px] font-bold text-[#2D4B3E] tracking-tight mb-2">新しいパスワードの設定</h1>
           <p className="text-[11px] font-bold text-[#999999] leading-relaxed">
             今後のログインで使用する新しいパスワードをご入力ください。
           </p>
@@ -67,7 +67,7 @@ export default function UpdatePasswordPage() {
                   type="password" 
                   value={newPassword} 
                   onChange={(e) => setNewPassword(e.target.value)} 
-                  className="w-full h-14 bg-[#FBFAF9] border border-[#EAEAEA] rounded-2xl pl-12 pr-4 text-[14px] font-bold outline-none focus:border-[#2D4B3E] focus:bg-white transition-all shadow-inner tracking-widest" 
+                  className="w-full h-14 bg-[#FBFAF9] border border-[#EAEAEA] rounded-2xl pl-12 pr-4 text-[14px] font-bold outline-none focus:border-[#2D4B3E] focus:bg-white transition-all shadow-inner" 
                   placeholder="••••••••" 
                   required 
                 />
@@ -77,7 +77,7 @@ export default function UpdatePasswordPage() {
             <button 
               type="submit" 
               disabled={isLoading} 
-              className="w-full h-14 mt-4 bg-[#2D4B3E] text-white rounded-2xl font-bold text-[14px] tracking-widest flex items-center justify-center gap-2 hover:bg-[#1f352b] active:scale-[0.98] transition-all shadow-md disabled:opacity-50"
+              className="w-full h-14 mt-4 bg-[#2D4B3E] text-white rounded-2xl font-bold text-[14px] flex items-center justify-center gap-2 hover:bg-[#1f352b] active:scale-[0.98] transition-all shadow-md disabled:opacity-50"
             >
               {isLoading ? <Loader2 size={18} className="animate-spin" /> : 'パスワードを変更してログイン'}
             </button>
@@ -86,7 +86,7 @@ export default function UpdatePasswordPage() {
           <div className="animate-in zoom-in-95 duration-500 flex flex-col items-center">
             <button 
               onClick={() => router.push('/staff/orders')} 
-              className="w-full h-14 bg-[#2D4B3E] text-white rounded-2xl font-bold text-[13px] tracking-widest flex items-center justify-center gap-2 hover:bg-[#1f352b] transition-all shadow-md mt-2"
+              className="w-full h-14 bg-[#2D4B3E] text-white rounded-2xl font-bold text-[13px] flex items-center justify-center gap-2 hover:bg-[#1f352b] transition-all shadow-md mt-2"
             >
               受注管理画面へ移動する <ArrowRight size={16} />
             </button>

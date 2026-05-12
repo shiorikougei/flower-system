@@ -18,8 +18,20 @@ export default function DashboardPage() {
   useEffect(() => {
     async function fetchDashboardData() {
       try {
+        // ★ セキュリティ修正: ログインユーザーのtenant_idを取得して、自店舗のデータだけを引く
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          window.location.href = '/staff/login';
+          return;
+        }
+        const { data: profile, error: profileError } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
+        if (profileError) throw profileError;
+        const tId = profile.tenant_id;
+        if (!tId) throw new Error('tenant_id が取得できませんでした');
+
         const todayStr = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
-        const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+        // ★ tenant_id でフィルタ
+        const { data, error } = await supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false });
         if (error) throw error;
 
         const fetchedOrders = data || [];
@@ -59,7 +71,7 @@ export default function DashboardPage() {
 
   const getMethodIcon = (method) => {
     if (method === 'pickup') return <Store size={14} className="text-blue-500" />;
-    if (method === 'delivery') return <Truck size={14} className="text-[#D97C8F]" />;
+    if (method === 'delivery') return <Truck size={14} className="text-[#D97D54]" />;
     return <Package size={14} className="text-[#2D4B3E]" />;
   };
 
@@ -80,7 +92,7 @@ export default function DashboardPage() {
   const todayDelivery = todayOrdersList.filter(o => o.order_data?.receiveMethod === 'delivery').length;
   const todaySagawa = todayOrdersList.filter(o => o.order_data?.receiveMethod === 'sagawa').length;
 
-  if (isLoading) return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-sans text-[#2D4B3E] font-bold tracking-widest animate-pulse">読み込み中...</div>;
+  if (isLoading) return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-sans text-[#2D4B3E] font-bold animate-pulse">読み込み中...</div>;
 
   return (
     <main className="pb-32 font-sans">
@@ -90,55 +102,52 @@ export default function DashboardPage() {
 
       <div className="max-w-[1200px] mx-auto w-full p-4 md:p-8 space-y-10">
         
-        <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2">
-          <h2 className="text-[28px] font-black text-[#111111]">お疲れ様です！</h2>
-          <p className="text-[14px] font-bold text-[#999999]">本日の業務状況と最新の注文状況を確認しましょう。</p>
+        <div className="flex flex-col gap-2">
+          <p className="text-[14px] text-[#555555]">本日の業務状況と最新の注文状況を確認しましょう。</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           
           {/* ★ 修正: クリック時の遷移先を /staff/calendar に変更しました！ */}
-          <div onClick={() => router.push('/staff/calendar')} className="bg-white rounded-[24px] p-6 border border-[#EAEAEA] shadow-sm flex flex-col gap-4 relative overflow-hidden group cursor-pointer hover:shadow-md hover:-translate-y-1 hover:border-[#4285F4]/40 transition-all duration-300">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#2D4B3E]/5 rounded-bl-[64px] -mr-4 -mt-4 transition-transform duration-500 group-hover:scale-110"></div>
+          <div onClick={() => router.push('/staff/calendar')} className="bg-white rounded-2xl p-6 border border-[#EAEAEA] shadow-sm flex flex-col gap-4 relative overflow-hidden group cursor-pointer hover:shadow-md hover:-translate-y-1 hover:border-[#4285F4]/40 transition-all duration-300">
             <div className="flex items-start justify-between relative z-10">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[#2D4B3E]/10 text-[#2D4B3E] flex items-center justify-center"><Calendar size={20}/></div>
-                <span className="text-[12px] font-bold text-[#999999] uppercase tracking-widest">本日 (お届け/受取/発送)</span>
+                <span className="text-[12px] font-bold text-[#999999] uppercase">本日 (お届け/受取/発送)</span>
               </div>
               <div className="w-8 h-8 rounded-full bg-[#FBFAF9] flex items-center justify-center group-hover:bg-[#4285F4] transition-colors"><ChevronRight size={16} className="text-[#999999] group-hover:text-white" /></div>
             </div>
             <div className="flex items-baseline gap-2 relative z-10 pt-2">
-              <span className="text-[48px] font-black text-[#2D4B3E] leading-none group-hover:text-[#4285F4] transition-colors">{stats.todayOrders}</span>
+              <span className="text-[48px] font-bold text-[#2D4B3E] leading-none group-hover:text-[#4285F4] transition-colors">{stats.todayOrders}</span>
               <span className="text-[14px] font-bold text-[#999999]">件</span>
             </div>
             
             <div className="mt-4 grid grid-cols-3 gap-3 relative z-10">
               <div className="bg-orange-50 text-orange-700 flex flex-col items-center justify-center p-3 rounded-2xl border border-orange-100 shadow-inner">
-                <span className="flex items-center gap-1.5 text-[11px] font-bold tracking-widest mb-1"><Store size={14}/> 店頭</span>
-                <span className="text-[20px] font-black">{todayPickup}</span>
+                <span className="flex items-center gap-1.5 text-[11px] font-bold mb-1"><Store size={14}/> 店頭</span>
+                <span className="text-[20px] font-bold">{todayPickup}</span>
               </div>
               <div className="bg-blue-50 text-blue-700 flex flex-col items-center justify-center p-3 rounded-2xl border border-blue-100 shadow-inner">
-                <span className="flex items-center gap-1.5 text-[11px] font-bold tracking-widest mb-1"><Truck size={14}/> 配達</span>
-                <span className="text-[20px] font-black">{todayDelivery}</span>
+                <span className="flex items-center gap-1.5 text-[11px] font-bold mb-1"><Truck size={14}/> 配達</span>
+                <span className="text-[20px] font-bold">{todayDelivery}</span>
               </div>
               <div className="bg-green-50 text-green-700 flex flex-col items-center justify-center p-3 rounded-2xl border border-green-100 shadow-inner">
-                <span className="flex items-center gap-1.5 text-[11px] font-bold tracking-widest mb-1"><Package size={14}/> 発送</span>
-                <span className="text-[20px] font-black">{todaySagawa}</span>
+                <span className="flex items-center gap-1.5 text-[11px] font-bold mb-1"><Package size={14}/> 発送</span>
+                <span className="text-[20px] font-bold">{todaySagawa}</span>
               </div>
             </div>
           </div>
           
-          <div onClick={() => router.push('/staff/orders')} className="bg-white rounded-[24px] p-6 border border-[#EAEAEA] shadow-sm flex flex-col gap-4 relative overflow-hidden group cursor-pointer hover:shadow-md hover:-translate-y-1 hover:border-[#E74C3C]/40 transition-all duration-300">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-[64px] -mr-4 -mt-4 transition-transform duration-500 group-hover:scale-110"></div>
+          <div onClick={() => router.push('/staff/orders')} className="bg-white rounded-2xl p-6 border border-[#EAEAEA] shadow-sm flex flex-col gap-4 relative overflow-hidden group cursor-pointer hover:shadow-md hover:-translate-y-1 hover:border-[#E74C3C]/40 transition-all duration-300">
             <div className="flex items-start justify-between relative z-10">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><Clock size={20}/></div>
-                <span className="text-[12px] font-bold text-[#999999] uppercase tracking-widest">未完了の注文総数</span>
+                <span className="text-[12px] font-bold text-[#999999] uppercase">未完了の注文総数</span>
               </div>
               <div className="w-8 h-8 rounded-full bg-[#FBFAF9] flex items-center justify-center group-hover:bg-[#E74C3C] transition-colors"><ChevronRight size={16} className="text-[#999999] group-hover:text-white" /></div>
             </div>
             <div className="flex items-baseline gap-2 relative z-10 pt-2">
-              <span className="text-[48px] font-black text-[#111111] leading-none group-hover:text-[#E74C3C] transition-colors">{stats.uncompletedOrders}</span>
+              <span className="text-[48px] font-bold text-[#111111] leading-none group-hover:text-[#E74C3C] transition-colors">{stats.uncompletedOrders}</span>
               <span className="text-[14px] font-bold text-[#999999]">件</span>
             </div>
           </div>
@@ -148,10 +157,10 @@ export default function DashboardPage() {
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-6 duration-700">
           <h3 className="text-[14px] font-bold text-[#2D4B3E] border-l-4 border-[#2D4B3E] pl-3">クイックメニュー</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Link href="/staff/new-order" className="bg-[#2D4B3E] text-white rounded-[24px] p-6 flex flex-col items-center justify-center gap-4 hover:bg-[#1f352b] hover:shadow-lg transition-all shadow-md group"><PlusCircle size={32} className="group-hover:scale-110 transition-transform duration-300"/><span className="text-[13px] font-bold tracking-widest">新規注文</span></Link>
-            <Link href="/staff/orders" className="bg-white border border-[#EAEAEA] text-[#555555] rounded-[24px] p-6 flex flex-col items-center justify-center gap-4 hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all shadow-sm group"><ShoppingBag size={32} className="group-hover:scale-110 transition-transform duration-300"/><span className="text-[13px] font-bold tracking-widest">受注一覧</span></Link>
-            <Link href="/staff/calendar" className="bg-white border border-[#EAEAEA] text-[#555555] rounded-[24px] p-6 flex flex-col items-center justify-center gap-4 hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all shadow-sm group"><Calendar size={32} className="group-hover:scale-110 transition-transform duration-300"/><span className="text-[13px] font-bold tracking-widest">カレンダー</span></Link>
-            <Link href="/staff/settings" className="bg-white border border-[#EAEAEA] text-[#555555] rounded-[24px] p-6 flex flex-col items-center justify-center gap-4 hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all shadow-sm group"><Settings size={32} className="group-hover:scale-110 transition-transform duration-300"/><span className="text-[13px] font-bold tracking-widest">各種設定</span></Link>
+            <Link href="/staff/new-order" className="bg-[#2D4B3E] text-white rounded-2xl p-6 flex flex-col items-center justify-center gap-4 hover:bg-[#1f352b] hover:shadow-lg transition-all shadow-md group"><PlusCircle size={32} className="group-hover:scale-110 transition-transform duration-300"/><span className="text-[13px] font-bold">新規注文</span></Link>
+            <Link href="/staff/orders" className="bg-white border border-[#EAEAEA] text-[#555555] rounded-2xl p-6 flex flex-col items-center justify-center gap-4 hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all shadow-sm group"><ShoppingBag size={32} className="group-hover:scale-110 transition-transform duration-300"/><span className="text-[13px] font-bold">受注一覧</span></Link>
+            <Link href="/staff/calendar" className="bg-white border border-[#EAEAEA] text-[#555555] rounded-2xl p-6 flex flex-col items-center justify-center gap-4 hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all shadow-sm group"><Calendar size={32} className="group-hover:scale-110 transition-transform duration-300"/><span className="text-[13px] font-bold">カレンダー</span></Link>
+            <Link href="/staff/settings" className="bg-white border border-[#EAEAEA] text-[#555555] rounded-2xl p-6 flex flex-col items-center justify-center gap-4 hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all shadow-sm group"><Settings size={32} className="group-hover:scale-110 transition-transform duration-300"/><span className="text-[13px] font-bold">各種設定</span></Link>
           </div>
         </div>
 
@@ -161,9 +170,9 @@ export default function DashboardPage() {
             <Link href="/staff/orders" className="text-[12px] font-bold text-[#999999] hover:text-[#2D4B3E] flex items-center gap-1 bg-white px-4 py-2 rounded-full border border-[#EAEAEA] shadow-sm transition-colors">すべて見る <ChevronRight size={14}/></Link>
           </div>
           
-          <div className="bg-white border border-[#EAEAEA] rounded-[32px] shadow-sm overflow-hidden">
+          <div className="bg-white border border-[#EAEAEA] rounded-2xl shadow-sm overflow-hidden">
             {recentOrders.length === 0 ? (
-              <div className="p-16 text-center text-[#999999] font-bold tracking-widest">最近の注文はありません</div>
+              <div className="p-16 text-center text-[#999999] font-bold">最近の注文はありません</div>
             ) : (
               <div className="divide-y divide-[#F7F7F7]">
                 {recentOrders.map(order => {
@@ -173,7 +182,7 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-5">
                         <div className="w-14 h-14 rounded-2xl bg-[#2D4B3E]/5 text-[#2D4B3E] flex flex-col items-center justify-center border border-[#2D4B3E]/10">
                           <span className="text-[9px] font-bold opacity-60 leading-none mb-1">{d.selectedDate?.split('-')[1] || '--'}月</span>
-                          <span className="text-[18px] font-black leading-none">{d.selectedDate?.split('-')[2] || '--'}</span>
+                          <span className="text-[18px] font-bold leading-none">{d.selectedDate?.split('-')[2] || '--'}</span>
                         </div>
                         <div>
                           <p className="text-[15px] font-bold text-[#111111]">{d.customerInfo?.name} 様</p>

@@ -6,14 +6,11 @@ import {
   Calendar, ChevronRight, X, Filter, PieChart
 } from 'lucide-react';
 
-// ★ キャッシュ用のキーを定義
-const CUSTOMERS_ORDERS_CACHE_KEY = 'florix_customers_orders_cache';
-
 export default function CustomersPage() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // 新しいフィルター＆ソート状態
   const [sortOption, setSortOption] = useState('recent'); // recent, frequent, spend
   const [filterMonth, setFilterMonth] = useState('all');
@@ -25,29 +22,41 @@ export default function CustomersPage() {
   }, []);
 
   const fetchOrders = async () => {
-    // 1. まずは sessionStorage (キャッシュ) から復元して高速表示
-    const cached = sessionStorage.getItem(CUSTOMERS_ORDERS_CACHE_KEY);
-    if (cached) {
-      try {
-        setOrders(JSON.parse(cached));
-        setIsLoading(false); // キャッシュがあればローディングを即解除
-      } catch (e) {
-        console.error("キャッシュパース失敗", e);
-      }
-    } else {
-      setIsLoading(true); // キャッシュがない初回のみローディングを表示
-    }
-
-    // 2. バックグラウンドで最新データをDBから取得
     try {
-      const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+      // ★ セキュリティ修正: tenant_id を取得
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = '/staff/login';
+        return;
+      }
+      const { data: profile, error: profileError } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
+      if (profileError) throw profileError;
+      const tId = profile.tenant_id;
+      if (!tId) throw new Error('tenant_id が取得できませんでした');
+
+      // ★ キャッシュキーに tenant_id を含める（テナント混在防止）
+      const CACHE_KEY = `florix_customers_orders_cache_${tId}`;
+
+      // 1. キャッシュから高速復元
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      if (cached) {
+        try {
+          setOrders(JSON.parse(cached));
+          setIsLoading(false);
+        } catch (e) {
+          console.error("キャッシュパース失敗", e);
+        }
+      } else {
+        setIsLoading(true);
+      }
+
+      // 2. バックグラウンドで最新データを取得（tenant_idフィルタ）
+      const { data, error } = await supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false });
       if (error) throw error;
-      
+
       const fetchedOrders = data || [];
       setOrders(fetchedOrders);
-      
-      // キャッシュを最新データで上書き保存
-      sessionStorage.setItem(CUSTOMERS_ORDERS_CACHE_KEY, JSON.stringify(fetchedOrders));
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify(fetchedOrders));
     } catch (error) {
       console.error('取得エラー:', error.message);
     } finally {
@@ -180,8 +189,8 @@ export default function CustomersPage() {
     <main className="pb-32 font-sans text-left">
       <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] flex flex-col md:flex-row md:items-center justify-between px-6 md:px-8 py-4 sticky top-0 z-10 gap-4">
         <div>
-          <h1 className="text-[18px] md:text-[20px] font-black text-[#2D4B3E] tracking-tight">顧客リスト＆分析</h1>
-          <p className="text-[11px] font-bold text-[#999] mt-1 tracking-widest">自動名寄せ・リピート率分析</p>
+          <h1 className="text-[18px] md:text-[20px] font-bold text-[#2D4B3E] tracking-tight">顧客リスト＆分析</h1>
+          <p className="text-[11px] font-bold text-[#999] mt-1">自動名寄せ・リピート率分析</p>
         </div>
         
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
@@ -218,18 +227,18 @@ export default function CustomersPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
           {/* 円グラフセクション */}
-          <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm flex items-center justify-between col-span-1 md:col-span-2">
+          <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] shadow-sm flex items-center justify-between col-span-1 md:col-span-2">
             <div className="space-y-4 flex-1">
-              <h2 className="text-[14px] font-black text-[#2D4B3E] flex items-center gap-2"><PieChart size={18}/> 新規・リピート比率</h2>
+              <h2 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><PieChart size={18}/> 新規・リピート比率</h2>
               <div className="flex gap-6">
                 <div className="space-y-1">
                   {/* ★ ピンクをテラコッタ(#D97D54)に変更 */}
                   <div className="flex items-center gap-1 text-[11px] font-bold text-[#999]"><span className="w-2.5 h-2.5 rounded-full bg-[#D97D54]"></span>新規顧客</div>
-                  <div className="text-[20px] font-black text-[#333]">{chartData.newCount}<span className="text-[12px] font-bold text-[#999]">人</span> <span className="text-[12px] text-[#D97D54]">({chartData.newPercent}%)</span></div>
+                  <div className="text-[20px] font-bold text-[#333]">{chartData.newCount}<span className="text-[12px] font-bold text-[#999]">人</span> <span className="text-[12px] text-[#D97D54]">({chartData.newPercent}%)</span></div>
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center gap-1 text-[11px] font-bold text-[#999]"><span className="w-2.5 h-2.5 rounded-full bg-[#2D4B3E]"></span>リピーター</div>
-                  <div className="text-[20px] font-black text-[#333]">{chartData.repeatCount}<span className="text-[12px] font-bold text-[#999]">人</span> <span className="text-[12px] text-[#2D4B3E]">({chartData.repeatPercent}%)</span></div>
+                  <div className="text-[20px] font-bold text-[#333]">{chartData.repeatCount}<span className="text-[12px] font-bold text-[#999]">人</span> <span className="text-[12px] text-[#2D4B3E]">({chartData.repeatPercent}%)</span></div>
                 </div>
               </div>
             </div>
@@ -247,22 +256,22 @@ export default function CustomersPage() {
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-[18px] font-black text-[#2D4B3E] leading-none">{chartData.total}</span>
+                <span className="text-[18px] font-bold text-[#2D4B3E] leading-none">{chartData.total}</span>
                 <span className="text-[8px] font-bold text-[#999]">Total</span>
               </div>
             </div>
           </div>
 
           {/* 売上サマリー */}
-          <div className="bg-[#2D4B3E] p-6 rounded-[24px] shadow-md flex flex-col justify-center text-white relative overflow-hidden">
+          <div className="bg-[#2D4B3E] p-6 rounded-2xl shadow-md flex flex-col justify-center text-white relative overflow-hidden">
             <ShoppingBag size={80} className="absolute -right-4 -bottom-4 text-white/10" />
-            <span className="text-[11px] font-bold text-white/70 tracking-widest mb-1 relative z-10">表示中の累計売上</span>
-            <span className="text-[32px] font-black relative z-10">¥{filteredAndSortedCustomers.reduce((sum, c) => sum + c.totalSpent, 0).toLocaleString()}</span>
+            <span className="text-[11px] font-bold text-white/70 mb-1 relative z-10">表示中の累計売上</span>
+            <span className="text-[32px] font-bold relative z-10">¥{filteredAndSortedCustomers.reduce((sum, c) => sum + c.totalSpent, 0).toLocaleString()}</span>
           </div>
         </div>
 
         {/* 顧客リストの上部ツールバー */}
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-[20px] border border-[#EAEAEA] shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-[#EAEAEA] shadow-sm">
           <div className="flex items-center gap-2">
             <Filter size={16} className="text-[#999] ml-2"/>
             <div className="flex bg-[#FBFAF9] p-1 rounded-xl border border-[#EAEAEA]">
@@ -286,17 +295,17 @@ export default function CustomersPage() {
 
         {/* 顧客リスト */}
         {isLoading ? (
-          <div className="p-20 text-center text-[#999] font-bold animate-pulse tracking-widest">顧客データを集計中...</div>
+          <div className="p-20 text-center text-[#999] font-bold animate-pulse">顧客データを集計中...</div>
         ) : filteredAndSortedCustomers.length === 0 ? (
           <div className="bg-white rounded-3xl border border-dashed border-[#CCC] p-20 text-center shadow-sm">
             <p className="text-[14px] font-bold text-[#999]">条件に一致する顧客データが見つかりません</p>
           </div>
         ) : (
-          <div className="bg-white rounded-[24px] border border-[#EAEAEA] shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm overflow-hidden">
             <div className="overflow-x-auto hide-scrollbar">
               <table className="w-full text-left min-w-[800px]">
                 <thead>
-                  <tr className="bg-[#FBFAF9] border-b border-[#EAEAEA] text-[11px] font-bold text-[#999] tracking-widest">
+                  <tr className="bg-[#FBFAF9] border-b border-[#EAEAEA] text-[11px] font-bold text-[#999]">
                     <th className="px-6 py-4">顧客名</th>
                     <th className="px-6 py-4">連絡先</th>
                     <th className="px-6 py-4">注文実績</th>
@@ -311,11 +320,11 @@ export default function CustomersPage() {
                       <tr key={c.id} onClick={() => setSelectedCustomer(c)} className="hover:bg-[#FBFAF9]/50 transition-colors cursor-pointer group">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-[#EAEAEA] flex items-center justify-center text-[#999] font-black text-[14px] shrink-0">
+                            <div className="w-10 h-10 rounded-full bg-[#EAEAEA] flex items-center justify-center text-[#999] font-bold text-[14px] shrink-0">
                               {c.name.charAt(0)}
                             </div>
                             <div>
-                              <div className="font-black text-[14px] text-[#222] group-hover:text-[#2D4B3E] transition-colors">{c.name} <span className="text-[10px] font-normal text-[#999]">様</span></div>
+                              <div className="font-bold text-[14px] text-[#222] group-hover:text-[#2D4B3E] transition-colors">{c.name} <span className="text-[10px] font-normal text-[#999]">様</span></div>
                               <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold border mt-1 ${rank.color}`}>{rank.label}</span>
                             </div>
                           </div>
@@ -325,7 +334,7 @@ export default function CustomersPage() {
                           {c.email && <div className="flex items-center gap-2 text-[11px] font-bold text-[#4285F4]"><Mail size={12} className="text-[#999]"/> {c.email}</div>}
                         </td>
                         <td className="px-6 py-4 space-y-1">
-                          <div className="text-[14px] font-black text-[#2D4B3E]">¥{c.totalSpent.toLocaleString()}</div>
+                          <div className="text-[14px] font-bold text-[#2D4B3E]">¥{c.totalSpent.toLocaleString()}</div>
                           <div className="text-[11px] font-bold text-[#999] flex items-center gap-1"><ShoppingBag size={12}/> {c.orderCount}回利用</div>
                         </td>
                         <td className="px-6 py-4 text-[12px] font-bold text-[#555]">
@@ -347,15 +356,15 @@ export default function CustomersPage() {
       {/* 詳細モーダル（注文履歴） */}
       {selectedCustomer && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#111111]/60 backdrop-blur-sm p-4 animate-in fade-in text-left" onClick={() => setSelectedCustomer(null)}>
-          <div className="bg-[#FBFAF9] rounded-[32px] w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl relative flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[#FBFAF9] rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl relative flex flex-col" onClick={(e) => e.stopPropagation()}>
             
             <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-[#EAEAEA] p-6 flex items-start justify-between z-20 rounded-t-[32px]">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-[#2D4B3E] flex items-center justify-center text-white font-black text-[20px] shadow-md">
+                <div className="w-14 h-14 rounded-full bg-[#2D4B3E] flex items-center justify-center text-white font-bold text-[20px] shadow-md">
                   {selectedCustomer.name.charAt(0)}
                 </div>
                 <div>
-                  <h2 className="text-[20px] font-black text-[#2D4B3E]">{selectedCustomer.name} <span className="text-[12px] font-normal text-[#999]">様</span></h2>
+                  <h2 className="text-[20px] font-bold text-[#2D4B3E]">{selectedCustomer.name} <span className="text-[12px] font-normal text-[#999]">様</span></h2>
                   <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold border mt-1 ${getCustomerRank(selectedCustomer).color}`}>
                     {getCustomerRank(selectedCustomer).label}
                   </span>
@@ -371,14 +380,14 @@ export default function CustomersPage() {
               {/* 顧客基本情報 */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-3">
-                  <h3 className="text-[12px] font-bold text-[#999] tracking-widest flex items-center gap-2"><User size={14}/> 連絡先情報</h3>
+                  <h3 className="text-[12px] font-bold text-[#999] flex items-center gap-2"><User size={14}/> 連絡先情報</h3>
                   <div className="space-y-2">
-                    <p className="text-[14px] font-black text-[#333] flex items-center gap-2"><Phone size={14} className="text-[#999]"/> {selectedCustomer.phone}</p>
+                    <p className="text-[14px] font-bold text-[#333] flex items-center gap-2"><Phone size={14} className="text-[#999]"/> {selectedCustomer.phone}</p>
                     {selectedCustomer.email && <p className="text-[13px] font-bold text-[#4285F4] flex items-center gap-2"><Mail size={14} className="text-[#999]"/> {selectedCustomer.email}</p>}
                   </div>
                 </div>
                 <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-3">
-                  <h3 className="text-[12px] font-bold text-[#999] tracking-widest flex items-center gap-2"><MapPin size={14}/> 最新の住所</h3>
+                  <h3 className="text-[12px] font-bold text-[#999] flex items-center gap-2"><MapPin size={14}/> 最新の住所</h3>
                   <div className="space-y-1">
                     <p className="text-[11px] font-bold text-[#999]">〒{selectedCustomer.zip || '未登録'}</p>
                     <p className="text-[13px] font-bold text-[#333] leading-relaxed">{selectedCustomer.address || '未登録'}</p>
@@ -389,21 +398,21 @@ export default function CustomersPage() {
               {/* 統計サマリー */}
               <div className="flex bg-[#2D4B3E]/5 border border-[#2D4B3E]/20 rounded-2xl p-4 divide-x divide-[#2D4B3E]/10">
                 <div className="flex-1 text-center space-y-1">
-                  <p className="text-[10px] font-bold text-[#555] tracking-widest">注文回数</p>
-                  <p className="text-[20px] font-black text-[#2D4B3E]">{selectedCustomer.orderCount} <span className="text-[12px]">回</span></p>
+                  <p className="text-[10px] font-bold text-[#555]">注文回数</p>
+                  <p className="text-[20px] font-bold text-[#2D4B3E]">{selectedCustomer.orderCount} <span className="text-[12px]">回</span></p>
                 </div>
                 <div className="flex-1 text-center space-y-1">
-                  <p className="text-[10px] font-bold text-[#555] tracking-widest">累計購入額</p>
-                  <p className="text-[20px] font-black text-[#2D4B3E]">¥{selectedCustomer.totalSpent.toLocaleString()}</p>
+                  <p className="text-[10px] font-bold text-[#555]">累計購入額</p>
+                  <p className="text-[20px] font-bold text-[#2D4B3E]">¥{selectedCustomer.totalSpent.toLocaleString()}</p>
                 </div>
                 <div className="flex-1 text-center space-y-1">
-                  <p className="text-[10px] font-bold text-[#555] tracking-widest">初回来店日</p>
+                  <p className="text-[10px] font-bold text-[#555]">初回来店日</p>
                   <p className="text-[14px] font-bold text-[#555] mt-1">{safeFormatDate(selectedCustomer.orders[selectedCustomer.orders.length - 1].created_at)}</p>
                 </div>
               </div>
 
               {/* 注文履歴タイムライン */}
-              <div className="bg-white rounded-[24px] border border-[#EAEAEA] shadow-sm p-6">
+              <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm p-6">
                 <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#F7F7F7] pb-3 mb-4 flex items-center gap-2">
                   {/* ★ここです！ CalendarIconじゃなくてCalendarに修正！💥 */}
                   <Calendar size={16} /> 過去の注文履歴
@@ -422,20 +431,20 @@ export default function CustomersPage() {
 
                         <div className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-2xl p-4 transition-all hover:border-[#2D4B3E] hover:shadow-md">
                           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                            <span className="text-[12px] font-black text-[#2D4B3E] bg-white px-3 py-1 rounded-lg border border-[#EAEAEA] shadow-sm">{safeFormatDate(order.created_at)}</span>
+                            <span className="text-[12px] font-bold text-[#2D4B3E] bg-white px-3 py-1 rounded-lg border border-[#EAEAEA] shadow-sm">{safeFormatDate(order.created_at)}</span>
                             <div className="flex items-center gap-2">
                               <span className="text-[10px] font-bold px-2 py-1 rounded bg-gray-100 text-gray-600">{methodLabel}</span>
-                              <span className="text-[14px] font-black text-[#222]">¥{order.computedTotal.toLocaleString()}</span>
+                              <span className="text-[14px] font-bold text-[#222]">¥{order.computedTotal.toLocaleString()}</span>
                             </div>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[12px]">
                             <div className="space-y-1">
-                              <p><span className="text-[#999] tracking-widest text-[10px] mr-2">お花</span> <span className="font-bold text-[#333]">{d.flowerType || '未設定'}</span></p>
-                              <p><span className="text-[#999] tracking-widest text-[10px] mr-2">用途</span> <span className="font-bold text-[#333]">{d.flowerPurpose || '-'}</span></p>
-                              <p><span className="text-[#999] tracking-widest text-[10px] mr-2">色合</span> <span className="font-bold text-[#333]">{d.flowerColor || '-'}</span></p>
+                              <p><span className="text-[#999] text-[10px] mr-2">お花</span> <span className="font-bold text-[#333]">{d.flowerType || '未設定'}</span></p>
+                              <p><span className="text-[#999] text-[10px] mr-2">用途</span> <span className="font-bold text-[#333]">{d.flowerPurpose || '-'}</span></p>
+                              <p><span className="text-[#999] text-[10px] mr-2">色合</span> <span className="font-bold text-[#333]">{d.flowerColor || '-'}</span></p>
                             </div>
                             <div className="space-y-1 sm:border-l sm:border-[#EAEAEA] sm:pl-4">
-                              <p><span className="text-[#999] tracking-widest text-[10px] mr-2">お届け先</span> <span className="font-bold text-[#333]">{d.isRecipientDifferent ? `${d.recipientInfo?.name} 様` : 'ご自宅/ご本人'}</span></p>
+                              <p><span className="text-[#999] text-[10px] mr-2">お届け先</span> <span className="font-bold text-[#333]">{d.isRecipientDifferent ? `${d.recipientInfo?.name} 様` : 'ご自宅/ご本人'}</span></p>
                               {d.cardType && d.cardType !== 'なし' && (
                                 <p className="mt-2"><span className="inline-block bg-red-50 text-red-600 px-1.5 py-0.5 rounded text-[9px] font-bold mr-1">{d.cardType}</span> <span className="font-bold text-[#333] truncate inline-block align-bottom max-w-[120px]">{d.cardType === '立札' ? d.tateInput1 : d.cardMessage}</span></p>
                               )}

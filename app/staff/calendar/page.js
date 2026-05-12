@@ -56,7 +56,8 @@ export default function CalendarPage() {
         sessionStorage.setItem(CACHE_KEY_SETTINGS, JSON.stringify(settings.settings_data));
       }
 
-      const { data: ordersData, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+      // ★ セキュリティ修正: tenant_id でフィルタ
+      const { data: ordersData, error } = await supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false });
       if (error) throw error;
       
       const latestOrders = ordersData || [];
@@ -72,7 +73,8 @@ export default function CalendarPage() {
 
   const fetchLatestDataSilently = async (tId, cacheKey) => {
     try {
-      const { data: ordersData } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+      // ★ セキュリティ修正: tenant_id でフィルタ
+      const { data: ordersData } = await supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false });
       if (ordersData) {
         setOrders(ordersData);
         sessionStorage.setItem(cacheKey, JSON.stringify(ordersData));
@@ -104,15 +106,16 @@ export default function CalendarPage() {
         statusHistory: [newHistoryEntry, ...currentHistory]
       };
       
-      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId);
-      
+      // ★ セキュリティ: tenant_id でも絞り込み（多層防御）
+      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId).eq('tenant_id', currentTenantId);
+
       const newOrders = orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o);
       setOrders(newOrders);
-      sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders)); 
-      
+      sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders));
+
       setSelectedOrder({ ...targetOrder, order_data: updatedData });
-    } catch (err) { 
-      alert('更新に失敗しました。'); 
+    } catch (err) {
+      alert('更新に失敗しました。');
     }
   };
 
@@ -120,22 +123,24 @@ export default function CalendarPage() {
   const handleUpdatePayment = async (orderId, currentData) => {
     if (!confirm('この注文を「入金済」として処理しますか？')) return;
     try {
+      // ★ 入金済への遷移ロジック（"未入金（引き取り時）"→"入金済（引き取り時受領）"）
+      const oldStatus = currentData.paymentStatus || '';
       let newStatus = '入金済';
-      if (currentData.paymentStatus) {
-        newStatus = currentData.paymentStatus.replace('未', '済');
-        if (newStatus === currentData.paymentStatus) newStatus = '入金済';
+      if (oldStatus.includes('引き取り時')) {
+        newStatus = '入金済（引き取り時受領）';
       }
 
       const updatedData = { ...currentData, paymentStatus: newStatus };
-      
-      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId);
+
+      // ★ セキュリティ: tenant_id でも絞り込み（多層防御）
+      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId).eq('tenant_id', currentTenantId);
       
       const newOrders = orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o);
       setOrders(newOrders);
       sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders)); 
       
       setSelectedOrder(prev => ({ ...prev, order_data: updatedData }));
-      alert('入金済みに更新しました！🎉');
+      alert('入金済みに更新しました！');
     } catch (error) {
       console.error(error);
       alert('更新に失敗しました。');
@@ -148,7 +153,8 @@ export default function CalendarPage() {
     try {
       const targetOrder = orders.find(o => o.id === orderId);
       const updatedData = { ...targetOrder.order_data, status: newStatus };
-      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId);
+      // ★ セキュリティ: tenant_id でも絞り込み（多層防御）
+      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId).eq('tenant_id', currentTenantId);
       
       const newOrders = orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o);
       setOrders(newOrders);
@@ -172,7 +178,8 @@ export default function CalendarPage() {
     if (!confirm('本当に削除してもよろしいですか？\nこの操作は取り消せません。')) return;
 
     try {
-      const { error } = await supabase.from('orders').delete().eq('id', orderId);
+      // ★ セキュリティ: tenant_id でも絞り込み（多層防御）
+      const { error } = await supabase.from('orders').delete().eq('id', orderId).eq('tenant_id', currentTenantId);
       if (error) throw error;
 
       const newOrders = orders.filter(o => o.id !== orderId);
@@ -312,12 +319,12 @@ export default function CalendarPage() {
         </div>
 
         {isLoading ? (
-          <div className="p-20 text-center text-[#999999] font-bold animate-pulse tracking-widest">データを読み込み中...</div>
+          <div className="p-20 text-center text-[#999999] font-bold animate-pulse">データを読み込み中...</div>
         ) : (
-          <div className="bg-white rounded-[16px] md:rounded-[32px] border border-[#EAEAEA] shadow-sm overflow-hidden">
+          <div className="bg-white rounded-xl md:rounded-2xl border border-[#EAEAEA] shadow-sm overflow-hidden">
             <div className="grid grid-cols-7 border-b border-[#EAEAEA] bg-[#FBFAF9]">
                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d, i) => (
-                 <div key={d} className={`p-2 md:p-3 text-center text-[8px] md:text-[10px] font-bold tracking-widest uppercase border-r border-[#EAEAEA] last:border-0 ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-[#999999]'}`}>{d}</div>
+                 <div key={d} className={`p-2 md:p-3 text-center text-[8px] md:text-[10px] font-bold uppercase border-r border-[#EAEAEA] last:border-0 ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-[#999999]'}`}>{d}</div>
                ))}
             </div>
             <div className="grid grid-cols-7">

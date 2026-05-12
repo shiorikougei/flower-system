@@ -44,8 +44,15 @@ export default function OrderDetailModal({
   const isPickup = modalData.receiveMethod === 'pickup';
   const isDelivery = modalData.receiveMethod === 'delivery';
 
-  const isUnpaid = !modalData.paymentStatus || modalData.paymentStatus.includes('未') || modalData.paymentStatus === '';
-  const currentPaymentStatus = modalData.paymentStatus || '未設定';
+  // ★ Stripe決済反映: DB の payment_status カラムが 'paid' なら入金済として扱う
+  //    （Webhook で自動更新される）order_data.paymentStatus が空でも自動で「入金済（クレジットカード）」と表示
+  const dbPaymentStatus = order?.payment_status;
+  const isPaidByCard = dbPaymentStatus === 'paid';
+  const orderDataStatus = modalData.paymentStatus;
+  const isUnpaid = !isPaidByCard && (!orderDataStatus || orderDataStatus.includes('未') || orderDataStatus === '');
+  const currentPaymentStatus = (isPaidByCard && (!orderDataStatus || orderDataStatus.includes('未')))
+    ? '入金済（クレジットカード）'
+    : (orderDataStatus || '未設定');
 
   const safeFormatDate = (dateString, withTime = false) => {
     try {
@@ -151,7 +158,7 @@ export default function OrderDetailModal({
       const receiveMethodStr = getMethodLabel(modalData.receiveMethod);
       const datePart = modalData.selectedDate || '未指定';
       
-      let paymentStatus = '未設定';
+      let paymentStatus = currentPaymentStatus;  // ★ 上で計算した実効値を使う
       if (modalData.paymentMethod) {
         paymentStatus = modalData.paymentMethod;
         if (modalData.paymentStatus) paymentStatus += ' (' + modalData.paymentStatus + ')';
@@ -220,7 +227,7 @@ export default function OrderDetailModal({
               <tr>
                 <td class="item-cell">
                   <div class="item-name">${formatText(modalData.flowerType) || '未設定'}</div>
-                  <div class="item-detail">用途: ${formatText(modalData.flowerPurpose) || '-'} / 色: ${formatText(modalData.flowerColor) || '-'} / イメージ: ${formatText(modalData.flowerVibe) || '-'}</div>
+                  <div class="item-detail">用途: ${formatText(modalData.flowerPurpose) || '-'}${modalData.otherPurpose ? ` (${formatText(modalData.otherPurpose)})` : ''} / 色: ${formatText(modalData.flowerColor) || '-'}${modalData.otherColor ? ` (${formatText(modalData.otherColor)})` : ''} / イメージ: ${formatText(modalData.flowerVibe) || '-'}${modalData.otherVibe ? ` (${formatText(modalData.otherVibe)})` : ''}</div>
                   ${renderCardBlock()}
                   ${modalData.note ? `<div class="item-detail" style="color:#d97c8f; margin-top:2mm;">備考: ${formatText(modalData.note)}</div>` : ''}
                 </td>
@@ -651,11 +658,45 @@ export default function OrderDetailModal({
                 </div>
               </div>
 
-              <div className="flex-1 grid grid-cols-2 gap-4 text-[13px]">
-                <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block tracking-widest mb-1">お花の種類</span><span className="font-black text-[#2D4B3E] text-[14px]">{modalData.flowerType || '未設定'}</span></div>
-                <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block tracking-widest mb-1">用途</span><span className="font-bold">{modalData.flowerPurpose} {modalData.otherPurpose && `(${modalData.otherPurpose})`}</span></div>
-                <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block tracking-widest mb-1">カラー</span><span className="font-bold">{modalData.flowerColor}</span></div>
-                <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block tracking-widest mb-1">イメージ</span><span className="font-bold">{modalData.flowerVibe} {modalData.otherVibe && `(${modalData.otherVibe})`}</span></div>
+              <div className="flex-1 text-[13px]">
+                {/* ★ EC注文の場合: 商品画像付きカート内訳を表示 */}
+                {modalData.orderType === 'ec' && Array.isArray(modalData.cartItems) && modalData.cartItems.length > 0 ? (
+                  <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA] space-y-3">
+                    <div className="flex items-center gap-2 pb-2 border-b border-[#EAEAEA]">
+                      <span className="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded">🛒 EC注文</span>
+                      <span className="text-[10px] text-[#999999]">{modalData.cartItems.length} 商品 / 合計 {modalData.cartItems.reduce((s, c) => s + (Number(c.qty) || 0), 0)} 点</span>
+                    </div>
+                    <div className="space-y-3">
+                      {modalData.cartItems.map((c, idx) => (
+                        <div key={idx} className="flex items-center gap-3 bg-white p-2 rounded-lg border border-[#EAEAEA]">
+                          {/* 商品画像 */}
+                          <div className="w-14 h-14 shrink-0 bg-[#FBFAF9] rounded-lg overflow-hidden">
+                            {c.imageUrl ? (
+                              <img src={c.imageUrl} alt={c.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[#CCC] text-[10px]">No Img</div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[12px] font-bold text-[#111111] truncate">{c.name}</p>
+                            <p className="text-[10px] text-[#999999] mt-0.5">¥{Number(c.price).toLocaleString()} × {c.qty}</p>
+                          </div>
+                          <span className="text-[13px] text-[#2D4B3E] font-bold shrink-0">
+                            ¥{(Number(c.price) * Number(c.qty)).toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  /* カスタム注文の場合: 従来通り */
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block mb-1">お花の種類</span><span className="font-bold text-[#2D4B3E] text-[14px]">{modalData.flowerType || '未設定'}</span></div>
+                    <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block mb-1">用途</span><span className="font-bold">{modalData.flowerPurpose} {modalData.otherPurpose && `(${modalData.otherPurpose})`}</span></div>
+                    <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block mb-1">カラー</span><span className="font-bold">{modalData.flowerColor} {modalData.otherColor && `(${modalData.otherColor})`}</span></div>
+                    <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block mb-1">イメージ</span><span className="font-bold">{modalData.flowerVibe} {modalData.otherVibe && `(${modalData.otherVibe})`}</span></div>
+                  </div>
+                )}
               </div>
             </div>
             {modalData.isBring === 'bring' && <div className="bg-orange-100 text-orange-700 px-3 py-2 rounded-xl text-[12px] font-bold mt-2 inline-block border border-orange-200">※お客様からのお花/器の持込あり</div>}
@@ -701,7 +742,31 @@ export default function OrderDetailModal({
               <h3 className="text-[16px] font-black text-[#2D4B3E] border-b border-[#EAEAEA] pb-3 flex items-center gap-2"><CreditCard size={20}/> お支払い情報</h3>
               <div className="space-y-3 text-[13px] md:text-[14px] font-medium text-[#555555]">
                 <div className="flex justify-between items-center"><span>商品代 (税抜):</span><span className="font-black text-[#111111] text-[16px]">¥{getTotals(modalData).item.toLocaleString()}</span></div>
-                {getTotals(modalData).fee > 0 && <div className="flex justify-between items-center text-blue-600"><span>配送料 (箱・クール含):</span><span className="font-bold text-[16px]">¥{getTotals(modalData).fee.toLocaleString()}</span></div>}
+                {/* ★ 内訳: feeBreakdown があれば各内訳を別行で、なければ従来通り合算 */}
+                {modalData.feeBreakdown ? (
+                  <>
+                    {Number(modalData.feeBreakdown.baseFee) > 0 && (
+                      <div className="flex justify-between items-center text-blue-600">
+                        <span>{modalData.receiveMethod === 'delivery' ? '配達料:' : '送料:'}</span>
+                        <span className="font-bold text-[16px]">¥{Number(modalData.feeBreakdown.baseFee).toLocaleString()}</span>
+                      </div>
+                    )}
+                    {Number(modalData.feeBreakdown.boxFee) > 0 && (
+                      <div className="flex justify-between items-center text-blue-600">
+                        <span>箱代:</span>
+                        <span className="font-bold text-[16px]">¥{Number(modalData.feeBreakdown.boxFee).toLocaleString()}</span>
+                      </div>
+                    )}
+                    {Number(modalData.feeBreakdown.coolFee) > 0 && (
+                      <div className="flex justify-between items-center text-blue-600">
+                        <span>クール便代:</span>
+                        <span className="font-bold text-[16px]">¥{Number(modalData.feeBreakdown.coolFee).toLocaleString()}</span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  getTotals(modalData).fee > 0 && <div className="flex justify-between items-center text-blue-600"><span>配送料:</span><span className="font-bold text-[16px]">¥{getTotals(modalData).fee.toLocaleString()}</span></div>
+                )}
                 {getTotals(modalData).pickup > 0 && <div className="flex justify-between items-center text-orange-600"><span>器回収・返却費:</span><span className="font-bold text-[16px]">¥{getTotals(modalData).pickup.toLocaleString()}</span></div>}
                 <div className="flex justify-between items-center border-t border-[#EAEAEA] pt-3 text-[#2D4B3E]"><span>消費税 (10%):</span><span className="font-bold text-[16px]">¥{getTotals(modalData).tax.toLocaleString()}</span></div>
                 

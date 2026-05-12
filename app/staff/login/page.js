@@ -60,13 +60,13 @@ export default function StaffLogin() {
 
   return (
     <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center p-4 font-sans text-[#111111]">
-      <div className="bg-white w-full max-w-[400px] p-8 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-[#EAEAEA] relative overflow-hidden">
+      <div className="bg-white w-full max-w-[400px] p-8 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-[#EAEAEA] relative overflow-hidden">
         
         {/* 装飾用の背景 */}
         <div className="absolute top-0 left-0 w-full h-2 bg-[#2D4B3E]"></div>
 
         <div className="text-center mb-8 mt-2">
-          <h1 className="text-[24px] font-black text-[#2D4B3E] tracking-tight font-serif italic mb-2">FLORIX</h1>
+          <h1 className="text-[24px] font-bold text-[#2D4B3E] tracking-tight font-serif italic mb-2">FLORIX</h1>
           <p className="text-[10px] font-bold text-[#999999] tracking-[0.2em] uppercase">
             {isResetMode ? 'Password Reset' : 'Staff Portal'}
           </p>
@@ -111,7 +111,7 @@ export default function StaffLogin() {
                   type="password" 
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)} 
-                  className="w-full h-14 bg-[#FBFAF9] border border-[#EAEAEA] rounded-2xl pl-12 pr-4 text-[14px] font-bold outline-none focus:border-[#2D4B3E] focus:bg-white transition-all shadow-inner tracking-widest" 
+                  className="w-full h-14 bg-[#FBFAF9] border border-[#EAEAEA] rounded-2xl pl-12 pr-4 text-[14px] font-bold outline-none focus:border-[#2D4B3E] focus:bg-white transition-all shadow-inner" 
                   placeholder="••••••••" 
                   required 
                 />
@@ -121,7 +121,7 @@ export default function StaffLogin() {
             <button 
               type="submit" 
               disabled={isLoading} 
-              className="w-full h-14 mt-4 bg-[#2D4B3E] text-white rounded-2xl font-bold text-[14px] tracking-widest flex items-center justify-center gap-2 hover:bg-[#1f352b] active:scale-[0.98] transition-all shadow-md disabled:opacity-50"
+              className="w-full h-14 mt-4 bg-[#2D4B3E] text-white rounded-2xl font-bold text-[14px] flex items-center justify-center gap-2 hover:bg-[#1f352b] active:scale-[0.98] transition-all shadow-md disabled:opacity-50"
             >
               {isLoading ? <Loader2 size={18} className="animate-spin" /> : 'ログイン'}
             </button>
@@ -165,7 +165,7 @@ export default function StaffLogin() {
             <button 
               type="submit" 
               disabled={isLoading} 
-              className="w-full h-14 mt-4 bg-[#2D4B3E] text-white rounded-2xl font-bold text-[14px] tracking-widest flex items-center justify-center gap-2 hover:bg-[#1f352b] active:scale-[0.98] transition-all shadow-md disabled:opacity-50"
+              className="w-full h-14 mt-4 bg-[#2D4B3E] text-white rounded-2xl font-bold text-[14px] flex items-center justify-center gap-2 hover:bg-[#1f352b] active:scale-[0.98] transition-all shadow-md disabled:opacity-50"
             >
               {isLoading ? <Loader2 size={18} className="animate-spin" /> : 'リセットメールを送信'}
             </button>

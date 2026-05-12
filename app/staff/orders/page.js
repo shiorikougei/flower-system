@@ -48,7 +48,8 @@ export default function OrdersPage() {
         }
 
         const [ordersRes, settingsRes] = await Promise.all([
-          supabase.from('orders').select('*').order('created_at', { ascending: false }),
+          // ★ セキュリティ修正: tenant_id でフィルタ
+          supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false }),
           supabase.from('app_settings').select('settings_data').eq('id', tId).single()
         ]);
 
@@ -96,15 +97,16 @@ export default function OrdersPage() {
         statusHistory: [newHistoryEntry, ...currentHistory]
       };
       
-      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId);
-      
+      // ★ セキュリティ: tenant_id でも絞り込み（多層防御）
+      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId).eq('tenant_id', currentTenantId);
+
       const newOrders = orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o);
       setOrders(newOrders);
-      sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders)); 
-      
+      sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders));
+
       setSelectedOrder({ ...targetOrder, order_data: updatedData });
-    } catch (err) { 
-      alert('更新に失敗しました。'); 
+    } catch (err) {
+      alert('更新に失敗しました。');
     }
   };
 
@@ -112,22 +114,26 @@ export default function OrdersPage() {
   const handleUpdatePayment = async (orderId, currentData) => {
     if (!confirm('この注文を「入金済」として処理しますか？')) return;
     try {
+      // ★ 入金済への遷移ロジック
+      //   - "未入金（引き取り時）" → "入金済（引き取り時受領）"
+      //   - その他「未〜」やデフォルト → "入金済"
+      const oldStatus = currentData.paymentStatus || '';
       let newStatus = '入金済';
-      if (currentData.paymentStatus) {
-        newStatus = currentData.paymentStatus.replace('未', '済');
-        if (newStatus === currentData.paymentStatus) newStatus = '入金済';
+      if (oldStatus.includes('引き取り時')) {
+        newStatus = '入金済（引き取り時受領）';
       }
 
       const updatedData = { ...currentData, paymentStatus: newStatus };
-      
-      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId);
+
+      // ★ セキュリティ: tenant_id でも絞り込み（多層防御）
+      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId).eq('tenant_id', currentTenantId);
       
       const newOrders = orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o);
       setOrders(newOrders);
       sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders)); 
       
       setSelectedOrder(prev => ({ ...prev, order_data: updatedData }));
-      alert('入金済みに更新しました！🎉');
+      alert('入金済みに更新しました！');
     } catch (error) {
       console.error(error);
       alert('更新に失敗しました。');
@@ -140,12 +146,13 @@ export default function OrdersPage() {
     try {
       const targetOrder = orders.find(o => o.id === orderId);
       const updatedData = { ...targetOrder.order_data, status: newStatus };
-      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId);
-      
+      // ★ セキュリティ: tenant_id でも絞り込み（多層防御）
+      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId).eq('tenant_id', currentTenantId);
+
       const newOrders = orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o);
       setOrders(newOrders);
       sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders));
-      
+
       setSelectedOrder(null);
     } catch (err) { alert('更新失敗'); }
   };
@@ -164,7 +171,8 @@ export default function OrdersPage() {
     if (!confirm('本当に削除してもよろしいですか？\nこの操作は取り消せません。')) return;
 
     try {
-      const { error } = await supabase.from('orders').delete().eq('id', orderId);
+      // ★ セキュリティ: tenant_id でも絞り込み（多層防御）
+      const { error } = await supabase.from('orders').delete().eq('id', orderId).eq('tenant_id', currentTenantId);
       if (error) throw error;
 
       const newOrders = orders.filter(o => o.id !== orderId);
@@ -221,7 +229,7 @@ export default function OrdersPage() {
     <div className="min-h-screen bg-[#FBFAF9] font-sans pb-32">
       <div className="bg-white border-b border-[#EAEAEA] sticky top-0 z-30 px-6 py-4 shadow-sm">
         <div className="max-w-[1000px] mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h1 className="text-[20px] font-black text-[#2D4B3E] tracking-widest">受注一覧</h1>
+          <h1 className="text-[20px] font-bold text-[#2D4B3E]">受注一覧</h1>
           
           <div className="flex bg-[#F7F7F7] p-1 rounded-xl border border-[#EAEAEA] w-fit">
             <button 
@@ -244,20 +252,25 @@ export default function OrdersPage() {
         {isLoading ? (
           <div className="text-center py-20 text-[#2D4B3E] font-bold animate-pulse">読み込み中...</div>
         ) : filteredOrders.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-[24px] border border-dashed border-[#EAEAEA] text-[#999999] font-bold">
+          <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-[#EAEAEA] text-[#999999] font-bold">
             表示する注文データがありません。
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
             {filteredOrders.map(order => {
               const d = order?.order_data || {};
-              const isUnpaid = !d.paymentStatus || d.paymentStatus.includes('未') || d.paymentStatus === '';
-              
+              // ★ Stripe決済反映: DB の payment_status='paid' (Webhookで自動更新) を優先
+              const isPaidByCard = order?.payment_status === 'paid';
+              const isUnpaid = !isPaidByCard && (!d.paymentStatus || d.paymentStatus.includes('未') || d.paymentStatus === '');
+              const displayStatus = (isPaidByCard && (!d.paymentStatus || d.paymentStatus.includes('未')))
+                ? '入金済（クレジットカード）'
+                : (d.paymentStatus || '未設定');
+
               return (
                 <div 
                   key={order.id} 
                   onClick={() => setSelectedOrder(order)}
-                  className="bg-white p-5 md:p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm hover:shadow-md hover:border-[#2D4B3E]/30 cursor-pointer transition-all flex flex-col md:flex-row md:items-center gap-4 group"
+                  className="bg-white p-5 md:p-6 rounded-2xl border border-[#EAEAEA] shadow-sm hover:shadow-md hover:border-[#2D4B3E]/30 cursor-pointer transition-all flex flex-col md:flex-row md:items-center gap-4 group"
                 >
                   <div className="flex-1 space-y-3">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -276,28 +289,40 @@ export default function OrdersPage() {
                         {d.status === 'new' ? '未対応' : (d.status || '未対応')}
                       </span>
                       
-                      {/* ★ 入金ステータスバッジを追加 */}
+                      {/* ★ 入金ステータスバッジ（クレカ決済はDBカラムを優先） */}
                       {isUnpaid ? (
                         <span className="text-[10px] font-bold bg-[#D97D54]/10 text-[#D97D54] px-2 py-1 rounded border border-[#D97D54]/20 flex items-center gap-1">
-                          <AlertCircle size={12}/> {d.paymentStatus || '未設定'}
+                          <AlertCircle size={12}/> {displayStatus}
                         </span>
                       ) : (
                         <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded border border-green-200 flex items-center gap-1">
-                          <CheckCircle2 size={12}/> {d.paymentStatus}
+                          <CheckCircle2 size={12}/> {displayStatus}
+                        </span>
+                      )}
+
+                      {/* ★ EC注文の場合のバッジ */}
+                      {d.orderType === 'ec' && (
+                        <span className="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded flex items-center gap-1">
+                          🛒 EC注文
                         </span>
                       )}
                     </div>
-                    <div className="text-[16px] md:text-[18px] font-black text-[#111111] group-hover:text-[#2D4B3E] transition-colors">
-                      {d.customerInfo?.name || 'お名前未設定'} 様 <span className="text-[12px] text-[#999999] font-medium ml-2">({d.flowerType || '商品未設定'})</span>
+                    <div className="text-[16px] md:text-[18px] font-bold text-[#111111] group-hover:text-[#2D4B3E] transition-colors">
+                      {d.customerInfo?.name || 'お名前未設定'} 様
+                      <span className="text-[12px] text-[#999999] font-medium ml-2">
+                        ({d.orderType === 'ec' && Array.isArray(d.cartItems) && d.cartItems.length > 0
+                          ? `${d.cartItems[0].name}${d.cartItems.length > 1 ? ` ほか${d.cartItems.length - 1}点` : ''}`
+                          : (d.flowerType || '商品未設定')})
+                      </span>
                     </div>
-                    <div className="text-[13px] font-bold text-[#D97C8F] flex items-center gap-1.5">
+                    <div className="text-[13px] font-bold text-[#D97D54] flex items-center gap-1.5">
                       <Calendar size={16} /> 納品日: {d.selectedDate || '未指定'} {d.selectedTime && `(${d.selectedTime})`}
                     </div>
                   </div>
                   
                   <div className="flex flex-col md:items-end justify-between border-t md:border-t-0 md:border-l border-[#EAEAEA] pt-4 md:pt-0 md:pl-6">
                     <p className="text-[11px] text-[#999999] font-bold mb-1">合計金額(税込)</p>
-                    <p className="text-[24px] font-black text-[#2D4B3E]">¥{getTotals(d).total.toLocaleString()}</p>
+                    <p className="text-[24px] font-bold text-[#2D4B3E]">¥{getTotals(d).total.toLocaleString()}</p>
                     <div className="flex items-center gap-1 text-[11px] font-bold text-blue-600 mt-2 bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 group-hover:bg-blue-500 group-hover:text-white transition-all">
                       詳細を見る <ChevronRight size={14}/>
                     </div>
