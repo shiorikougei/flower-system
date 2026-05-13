@@ -196,8 +196,10 @@ export default function OrderDetailModal({
 
       const formatPrice = (price) => `¥${Number(price || 0).toLocaleString()}`;
 
-      const shop = (appSettings?.shops || [])[0] || {};
-      const shopName = appSettings?.generalConfig?.appName || '花・花OHANA！';
+      // ★ 注文の shopId に一致する店舗を優先で取得。なければ先頭店舗
+      const shop = (appSettings?.shops || []).find(s => String(s.id) === String(modalData.shopId)) || (appSettings?.shops || [])[0] || {};
+      const shopName = shop.name || appSettings?.generalConfig?.appName || '花・花OHANA！';
+      const shopLogoUrl = appSettings?.generalConfig?.logoUrl || '';
       const shopZip = shop.zip || '0010025';
       const shopAddress = shop.address || '北海道札幌市北区北２５条西４丁目３−８ クレアノース25 1階';
       const shopTel = shop.phone || '011-600-1878';
@@ -369,7 +371,7 @@ export default function OrderDetailModal({
         </div>
       `;
 
-      // ★ EC贈り物用：店舗案内チラシ（金額・依頼主情報なし。お届け先様への同梱物として最低限の内容）
+      // ★ EC贈り物用：店舗案内チラシ（金額なし。お届け先様への同梱物）
       const renderEnclosedCard = ({ fullPage = true }) => {
         const itemRows = (modalData.cartItems || []).map(c => `
           <tr>
@@ -379,38 +381,43 @@ export default function OrderDetailModal({
         `).join('');
         return `
           <div class="${fullPage ? 'slip-full' : 'slip'}" style="color:#222;">
-            <div style="text-align:center; margin-bottom:8mm; padding-top:6mm;">
-              <div style="font-size:11pt; letter-spacing:0.4em; color:#117768; font-weight:bold;">Thank you for choosing us</div>
-              <div style="font-size:22pt; font-weight:bold; letter-spacing:0.3em; margin-top:3mm;">お届け物のご案内</div>
+            <!-- 上部：店舗ロゴ・店舗情報 -->
+            <div style="text-align:center; padding-top:4mm; padding-bottom:6mm; border-bottom:0.5pt dashed #bbb;">
+              ${shopLogoUrl ? `<img src="${shopLogoUrl}" alt="${formatText(shopName)}" style="max-height:18mm; max-width:60mm; object-fit:contain; margin:0 auto 3mm auto; display:block;" />` : ''}
+              <div style="font-size:15pt; font-weight:900; color:#222; letter-spacing:0.2em; margin-bottom:2mm;">${formatText(shopName)}</div>
+              <div style="font-size:9pt; color:#555; line-height:1.6;">
+                <div>〒${formatText(shopZip)} ${formatText(shopAddress)}</div>
+                <div>TEL: ${formatText(shopTel)}</div>
+              </div>
             </div>
 
-            <div style="margin:0 auto 8mm auto; max-width:120mm; text-align:center; font-size:11pt; line-height:1.9;">
-              <p>${formatText(recipient.name)} <span style="font-size:9pt;">様</span></p>
-              <p style="margin-top:4mm; font-size:10pt; color:#444;">
-                この度は ${shopName} の商品をお受け取りいただき、<br/>
-                誠にありがとうございます。<br/>
-                心を込めてお作りしたお花をお届けいたします🌸
-              </p>
+            <!-- 中部：お届け先 + メッセージ -->
+            <div style="margin:10mm auto 0 auto; max-width:130mm; text-align:center;">
+              <div style="font-size:13pt; font-weight:bold;">${formatText(recipient.name)} <span style="font-size:10pt; font-weight:normal;">様</span></div>
+              <div style="margin-top:6mm; font-size:10.5pt; color:#333; line-height:2;">
+                この度は <strong style="color:#117768;">${formatText(customer.name)}</strong> 様より<br/>
+                心のこもったお贈り物が届きました🌸<br/>
+                <span style="font-size:10pt; color:#555;">心を込めてお作りしたお花をお届けいたします。</span>
+              </div>
             </div>
 
-            <div style="margin:0 auto; max-width:120mm; border-top:0.5pt solid #ddd; border-bottom:0.5pt solid #ddd; padding:4mm 0;">
-              <div style="font-size:8.5pt; color:#888; text-align:center; margin-bottom:2mm; letter-spacing:0.2em;">お届け内容</div>
+            <!-- お届け内容 -->
+            <div style="margin:8mm auto 0 auto; max-width:120mm; border-top:0.5pt solid #ddd; border-bottom:0.5pt solid #ddd; padding:4mm 0;">
+              <div style="font-size:8.5pt; color:#888; text-align:center; margin-bottom:2mm; letter-spacing:0.3em;">お届け内容</div>
               <table style="width:100%; border-collapse:collapse;">
                 <tbody>${itemRows}</tbody>
               </table>
             </div>
 
-            <div style="margin:8mm auto 0 auto; max-width:120mm; text-align:center; font-size:9pt; color:#555; line-height:1.7;">
+            <div style="margin:6mm auto 0 auto; max-width:130mm; text-align:center; font-size:9pt; color:#555; line-height:1.7;">
               お花のお手入れ方法やご不明な点がございましたら、<br/>
-              下記までお気軽にお問い合わせください。
+              上記の店舗までお気軽にお問い合わせください。
             </div>
 
-            <div style="margin-top:auto; padding-top:8mm; border-top:0.5pt dashed #bbb; text-align:center;">
-              <div style="font-size:14pt; font-weight:900; color:#222; letter-spacing:0.15em; margin-bottom:2mm;">${shopName}</div>
-              <div style="font-size:9pt; color:#444; line-height:1.6;">
-                <div>〒${shopZip} ${shopAddress}</div>
-                <div>TEL: ${shopTel}</div>
-              </div>
+            <!-- 下部：タイトル -->
+            <div style="margin-top:auto; padding-top:8mm; text-align:center;">
+              <div style="font-size:11pt; letter-spacing:0.4em; color:#117768; font-weight:bold;">Thank you for choosing us</div>
+              <div style="font-size:22pt; font-weight:bold; letter-spacing:0.3em; margin-top:3mm; color:#222;">贈り物のご案内</div>
             </div>
           </div>
         `;
