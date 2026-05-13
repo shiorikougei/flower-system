@@ -4,7 +4,7 @@ import { supabase } from '@/utils/supabase';
 import {
   Building2, Mail, ArrowUpCircle, Bot, Lock, Unlock,
   CheckCircle, XCircle, RefreshCw, Save, Sparkles, Store,
-  MessageSquare, Trash2, AlertTriangle, Wand2, X
+  MessageSquare, Trash2, AlertTriangle, Wand2, X, FileText
 } from 'lucide-react';
 
 const DEFAULT_AI_PROMPT = '以下のテキストからお花の「価格」「用途」「カラー」「イメージ」をJSON形式で抽出してください。価格はカンマなしの数値で出力してください。';
@@ -254,6 +254,84 @@ export default function OwnerDashboard() {
     if (activeTab === 'usage' && isAuth) loadUsage(usageMonth);
     // eslint-disable-next-line
   }, [activeTab, usageMonth, isAuth]);
+
+  // ★ AI利用超過分の請求書PDFを発行
+  const printInvoice = (usage) => {
+    const issueDate = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
+    const [yy, mm] = usage.monthKey ? usage.monthKey.split('-') : [new Date().getFullYear(), String(new Date().getMonth()+1).padStart(2,'0')];
+    const periodLabel = `${yy}年${parseInt(mm)}月分`;
+    const taxExcluded = Math.floor(usage.overageJpy / 1.1);
+    const tax = usage.overageJpy - taxExcluded;
+    const ownerName = 'NocoLde';
+    const ownerInvoice = 'T0000000000000';
+    const dueDate = (() => {
+      const d = new Date();
+      d.setMonth(d.getMonth() + 1);
+      d.setDate(0); // 翌月末
+      return d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
+    })();
+
+    const html = `<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"/><title>請求書_${usage.tenantId}_${usage.monthKey}</title>
+      <style>
+        @page { size: A4 portrait; margin: 20mm; }
+        * { box-sizing: border-box; }
+        body { font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; color: #222; margin: 0; padding: 0; }
+        .container { max-width: 170mm; margin: 0 auto; }
+        .title { text-align: center; font-size: 26pt; font-weight: 900; letter-spacing: 0.5em; padding: 6mm 0; border-bottom: 2pt double #222; margin-bottom: 8mm; }
+        .meta { display: flex; justify-content: space-between; margin-bottom: 8mm; font-size: 10pt; }
+        .target { font-size: 14pt; font-weight: bold; padding: 4mm 0; border-bottom: 0.5pt solid #999; margin-bottom: 6mm; }
+        .amount-block { background: #fafafa; border: 1.5pt solid #222; padding: 8mm; margin: 8mm 0; text-align: center; }
+        .amount-label { font-size: 10pt; color: #666; margin-bottom: 2mm; }
+        .amount-value { font-size: 28pt; font-weight: 900; color: #117768; letter-spacing: 0.1em; }
+        .amount-tax { font-size: 9pt; color: #666; margin-top: 2mm; }
+        .description { font-size: 11pt; padding: 4mm 0; margin-bottom: 4mm; }
+        table { width: 100%; border-collapse: collapse; margin: 4mm 0; font-size: 10pt; }
+        th, td { padding: 2.5mm 3mm; border-bottom: 0.5pt solid #ddd; }
+        th { background: #f4f4f4; font-weight: bold; }
+        .due { background: #fff7ed; border: 1pt solid #f97316; padding: 4mm; margin: 6mm 0; font-size: 11pt; color: #c2410c; text-align: center; font-weight: bold; }
+        .footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 12mm; padding-top: 6mm; border-top: 0.5pt solid #999; }
+        .issuer-info { font-size: 10pt; line-height: 1.7; }
+        .issuer-name { font-size: 14pt; font-weight: 900; margin-bottom: 2mm; }
+      </style></head><body>
+      <div class="container">
+        <div class="title">請 求 書</div>
+        <div class="meta">
+          <div>No. INV-${usage.tenantId.slice(0,6)}-${usage.monthKey.replace('-','')}</div>
+          <div>発行日: ${issueDate}</div>
+        </div>
+        <div class="target">${usage.tenantName} 御中</div>
+        <div class="amount-block">
+          <div class="amount-label">ご請求金額（税込）</div>
+          <div class="amount-value">¥ ${usage.overageJpy.toLocaleString()} -</div>
+          <div class="amount-tax">（内訳: 本体 ¥${taxExcluded.toLocaleString()} / 消費税 ¥${tax.toLocaleString()}）</div>
+        </div>
+        <div class="description">下記の通りご請求申し上げます。</div>
+        <table>
+          <thead><tr><th>項目</th><th style="width:30mm; text-align:center;">数量</th><th style="width:30mm; text-align:right;">単価</th><th style="width:30mm; text-align:right;">金額(税抜)</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>AI生成機能 ${periodLabel}<br/><span style="font-size:9pt; color:#666;">無料枠 ${aiPricing.freeQuotaPerMonth}回 / 利用 ${usage.total}回 / 超過 ${usage.overage}回</span></td>
+              <td style="text-align:center;">${usage.overage}回</td>
+              <td style="text-align:right;">¥${aiPricing.pricePerExtraJpy.toLocaleString()}</td>
+              <td style="text-align:right;">¥${Math.floor(usage.overageJpy / 1.1).toLocaleString()}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="due">お支払い期日: ${dueDate}</div>
+        <div class="footer">
+          <div class="issuer-info">
+            <div class="issuer-name">${ownerName}</div>
+            <div>登録番号: ${ownerInvoice}</div>
+            <div style="margin-top:3mm; color:#666;">お支払いに関するお問い合わせ:</div>
+            <div>support@nocolde.com</div>
+          </div>
+        </div>
+      </div>
+      <script>window.onload = function() { setTimeout(function() { window.print(); }, 400); };</script>
+      </body></html>`;
+    const w = window.open('', '_blank');
+    if (w) { w.document.open(); w.document.write(html); w.document.close(); }
+  };
 
   const saveAiPricing = async () => {
     try {
@@ -796,12 +874,13 @@ export default function OwnerDashboard() {
                     <th className="px-4 py-3 text-right font-bold text-gray-500 tracking-widest">プロンプト</th>
                     <th className="px-4 py-3 text-right font-bold text-gray-500 tracking-widest">合計</th>
                     <th className="px-4 py-3 text-right font-bold text-gray-500 tracking-widest">超過</th>
-                    <th className="px-6 py-3 text-right font-bold text-gray-500 tracking-widest">請求額</th>
+                    <th className="px-4 py-3 text-right font-bold text-gray-500 tracking-widest">請求額</th>
+                    <th className="px-4 py-3 text-center font-bold text-gray-500 tracking-widest">請求書</th>
                   </tr>
                 </thead>
                 <tbody>
                   {usageList.length === 0 && (
-                    <tr><td colSpan="6" className="px-6 py-12 text-center text-gray-600 italic font-mono">この月のデータはまだありません</td></tr>
+                    <tr><td colSpan="7" className="px-6 py-12 text-center text-gray-600 italic font-mono">この月のデータはまだありません</td></tr>
                   )}
                   {usageList.map(u => (
                     <tr key={u.tenantId} className="border-b border-[#222222]/50 hover:bg-black/30 transition-colors">
@@ -812,8 +891,19 @@ export default function OwnerDashboard() {
                       <td className={`px-4 py-4 text-right font-mono ${u.overage > 0 ? 'text-amber-400 font-bold' : 'text-gray-700'}`}>
                         {u.overage > 0 ? `+${u.overage}` : '—'}
                       </td>
-                      <td className={`px-6 py-4 text-right font-mono font-bold ${u.overageJpy > 0 ? 'text-cyan-400' : 'text-gray-700'}`}>
+                      <td className={`px-4 py-4 text-right font-mono font-bold ${u.overageJpy > 0 ? 'text-cyan-400' : 'text-gray-700'}`}>
                         {u.overageJpy > 0 ? `¥${u.overageJpy.toLocaleString()}` : '無料枠内'}
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        {u.overageJpy > 0 ? (
+                          <button
+                            onClick={() => printInvoice({ ...u, monthKey: usageMonth })}
+                            className="inline-flex items-center gap-1 bg-cyan-500/10 text-cyan-400 border border-cyan-500/40 px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-cyan-500/20 transition-all"
+                            title="請求書をPDF発行"
+                          >
+                            <FileText size={11}/> 発行
+                          </button>
+                        ) : <span className="text-gray-700 text-[10px]">—</span>}
                       </td>
                     </tr>
                   ))}
@@ -825,6 +915,7 @@ export default function OwnerDashboard() {
                       <td className="px-6 py-3 text-right text-cyan-400 font-bold font-mono text-[14px]">
                         ¥{usageList.reduce((s, u) => s + u.overageJpy, 0).toLocaleString()}
                       </td>
+                      <td className="px-4 py-3"></td>
                     </tr>
                   </tfoot>
                 )}

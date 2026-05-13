@@ -41,6 +41,13 @@ export const EMAIL_TRIGGERS = [
     variables: ['customerName', 'shopName', 'orderId', 'orderTotal', 'orderItems', 'deliveryDate', 'shopPhone'],
   },
   {
+    id: 'anniversary_reminder',
+    label: '記念日リマインダー',
+    description: 'お客様がマイページで登録した記念日の1週間前に自動送信',
+    auto: true,
+    variables: ['customerName', 'shopName', 'anniversaryTitle', 'anniversaryDate', 'anniversaryNotes', 'shopPhone'],
+  },
+  {
     id: 'delivery_completion',
     label: 'お渡し・配達完了',
     description: '商品をお渡しまたは配達完了したお客様への完了通知（手動）',
@@ -170,6 +177,31 @@ TEL: {shopPhone}
 お受け取り、心よりお待ちしております🌸
 
 {shopName}`,
+    },
+    {
+      id: 'preset_anniversary_reminder',
+      trigger: 'anniversary_reminder',
+      targetShops: 'all',
+      enabled: true,
+      subject: '【{shopName}】まもなく {anniversaryTitle}（{anniversaryDate}）です🌸',
+      body: `{customerName} 様
+
+いつもありがとうございます。
+お客様にご登録いただいた記念日が、まもなく到来いたします。
+
+━━━━━━━━━━━━━━━━━━━━
+{anniversaryTitle}
+記念日: {anniversaryDate}
+{anniversaryNotes}
+━━━━━━━━━━━━━━━━━━━━
+
+今年も大切な日に、心を込めたお花をご用意いたします💐
+ご予約・ご相談はお気軽にお問い合わせください。
+
+{shopName}
+TEL: {shopPhone}
+
+※このメールは記念日リマインダーの設定に基づいて自動送信されています。`,
     },
     {
       id: 'preset_payment_confirmed',
