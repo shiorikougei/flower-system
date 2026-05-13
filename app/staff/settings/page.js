@@ -17,6 +17,12 @@ const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('general');
   const [isSaving, setIsSaving] = useState(false);
+  // ★ 保存完了トースト
+  const [toast, setToast] = useState(null); // { type: 'success'|'error', message: string }
+  const showToast = (type, message) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 3500);
+  };
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false); 
@@ -166,8 +172,11 @@ export default function SettingsPage() {
         shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReplyTemplates, staffOrderConfig, timeSlots 
       };
       await supabase.from('app_settings').upsert({ id: currentTenantId, settings_data: payload });
-      alert('すべての設定を保存しました！');
-    } catch (e) { alert('保存失敗'); } finally { setIsSaving(false); }
+      showToast('success', '設定を保存しました');
+    } catch (e) {
+      console.error(e);
+      showToast('error', '保存に失敗しました');
+    } finally { setIsSaving(false); }
   };
 
   const handleImg = (e, f) => {
@@ -937,6 +946,24 @@ export default function SettingsPage() {
         {activeTab === 'payment' && renderPaymentTab()}
         {activeTab === 'links' && renderLinksTab()}
       </main>
+
+      {/* ★ 保存トースト */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[200] animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border ${
+            toast.type === 'success'
+              ? 'bg-white border-[#117768]/30 text-[#117768]'
+              : 'bg-white border-red-300 text-red-700'
+          }`}>
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[14px] font-bold ${
+              toast.type === 'success' ? 'bg-[#117768]' : 'bg-red-500'
+            }`}>
+              {toast.type === 'success' ? '✓' : '!'}
+            </div>
+            <span className="text-[13px] font-bold">{toast.message}</span>
+          </div>
+        </div>
+      )}
 
       <style jsx global>{` @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&display=swap'); .font-serif { font-family: 'Noto Serif JP', serif; } .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; } `}</style>
     </div>

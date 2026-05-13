@@ -45,7 +45,12 @@ export default function ShopCatalogPage() {
         supabase.from('products').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('display_order', { ascending: true })
       ]);
       if (settingsRes.data?.settings_data) setAppSettings(settingsRes.data.settings_data);
-      setProducts(productsRes.data || []);
+      // ★ ドライフラワー（一点もの）= restock_allowed が false の在庫0商品は自動非表示
+      //    restock_allowed が true の商品は在庫0でも表示し、入荷通知登録を可能にする
+      const visibleProducts = (productsRes.data || []).filter(p =>
+        Number(p.stock) > 0 || p.restock_allowed === true
+      );
+      setProducts(visibleProducts);
     } catch (err) {
       console.error(err);
     } finally {

@@ -93,6 +93,7 @@ export default function StaffProductsPage() {
       image_url: '',
       category: '',
       is_active: true,
+      restock_allowed: false,  // ★ 一点もの（ドライフラワー等）デフォルト
       display_order: 0,
     });
   }
@@ -131,6 +132,7 @@ export default function StaffProductsPage() {
         image_url: imageUrl || '',
         category: editTarget.category || '',
         is_active: Boolean(editTarget.is_active),
+        restock_allowed: Boolean(editTarget.restock_allowed),  // ★ 再入荷可否
         display_order: Number(editTarget.display_order) || 0,
       };
 
@@ -230,6 +232,10 @@ export default function StaffProductsPage() {
                   )}
                   {!p.is_active && (
                     <div className="absolute top-2 right-2 bg-[#999999] text-white text-[10px] font-bold px-2 py-1 rounded">非公開</div>
+                  )}
+                  {/* ★ 再入荷不可（一点もの）バッジ */}
+                  {!p.restock_allowed && (
+                    <div className="absolute bottom-2 left-2 bg-amber-100 text-amber-800 text-[9px] font-bold px-2 py-0.5 rounded-full border border-amber-300">一点もの</div>
                   )}
                 </div>
                 <div className="p-4 space-y-2 flex-1 flex flex-col">
@@ -358,6 +364,25 @@ export default function StaffProductsPage() {
                     {editTarget.is_active ? '販売中' : '非公開（停止中）'}
                   </label>
                 </div>
+              </div>
+
+              {/* ★ 再入荷可否 */}
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editTarget.restock_allowed)}
+                    onChange={(e) => setEditTarget({ ...editTarget, restock_allowed: e.target.checked })}
+                    className="mt-0.5 w-5 h-5 accent-[#2D4B3E]"
+                  />
+                  <div className="flex-1">
+                    <p className="text-[13px] font-bold text-[#111111]">この商品は再入荷できる商品</p>
+                    <p className="text-[11px] text-amber-900 mt-1 leading-relaxed">
+                      <strong>OFF（推奨）:</strong> ドライフラワーなど一点ものの商品。在庫0になるとお客様ページから自動非表示<br/>
+                      <strong>ON:</strong> 同じ商品を継続的に作る場合。在庫0でも「入荷通知に登録」ボタンが表示され、入荷時に登録者へ自動メール送信されます
+                    </p>
+                  </div>
+                </label>
               </div>
             </div>
 
