@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Search, ChevronLeft, Package, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Search, ChevronLeft, Package, AlertCircle, CheckCircle2, Mail } from 'lucide-react';
 
 export default function OrderHistoryPage() {
   const params = useParams();
@@ -15,6 +15,31 @@ export default function OrderHistoryPage() {
   const [results, setResults] = useState([]);
   const [error, setError] = useState('');
   const [searched, setSearched] = useState(false);
+  const [magicLinkSending, setMagicLinkSending] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
+
+  async function sendMagicLink() {
+    if (!email.trim()) {
+      setError('メールアドレスを入力してください');
+      return;
+    }
+    setError('');
+    setMagicLinkSending(true);
+    try {
+      const res = await fetch('/api/customer-magiclink', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId, shopId, email: email.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '送信に失敗しました');
+      setMagicLinkSent(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setMagicLinkSending(false);
+    }
+  }
 
   async function handleSearch(e) {
     e?.preventDefault?.();
@@ -115,6 +140,31 @@ export default function OrderHistoryPage() {
             <Search size={16}/> {isSearching ? '検索中...' : '注文を検索する'}
           </button>
         </form>
+
+        {/* Magic Link: 注文番号がわからない時 */}
+        <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-3">
+          <p className="text-[12px] font-bold text-[#555555] flex items-center gap-2">
+            <Mail size={14}/> 注文番号がわからない時
+          </p>
+          <p className="text-[11px] text-[#999999] leading-relaxed">
+            上のメールアドレスを入力した上で、こちらをクリックすると、すべての注文履歴をまとめて確認できるリンクをメールでお送りします。
+          </p>
+          {magicLinkSent ? (
+            <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2 text-green-700">
+              <CheckCircle2 size={16}/>
+              <p className="text-[12px] font-bold">確認リンクをメールでお送りしました</p>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={sendMagicLink}
+              disabled={magicLinkSending || !email}
+              className="w-full h-11 bg-white border border-[#2D4B3E] text-[#2D4B3E] rounded-xl text-[12px] font-bold hover:bg-[#2D4B3E] hover:text-white transition-all disabled:opacity-50"
+            >
+              {magicLinkSending ? '送信中...' : '注文一覧のリンクをメールで受け取る'}
+            </button>
+          )}
+        </div>
 
         {error && (
           <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700">

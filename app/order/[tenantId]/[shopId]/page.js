@@ -2,7 +2,8 @@
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/utils/supabase'; 
-import { Calendar, Package, ChevronRight, Store, Truck, AlertCircle, Phone } from 'lucide-react';
+import { Calendar, Package, ChevronRight, Store, Truck, AlertCircle, Phone, ShoppingBag, Search } from 'lucide-react';
+import Link from 'next/link';
 
 import TatefudaPreview from '@/components/TatefudaPreview';
 import DatePicker from '@/components/DatePicker';
@@ -664,7 +665,15 @@ function OrderFormContent() {
           <div className="flex items-center gap-3">
             {logoUrl ? <img src={logoUrl} alt={appName} className="h-6 object-contain" /> : <span className="font-serif font-bold tracking-tight text-[18px] text-[#2D4B3E]">{appName}</span>}
           </div>
-          <div className="text-[10px] font-bold text-[#999999]">ステップ {step} / 4</div>
+          <div className="flex items-center gap-2">
+            <Link href={`/order/${tenantId}/${shopId}/shop`} className="hidden sm:flex items-center gap-1 text-[11px] font-bold text-[#555555] hover:text-[#2D4B3E] px-2 py-1">
+              <ShoppingBag size={12}/> 商品から選ぶ
+            </Link>
+            <Link href={`/order/${tenantId}/${shopId}/history`} className="hidden sm:flex items-center gap-1 text-[11px] font-bold text-[#555555] hover:text-[#2D4B3E] px-2 py-1">
+              <Search size={12}/> 注文確認
+            </Link>
+            <div className="text-[10px] font-bold text-[#999999]">ステップ {step} / 4</div>
+          </div>
         </div>
         <div className="h-0.5 w-full bg-[#FBFAF9]">
           <div className="h-full transition-all duration-500 ease-out bg-[#2D4B3E]" style={{ width: `${(step / 4) * 100}%` }}></div>
@@ -677,8 +686,31 @@ function OrderFormContent() {
         {step === 1 && (
           <div className="space-y-10 animate-in fade-in duration-200">
             <div>
-              <h1 className="text-[20px] font-bold mb-2 text-[#2D4B3E]">商品を選ぶ</h1>
-              <p className="text-[12px] text-[#555555]">ご希望のアイテムとお持ち込みの有無をお選びください。</p>
+              <h1 className="text-[20px] font-bold mb-2 text-[#2D4B3E]">カスタム注文</h1>
+              <p className="text-[12px] text-[#555555]">お花の種類・予算・イメージから自由に組み立てます。</p>
+            </div>
+
+            {/* ★ ECカタログへの導線 */}
+            <Link
+              href={`/order/${tenantId}/${shopId}/shop`}
+              className="flex items-center justify-between p-4 bg-white border border-[#EAEAEA] rounded-2xl hover:border-[#2D4B3E] transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#2D4B3E]/10 text-[#2D4B3E] flex items-center justify-center">
+                  <ShoppingBag size={18}/>
+                </div>
+                <div>
+                  <p className="text-[13px] font-bold text-[#111111]">商品カタログから選ぶ</p>
+                  <p className="text-[10px] text-[#999999] mt-0.5">プリセット商品をすぐに購入できます</p>
+                </div>
+              </div>
+              <ChevronRight size={18} className="text-[#999999] group-hover:text-[#2D4B3E] transition-colors"/>
+            </Link>
+
+            <div className="flex items-center gap-3 text-[10px] text-[#999999] font-bold">
+              <div className="flex-1 h-px bg-[#EAEAEA]"></div>
+              <span>または、カスタム注文する</span>
+              <div className="flex-1 h-px bg-[#EAEAEA]"></div>
             </div>
             <div className="space-y-6">
               <select className={`w-full h-16 px-5 bg-white border rounded-2xl outline-none transition-all text-[15px] font-bold appearance-none shadow-sm ${flowerType ? 'border-[#2D4B3E] text-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#EAEAEA] focus:border-[#2D4B3E]'}`} value={flowerType} onChange={(e) => { setFlowerType(e.target.value); setItemPrice(''); setIsBring('shop'); }}>

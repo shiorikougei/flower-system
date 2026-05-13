@@ -52,11 +52,11 @@ CREATE TRIGGER products_updated_at
 -- ----------------------------------------------------------------
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 
--- 公開: お客様向け商品カタログのため、is_activeかつstock>0の商品は誰でも閲覧可
--- ※ anon, authenticated 両方からアクセス可
+-- 公開: お客様向け商品カタログのため、is_active=trueの商品は誰でも閲覧可
+-- 在庫切れ商品も含む（フロント側で「在庫切れ」表示＋入荷通知登録ボタンを出す）
 CREATE POLICY "products_public_read" ON public.products
   FOR SELECT
-  USING (is_active = true AND stock > 0);
+  USING (is_active = true);
 
 -- スタッフ: 自分のテナントの全商品（非公開・在庫切れ含む）を閲覧可
 CREATE POLICY "products_staff_read_all" ON public.products

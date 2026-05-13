@@ -10,6 +10,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/utils/stripe';
+import { sendEmail, buildOrderConfirmationEmail } from '@/utils/email';
 
 export const runtime = 'nodejs';   // Edgeでは crypto が一部使えないため明示
 export const dynamic = 'force-dynamic';
@@ -57,9 +58,15 @@ export async function POST(request) {
         // 既存の order_data を取得して paymentStatus も "入金済" に更新
         const { data: orderRow } = await supabaseAdmin
           .from('orders')
-          .select('order_data')
+          .select('order_data, payment_status')
           .eq('id', orderId)
           .single();
+
+        // ★ 二重処理防止: 既に paid 済みなら何もしない
+        if (orderRow?.payment_status === 'paid') {
+          console.log('[webhook] 既に決済済みのためスキップ:', orderId);
+          break;
+        }
 
         const newOrderData = {
           ...(orderRow?.order_data || {}),
@@ -78,35 +85,48 @@ export async function POST(request) {
 
         if (error) console.error('orders更新失敗:', error);
 
-        // ★ EC注文の場合は在庫を減算
+        // ★ クレカ決済成功メール送信（在庫減算より先に・失敗してもメールは送る）
+        try {
+          const customerEmail = orderRow?.order_data?.customerInfo?.email;
+          const tenantId = session.metadata?.tenant_id;
+          if (customerEmail && tenantId) {
+            const { data: settingsRow } = await supabaseAdmin
+              .from('app_settings')
+              .select('settings_data')
+              .eq('id', tenantId)
+              .single();
+            const settings = settingsRow?.settings_data || {};
+            const shopId = orderRow?.order_data?.shopId;
+            const shop = settings.shops?.find(s => String(s.id) === String(shopId)) || settings.shops?.[0] || {};
+            const shopName = shop.name || settings.generalConfig?.appName || 'お花屋さん';
+            const { subject, html } = buildOrderConfirmationEmail({
+              order: { id: orderId, order_data: { ...orderRow.order_data, paymentMethod: 'card' } },
+              shopName,
+              bankInfo: '',
+            });
+            // ★ FROM名を店舗名で上書き
+            const from = `${shopName} <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
+            await sendEmail({ to: customerEmail, subject, html, from });
+            console.log('[webhook] 注文確認メール送信完了:', customerEmail);
+          }
+        } catch (mailErr) {
+          console.warn('[webhook] 注文確認メール送信失敗:', mailErr.message);
+        }
+
+        // ★ EC注文の場合は在庫を減算（RPC関数で原子的に）
         const cartItems = orderRow?.order_data?.cartItems;
         if (Array.isArray(cartItems) && cartItems.length > 0) {
           console.log('[webhook] EC注文(クレカ) 在庫減算開始:', cartItems.map(c => ({ id: c.productId, qty: c.qty })));
           for (const c of cartItems) {
-            if (!c.productId) {
-              console.warn('[webhook] productId が空のアイテム:', c);
-              continue;
-            }
-            const { data: prod, error: getErr } = await supabaseAdmin
-              .from('products')
-              .select('id, stock, name')
-              .eq('id', c.productId)
-              .single();
-            if (getErr) {
-              console.error('[webhook] 商品取得失敗:', c.productId, getErr.message);
-              continue;
-            }
-            if (prod) {
-              const newStock = Math.max(0, Number(prod.stock || 0) - Number(c.qty || 0));
-              const { error: updErr } = await supabaseAdmin
-                .from('products')
-                .update({ stock: newStock })
-                .eq('id', c.productId);
-              if (updErr) {
-                console.error('[webhook] 在庫更新失敗:', c.productId, updErr.message);
-              } else {
-                console.log(`[webhook] 在庫減算成功: "${prod.name}" ${prod.stock} → ${newStock}`);
-              }
+            if (!c.productId) continue;
+            const { data: result, error: rpcErr } = await supabaseAdmin.rpc('decrement_stock', {
+              p_product_id: c.productId,
+              p_qty: Number(c.qty || 0),
+            });
+            if (rpcErr) {
+              console.error('[webhook] decrement_stock 失敗:', c.productId, rpcErr.message);
+            } else if (result?.success) {
+              console.log(`[webhook] 在庫減算成功: "${result.product_name}" → ${result.new_stock}`);
             }
           }
         }

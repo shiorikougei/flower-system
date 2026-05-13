@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
-import { ShoppingCart, Plus, Minus, Package, X, ChevronLeft, Search } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Package, X, ChevronLeft, Search, Sparkles, Bell, CheckCircle2 } from 'lucide-react';
 import { getCart, addToCart, getCartCount } from '@/utils/cart';
 
 export default function ShopCatalogPage() {
@@ -20,6 +20,7 @@ export default function ShopCatalogPage() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [cartCount, setCartCount] = useState(0);
   const [addingToast, setAddingToast] = useState(null);
+  const [notifyTarget, setNotifyTarget] = useState(null);   // 入荷通知登録モーダルの対象商品
 
   useEffect(() => {
     loadData();
@@ -40,8 +41,8 @@ export default function ShopCatalogPage() {
     try {
       const [settingsRes, productsRes] = await Promise.all([
         supabase.from('app_settings').select('settings_data').eq('id', tenantId).single(),
-        // is_active=true & stock>0 のもののみ表示（公開ポリシーで自動制限される）
-        supabase.from('products').select('*').eq('tenant_id', tenantId).eq('is_active', true).gt('stock', 0).order('display_order', { ascending: true })
+        // 在庫切れ商品も含めて取得し、UIで「在庫切れ + 通知登録」を出す
+        supabase.from('products').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('display_order', { ascending: true })
       ]);
       if (settingsRes.data?.settings_data) setAppSettings(settingsRes.data.settings_data);
       setProducts(productsRes.data || []);
@@ -90,9 +91,12 @@ export default function ShopCatalogPage() {
           <div className="flex items-center gap-3">
             {logoUrl ? <img src={logoUrl} alt={appName} className="h-6 object-contain" /> : <span className="font-serif font-bold text-[18px] text-[#2D4B3E]">{targetShop.name}</span>}
           </div>
-          <div className="flex items-center gap-3">
-            <Link href={`/order/${tenantId}/${shopId}`} className="text-[12px] font-bold text-[#555555] hover:text-[#2D4B3E]">
-              カスタム注文
+          <div className="flex items-center gap-2">
+            <Link href={`/order/${tenantId}/${shopId}`} className="hidden sm:flex items-center gap-1 text-[11px] font-bold text-[#555555] hover:text-[#2D4B3E] px-2 py-1">
+              <Sparkles size={12}/> カスタム注文
+            </Link>
+            <Link href={`/order/${tenantId}/${shopId}/history`} className="hidden sm:flex items-center gap-1 text-[11px] font-bold text-[#555555] hover:text-[#2D4B3E] px-2 py-1">
+              <Search size={12}/> 注文確認
             </Link>
             <Link
               href={`/order/${tenantId}/${shopId}/cart`}
@@ -151,28 +155,43 @@ export default function ShopCatalogPage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {filteredProducts.map(p => (
-              <div key={p.id} className="bg-white rounded-2xl border border-[#EAEAEA] overflow-hidden hover:shadow-md transition-all flex flex-col group">
-                <button onClick={() => setSelectedProduct(p)} className="block aspect-square bg-[#FBFAF9] relative overflow-hidden">
-                  {p.image_url ? (
-                    <img src={p.image_url} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[#CCC]"><Package size={32}/></div>
-                  )}
-                </button>
-                <div className="p-4 space-y-2 flex-1 flex flex-col">
-                  {p.category && <p className="text-[10px] text-[#999999]">{p.category}</p>}
-                  <button onClick={() => setSelectedProduct(p)} className="text-left text-[13px] font-bold text-[#111111] hover:text-[#2D4B3E] line-clamp-2 min-h-[2.6em]">{p.name}</button>
-                  <p className="text-[15px] font-bold text-[#2D4B3E]">¥{p.price.toLocaleString()}<span className="text-[10px] font-normal text-[#999999] ml-1">(税抜)</span></p>
-                  <button
-                    onClick={() => handleAddToCart(p, 1)}
-                    className="mt-auto w-full h-10 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold hover:bg-[#1f352b] transition-all flex items-center justify-center gap-1.5"
-                  >
-                    <Plus size={14}/> カートに入れる
+            {filteredProducts.map(p => {
+              const isOutOfStock = p.stock === 0;
+              return (
+                <div key={p.id} className={`bg-white rounded-2xl border border-[#EAEAEA] overflow-hidden hover:shadow-md transition-all flex flex-col group ${isOutOfStock ? 'opacity-80' : ''}`}>
+                  <button onClick={() => !isOutOfStock && setSelectedProduct(p)} className="block aspect-square bg-[#FBFAF9] relative overflow-hidden">
+                    {p.image_url ? (
+                      <img src={p.image_url} alt={p.name} className={`w-full h-full object-cover transition-transform duration-300 ${isOutOfStock ? 'grayscale' : 'group-hover:scale-105'}`} />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[#CCC]"><Package size={32}/></div>
+                    )}
+                    {isOutOfStock && (
+                      <div className="absolute top-3 left-3 bg-[#111111]/80 text-white text-[10px] font-bold px-2 py-1 rounded">在庫切れ</div>
+                    )}
                   </button>
+                  <div className="p-4 space-y-2 flex-1 flex flex-col">
+                    {p.category && <p className="text-[10px] text-[#999999]">{p.category}</p>}
+                    <button onClick={() => !isOutOfStock && setSelectedProduct(p)} className="text-left text-[13px] font-bold text-[#111111] hover:text-[#2D4B3E] line-clamp-2 min-h-[2.6em]">{p.name}</button>
+                    <p className="text-[15px] font-bold text-[#2D4B3E]">¥{p.price.toLocaleString()}<span className="text-[10px] font-normal text-[#999999] ml-1">(税抜)</span></p>
+                    {isOutOfStock ? (
+                      <button
+                        onClick={() => setNotifyTarget(p)}
+                        className="mt-auto w-full h-10 bg-white border border-[#D97D54] text-[#D97D54] rounded-xl text-[12px] font-bold hover:bg-[#D97D54] hover:text-white transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <Bell size={14}/> 入荷したら通知
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleAddToCart(p, 1)}
+                        className="mt-auto w-full h-10 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold hover:bg-[#1f352b] transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <Plus size={14}/> カートに入れる
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>
@@ -183,6 +202,15 @@ export default function ShopCatalogPage() {
           product={selectedProduct}
           onClose={() => setSelectedProduct(null)}
           onAddToCart={(qty) => { handleAddToCart(selectedProduct, qty); setSelectedProduct(null); }}
+        />
+      )}
+
+      {/* 入荷通知登録モーダル */}
+      {notifyTarget && (
+        <NotifyModal
+          product={notifyTarget}
+          tenantId={tenantId}
+          onClose={() => setNotifyTarget(null)}
         />
       )}
 
@@ -245,6 +273,83 @@ function ProductDetailModal({ product, onClose, onAddToCart }) {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ★ 入荷通知登録モーダル
+function NotifyModal({ product, tenantId, onClose }) {
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/stock-notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId, productId: product.id, email: email.trim(), customerName: name.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '登録に失敗しました');
+      setDone(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111111]/40 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white border-b border-[#EAEAEA] p-4 flex justify-between items-center">
+          <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Bell size={16}/> 入荷通知の登録</h3>
+          <button onClick={onClose} className="text-[#999999] hover:text-[#111111]"><X size={18}/></button>
+        </div>
+        <div className="p-6">
+          {done ? (
+            <div className="text-center space-y-3 py-4">
+              <CheckCircle2 size={40} className="mx-auto text-green-500" />
+              <p className="text-[13px] font-bold text-[#111111]">登録完了しました</p>
+              <p className="text-[12px] text-[#555555] leading-relaxed">
+                「{product.name}」が入荷次第、メールにてお知らせいたします。
+              </p>
+              <button onClick={onClose} className="mt-4 px-6 h-10 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold">閉じる</button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA] flex gap-3">
+                {product.image_url && <img src={product.image_url} alt={product.name} className="w-14 h-14 rounded-lg object-cover"/>}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-bold text-[#111111] truncate">{product.name}</p>
+                  <p className="text-[11px] text-[#D97D54] mt-0.5">在庫切れ中</p>
+                </div>
+              </div>
+              <p className="text-[12px] text-[#555555] leading-relaxed">
+                こちらの商品が入荷した際にメールでお知らせいたします。
+              </p>
+              <div className="space-y-2">
+                <input type="text" placeholder="お名前（任意）" value={name} onChange={(e) => setName(e.target.value)}
+                  className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />
+                <input type="email" required placeholder="メールアドレス" value={email} onChange={(e) => setEmail(e.target.value)}
+                  className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />
+              </div>
+              {error && <p className="text-red-500 text-[11px] font-bold">{error}</p>}
+              <button type="submit" disabled={isSubmitting}
+                className="w-full h-12 bg-[#2D4B3E] text-white rounded-xl text-[13px] font-bold hover:bg-[#1f352b] disabled:opacity-50">
+                {isSubmitting ? '送信中...' : '通知を登録する'}
+              </button>
+              <p className="text-[10px] text-[#999999] text-center">※ご登録後の連絡先変更・解除は店舗までご連絡ください</p>
+            </form>
+          )}
         </div>
       </div>
     </div>

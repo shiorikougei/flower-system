@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
-import { Plus, Package, Edit2, Trash2, Image as ImageIcon, X, AlertCircle, Save, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Plus, Package, Edit2, Trash2, Image as ImageIcon, X, AlertCircle, Save, ToggleLeft, ToggleRight, Bell, Send } from 'lucide-react';
 
 export default function StaffProductsPage() {
   const [tenantId, setTenantId] = useState(null);
@@ -10,6 +10,7 @@ export default function StaffProductsPage() {
   const [editTarget, setEditTarget] = useState(null);   // 編集中商品 or 'new' or null
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState(null);
+  const [pendingNotifyCounts, setPendingNotifyCounts] = useState({});  // 商品ID → 未通知件数
 
   useEffect(() => {
     initData();
@@ -36,10 +37,48 @@ export default function StaffProductsPage() {
         .order('created_at', { ascending: false });
       if (error) throw error;
       setProducts(data || []);
+
+      // 未通知の入荷通知件数を取得
+      const { data: notifs } = await supabase
+        .from('stock_notifications')
+        .select('product_id')
+        .eq('tenant_id', tId)
+        .is('notified_at', null);
+      if (notifs) {
+        const counts = {};
+        for (const n of notifs) {
+          counts[n.product_id] = (counts[n.product_id] || 0) + 1;
+        }
+        setPendingNotifyCounts(counts);
+      }
     } catch (err) {
       setMessage({ type: 'error', text: '商品の読み込みに失敗しました: ' + err.message });
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function dispatchNotifications(productId) {
+    const count = pendingNotifyCounts[productId] || 0;
+    if (count === 0) return;
+    if (!confirm(`${count}件の入荷通知メールを送信しますか？`)) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch('/api/stock-notify/dispatch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ productId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '送信に失敗しました');
+      setMessage({ type: 'success', text: `${data.sent}件の通知メールを送信しました` });
+      await initData();
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message });
     }
   }
 
@@ -201,6 +240,21 @@ export default function StaffProductsPage() {
                     <p className="text-[16px] font-bold text-[#2D4B3E]">¥{p.price.toLocaleString()}</p>
                     <p className="text-[11px] text-[#999999]">在庫: <span className={p.stock <= 3 ? 'text-red-500 font-bold' : 'text-[#555555] font-bold'}>{p.stock}</span></p>
                   </div>
+
+                  {/* 入荷通知の待機件数 */}
+                  {(pendingNotifyCounts[p.id] || 0) > 0 && p.stock > 0 && (
+                    <button
+                      onClick={() => dispatchNotifications(p.id)}
+                      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold bg-[#D97D54]/10 text-[#D97D54] border border-[#D97D54]/30 hover:bg-[#D97D54] hover:text-white transition-all"
+                    >
+                      <Send size={12}/> {pendingNotifyCounts[p.id]}件の入荷通知を送信
+                    </button>
+                  )}
+                  {(pendingNotifyCounts[p.id] || 0) > 0 && p.stock === 0 && (
+                    <div className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-bold text-[#999999] bg-[#FBFAF9]">
+                      <Bell size={11}/> {pendingNotifyCounts[p.id]}件の入荷待ち
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-2 pt-3 border-t border-[#F0F0F0]">
                     <button

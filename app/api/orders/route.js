@@ -13,6 +13,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe, APP_URL } from '@/utils/stripe';
+import { sendEmail, buildOrderConfirmationEmail } from '@/utils/email';
 
 export async function POST(request) {
   try {
@@ -121,35 +122,64 @@ export async function POST(request) {
     }
     const orderId = inserted.id;
 
+    // ---- お客様向け 注文確認メール送信 ----
+    //   カードの場合は決済完了後に送る方が自然なので、Webhook側でも送信する
+    //   銀行振込は注文確定時点でメール送信
+    async function sendConfirmationEmail() {
+      try {
+        const customerEmail = orderData.customerInfo?.email;
+        if (!customerEmail) return;
+
+        // 店舗情報・振込先取得
+        const { data: settingsRow } = await supabaseAdmin
+          .from('app_settings')
+          .select('settings_data')
+          .eq('id', tenantId)
+          .single();
+        const settings = settingsRow?.settings_data || {};
+        const shop = settings.shops?.find(s => String(s.id) === String(shopId)) || settings.shops?.[0] || {};
+        const shopName = shop.name || settings.generalConfig?.appName || 'お花屋さん';
+        const bankInfo = shop.bankInfo || '';
+
+        // 注文オブジェクトを再構築（DBから取り直してもよい）
+        const orderForEmail = {
+          id: orderId,
+          order_data: orderRecord.order_data,
+        };
+        const { subject, html } = buildOrderConfirmationEmail({ order: orderForEmail, shopName, bankInfo });
+        // ★ FROM名を店舗名で上書き（お客様が注文した店舗から届くように見せる）
+        const from = `${shopName} <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
+        await sendEmail({ to: customerEmail, subject, html, from });
+      } catch (e) {
+        console.warn('[orders] 注文確認メール送信失敗:', e.message);
+      }
+    }
+
     // ---- カード以外はそのまま完了（EC注文なら在庫減算） ----
     if (paymentMethod !== 'card') {
       // EC注文の銀行振込は、決済確認前に在庫を減らす（カードはwebhookで減らす）
       if (isEcOrder) {
         console.log('[orders] EC注文(銀行振込) 在庫減算開始:', orderData.cartItems.map(c => ({ id: c.productId, qty: c.qty })));
         for (const c of orderData.cartItems) {
-          const { data: prod, error: getErr } = await supabaseAdmin
-            .from('products')
-            .select('id, stock, name')
-            .eq('id', c.productId)
-            .single();
-          if (getErr) {
-            console.error('[orders] 商品取得失敗:', c.productId, getErr.message);
+          // ★ RPC関数で原子的に減算（並行注文時の整合性確保）
+          const { data: result, error: rpcErr } = await supabaseAdmin.rpc('decrement_stock', {
+            p_product_id: c.productId,
+            p_qty: Number(c.qty || 0),
+          });
+          if (rpcErr) {
+            console.error('[orders] decrement_stock 失敗:', c.productId, rpcErr.message);
             continue;
           }
-          if (prod) {
-            const newStock = Math.max(0, Number(prod.stock || 0) - Number(c.qty || 0));
-            const { error: updErr } = await supabaseAdmin
-              .from('products')
-              .update({ stock: newStock })
-              .eq('id', c.productId);
-            if (updErr) {
-              console.error('[orders] 在庫更新失敗:', c.productId, updErr.message);
-            } else {
-              console.log(`[orders] 在庫減算成功: "${prod.name}" ${prod.stock} → ${newStock}`);
-            }
+          if (result?.success) {
+            console.log(`[orders] 在庫減算成功: "${result.product_name}" → ${result.new_stock}`);
+          } else {
+            console.warn(`[orders] 在庫減算スキップ:`, result);
           }
         }
       }
+
+      // 銀行振込はここで確定メール送信
+      await sendConfirmationEmail();
       return NextResponse.json({ orderId });
     }
 

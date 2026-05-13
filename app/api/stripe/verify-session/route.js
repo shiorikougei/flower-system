@@ -85,32 +85,20 @@ export async function POST(request) {
         })
         .eq('id', orderId);
 
-      // ★ EC注文の場合は在庫減算（Webhookが届かなかった時の保険）
+      // ★ EC注文の場合は在庫減算（Webhookが届かなかった時の保険、RPC関数で原子的に）
       const cartItems = order.order_data?.cartItems;
       if (Array.isArray(cartItems) && cartItems.length > 0) {
         console.log('[verify-session] EC注文 在庫減算開始:', cartItems.map(c => ({ id: c.productId, qty: c.qty })));
         for (const c of cartItems) {
           if (!c.productId) continue;
-          const { data: prod, error: getErr } = await supabaseAdmin
-            .from('products')
-            .select('id, stock, name')
-            .eq('id', c.productId)
-            .single();
-          if (getErr) {
-            console.error('[verify-session] 商品取得失敗:', c.productId, getErr.message);
-            continue;
-          }
-          if (prod) {
-            const newStock = Math.max(0, Number(prod.stock || 0) - Number(c.qty || 0));
-            const { error: updErr } = await supabaseAdmin
-              .from('products')
-              .update({ stock: newStock })
-              .eq('id', c.productId);
-            if (updErr) {
-              console.error('[verify-session] 在庫更新失敗:', c.productId, updErr.message);
-            } else {
-              console.log(`[verify-session] 在庫減算成功: "${prod.name}" ${prod.stock} → ${newStock}`);
-            }
+          const { data: result, error: rpcErr } = await supabaseAdmin.rpc('decrement_stock', {
+            p_product_id: c.productId,
+            p_qty: Number(c.qty || 0),
+          });
+          if (rpcErr) {
+            console.error('[verify-session] decrement_stock 失敗:', c.productId, rpcErr.message);
+          } else if (result?.success) {
+            console.log(`[verify-session] 在庫減算成功: "${result.product_name}" → ${result.new_stock}`);
           }
         }
       }
