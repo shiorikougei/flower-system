@@ -11,7 +11,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/utils/stripe';
 import { sendEmail } from '@/utils/email';
-import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems } from '@/utils/emailTemplates';
+import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatRecipientInfo } from '@/utils/emailTemplates';
 
 export const runtime = 'nodejs';   // Edgeでは crypto が一部使えないため明示
 export const dynamic = 'force-dynamic';
@@ -121,6 +121,7 @@ export async function POST(request) {
                 bankInfo: '',
                 deliveryDate: od.selectedDate ? `${od.selectedDate} ${od.selectedTime || ''}`.trim() : '',
                 shopPhone,
+                recipientInfo: formatRecipientInfo(od),
               };
               const { subject, body } = renderTemplate(tpl, vars);
               const html = bodyToHtml(body, { shopName });

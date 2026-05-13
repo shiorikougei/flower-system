@@ -10,7 +10,7 @@ export const EMAIL_TRIGGERS = [
     label: 'ご注文受付',
     description: 'お客様の注文確定時に自動送信',
     auto: true,
-    variables: ['customerName', 'shopName', 'orderId', 'orderTotal', 'orderItems', 'paymentMethod', 'bankInfo', 'deliveryDate', 'shopPhone'],
+    variables: ['customerName', 'shopName', 'orderId', 'orderTotal', 'orderItems', 'paymentMethod', 'bankInfo', 'deliveryDate', 'shopPhone', 'recipientInfo'],
   },
   {
     id: 'restock_notification',
@@ -87,6 +87,7 @@ export function getPresetTemplates() {
 【お届け予定】
 {deliveryDate}
 
+{recipientInfo}
 ━━━━━━━━━━━━━━━━━━━━
 
 ご不明な点がございましたら、{shopName}までお問い合わせください。
@@ -260,6 +261,25 @@ export function findTemplateFor(triggerId, autoReplyTemplates, { shopId } = {}) 
 
   // 最後にプリセット
   return presets.find(p => p.trigger === triggerId) || null;
+}
+
+// ===============================================================
+// お届け先情報を文字列化（{recipientInfo} 変数の置換用）
+// ご依頼主 === お届け先 のときは空文字を返す
+// ===============================================================
+export function formatRecipientInfo(orderData) {
+  const d = orderData || {};
+  if (!d.isRecipientDifferent) return '';
+  const r = d.recipientInfo || {};
+  if (!r.name && !r.address1) return '';
+  const lines = [
+    '【お届け先】',
+    `${r.name || ''} 様`,
+  ];
+  if (r.zip) lines.push(`〒${r.zip}`);
+  if (r.address1 || r.address2) lines.push(`${r.address1 || ''} ${r.address2 || ''}`.trim());
+  if (r.phone) lines.push(`TEL: ${r.phone}`);
+  return lines.join('\n') + '\n';
 }
 
 // ===============================================================

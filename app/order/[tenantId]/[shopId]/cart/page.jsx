@@ -17,6 +17,9 @@ export default function CartPage() {
   const [stripeEnabled, setStripeEnabled] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('');
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', email: '', zip: '', address1: '', address2: '' });
+  // ★ ご依頼主 ≠ お届け先（贈り物用）
+  const [isRecipientDifferent, setIsRecipientDifferent] = useState(false);
+  const [recipientInfo, setRecipientInfo] = useState({ name: '', phone: '', zip: '', address1: '', address2: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -63,13 +66,31 @@ export default function CartPage() {
     } catch (e) {}
   };
 
+  // ★ お届け先側の郵便番号→住所自動入力
+  const fetchRecipientAddress = async (zip) => {
+    if (zip.length !== 7) return;
+    try {
+      const res = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${zip}`);
+      const data = await res.json();
+      if (data.results?.[0]) {
+        const a = data.results[0];
+        setRecipientInfo(prev => ({ ...prev, address1: `${a.address1}${a.address2}${a.address3}` }));
+      }
+    } catch (e) {}
+  };
+
   const subTotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
   const tax = Math.floor(subTotal * 0.1);
   const totalAmount = subTotal + tax;
 
   function validate() {
     if (cart.length === 0) return 'カートが空です';
-    if (!customerInfo.name || !customerInfo.phone || !customerInfo.email) return 'お客様情報を入力してください';
+    if (!customerInfo.name || !customerInfo.phone || !customerInfo.email) return 'ご依頼主様のお名前・電話番号・メールを入力してください';
+    if (isRecipientDifferent) {
+      if (!recipientInfo.name || !recipientInfo.phone || !recipientInfo.zip || !recipientInfo.address1) {
+        return 'お届け先様の情報をすべて入力してください';
+      }
+    }
     if (!paymentMethod) return 'お支払い方法を選択してください';
     return '';
   }
@@ -90,8 +111,8 @@ export default function CartPage() {
         pickupFee: 0,
         feeBreakdown: { baseFee: 0, boxFee: 0, coolFee: 0 },
         customerInfo,
-        isRecipientDifferent: false,
-        recipientInfo: { name: '', phone: '', zip: '', address1: '', address2: '' },
+        isRecipientDifferent,
+        recipientInfo: isRecipientDifferent ? recipientInfo : { name: '', phone: '', zip: '', address1: '', address2: '' },
         status: 'new',
       };
 
@@ -183,15 +204,46 @@ export default function CartPage() {
               </div>
             </div>
 
-            {/* お客様情報 */}
+            {/* ご依頼主情報 */}
             <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-3">
-              <p className="text-[12px] font-bold text-[#555555] mb-3">お客様情報</p>
+              <p className="text-[12px] font-bold text-[#555555] mb-3">ご依頼主様情報</p>
               <input type="text" placeholder="お名前" value={customerInfo.name} onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"/>
               <input type="tel" placeholder="電話番号" value={customerInfo.phone} onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"/>
               <input type="email" placeholder="メールアドレス" value={customerInfo.email} onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"/>
               <input type="text" placeholder="郵便番号（7桁・ハイフンなし）" value={customerInfo.zip} onChange={(e) => { setCustomerInfo({...customerInfo, zip: e.target.value}); if (e.target.value.length === 7) fetchAddress(e.target.value); }} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"/>
               <input type="text" placeholder="住所（自動入力）" value={customerInfo.address1} readOnly className="w-full h-12 px-4 bg-[#EAEAEA]/30 rounded-xl text-[13px] text-[#999999] outline-none"/>
               <input type="text" placeholder="番地・建物名" value={customerInfo.address2} onChange={(e) => setCustomerInfo({...customerInfo, address2: e.target.value})} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"/>
+            </div>
+
+            {/* ★ お届け先別住所トグル（プレゼント・贈り物用） */}
+            <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isRecipientDifferent}
+                  onChange={(e) => setIsRecipientDifferent(e.target.checked)}
+                  className="mt-1 w-4 h-4 accent-[#2D4B3E]"
+                />
+                <div>
+                  <p className="text-[13px] font-bold text-[#111111]">プレゼント・贈り物として別の住所にお届け</p>
+                  <p className="text-[11px] text-[#555555] mt-1">ご依頼主様と異なる場所に届ける場合はチェックを入れてください</p>
+                </div>
+              </label>
+
+              {isRecipientDifferent && (
+                <div className="space-y-3 pt-3 mt-2 border-t border-[#EAEAEA]">
+                  <p className="text-[12px] font-bold text-[#555555]">お届け先様情報</p>
+                  <input type="text" placeholder="お名前" value={recipientInfo.name} onChange={(e) => setRecipientInfo({...recipientInfo, name: e.target.value})} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                  <input type="tel" placeholder="電話番号" value={recipientInfo.phone} onChange={(e) => setRecipientInfo({...recipientInfo, phone: e.target.value})} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                  <input type="text" placeholder="郵便番号（7桁・ハイフンなし）" value={recipientInfo.zip} onChange={(e) => { setRecipientInfo({...recipientInfo, zip: e.target.value}); if (e.target.value.length === 7) fetchRecipientAddress(e.target.value); }} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                  <input type="text" placeholder="住所（自動入力）" value={recipientInfo.address1} readOnly className="w-full h-12 px-4 bg-[#EAEAEA]/30 rounded-xl text-[13px] text-[#999999] outline-none"/>
+                  <input type="text" placeholder="番地・建物名" value={recipientInfo.address2} onChange={(e) => setRecipientInfo({...recipientInfo, address2: e.target.value})} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                  <div className="text-[11px] text-[#117768] bg-[#117768]/5 border border-[#117768]/20 rounded-lg p-3 leading-relaxed">
+                    💐 プレゼント設定の場合、お届け物には金額が記載された納品書は同梱されません。<br/>
+                    お買い上げ明細はご依頼主様のメールアドレスにお送りします。
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* お支払い方法 */}

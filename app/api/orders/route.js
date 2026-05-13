@@ -14,7 +14,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe, APP_URL } from '@/utils/stripe';
 import { sendEmail } from '@/utils/email';
-import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems } from '@/utils/emailTemplates';
+import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatRecipientInfo } from '@/utils/emailTemplates';
 
 export async function POST(request) {
   try {
@@ -161,6 +161,7 @@ export async function POST(request) {
           bankInfo: paymentMethod === 'bank_transfer' && bankInfo ? `【お振込先】\n${bankInfo}\n※お振込手数料はお客様ご負担となります。` : '',
           deliveryDate: orderData.selectedDate ? `${orderData.selectedDate} ${orderData.selectedTime || ''}`.trim() : '',
           shopPhone,
+          recipientInfo: formatRecipientInfo(orderRecord.order_data),
         };
         const { subject, body } = renderTemplate(tpl, vars);
         const html = bodyToHtml(body, { shopName });

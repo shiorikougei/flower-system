@@ -11,7 +11,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from '@/utils/email';
-import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems } from '@/utils/emailTemplates';
+import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatRecipientInfo } from '@/utils/emailTemplates';
 
 export async function POST(request) {
   try {
@@ -93,6 +93,7 @@ export async function POST(request) {
       deliveryDate: od.selectedDate ? `${od.selectedDate} ${od.selectedTime || ''}`.trim() : '',
       shopPhone,
       completionImageUrl: od.completionImage || '',
+      recipientInfo: formatRecipientInfo(od),
     };
 
     const { subject, body } = renderTemplate(tpl, vars);

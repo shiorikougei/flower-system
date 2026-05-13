@@ -316,7 +316,10 @@ export default function OrderDetailModal({
 
       const renderFooter = (type, hidePrice) => {
         let footerActionsHtml = '';
-        if (type === 'customer') {
+        // ★ EC注文の納品書・店舗案内 → 配達者/サイン枠を出さない（同梱物に手書き枠は不要）
+        if (isEcOrder && (type === 'delivery' || type === 'enclosed_card')) {
+          footerActionsHtml = '';
+        } else if (type === 'customer') {
           const firstStatus = activeStatuses[0] || '受注';
           const entry = history.find(h => h.status === firstStatus || h.status === 'new') || history[history.length - 1];
           const staff = entry ? entry.staff : (modalData.staffName || '');
@@ -365,6 +368,53 @@ export default function OrderDetailModal({
           ${renderFooter(type, hidePrice)}
         </div>
       `;
+
+      // ★ EC贈り物用：店舗案内チラシ（金額・依頼主情報なし。お届け先様への同梱物として最低限の内容）
+      const renderEnclosedCard = ({ fullPage = true }) => {
+        const itemRows = (modalData.cartItems || []).map(c => `
+          <tr>
+            <td style="padding:2mm 1mm; font-size:11pt; font-weight:bold;">${formatText(c.name)}</td>
+            <td style="padding:2mm 1mm; text-align:center; font-size:10pt;">× ${formatText(c.qty)}</td>
+          </tr>
+        `).join('');
+        return `
+          <div class="${fullPage ? 'slip-full' : 'slip'}" style="color:#222;">
+            <div style="text-align:center; margin-bottom:8mm; padding-top:6mm;">
+              <div style="font-size:11pt; letter-spacing:0.4em; color:#117768; font-weight:bold;">Thank you for choosing us</div>
+              <div style="font-size:22pt; font-weight:bold; letter-spacing:0.3em; margin-top:3mm;">お届け物のご案内</div>
+            </div>
+
+            <div style="margin:0 auto 8mm auto; max-width:120mm; text-align:center; font-size:11pt; line-height:1.9;">
+              <p>${formatText(recipient.name)} <span style="font-size:9pt;">様</span></p>
+              <p style="margin-top:4mm; font-size:10pt; color:#444;">
+                この度は ${shopName} の商品をお受け取りいただき、<br/>
+                誠にありがとうございます。<br/>
+                心を込めてお作りしたお花をお届けいたします🌸
+              </p>
+            </div>
+
+            <div style="margin:0 auto; max-width:120mm; border-top:0.5pt solid #ddd; border-bottom:0.5pt solid #ddd; padding:4mm 0;">
+              <div style="font-size:8.5pt; color:#888; text-align:center; margin-bottom:2mm; letter-spacing:0.2em;">お届け内容</div>
+              <table style="width:100%; border-collapse:collapse;">
+                <tbody>${itemRows}</tbody>
+              </table>
+            </div>
+
+            <div style="margin:8mm auto 0 auto; max-width:120mm; text-align:center; font-size:9pt; color:#555; line-height:1.7;">
+              お花のお手入れ方法やご不明な点がございましたら、<br/>
+              下記までお気軽にお問い合わせください。
+            </div>
+
+            <div style="margin-top:auto; padding-top:8mm; border-top:0.5pt dashed #bbb; text-align:center;">
+              <div style="font-size:14pt; font-weight:900; color:#222; letter-spacing:0.15em; margin-bottom:2mm;">${shopName}</div>
+              <div style="font-size:9pt; color:#444; line-height:1.6;">
+                <div>〒${shopZip} ${shopAddress}</div>
+                <div>TEL: ${shopTel}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      };
 
       const html = `
         <!DOCTYPE html>
@@ -423,13 +473,23 @@ export default function OrderDetailModal({
         </head>
         <body>
           ${isEcOrder ? `
-            <!-- EC注文: 1ページ目=受注書控, 2ページ目=納品書 -->
-            <div class="page">
-              ${renderSlip({ title: '受 注 書 控', type: 'order_store', hidePrice: false, fullPage: true })}
-            </div>
-            <div class="page">
-              ${renderSlip({ title: '納 品 書', type: 'delivery', hidePrice: false, fullPage: true })}
-            </div>
+            ${modalData.isRecipientDifferent ? `
+              <!-- EC注文（贈り物）: 1ページ目=受注書控（店舗保管）, 2ページ目=お届け物のご案内（同梱用・金額なし） -->
+              <div class="page">
+                ${renderSlip({ title: '受 注 書 控', type: 'order_store', hidePrice: false, fullPage: true })}
+              </div>
+              <div class="page">
+                ${renderEnclosedCard({ fullPage: true })}
+              </div>
+            ` : `
+              <!-- EC注文（ご依頼主=お届け先）: 1ページ目=受注書控, 2ページ目=納品書 -->
+              <div class="page">
+                ${renderSlip({ title: '受 注 書 控', type: 'order_store', hidePrice: false, fullPage: true })}
+              </div>
+              <div class="page">
+                ${renderSlip({ title: '納 品 書', type: 'delivery', hidePrice: false, fullPage: true })}
+              </div>
+            `}
           ` : `
             <!-- カスタム注文: 各ページ2分割（既存） -->
             <div class="page">
