@@ -10,6 +10,7 @@ import {
 
 import TatefudaPreview from '@/components/TatefudaPreview';
 import PaymentTab from '@/components/settings/PaymentTab';
+import { EMAIL_TRIGGERS, getPresetTemplates, getTriggerById } from '@/utils/emailTemplates';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 
@@ -713,25 +714,63 @@ export default function SettingsPage() {
           <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Mail size={20}/> 案内文・テンプレート管理</h2>
           <p className="text-[11px] text-[#999999] mt-1">注文画面や通知メールで使用する定型文を管理します。店舗ごとに内容を変えることも可能です。</p>
         </div>
-        <button onClick={() => setAutoReplyTemplates([...autoReplyTemplates, { id: `t_${Date.now()}`, trigger: '店頭受取の案内', targetShops: 'all', subject: '新しいテンプレート', body: '' }])} className="text-[11px] bg-[#2D4B3E] text-white px-4 py-2 rounded-full font-bold shadow-sm transition-all hover:bg-[#1f352b]">+ 追加</button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              if (!confirm('プリセット（自動メールのデフォルト文面）を読み込みます。既存のテンプレートは残ります。')) return;
+              const presets = getPresetTemplates();
+              // 既に同じトリガーのテンプレートがある場合はスキップ
+              const existingTriggers = new Set(autoReplyTemplates.map(t => t.trigger));
+              const toAdd = presets.filter(p => !existingTriggers.has(p.trigger)).map(p => ({ ...p, id: `t_${Date.now()}_${p.trigger}` }));
+              setAutoReplyTemplates([...autoReplyTemplates, ...toAdd]);
+              alert(`${toAdd.length}件のプリセットを追加しました`);
+            }}
+            className="text-[11px] bg-white border border-[#2D4B3E] text-[#2D4B3E] px-4 py-2 rounded-full font-bold transition-all hover:bg-[#2D4B3E]/5"
+          >
+            📥 プリセット読み込み
+          </button>
+          <button onClick={() => setAutoReplyTemplates([...autoReplyTemplates, { id: `t_${Date.now()}`, trigger: 'custom', targetShops: 'all', enabled: true, subject: '新しいテンプレート', body: '' }])} className="text-[11px] bg-[#2D4B3E] text-white px-4 py-2 rounded-full font-bold shadow-sm transition-all hover:bg-[#1f352b]">+ 追加</button>
+        </div>
       </div>
       <div className="space-y-8">
         {autoReplyTemplates.map((template, index) => {
+          const triggerInfo = getTriggerById(template.trigger);
+          const isEnabled = template.enabled !== false;
           const isAllShops = template.targetShops === 'all' || template.targetShops === undefined;
           return (
-            <div key={template.id} className="bg-[#FBFAF9] p-6 rounded-2xl border border-[#EAEAEA] space-y-4 relative group">
+            <div key={template.id} className={`bg-[#FBFAF9] p-6 rounded-2xl border border-[#EAEAEA] space-y-4 relative group ${!isEnabled ? 'opacity-60' : ''}`}>
               <button onClick={() => setAutoReplyTemplates(autoReplyTemplates.filter(t => t.id !== template.id))} className="absolute top-6 right-6 text-red-300 hover:text-red-500 bg-white p-2 rounded-full shadow-sm"><Trash2 size={16}/></button>
+
+              {/* ★ トリガー情報 + 有効化トグル */}
+              {triggerInfo && (
+                <div className="flex items-start justify-between gap-3 pr-12 pb-3 border-b border-[#EAEAEA]">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-bold text-[#2D4B3E]">
+                      {triggerInfo.auto ? '🤖 自動送信' : '✋ 手動送信'} ／ {triggerInfo.label}
+                    </p>
+                    <p className="text-[10px] text-[#999999] leading-relaxed mt-1">{triggerInfo.description}</p>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={isEnabled}
+                      onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].enabled = e.target.checked; setAutoReplyTemplates(newT); }}
+                      className="w-4 h-4 accent-[#2D4B3E]"
+                    />
+                    <span className="text-[10px] font-bold text-[#555555]">{isEnabled ? '有効' : '無効'}</span>
+                  </label>
+                </div>
+              )}
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-12">
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold text-[#999999]">案内の種類（いつ使うか）</label>
                   <select value={template.trigger} onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].trigger = e.target.value; setAutoReplyTemplates(newT); }} className="w-full h-12 bg-white border border-[#EAEAEA] rounded-xl px-4 font-bold text-[13px] outline-none focus:border-[#2D4B3E]">
-                    <option value="注文受付（自動返信）">注文受付（自動返信）</option>
-                    <option value="店頭受取の案内">店頭受取の案内</option>
-                    <option value="自社配達の案内">自社配達の案内</option>
-                    <option value="業者配送の案内">業者配送の案内</option>
-                    <option value="銀行振込のご案内">銀行振込のご案内</option>
-                    <option value="その他">その他</option>
+                    <option value="order_confirmed">ご注文受付（自動送信）</option>
+                    <option value="restock_notification">入荷のお知らせ</option>
+                    <option value="mypage_magic_link">注文履歴の確認URL</option>
+                    <option value="delivery_completion">お渡し・配達完了（手動）</option>
+                    <option value="custom">カスタム（手動送信）</option>
                   </select>
                 </div>
                 
@@ -768,28 +807,40 @@ export default function SettingsPage() {
                 <div className="relative">
                   <textarea value={template.body} onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].body = e.target.value; setAutoReplyTemplates(newT); }} className="w-full h-64 bg-white border border-[#EAEAEA] rounded-2xl p-5 pb-16 text-[13px] font-bold outline-none resize-none leading-relaxed focus:border-[#2D4B3E]" />
                   
-                  {/* ★修正：タグをクリックでコピーできるように変更 */}
+                  {/* ★ トリガーに応じた変数ボタン（クリックでコピー） */}
                   <div className="absolute bottom-4 left-4 right-4 flex flex-wrap gap-1.5">
-                    {[
-                      { tag: '{CustomerName}', label: 'お客様名' }, 
-                      { tag: '{ShopName}', label: '店舗名' }, 
-                      { tag: '{TotalAmount}', label: '合計金額' }, 
-                      { tag: '{OrderDetails}', label: '注文内容' }, 
-                      { tag: '{ShopPhone}', label: '店舗電話' }
-                    ].map(t => (
-                      <button 
-                        key={t.tag}
+                    {(triggerInfo?.variables || ['customerName', 'shopName', 'orderId']).map(v => {
+                      const labelMap = {
+                        customerName: 'お客様名',
+                        shopName: '店舗名',
+                        orderId: '注文番号',
+                        orderTotal: '合計金額',
+                        orderItems: '注文内容',
+                        paymentMethod: '支払い方法',
+                        bankInfo: '振込先情報',
+                        deliveryDate: '納品予定日',
+                        shopPhone: '店舗電話',
+                        productName: '商品名',
+                        shopUrl: '商品ページURL',
+                        magicLinkUrl: '注文履歴URL',
+                      };
+                      const tag = `{${v}}`;
+                      const label = labelMap[v] || v;
+                      return (
+                      <button
+                        key={tag}
                         type="button"
-                        onClick={() => handleCopyTag(t.tag)}
+                        onClick={() => handleCopyTag(tag)}
                         className="px-2 py-1 bg-[#F7F7F7] border border-[#EAEAEA] text-[9px] font-bold text-[#2D4B3E] rounded-md hover:bg-[#EAEAEA] transition-colors cursor-pointer flex items-center gap-1"
                       >
-                        {copiedTag === t.tag ? (
+                        {copiedTag === tag ? (
                           <span className="text-green-600">✓ コピーしました</span>
                         ) : (
-                          `${t.tag}: ${t.label}`
+                          `${tag}: ${label}`
                         )}
                       </button>
-                    ))}
+                    );
+                    })}
                   </div>
 
                 </div>

@@ -10,7 +10,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/utils/stripe';
-import { sendEmail, buildOrderConfirmationEmail } from '@/utils/email';
+import { sendEmail } from '@/utils/email';
+import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems } from '@/utils/emailTemplates';
 
 export const runtime = 'nodejs';   // Edgeでは crypto が一部使えないため明示
 export const dynamic = 'force-dynamic';
@@ -85,7 +86,7 @@ export async function POST(request) {
 
         if (error) console.error('orders更新失敗:', error);
 
-        // ★ クレカ決済成功メール送信（在庫減算より先に・失敗してもメールは送る）
+        // ★ クレカ決済成功メール送信（テンプレートシステム経由）
         try {
           const customerEmail = orderRow?.order_data?.customerInfo?.email;
           const tenantId = session.metadata?.tenant_id;
@@ -99,15 +100,34 @@ export async function POST(request) {
             const shopId = orderRow?.order_data?.shopId;
             const shop = settings.shops?.find(s => String(s.id) === String(shopId)) || settings.shops?.[0] || {};
             const shopName = shop.name || settings.generalConfig?.appName || 'お花屋さん';
-            const { subject, html } = buildOrderConfirmationEmail({
-              order: { id: orderId, order_data: { ...orderRow.order_data, paymentMethod: 'card' } },
-              shopName,
-              bankInfo: '',
-            });
-            // ★ FROM名を店舗名で上書き
-            const from = `${shopName} <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
-            await sendEmail({ to: customerEmail, subject, html, from });
-            console.log('[webhook] 注文確認メール送信完了:', customerEmail);
+            const shopPhone = shop.phone || '';
+
+            const tpl = findTemplateFor('order_confirmed', settings.autoReplyTemplates, { shopId: shop.id });
+            if (tpl) {
+              // 金額再計算
+              const od = orderRow.order_data || {};
+              const item = Number(od.itemPrice) || (Array.isArray(od.cartItems) ? od.cartItems.reduce((s, c) => s + Number(c.price) * Number(c.qty), 0) : 0);
+              const fee = Number(od.calculatedFee) || 0;
+              const pickup = Number(od.pickupFee) || 0;
+              const total = (item + fee + pickup) + Math.floor((item + fee + pickup) * 0.1);
+
+              const vars = {
+                customerName: od.customerInfo?.name || 'お客',
+                shopName,
+                orderId: String(orderId).slice(0, 8),
+                orderTotal: total.toLocaleString(),
+                orderItems: formatOrderItems(od),
+                paymentMethod: 'クレジットカード決済（決済完了）',
+                bankInfo: '',
+                deliveryDate: od.selectedDate ? `${od.selectedDate} ${od.selectedTime || ''}`.trim() : '',
+                shopPhone,
+              };
+              const { subject, body } = renderTemplate(tpl, vars);
+              const html = bodyToHtml(body, { shopName });
+              const from = `${shopName} <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
+              await sendEmail({ to: customerEmail, subject, html, from });
+              console.log('[webhook] 注文確認メール送信完了:', customerEmail);
+            }
           }
         } catch (mailErr) {
           console.warn('[webhook] 注文確認メール送信失敗:', mailErr.message);

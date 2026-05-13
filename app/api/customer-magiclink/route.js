@@ -11,6 +11,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { sendEmail } from '@/utils/email';
+import { findTemplateFor, renderTemplate, bodyToHtml } from '@/utils/emailTemplates';
 
 const TOKEN_EXPIRY_HOURS = 24;
 
@@ -82,33 +83,31 @@ export async function POST(request) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
     const magicUrl = `${appUrl}/order/${tenantId}/${shopId || 'default'}/mypage?token=${token}`;
 
-    // メール送信
-    const html = `<!DOCTYPE html>
-<html lang="ja">
-<head><meta charset="utf-8"><title>注文履歴の確認</title></head>
-<body style="margin:0; padding:0; background:#FBFAF9; font-family:'Hiragino Sans', sans-serif; color:#111;">
-<div style="max-width:600px; margin:0 auto; background:white; padding:40px 24px;">
-  <h1 style="color:#2D4B3E; font-size:20px; margin:0 0 24px 0;">注文履歴のご確認</h1>
-  <p style="font-size:13px; line-height:1.7;">
-    ご注文履歴の確認URLをお送りします。<br>
-    下記ボタンより、過去のご注文内容を確認できます。
-  </p>
-  <p style="text-align:center; margin:32px 0;">
-    <a href="${magicUrl}" style="display:inline-block; padding:14px 40px; background:#2D4B3E; color:white; text-decoration:none; border-radius:8px; font-weight:bold; font-size:14px;">注文履歴を見る</a>
-  </p>
-  <p style="font-size:11px; color:#999; line-height:1.6;">
-    このリンクは <strong>${TOKEN_EXPIRY_HOURS}時間</strong> 有効です。<br>
-    心当たりのない場合は、このメールは破棄してください。<br><br>
-    ${escapeHtml(shopName)} よりお知らせ
-  </p>
-</div>
-</body></html>`;
+    // テンプレートシステムで送信
+    const shopIdForLookup = settingsRow?.settings_data?.shops?.[0]?.id;
+    const tpl = findTemplateFor('mypage_magic_link', settingsRow?.settings_data?.autoReplyTemplates, { shopId: shopIdForLookup });
 
-    // ★ FROM名を店舗名で上書き
+    let subject, html;
+    if (tpl) {
+      const vars = {
+        customerName: ordersForEmail[0]?.order_data?.customerInfo?.name || 'お客',
+        shopName,
+        magicLinkUrl: magicUrl,
+      };
+      const rendered = renderTemplate(tpl, vars);
+      subject = rendered.subject;
+      html = bodyToHtml(rendered.body, { shopName });
+    } else {
+      // フォールバック
+      subject = `【${shopName}】注文履歴ご確認URL`;
+      html = `<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"></head><body><div style="max-width:600px;margin:0 auto;padding:40px;font-family:'Hiragino Sans',sans-serif;"><h1 style="color:#2D4B3E;">注文履歴のご確認</h1><p>${escapeHtml(shopName)} よりお知らせ</p><p><a href="${magicUrl}">注文履歴を見る</a></p></div></body></html>`;
+    }
+
+    // FROM名を店舗名で上書き
     const from = `${shopName} <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
     await sendEmail({
       to: normalizedEmail,
-      subject: `【${shopName}】注文履歴ご確認URL`,
+      subject,
       html,
       from,
     });

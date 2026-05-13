@@ -13,7 +13,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe, APP_URL } from '@/utils/stripe';
-import { sendEmail, buildOrderConfirmationEmail } from '@/utils/email';
+import { sendEmail } from '@/utils/email';
+import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems } from '@/utils/emailTemplates';
 
 export async function POST(request) {
   try {
@@ -123,14 +124,13 @@ export async function POST(request) {
     const orderId = inserted.id;
 
     // ---- お客様向け 注文確認メール送信 ----
-    //   カードの場合は決済完了後に送る方が自然なので、Webhook側でも送信する
-    //   銀行振込は注文確定時点でメール送信
+    //   テンプレートシステム経由（設定で編集可能、未設定ならプリセット使用）
     async function sendConfirmationEmail() {
       try {
         const customerEmail = orderData.customerInfo?.email;
         if (!customerEmail) return;
 
-        // 店舗情報・振込先取得
+        // 店舗情報・テンプレート取得
         const { data: settingsRow } = await supabaseAdmin
           .from('app_settings')
           .select('settings_data')
@@ -140,14 +140,32 @@ export async function POST(request) {
         const shop = settings.shops?.find(s => String(s.id) === String(shopId)) || settings.shops?.[0] || {};
         const shopName = shop.name || settings.generalConfig?.appName || 'お花屋さん';
         const bankInfo = shop.bankInfo || '';
+        const shopPhone = shop.phone || '';
 
-        // 注文オブジェクトを再構築（DBから取り直してもよい）
-        const orderForEmail = {
-          id: orderId,
-          order_data: orderRecord.order_data,
+        // テンプレート取得（未設定ならプリセット）
+        const tpl = findTemplateFor('order_confirmed', settings.autoReplyTemplates, { shopId: shop.id });
+        if (!tpl) return;
+
+        // 変数置換
+        const paymentLabelMap = {
+          card: 'クレジットカード決済（決済完了）',
+          bank_transfer: '銀行振込',
         };
-        const { subject, html } = buildOrderConfirmationEmail({ order: orderForEmail, shopName, bankInfo });
-        // ★ FROM名を店舗名で上書き（お客様が注文した店舗から届くように見せる）
+        const vars = {
+          customerName: orderData.customerInfo?.name || 'お客',
+          shopName,
+          orderId: String(orderId).slice(0, 8),
+          orderTotal: totalAmount.toLocaleString(),
+          orderItems: formatOrderItems(orderRecord.order_data),
+          paymentMethod: paymentLabelMap[paymentMethod] || paymentMethod,
+          bankInfo: paymentMethod === 'bank_transfer' && bankInfo ? `【お振込先】\n${bankInfo}\n※お振込手数料はお客様ご負担となります。` : '',
+          deliveryDate: orderData.selectedDate ? `${orderData.selectedDate} ${orderData.selectedTime || ''}`.trim() : '',
+          shopPhone,
+        };
+        const { subject, body } = renderTemplate(tpl, vars);
+        const html = bodyToHtml(body, { shopName });
+
+        // FROM名を店舗名で上書き
         const from = `${shopName} <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
         await sendEmail({ to: customerEmail, subject, html, from });
       } catch (e) {

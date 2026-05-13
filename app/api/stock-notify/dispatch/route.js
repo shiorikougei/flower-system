@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from '@/utils/email';
+import { findTemplateFor, renderTemplate, bodyToHtml } from '@/utils/emailTemplates';
 
 export async function POST(request) {
   try {
@@ -70,16 +71,30 @@ export async function POST(request) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
     const shopId = settingsRow?.settings_data?.shops?.[0]?.id || 'default';
 
-    // 1人ずつメール送信
+    // テンプレートシステムで送信（設定で編集可能、未設定ならプリセット）
+    const tpl = findTemplateFor('restock_notification', settingsRow?.settings_data?.autoReplyTemplates, { shopId });
+
     let sent = 0;
     for (const r of pendings) {
       try {
-        const html = buildRestockEmail({ productName: product.name, shopName, productImage: product.image_url, shopUrl: `${appUrl}/order/${product.tenant_id}/${shopId}/shop`, customerName: r.customer_name });
-        // ★ FROM名を店舗名で上書き
+        let subject, html;
+        if (tpl) {
+          const vars = {
+            customerName: r.customer_name || 'お客',
+            productName: product.name,
+            shopName,
+            shopUrl: `${appUrl}/order/${product.tenant_id}/${shopId}/shop`,
+          };
+          const rendered = renderTemplate(tpl, vars);
+          subject = rendered.subject;
+          html = bodyToHtml(rendered.body, { shopName });
+        } else {
+          subject = `【${shopName}】「${product.name}」が入荷しました`;
+          html = buildRestockEmail({ productName: product.name, shopName, productImage: product.image_url, shopUrl: `${appUrl}/order/${product.tenant_id}/${shopId}/shop`, customerName: r.customer_name });
+        }
         const from = `${shopName} <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
-        const result = await sendEmail({ to: r.email, subject: `【${shopName}】「${product.name}」が入荷しました`, html, from });
+        const result = await sendEmail({ to: r.email, subject, html, from });
         if (!result.error) {
-          // 通知完了マークを付ける
           await supabaseAdmin.from('stock_notifications').update({ notified_at: new Date().toISOString() }).eq('id', r.id);
           sent++;
         }
