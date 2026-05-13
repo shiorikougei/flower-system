@@ -40,8 +40,15 @@ export default function StaffNewOrderPage() {
   const [otherVibe, setOtherVibe] = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
   
-  const [absenceAction, setAbsenceAction] = useState('持ち戻り'); 
-  const [absenceNote, setAbsenceNote] = useState(''); 
+  const [absenceAction, setAbsenceAction] = useState('持ち戻り');
+  const [absenceNote, setAbsenceNote] = useState('');
+
+  // ★ 配達時の事前連絡同意（デフォルトON、お得意様などイレギュラー対応でOFF可）
+  const [priorContactAgreed, setPriorContactAgreed] = useState(true);
+  // ★ 前払い済みの場合のサブ選択（現金 / カード決済）
+  const [prepaymentSubType, setPrepaymentSubType] = useState('現金');
+  // ★ 業者配送(sagawa) + 引き取り時に支払いの確認チェック
+  const [sagawaPaymentLaterConfirmed, setSagawaPaymentLaterConfirmed] = useState(false);
 
   const [cardType, setCardType] = useState('なし');
   const [cardMessage, setCardMessage] = useState('');
@@ -409,10 +416,19 @@ export default function StaffNewOrderPage() {
         cardType, cardMessage, tatePattern,
         tateInput1, tateInput2, tateInput3, tateInput3a, tateInput3b,
         customerInfo, isRecipientDifferent, recipientInfo, note,
-        paymentMethod, sendAutoReply,
+        paymentMethod,
+        // ★ 前払い済みの場合のサブ選択（現金/カード）
+        prepaymentSubType: paymentMethod === '前払い済み' ? prepaymentSubType : null,
+        // ★ 配達時の事前連絡同意
+        priorContactAgreed: receiveMethod === 'delivery' ? priorContactAgreed : null,
+        // ★ 業者配送+引き取り時支払いの確認
+        sagawaPaymentLaterConfirmed: (paymentMethod === '引き取り時に支払い' && receiveMethod === 'sagawa') ? sagawaPaymentLaterConfirmed : null,
+        sendAutoReply,
         // ★ 入金状況: 「前払い済み」→入金済扱い / 「引き取り時に支払い」→未入金扱い
         //    受注一覧の判定は paymentStatus に「未」が含まれているかで分岐
-        paymentStatus: paymentMethod === '前払い済み' ? '前払い済み' : '未入金（引き取り時）',
+        paymentStatus: paymentMethod === '前払い済み'
+          ? `前払い済み（${prepaymentSubType}）`
+          : '未入金（引き取り時）',
         referenceImage: selectedImage ? selectedImage.url : null,
         status: 'new',
         isStaffEntered: true
@@ -500,9 +516,9 @@ export default function StaffNewOrderPage() {
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-[#999999]">受取方法</label>
                 <div className="flex gap-2">
-                  <button onClick={() => setReceiveMethod('pickup')} className={`flex-1 py-3 text-[12px] font-bold rounded-xl border ${receiveMethod === 'pickup' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>店頭受取</button>
+                  <button onClick={() => { setReceiveMethod('pickup'); setAbsenceAction('持ち戻り'); setAbsenceNote(''); setIsRecipientDifferent(false); }} className={`flex-1 py-3 text-[12px] font-bold rounded-xl border ${receiveMethod === 'pickup' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>店頭受取</button>
                   <button onClick={() => setReceiveMethod('delivery')} className={`flex-1 py-3 text-[12px] font-bold rounded-xl border ${receiveMethod === 'delivery' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>自社配達</button>
-                  <button onClick={() => setReceiveMethod('sagawa')} className={`flex-1 py-3 text-[12px] font-bold rounded-xl border ${receiveMethod === 'sagawa' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>業者配送</button>
+                  <button onClick={() => { setReceiveMethod('sagawa'); setAbsenceAction('持ち戻り'); setAbsenceNote(''); }} className={`flex-1 py-3 text-[12px] font-bold rounded-xl border ${receiveMethod === 'sagawa' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>業者配送</button>
                 </div>
               </div>
               
@@ -738,24 +754,52 @@ export default function StaffNewOrderPage() {
 
             {receiveMethod === 'delivery' && (
               <div className="pt-6 border-t border-[#FBFAF9] space-y-4 animate-in fade-in">
+                {/* ★ 事前連絡同意（デフォルトON、お得意様用にOFFも可能） */}
+                <div className="space-y-2 p-4 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA]">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={priorContactAgreed}
+                      onChange={(e) => setPriorContactAgreed(e.target.checked)}
+                      className="w-5 h-5 accent-[#2D4B3E] rounded-md mt-0.5"
+                    />
+                    <div className="flex-1">
+                      <p className="text-[13px] font-bold text-[#111111]">お届け先様への事前連絡 了承</p>
+                      <p className="text-[10px] text-[#999999] mt-1 leading-relaxed">
+                        配達時にお届け先様へ電話で確認することを了承いただいています。<br/>
+                        ※お得意様など特別な指示がある場合のみOFFにしてください。
+                      </p>
+                    </div>
+                  </label>
+                  {!priorContactAgreed && (
+                    <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-lg flex items-start gap-2">
+                      <AlertCircle size={14} className="text-orange-600 shrink-0 mt-0.5" />
+                      <p className="text-[11px] font-bold text-orange-700 leading-relaxed">
+                        了承を得られない場合は、原則「業者配送」をご案内ください。<br/>
+                        お得意様などイレギュラー対応の場合のみこのまま進めてください。
+                      </p>
+                    </div>
+                  )}
+                </div>
+
                 <div className="space-y-2">
                   <label className="text-[11px] font-bold text-[#2D4B3E] flex items-center justify-between">
                     ご不在時の対応 (置き配)
                   </label>
-                  <p className="text-[11px] text-[#999999] mb-2">生花のため、ご不在時は原則として置き配または宅配ボックスへのお届けとなります。</p>
+                  <p className="text-[11px] text-[#999999] mb-2">原則「持ち戻り」。お得意様や事前合意がある場合のみ「置き配」を選択してください。</p>
                   <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => setAbsenceAction('持ち戻り')} className={`py-3 text-[12px] font-bold rounded-xl border transition-all ${absenceAction === '持ち戻り' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] shadow-md' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>持ち戻り (再配達)</button>
-                    <button onClick={() => setAbsenceAction('置き配')} className={`py-3 text-[12px] font-bold rounded-xl border transition-all ${absenceAction === '置き配' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] shadow-md' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>置き配を希望する</button>
+                    <button type="button" onClick={() => setAbsenceAction('持ち戻り')} className={`py-3 text-[12px] font-bold rounded-xl border transition-all ${absenceAction === '持ち戻り' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] shadow-md' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>持ち戻り (再配達)</button>
+                    <button type="button" onClick={() => setAbsenceAction('置き配')} className={`py-3 text-[12px] font-bold rounded-xl border transition-all ${absenceAction === '置き配' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] shadow-md' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>置き配を希望する</button>
                   </div>
                 </div>
                 {absenceAction === '置き配' && (
                   <div className="space-y-2 animate-in fade-in">
-                    <input 
-                      type="text" 
-                      placeholder="例：玄関のドア前、宅配ボックス、ガスメーターの中 など" 
-                      value={absenceNote} 
-                      onChange={(e) => setAbsenceNote(e.target.value)} 
-                      className="w-full h-12 px-4 bg-white border-2 border-[#2D4B3E]/30 rounded-xl outline-none font-bold text-[13px] focus:border-[#2D4B3E] shadow-inner" 
+                    <input
+                      type="text"
+                      placeholder="例：玄関のドア前、宅配ボックス、ガスメーターの中 など"
+                      value={absenceNote}
+                      onChange={(e) => setAbsenceNote(e.target.value)}
+                      className="w-full h-12 px-4 bg-white border-2 border-[#2D4B3E]/30 rounded-xl outline-none font-bold text-[13px] focus:border-[#2D4B3E] shadow-inner"
                     />
                   </div>
                 )}
@@ -786,6 +830,55 @@ export default function StaffNewOrderPage() {
                 </div>
                 <p className="text-[10px] text-[#999999] mt-1">受注一覧の入金ステータスに反映されます</p>
               </div>
+
+              {/* ★ 前払い済み: 現金 / カード のサブ選択 */}
+              {paymentMethod === '前払い済み' && (
+                <div className="space-y-2 p-4 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA] animate-in fade-in">
+                  <label className="text-[11px] font-bold text-[#999999]">支払い方法（前払い済み）</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button type="button" onClick={() => setPrepaymentSubType('現金')}
+                      className={`py-3 text-[12px] font-bold rounded-xl border transition-all ${prepaymentSubType === '現金' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-white border-[#EAEAEA] text-[#555555]'}`}>
+                      現金
+                    </button>
+                    <button type="button" onClick={() => setPrepaymentSubType('カード決済')}
+                      className={`py-3 text-[12px] font-bold rounded-xl border transition-all ${prepaymentSubType === 'カード決済' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-white border-[#EAEAEA] text-[#555555]'}`}>
+                      カード決済
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ★ 引き取り時支払い + 自社配達 + 届け先異なる の場合の注意書き */}
+              {paymentMethod === '引き取り時に支払い' && receiveMethod === 'delivery' && isRecipientDifferent && (
+                <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl flex items-start gap-2 animate-in fade-in">
+                  <AlertCircle size={16} className="text-orange-600 shrink-0 mt-0.5" />
+                  <p className="text-[11px] font-bold text-orange-700 leading-relaxed">
+                    ⚠️ お届け先が注文者と異なる + 引き取り時支払い：<br/>
+                    お届け先様で支払いが発生する形になります。注文者様にご確認ください。
+                  </p>
+                </div>
+              )}
+
+              {/* ★ 引き取り時支払い + 業者配送 の場合の確認チェック */}
+              {paymentMethod === '引き取り時に支払い' && receiveMethod === 'sagawa' && (
+                <div className="space-y-2 p-4 bg-orange-50 border border-orange-200 rounded-xl animate-in fade-in">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle size={16} className="text-orange-600 shrink-0 mt-0.5" />
+                    <p className="text-[11px] font-bold text-orange-700 leading-relaxed">
+                      業者配送は前払いが原則です。後払いで本当によろしいですか？
+                    </p>
+                  </div>
+                  <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sagawaPaymentLaterConfirmed}
+                      onChange={(e) => setSagawaPaymentLaterConfirmed(e.target.checked)}
+                      className="w-4 h-4 accent-orange-600"
+                    />
+                    <span className="text-[11px] font-bold text-[#111111]">後払いでよいことを確認しました</span>
+                  </label>
+                </div>
+              )}
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-[#999999]">社内メモ / 要望</label>
                 <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="例：予算オーバーだけどサービスでバラ増量" className="w-full h-24 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-4 text-[13px] resize-none focus:border-[#2D4B3E] outline-none"></textarea>
