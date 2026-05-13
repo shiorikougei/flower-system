@@ -89,6 +89,15 @@ export default function SettingsPage() {
     { id: 't1', trigger: '注文受付（自動返信）', targetShops: 'all', subject: 'ご注文ありがとうございます', body: '{CustomerName} 様\n\nご注文ありがとうございます。' }
   ]);
 
+  // ★ LINE 連携設定
+  const [lineConfig, setLineConfig] = useState({
+    enabled: false,
+    channelAccessToken: '',
+    channelSecret: '',
+    channelId: '',
+    addFriendUrl: '',
+  });
+
   const tabs = [
     { id: 'general', label: '基本・ロゴ', icon: SettingsIcon },
     { id: 'status', label: 'ステータス', icon: ListChecks },
@@ -101,6 +110,7 @@ export default function SettingsPage() {
     { id: 'staff', label: 'スタッフ', icon: User },
     { id: 'message', label: '案内文管理', icon: Mail },
     { id: 'payment', label: '決済設定', icon: CreditCard },
+    { id: 'line', label: 'LINE連携', icon: Mail },
     { id: 'links', label: 'URL発行', icon: LinkIcon },
   ];
 
@@ -119,7 +129,8 @@ export default function SettingsPage() {
     if (s.staffOrderConfig) setStaffOrderConfig(s.staffOrderConfig);
     if (s.autoReplyTemplates) setAutoReplyTemplates(s.autoReplyTemplates);
     if (s.timeSlots) setTimeSlots(s.timeSlots);
-    
+    if (s.lineConfig) setLineConfig(prev => ({...prev, ...s.lineConfig}));
+
     if (s.features && s.features.b2b) setIsB2BEnabled(true);
   };
 
@@ -169,7 +180,8 @@ export default function SettingsPage() {
         paymentConfig, 
         statusConfig, 
         designOptions,
-        shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReplyTemplates, staffOrderConfig, timeSlots 
+        shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReplyTemplates, staffOrderConfig, timeSlots,
+        lineConfig,
       };
       await supabase.from('app_settings').upsert({ id: currentTenantId, settings_data: payload });
       showToast('success', '設定を保存しました');
@@ -704,6 +716,109 @@ export default function SettingsPage() {
     </div>
   );
 
+  // ★ LINE 連携設定タブ
+  const renderLineTab = () => {
+    const webhookUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}/api/line/webhook/${currentTenantId || 'default'}`
+      : `https://noodleflorix.com/api/line/webhook/${currentTenantId || 'default'}`;
+    return (
+      <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-6 animate-in fade-in text-left max-w-[800px]">
+        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2">💬 LINE公式アカウント連携</h2>
+        <p className="text-[12px] text-[#555555] leading-relaxed">
+          LINE Messaging API と連携すると、注文確認・完成写真・入金確認等の通知を
+          <strong className="text-[#117768]"> メール + LINE 両方</strong>でお客様にお届けできます。
+        </p>
+
+        {/* 有効化トグル */}
+        <div className={`p-5 rounded-2xl border ${lineConfig.enabled ? 'bg-green-50 border-green-200' : 'bg-[#FBFAF9] border-[#EAEAEA]'}`}>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={lineConfig.enabled}
+              onChange={(e) => setLineConfig({ ...lineConfig, enabled: e.target.checked })}
+              className="mt-1 w-5 h-5 accent-[#117768]"
+            />
+            <div>
+              <p className="text-[14px] font-bold text-[#111]">LINE連携を有効にする</p>
+              <p className="text-[11px] text-[#555] mt-1">
+                チェックを入れ、下の認証情報を全て入力した状態で「変更を保存」してください。
+              </p>
+            </div>
+          </label>
+        </div>
+
+        {/* 認証情報 */}
+        <div className="space-y-3">
+          <h3 className="text-[14px] font-bold text-[#2D4B3E]">認証情報</h3>
+          <p className="text-[11px] text-[#999] leading-relaxed">
+            LINE Developers Console で発行した値を入力してください。
+            <a href="https://developers.line.biz/console/" target="_blank" rel="noopener noreferrer" className="text-[#117768] underline ml-1">LINE Developers Console を開く →</a>
+          </p>
+          <div>
+            <label className="text-[11px] font-bold text-[#555] tracking-widest">Channel Access Token（長期）</label>
+            <input type="password" value={lineConfig.channelAccessToken}
+              onChange={(e) => setLineConfig({ ...lineConfig, channelAccessToken: e.target.value })}
+              placeholder="JI4dF3rN..."
+              className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] font-mono outline-none focus:border-[#2D4B3E]"/>
+          </div>
+          <div>
+            <label className="text-[11px] font-bold text-[#555] tracking-widest">Channel Secret</label>
+            <input type="password" value={lineConfig.channelSecret}
+              onChange={(e) => setLineConfig({ ...lineConfig, channelSecret: e.target.value })}
+              placeholder="abcdef1234..."
+              className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] font-mono outline-none focus:border-[#2D4B3E]"/>
+          </div>
+          <div>
+            <label className="text-[11px] font-bold text-[#555] tracking-widest">Channel ID（任意）</label>
+            <input type="text" value={lineConfig.channelId}
+              onChange={(e) => setLineConfig({ ...lineConfig, channelId: e.target.value })}
+              placeholder="1234567890"
+              className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] font-mono outline-none focus:border-[#2D4B3E]"/>
+          </div>
+          <div>
+            <label className="text-[11px] font-bold text-[#555] tracking-widest">友達追加用URL（お客様へ案内）</label>
+            <input type="url" value={lineConfig.addFriendUrl}
+              onChange={(e) => setLineConfig({ ...lineConfig, addFriendUrl: e.target.value })}
+              placeholder="https://lin.ee/xxxxxx"
+              className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] outline-none focus:border-[#2D4B3E]"/>
+            <p className="text-[10px] text-[#999] mt-1">マイページや確認メール末尾に「LINEで通知を受け取る」リンクとして表示されます</p>
+          </div>
+        </div>
+
+        {/* Webhook URL（コピペ用） */}
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2">
+          <p className="text-[12px] font-bold text-blue-900">📡 LINE Developers に設定する Webhook URL</p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 bg-white px-3 py-2 rounded-lg text-[11px] font-mono text-blue-900 break-all border border-blue-200">{webhookUrl}</code>
+            <button
+              onClick={() => { navigator.clipboard?.writeText(webhookUrl); alert('コピーしました'); }}
+              className="px-3 py-2 bg-blue-600 text-white text-[11px] font-bold rounded-lg hover:bg-blue-700"
+            >コピー</button>
+          </div>
+          <p className="text-[10px] text-blue-800 leading-relaxed">
+            このURLを LINE Developers Console → Messaging API設定 → Webhook URL に設定して、「Webhookの利用」をオンにしてください。
+          </p>
+        </div>
+
+        {/* 連携手順 */}
+        <details className="border border-[#EAEAEA] rounded-xl">
+          <summary className="cursor-pointer p-4 text-[12px] font-bold text-[#2D4B3E] hover:bg-[#FBFAF9]">📖 LINE連携の手順を見る</summary>
+          <div className="p-4 pt-0 text-[11px] text-[#555] leading-relaxed space-y-2">
+            <p><strong>1.</strong> <a href="https://developers.line.biz/console/" target="_blank" rel="noopener noreferrer" className="text-[#117768] underline">LINE Developers Console</a> にログイン</p>
+            <p><strong>2.</strong> プロバイダーを作成 → 「Messaging API」のチャネルを作成</p>
+            <p><strong>3.</strong> 「Messaging API設定」タブで <strong>Channel Access Token（長期）</strong> を発行 → 上欄にペースト</p>
+            <p><strong>4.</strong> 「チャネル基本設定」タブで <strong>Channel Secret</strong> をコピー → 上欄にペースト</p>
+            <p><strong>5.</strong> 「Messaging API設定」 → 「Webhook URL」 に上の青枠のURLをペースト → 「Webhookの利用」をON</p>
+            <p><strong>6.</strong> 「応答メッセージ」をOFF、「あいさつメッセージ」と「Webhook」をONに設定</p>
+            <p><strong>7.</strong> LINE公式アカウントの<strong>友達追加URL</strong>（lin.ee/...）を上欄にペースト</p>
+            <p><strong>8.</strong> ページ上部「変更を保存」 → 「LINE連携を有効にする」にチェック</p>
+            <p className="pt-2 border-t border-[#EAEAEA] text-[#117768] font-bold">✓ 設定完了！お客様が公式LINEを友達追加 → メアドを送信 → 自動で紐付けされます</p>
+          </div>
+        </details>
+      </div>
+    );
+  };
+
   const renderStaffTab = () => (
     <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-6 animate-in fade-in text-left">
       <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><User size={20}/> スタッフ管理</h2>
@@ -944,6 +1059,7 @@ export default function SettingsPage() {
         {activeTab === 'staff' && renderStaffTab()}
         {activeTab === 'message' && renderMessageTab()}
         {activeTab === 'payment' && renderPaymentTab()}
+        {activeTab === 'line' && renderLineTab()}
         {activeTab === 'links' && renderLinksTab()}
       </main>
 

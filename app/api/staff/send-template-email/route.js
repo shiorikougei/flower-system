@@ -12,6 +12,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from '@/utils/email';
 import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatRecipientInfo } from '@/utils/emailTemplates';
+import { sendLineParallelToEmail } from '@/utils/line';
 
 export async function POST(request) {
   try {
@@ -105,7 +106,17 @@ export async function POST(request) {
       return NextResponse.json({ error: 'メール送信に失敗しました', detail: result.error }, { status: 500 });
     }
 
-    return NextResponse.json({ sent: true });
+    // ★ LINE連携が有効ならLINEにも送信（並列、失敗してもメール送信は成功扱い）
+    const lineResult = await sendLineParallelToEmail({
+      supabaseAdmin,
+      tenantSettings: settings,
+      tenantId,
+      customerEmail,
+      text: `${subject}\n\n${body}`,
+      imageUrl: triggerId === 'completion_photo' ? od.completionImage : null,
+    });
+
+    return NextResponse.json({ sent: true, line: lineResult });
   } catch (err) {
     console.error('[send-template-email] error:', err);
     return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });

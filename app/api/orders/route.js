@@ -15,6 +15,7 @@ import { createClient } from '@supabase/supabase-js';
 import { stripe, APP_URL } from '@/utils/stripe';
 import { sendEmail } from '@/utils/email';
 import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatRecipientInfo } from '@/utils/emailTemplates';
+import { sendLineParallelToEmail } from '@/utils/line';
 
 export async function POST(request) {
   try {
@@ -169,6 +170,15 @@ export async function POST(request) {
         // FROM名を店舗名で上書き
         const from = `${shopName} <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
         await sendEmail({ to: customerEmail, subject, html, from });
+
+        // ★ LINE併送（有効時のみ）
+        await sendLineParallelToEmail({
+          supabaseAdmin,
+          tenantSettings: settings,
+          tenantId,
+          customerEmail,
+          text: `${subject}\n\n${body}`,
+        });
       } catch (e) {
         console.warn('[orders] 注文確認メール送信失敗:', e.message);
       }

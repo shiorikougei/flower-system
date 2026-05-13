@@ -12,6 +12,7 @@ import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/utils/stripe';
 import { sendEmail } from '@/utils/email';
 import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatRecipientInfo } from '@/utils/emailTemplates';
+import { sendLineParallelToEmail } from '@/utils/line';
 
 export const runtime = 'nodejs';   // Edgeでは crypto が一部使えないため明示
 export const dynamic = 'force-dynamic';
@@ -128,6 +129,15 @@ export async function POST(request) {
               const from = `${shopName} <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
               await sendEmail({ to: customerEmail, subject, html, from });
               console.log('[webhook] 注文確認メール送信完了:', customerEmail);
+
+              // ★ LINE併送（有効時のみ）
+              await sendLineParallelToEmail({
+                supabaseAdmin,
+                tenantSettings: settings,
+                tenantId,
+                customerEmail,
+                text: `${subject}\n\n${body}`,
+              });
             }
           }
         } catch (mailErr) {
