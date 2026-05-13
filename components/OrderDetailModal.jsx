@@ -24,9 +24,15 @@ export default function OrderDetailModal({
   });
   
   const [isUploading, setIsUploading] = useState(false);
-  
+
   // ★ 新規追加：メールテンプレート選択メニューの表示状態
   const [showMailTemplates, setShowMailTemplates] = useState(false);
+
+  // ★ 入金確認モーダル（銀行振込の手動入金確認 + 納品日変更 + 自動メール送信）
+  const [showPaymentConfirmModal, setShowPaymentConfirmModal] = useState(false);
+  const [confirmDeliveryDate, setConfirmDeliveryDate] = useState('');
+  const [confirmDeliveryTime, setConfirmDeliveryTime] = useState('');
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   useEffect(() => {
     setUpdateForm({
@@ -34,6 +40,10 @@ export default function OrderDetailModal({
       staff: ''
     });
     setShowMailTemplates(false);
+    // ★ モーダル開閉時に納品日初期値をセット
+    setConfirmDeliveryDate(order?.order_data?.selectedDate || '');
+    setConfirmDeliveryTime(order?.order_data?.selectedTime || '');
+    setShowPaymentConfirmModal(false);
   }, [order]);
 
   if (!order) return null;
@@ -583,6 +593,67 @@ export default function OrderDetailModal({
     }
   };
 
+  // ★ 銀行振込の入金確認 → 納品日確定 → 自動メール送信
+  const handleConfirmPayment = async () => {
+    if (!confirmDeliveryDate) {
+      alert('納品予定日を入力してください');
+      return;
+    }
+    setIsProcessingPayment(true);
+    try {
+      // 1. 入金状態 + 納品日を更新
+      const oldStatus = modalData.paymentStatus || '';
+      let newStatus = '入金済';
+      if (oldStatus.includes('引き取り時')) newStatus = '入金済（引き取り時受領）';
+
+      const updatedData = {
+        ...modalData,
+        paymentStatus: newStatus,
+        selectedDate: confirmDeliveryDate,
+        selectedTime: confirmDeliveryTime || modalData.selectedTime || '',
+      };
+
+      // 親コンポーネントの onUpdatePayment は paymentStatus のみ更新するので
+      // ここで直接 supabase を呼んで両方更新
+      const { error } = await supabase
+        .from('orders')
+        .update({ order_data: updatedData })
+        .eq('id', order.id);
+      if (error) throw error;
+
+      // 2. payment_confirmed メール自動送信
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const res = await fetch('/api/staff/send-template-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ orderId: order.id, triggerId: 'payment_confirmed' }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          console.warn('入金確認メール送信失敗:', data.error);
+          alert(`入金済みに更新しましたが、メール送信に失敗しました: ${data.error || ''}`);
+        }
+      }
+
+      // 3. UI 更新（親へ反映してもらう）
+      if (onUpdatePayment) {
+        await onUpdatePayment(order.id, updatedData, { skipConfirm: true, alreadyUpdated: true });
+      }
+
+      setShowPaymentConfirmModal(false);
+      alert('入金済みに更新し、お客様にメールを送信しました ✉️');
+    } catch (err) {
+      console.error(err);
+      alert(`処理に失敗しました: ${err.message}`);
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
   // ★ テンプレートメールをサーバー側から実際に送信（Resend経由）
   const handleSendTemplateEmail = async (template) => {
     try {
@@ -1001,8 +1072,15 @@ export default function OrderDetailModal({
                           <AlertCircle size={16}/> {currentPaymentStatus}
                         </span>
                         {onUpdatePayment && (
-                          <button 
-                            onClick={() => onUpdatePayment(order.id, modalData)}
+                          <button
+                            onClick={() => {
+                              // ★ 銀行振込の場合は確認モーダル経由（納品日確認+メール送信）
+                              if (modalData.paymentMethod === 'bank_transfer') {
+                                setShowPaymentConfirmModal(true);
+                              } else {
+                                onUpdatePayment(order.id, modalData);
+                              }
+                            }}
                             className="px-4 py-2 bg-[#D97D54] text-white text-[12px] font-bold rounded-xl hover:bg-[#c26d48] transition-all shadow-sm flex items-center gap-1.5 active:scale-95"
                           >
                             <CheckCircle2 size={16}/> 入金済にする
@@ -1045,6 +1123,78 @@ export default function OrderDetailModal({
           )}
         </div>
       </div>
+
+      {/* ★ 銀行振込 入金確認モーダル */}
+      {showPaymentConfirmModal && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-[#111111]/70 backdrop-blur-sm p-4 animate-in fade-in"
+          onClick={(e) => { e.stopPropagation(); setShowPaymentConfirmModal(false); }}
+        >
+          <div
+            className="bg-white rounded-[24px] w-full max-w-md shadow-2xl p-6 md:p-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-11 h-11 bg-[#117768]/10 rounded-full flex items-center justify-center">
+                <CheckCircle2 size={22} className="text-[#117768]" />
+              </div>
+              <div>
+                <h3 className="text-[16px] font-bold text-[#111111]">ご入金確認</h3>
+                <p className="text-[11px] text-[#999999] mt-0.5">納品予定日を確定してお客様へ通知します</p>
+              </div>
+            </div>
+
+            <div className="bg-[#FBFAF9] rounded-xl p-4 mb-4 border border-[#EAEAEA] text-[12px] text-[#555] space-y-1">
+              <div><span className="text-[#999]">ご注文者:</span> <span className="font-bold text-[#111]">{modalData.customerInfo?.name || '-'}</span></div>
+              <div><span className="text-[#999]">合計金額:</span> <span className="font-bold text-[#2D4B3E]">¥{getTotals(modalData).total.toLocaleString()}</span></div>
+              <div><span className="text-[#999]">現在の納品予定日:</span> <span className="font-bold">{modalData.selectedDate || '未指定'} {modalData.selectedTime || ''}</span></div>
+            </div>
+
+            <div className="space-y-3 mb-5">
+              <div>
+                <label className="block text-[11px] font-bold text-[#555] mb-1.5 tracking-widest">新しい納品日</label>
+                <input
+                  type="date"
+                  value={confirmDeliveryDate}
+                  onChange={(e) => setConfirmDeliveryDate(e.target.value)}
+                  className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-[#555] mb-1.5 tracking-widest">時間（任意）</label>
+                <input
+                  type="text"
+                  value={confirmDeliveryTime}
+                  onChange={(e) => setConfirmDeliveryTime(e.target.value)}
+                  placeholder="例: 14:00〜16:00"
+                  className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"
+                />
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-5 text-[11px] text-blue-900 leading-relaxed">
+              ✉️ 確定すると、お客様に「入金確認・納品日のお知らせ」メールが自動送信されます
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowPaymentConfirmModal(false)}
+                disabled={isProcessingPayment}
+                className="flex-1 h-11 bg-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-xl hover:bg-[#dcdcdc] disabled:opacity-50"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleConfirmPayment}
+                disabled={isProcessingPayment}
+                className="flex-1 h-11 bg-[#117768] text-white text-[12px] font-bold rounded-xl hover:bg-[#0f6358] disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {isProcessingPayment ? '送信中...' : <><CheckCircle2 size={15}/>確定 + メール送信</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

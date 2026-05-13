@@ -265,6 +265,20 @@ export default function CartPage() {
                   <p className="text-[11px] text-[#555555] mt-1">注文後、振込先をメールでお送りします</p>
                 </div>
               </label>
+
+              {paymentMethod === 'bank_transfer' && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-[11.5px] text-amber-900 leading-relaxed">
+                  <p className="font-bold mb-1.5 flex items-center gap-1.5">
+                    <AlertCircle size={14}/> 銀行振込についてご確認ください
+                  </p>
+                  <ul className="space-y-1 pl-1">
+                    <li>・<strong>ご入金確認後</strong>に商品のご準備を開始いたします</li>
+                    <li>・ご入金のタイミングによっては、ご希望の納品日にお届けできない場合がございます</li>
+                    <li>・入金確認が取れ次第、確定の納品日をメールにてご案内いたします</li>
+                    <li>・お振込手数料はお客様ご負担となります</li>
+                  </ul>
+                </div>
+              )}
             </div>
 
             {error && (

@@ -120,27 +120,32 @@ export default function CalendarPage() {
   };
 
   // ★ 新規追加：入金ステータス更新処理
-  const handleUpdatePayment = async (orderId, currentData) => {
-    if (!confirm('この注文を「入金済」として処理しますか？')) return;
+  const handleUpdatePayment = async (orderId, currentData, opts = {}) => {
+    if (!opts.skipConfirm) {
+      if (!confirm('この注文を「入金済」として処理しますか？')) return;
+    }
     try {
-      // ★ 入金済への遷移ロジック（"未入金（引き取り時）"→"入金済（引き取り時受領）"）
-      const oldStatus = currentData.paymentStatus || '';
-      let newStatus = '入金済';
-      if (oldStatus.includes('引き取り時')) {
-        newStatus = '入金済（引き取り時受領）';
+      let updatedData;
+      if (opts.alreadyUpdated) {
+        // モーダル経由：DB更新済みなのでローカル反映だけ
+        updatedData = currentData;
+      } else {
+        const oldStatus = currentData.paymentStatus || '';
+        let newStatus = '入金済';
+        if (oldStatus.includes('引き取り時')) {
+          newStatus = '入金済（引き取り時受領）';
+        }
+        updatedData = { ...currentData, paymentStatus: newStatus };
+        // ★ セキュリティ: tenant_id でも絞り込み（多層防御）
+        await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId).eq('tenant_id', currentTenantId);
       }
 
-      const updatedData = { ...currentData, paymentStatus: newStatus };
-
-      // ★ セキュリティ: tenant_id でも絞り込み（多層防御）
-      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId).eq('tenant_id', currentTenantId);
-      
       const newOrders = orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o);
       setOrders(newOrders);
-      sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders)); 
-      
+      sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders));
+
       setSelectedOrder(prev => ({ ...prev, order_data: updatedData }));
-      alert('入金済みに更新しました！');
+      if (!opts.skipConfirm) alert('入金済みに更新しました！');
     } catch (error) {
       console.error(error);
       alert('更新に失敗しました。');

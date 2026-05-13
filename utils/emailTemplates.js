@@ -34,6 +34,13 @@ export const EMAIL_TRIGGERS = [
     variables: ['customerName', 'shopName', 'orderId', 'completionImageUrl', 'orderItems', 'deliveryDate'],
   },
   {
+    id: 'payment_confirmed',
+    label: '入金確認・納品日のお知らせ',
+    description: '銀行振込のご入金確認後の通知（スタッフが入金済みに変更した時に自動送信）',
+    auto: true,
+    variables: ['customerName', 'shopName', 'orderId', 'orderTotal', 'orderItems', 'deliveryDate', 'shopPhone'],
+  },
+  {
     id: 'delivery_completion',
     label: 'お渡し・配達完了',
     description: '商品をお渡しまたは配達完了したお客様への完了通知（手動）',
@@ -163,6 +170,38 @@ TEL: {shopPhone}
 お受け取り、心よりお待ちしております🌸
 
 {shopName}`,
+    },
+    {
+      id: 'preset_payment_confirmed',
+      trigger: 'payment_confirmed',
+      targetShops: 'all',
+      enabled: true,
+      subject: '【{shopName}】ご入金を確認いたしました (注文番号: {orderId})',
+      body: `{customerName} 様
+
+いつもありがとうございます。
+ご注文いただきましたお品物について、ご入金を確認いたしましたのでお知らせいたします。
+
+━━━━━━━━━━━━━━━━━━━━
+ご注文番号: {orderId}
+━━━━━━━━━━━━━━━━━━━━
+
+【ご注文内容】
+{orderItems}
+
+【合計金額（税込）】
+¥{orderTotal}
+
+【納品予定日】
+{deliveryDate}
+
+ご入金を確認次第、商品のご準備に取り掛からせていただきます。
+上記の納品予定日にお届けまたはお渡しさせていただきます💐
+
+ご不明な点がございましたら、{shopName}までお問い合わせください。
+TEL: {shopPhone}
+
+引き続きどうぞよろしくお願いいたします。`,
     },
     {
       id: 'preset_delivery_completion',
