@@ -243,17 +243,24 @@ export default function OrderDetailModal({
         return '';
       };
 
-      const renderItemsBlock = (hidePrice = false) => `
-        <div class="items-area">
-          <table class="items-table" style="border-color:${hidePrice ? '#888' : '#444'}">
-            <thead>
-              <tr style="background:${hidePrice ? '#f4f4f4' : '#fafafa'}">
-                <th style="text-align:left;">商品名・内容</th>
-                <th style="width:18mm; text-align:center;">数量</th>
-                <th style="width:26mm; text-align:right;">金額(税抜)</th>
+      // ★ EC注文判定
+      const isEcOrder = modalData.orderType === 'ec' && Array.isArray(modalData.cartItems) && modalData.cartItems.length > 0;
+
+      const renderItemsBlock = (hidePrice = false, slipType = 'order_store') => {
+        // ★ EC注文: cartItems を商品行ごとに表示
+        let itemRows = '';
+        if (isEcOrder) {
+          itemRows = modalData.cartItems.map(c => `
+              <tr>
+                <td class="item-cell">
+                  <div class="item-name">${formatText(c.name)}</div>
+                </td>
+                <td class="qty-cell">${formatText(c.qty)}</td>
+                <td class="price-cell">${hidePrice ? '' : formatPrice(Number(c.price) * Number(c.qty))}</td>
               </tr>
-            </thead>
-            <tbody>
+          `).join('');
+        } else {
+          itemRows = `
               <tr>
                 <td class="item-cell">
                   <div class="item-name">${formatText(modalData.flowerType) || '未設定'}</div>
@@ -264,9 +271,34 @@ export default function OrderDetailModal({
                 <td class="qty-cell">1</td>
                 <td class="price-cell">${hidePrice ? '' : formatPrice(modalData.itemPrice)}</td>
               </tr>
-            </tbody>
+          `;
+        }
+
+        // ★ EC注文 かつ お客様向け伝票（customer/delivery）にはサンキューメッセージ
+        const thankYouMessage = (isEcOrder && (slipType === 'customer' || slipType === 'delivery')) ? `
+          <div style="border:1px solid #117768; background:#f4faf8; padding:4mm; margin-top:3mm; text-align:center; border-radius:2mm;">
+            <div style="font-size:11pt; font-weight:bold; color:#117768; margin-bottom:1mm;">Thank you for your order</div>
+            <div style="font-size:8.5pt; color:#333; line-height:1.5;">
+              この度はご注文いただき、誠にありがとうございました。<br/>
+              またのご利用を心よりお待ちしております。
+            </div>
+          </div>
+        ` : '';
+
+        return `
+        <div class="items-area">
+          <table class="items-table" style="border-color:${hidePrice ? '#888' : '#444'}">
+            <thead>
+              <tr style="background:${hidePrice ? '#f4f4f4' : '#fafafa'}">
+                <th style="text-align:left;">商品名・内容</th>
+                <th style="width:18mm; text-align:center;">数量</th>
+                <th style="width:26mm; text-align:right;">金額(税抜)</th>
+              </tr>
+            </thead>
+            <tbody>${itemRows}</tbody>
           </table>
         </div>
+        ${thankYouMessage}
         <div style="display:flex; justify-content:flex-end;">
           ${!hidePrice ? `
             <table class="amount-summary">
@@ -280,6 +312,7 @@ export default function OrderDetailModal({
           ` : `<div style="height:23.5mm;"></div>`}
         </div>
       `;
+      };
 
       const renderFooter = (type, hidePrice) => {
         let footerActionsHtml = '';
@@ -315,11 +348,11 @@ export default function OrderDetailModal({
       const renderSlip = ({ title, type, hidePrice = false, showReceiptNote = false }) => `
         <div class="slip" style="color: ${hidePrice ? '#333' : 'inherit'}">
           <div class="slip-header">
-            <div class="slip-title" style="color:${getTitleColor(type)}">${title}</div>
+            <div class="slip-title" style="color:${getTitleColor(type)}">${title}${isEcOrder ? ` <span style="font-size:9pt; background:#e3f2fd; color:#1565c0; padding:1mm 2mm; border-radius:1mm; font-weight:bold; vertical-align:middle;">EC注文</span>` : ''}</div>
             ${renderHeaderMeta()}
           </div>
           ${renderClientBoxes(hidePrice)}
-          ${renderItemsBlock(hidePrice)}
+          ${renderItemsBlock(hidePrice, type)}
           ${showReceiptNote ? `
             <div class="receipt-note" style="margin-top: 3mm; margin-bottom: 2mm;">
               <div style="font-size: 8.5pt; margin-bottom: 4mm;">上記の商品を確かに受領いたしました。</div>
