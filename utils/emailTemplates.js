@@ -27,6 +27,13 @@ export const EMAIL_TRIGGERS = [
     variables: ['customerName', 'shopName', 'magicLinkUrl'],
   },
   {
+    id: 'completion_photo',
+    label: '完成写真のお知らせ',
+    description: '注文管理画面で完成写真をアップロードした時に自動送信',
+    auto: true,
+    variables: ['customerName', 'shopName', 'orderId', 'completionImageUrl', 'orderItems', 'deliveryDate'],
+  },
+  {
     id: 'delivery_completion',
     label: 'お渡し・配達完了',
     description: '商品をお渡しまたは配達完了したお客様への完了通知（手動）',
@@ -128,6 +135,35 @@ TEL: {shopPhone}
 {shopName}`,
     },
     {
+      id: 'preset_completion_photo',
+      trigger: 'completion_photo',
+      targetShops: 'all',
+      enabled: true,
+      subject: '【{shopName}】ご注文商品の完成写真をお送りします',
+      body: `{customerName} 様
+
+いつもありがとうございます。
+ご注文いただいた商品の完成写真をお送りいたします💐
+
+━━━━━━━━━━━━━━━━━━━━
+ご注文番号: {orderId}
+━━━━━━━━━━━━━━━━━━━━
+
+【ご注文内容】
+{orderItems}
+
+【お届け予定】
+{deliveryDate}
+
+完成写真:
+{completionImageUrl}
+
+ご注文時のイメージに沿って心を込めてお作りしました。
+お受け取り、心よりお待ちしております🌸
+
+{shopName}`,
+    },
+    {
       id: 'preset_delivery_completion',
       trigger: 'delivery_completion',
       targetShops: 'all',
@@ -163,18 +199,29 @@ export function renderTemplate(template, vars) {
 }
 
 // プレーンテキストの本文をHTMLメールに変換（シンプルなラッパー）
+// 画像URLが本文中にあれば <img> として埋め込み、それ以外のURLは普通のリンクに
 export function bodyToHtml(body, { shopName } = {}) {
-  // 改行を <br> に、URLを自動リンク化
-  const html = escapeHtml(body || '')
-    .replace(/\n/g, '<br>')
-    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:#2D4B3E; word-break:break-all;">$1</a>');
+  const lines = (body || '').split('\n');
+  const htmlParts = lines.map(line => {
+    const trimmed = line.trim();
+    // 画像URLっぽいもの (画像拡張子 or Supabase Storage)
+    if (/^https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)(\?[^\s]*)?$/i.test(trimmed) ||
+        /^https?:\/\/[^\s]+\/storage\/v1\/object\/[^\s]+$/i.test(trimmed)) {
+      return `<img src="${trimmed}" alt="" style="max-width:100%; height:auto; border-radius:8px; margin:8px 0; display:block;">`;
+    }
+    // URL → リンク
+    const escaped = escapeHtml(line);
+    const linked = escaped.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:#2D4B3E; word-break:break-all;">$1</a>');
+    return linked;
+  });
+  const html = htmlParts.join('<br>');
 
   return `<!DOCTYPE html>
 <html lang="ja">
 <head><meta charset="utf-8"></head>
 <body style="margin:0; padding:0; background:#FBFAF9; font-family:'Hiragino Sans', sans-serif; color:#111; line-height:1.7;">
   <div style="max-width:600px; margin:0 auto; background:white; padding:40px 24px;">
-    <div style="font-size:13px; white-space:pre-wrap; word-break:break-word;">${html}</div>
+    <div style="font-size:13px; word-break:break-word;">${html}</div>
     ${shopName ? `<p style="font-size:11px; color:#999; margin-top:32px; padding-top:16px; border-top:1px solid #EAEAEA; text-align:center;">— ${escapeHtml(shopName)} —</p>` : ''}
   </div>
 </body>

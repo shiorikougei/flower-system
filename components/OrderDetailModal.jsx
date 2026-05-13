@@ -134,8 +134,38 @@ export default function OrderDetailModal({
       if (dbError) throw dbError;
 
       order.order_data.completionImage = publicUrl;
-      alert('完成写真をアップロードしました！🎉\nこれでメールの {CompletionImage} タグにこの写真のURLが差し込まれます！');
-      
+
+      // ★ 完成写真メールを自動送信（お客様メアド + テンプレート設定がある場合のみ）
+      let mailMessage = '';
+      const customerEmail = modalData.customerInfo?.email;
+      if (customerEmail) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            const res = await fetch('/api/staff/send-template-email', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({ orderId: order.id, triggerId: 'completion_photo' }),
+            });
+            const data = await res.json();
+            if (res.ok && data.sent) {
+              mailMessage = `\n📧 お客様（${customerEmail}）に完成写真メールを自動送信しました！`;
+            } else {
+              mailMessage = `\n⚠️ メール送信できませんでした: ${data.error || '原因不明'}`;
+            }
+          }
+        } catch (e) {
+          mailMessage = `\n⚠️ メール送信に失敗: ${e.message}`;
+        }
+      } else {
+        mailMessage = '\n（お客様のメアドが登録されてないため、メール送信スキップ）';
+      }
+
+      alert(`完成写真をアップロードしました 🎉${mailMessage}`);
+
     } catch (error) {
       console.error('Upload Error:', error);
       alert('画像のアップロードに失敗しました。');
@@ -413,8 +443,41 @@ export default function OrderDetailModal({
 
       const body = encodeURIComponent(bodyText);
       window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
-    } catch (err) { 
-      alert(`メールの起動に失敗しました: ${err.message}`); 
+    } catch (err) {
+      alert(`メールの起動に失敗しました: ${err.message}`);
+    }
+  };
+
+  // ★ テンプレートメールをサーバー側から実際に送信（Resend経由）
+  const handleSendTemplateEmail = async (template) => {
+    try {
+      setShowMailTemplates(false);
+      const triggerLabel = {
+        restock_notification: '入荷のお知らせ',
+        delivery_completion: 'お渡し・配達完了',
+        custom: 'カスタム',
+      };
+      if (!confirm(`「${triggerLabel[template.trigger] || template.trigger}」のメールを送信しますか？\n宛先: ${modalData.customerInfo?.email}`)) return;
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('ログインが必要です');
+        return;
+      }
+
+      const res = await fetch('/api/staff/send-template-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ orderId: order.id, triggerId: template.trigger }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '送信に失敗しました');
+      alert('メールを送信しました ✉️');
+    } catch (err) {
+      alert(`メール送信に失敗しました: ${err.message}`);
     }
   };
 
@@ -463,23 +526,36 @@ export default function OrderDetailModal({
                 </button>
                 
                 {showMailTemplates && (
-                  <div className="absolute top-full right-0 mt-2 w-56 md:w-64 bg-white border border-[#EAEAEA] rounded-xl shadow-xl z-50 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                  <div className="absolute top-full right-0 mt-2 w-56 md:w-72 bg-white border border-[#EAEAEA] rounded-xl shadow-xl z-50 overflow-hidden" onClick={(e) => e.stopPropagation()}>
                     <div className="bg-[#FBFAF9] px-4 py-2 border-b border-[#EAEAEA] text-[10px] font-bold text-[#999999]">
-                      送信する案内文を選択
+                      手動送信する案内文を選択
                     </div>
                     <div className="max-h-60 overflow-y-auto hide-scrollbar">
-                      {(appSettings?.autoReplyTemplates || []).length > 0 ? (appSettings.autoReplyTemplates).map(t => (
-                        <button 
-                          key={t.id}
-                          onClick={() => handleSendEmail(t)}
-                          className="w-full text-left px-4 py-3 hover:bg-[#FBFAF9] border-b border-[#EAEAEA] last:border-0 transition-colors"
-                        >
-                          <div className="text-[12px] font-bold text-[#2D4B3E] mb-1">{t.trigger}</div>
-                          <div className="text-[10px] text-[#555555] truncate">{t.subject}</div>
-                        </button>
-                      )) : (
-                        <div className="px-4 py-3 text-[11px] text-[#999999]">設定画面で案内文を追加してください</div>
-                      )}
+                      {(() => {
+                        // ★ 手動送信用 (auto: false) のテンプレートだけ表示
+                        const manualTriggers = ['restock_notification', 'delivery_completion', 'custom'];
+                        const manualTemplates = (appSettings?.autoReplyTemplates || []).filter(t =>
+                          manualTriggers.includes(t.trigger) && t.enabled !== false
+                        );
+                        if (manualTemplates.length === 0) {
+                          return <div className="px-4 py-3 text-[11px] text-[#999999]">設定画面で「手動送信」テンプレートを追加してください</div>;
+                        }
+                        const triggerLabel = {
+                          restock_notification: '入荷のお知らせ',
+                          delivery_completion: 'お渡し・配達完了',
+                          custom: 'カスタム',
+                        };
+                        return manualTemplates.map(t => (
+                          <button
+                            key={t.id}
+                            onClick={() => handleSendTemplateEmail(t)}
+                            className="w-full text-left px-4 py-3 hover:bg-[#FBFAF9] border-b border-[#EAEAEA] last:border-0 transition-colors"
+                          >
+                            <div className="text-[12px] font-bold text-[#2D4B3E] mb-1">{triggerLabel[t.trigger] || t.trigger}</div>
+                            <div className="text-[10px] text-[#555555] truncate">{t.subject}</div>
+                          </button>
+                        ));
+                      })()}
                     </div>
                   </div>
                 )}
