@@ -345,8 +345,8 @@ export default function OrderDetailModal({
         `;
       };
 
-      const renderSlip = ({ title, type, hidePrice = false, showReceiptNote = false }) => `
-        <div class="slip" style="color: ${hidePrice ? '#333' : 'inherit'}">
+      const renderSlip = ({ title, type, hidePrice = false, showReceiptNote = false, fullPage = false }) => `
+        <div class="${fullPage ? 'slip-full' : 'slip'}" style="color: ${hidePrice ? '#333' : 'inherit'}">
           <div class="slip-header">
             <div class="slip-title" style="color:${getTitleColor(type)}">${title}${isEcOrder ? ` <span style="font-size:9pt; background:#e3f2fd; color:#1565c0; padding:1mm 2mm; border-radius:1mm; font-weight:bold; vertical-align:middle;">EC注文</span>` : ''}</div>
             ${renderHeaderMeta()}
@@ -383,6 +383,8 @@ export default function OrderDetailModal({
             .page { width: 210mm; height: 296mm; background: #fff; margin: 0 auto 10mm auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; position: relative; overflow: hidden; }
             .slip { width: 100%; height: 148mm; padding: 7mm 15mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
             .slip:first-child { border-bottom: 1px dashed #aaa; }
+            /* ★ EC注文用: 1ページ全面（A4フルサイズ） */
+            .slip-full { width: 100%; height: 296mm; padding: 15mm 20mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
             .cutline { position: absolute; top: 148mm; left: 10mm; right: 10mm; transform: translateY(-50%); display: flex; justify-content: center; align-items: center; z-index: 10; pointer-events: none; }
             .cutline span { background: #fff; padding: 0 5mm; font-size: 8pt; color: #888; letter-spacing: 0.2em; }
             .slip-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3mm; }
@@ -420,16 +422,27 @@ export default function OrderDetailModal({
           </style>
         </head>
         <body>
-          <div class="page">
-            ${renderSlip({ title: '受 注 書 控', type: 'order_store', hidePrice: false })}
-            ${renderSlip({ title: 'お 客 様 控', type: 'customer', hidePrice: false })}
-            <div class="cutline"><span>✂ 切り取り線</span></div>
-          </div>
-          <div class="page">
-            ${renderSlip({ title: '納 品 書', type: 'delivery', hidePrice: true })}
-            ${renderSlip({ title: '受 領 書', type: 'receipt', hidePrice: true, showReceiptNote: true })}
-            <div class="cutline"><span>✂ 切り取り線</span></div>
-          </div>
+          ${isEcOrder ? `
+            <!-- EC注文: 1ページ目=受注書控, 2ページ目=納品書 -->
+            <div class="page">
+              ${renderSlip({ title: '受 注 書 控', type: 'order_store', hidePrice: false, fullPage: true })}
+            </div>
+            <div class="page">
+              ${renderSlip({ title: '納 品 書', type: 'delivery', hidePrice: false, fullPage: true })}
+            </div>
+          ` : `
+            <!-- カスタム注文: 各ページ2分割（既存） -->
+            <div class="page">
+              ${renderSlip({ title: '受 注 書 控', type: 'order_store', hidePrice: false })}
+              ${renderSlip({ title: 'お 客 様 控', type: 'customer', hidePrice: false })}
+              <div class="cutline"><span>✂ 切り取り線</span></div>
+            </div>
+            <div class="page">
+              ${renderSlip({ title: '納 品 書', type: 'delivery', hidePrice: true })}
+              ${renderSlip({ title: '受 領 書', type: 'receipt', hidePrice: true, showReceiptNote: true })}
+              <div class="cutline"><span>✂ 切り取り線</span></div>
+            </div>
+          `}
           <script>
             window.onload = function() { setTimeout(function() { window.print(); }, 400); };
           </script>
