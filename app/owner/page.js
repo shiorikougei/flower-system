@@ -648,24 +648,8 @@ export default function OwnerDashboard() {
 
         {activeTab === 'ai' && (
           <div className="space-y-10 animate-in fade-in">
-            {/* ① 画像解析用プロンプト */}
+            {/* キャプション生成プロンプト（画像解析プロンプトはURL取込機能の正式リリースまで非表示） */}
             <section className="space-y-6">
-              <header className="space-y-2">
-                <h3 className="text-[16px] font-bold text-emerald-400 flex items-center gap-2"><Sparkles size={18}/> 店舗別 AI 画像解析プロンプト</h3>
-                <p className="text-[12px] text-gray-500 leading-relaxed">「過去分登録 (URL取込)」で使用される、テキストから情報抽出するAI指示文。</p>
-              </header>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {tenants.map(t => (
-                  <div key={`anal-${t.id}`} className="bg-[#111111] p-6 rounded-2xl border border-[#222222] shadow-xl flex flex-col">
-                    <h4 className="text-white font-bold mb-4 flex items-center gap-2"><Store size={16} className="text-emerald-500" /> {t.name} <span className="text-gray-600 text-[10px] font-mono">({t.id})</span></h4>
-                    <textarea value={t.aiPrompt ?? DEFAULT_AI_PROMPT} onChange={(e) => updateTenantPrompt(t.id, e.target.value)} className="w-full h-40 bg-black border border-[#333333] rounded-xl p-4 text-[12px] text-emerald-50 outline-none resize-none font-mono focus:border-[#2D4B3E] transition-colors flex-1" placeholder="この店舗専用のAI指示を記述..." />
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            {/* ② キャプション生成プロンプト */}
-            <section className="space-y-6 pt-8 border-t border-[#222222]">
               <header className="space-y-2">
                 <h3 className="text-[16px] font-bold text-amber-400 flex items-center gap-2"><Wand2 size={18}/> 店舗別 SNSキャプション生成プロンプト</h3>
                 <p className="text-[12px] text-gray-500 leading-relaxed">投稿用キャプション自動生成のAI指示文。過去キャプションを取り込むと、その店舗のトーンを真似した指示文を自動構築できます ✨</p>
