@@ -68,6 +68,19 @@ export default function OrderDetailModal({
     return map[method] || method;
   };
 
+  // ★ 支払方法のラベル変換
+  const getPaymentLabel = (method) => {
+    const map = {
+      card: 'クレジットカード決済',
+      bank_transfer: '銀行振込',
+      cash: '現金',
+      cod: '代金引換',
+      paid_card: '前払い済み（カード）',
+      paid_cash: '前払い済み（現金）',
+    };
+    return map[method] || method || '未設定';
+  };
+
   const getGoogleMapsUrl = (info) => {
     try {
       if (!info) return '#';
@@ -966,10 +979,11 @@ export default function OrderDetailModal({
               </div>
               
               {modalData.paymentMethod && (
-                <div className="pt-4 flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-[#EAEAEA]">
-                  <span className="inline-block bg-[#F7F7F7] text-[#555555] px-4 py-2 rounded-xl text-[12px] font-bold border border-[#EAEAEA] shadow-sm">
-                    支払方法: {modalData.paymentMethod}
-                  </span>
+                <div className="pt-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-t border-[#EAEAEA]">
+                  <div className="flex items-center gap-2 bg-[#F7F7F7] px-4 py-2.5 rounded-xl border border-[#EAEAEA] shadow-sm">
+                    <span className="text-[10px] font-bold text-[#999999] tracking-widest">支払方法</span>
+                    <span className="text-[13px] font-bold text-[#2D4B3E]">{getPaymentLabel(modalData.paymentMethod)}</span>
+                  </div>
                   
                   <div className="flex items-center gap-3">
                     {isUnpaid ? (
