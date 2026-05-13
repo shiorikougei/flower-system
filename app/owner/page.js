@@ -1,13 +1,26 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
-import { 
-  Building2, Mail, ArrowUpCircle, Bot, Lock, Unlock, 
+import {
+  Building2, Mail, ArrowUpCircle, Bot, Lock, Unlock,
   CheckCircle, XCircle, RefreshCw, Save, Sparkles, Store,
-  MessageSquare, Trash2, AlertTriangle
+  MessageSquare, Trash2, AlertTriangle, Wand2, X
 } from 'lucide-react';
 
 const DEFAULT_AI_PROMPT = '以下のテキストからお花の「価格」「用途」「カラー」「イメージ」をJSON形式で抽出してください。価格はカンマなしの数値で出力してください。';
+const DEFAULT_CAPTION_PROMPT = `あなたは {appName} の SNS担当です。お花の注文を受けて完成した作品をInstagramに投稿します。以下の条件でキャプションを作成してください。
+
+【条件】
+- 用途: {purpose}
+- カラー: {color}
+- 雰囲気: {vibe}
+- 金額表示: {price}
+- 店舗名: {appName}
+
+【トーン】
+- 温かみのある柔らかい文体、絵文字を散りばめる🌸💐✨
+- 改行多めで読みやすく
+- 末尾にハッシュタグ5〜8個`;
 
 export default function OwnerDashboard() {
   const [activeTab, setActiveTab] = useState('tenants');
@@ -56,6 +69,8 @@ export default function OwnerDashboard() {
             price: s.monthlyPrice || 10000,
             features: s.features || { b2b: false, deliveryOutsource: false },
             aiPrompt: s.aiPrompt || DEFAULT_AI_PROMPT,
+            captionPrompt: s.captionPrompt || DEFAULT_CAPTION_PROMPT,
+            showPriceInCaption: typeof s.showPriceInCaption === 'boolean' ? s.showPriceInCaption : true,
             updatedAt: row.updated_at
           };
         });
@@ -172,12 +187,127 @@ export default function OwnerDashboard() {
     setTenants(tenants.map(t => t.id === tenantId ? { ...t, aiPrompt: newPrompt } : t));
   };
 
+  // ★ キャプション生成プロンプト編集
+  const updateTenantCaptionPrompt = (tenantId, newPrompt) => {
+    setTenants(tenants.map(t => t.id === tenantId ? { ...t, captionPrompt: newPrompt } : t));
+  };
+
+  // ★ 金額表示トグル
+  const updateTenantShowPrice = (tenantId, show) => {
+    setTenants(tenants.map(t => t.id === tenantId ? { ...t, showPriceInCaption: show } : t));
+  };
+
+  // ★ サンプル取り込みモーダル用
+  const [sampleModalTenant, setSampleModalTenant] = useState(null);
+  const [sampleText, setSampleText] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // ★ AI利用状況
+  const [usageList, setUsageList] = useState([]);
+  const [usageMonth, setUsageMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [aiPricing, setAiPricing] = useState({ freeQuotaPerMonth: 100, pricePerExtraJpy: 5 });
+  const [isLoadingUsage, setIsLoadingUsage] = useState(false);
+
+  const loadUsage = async (monthKey = usageMonth) => {
+    setIsLoadingUsage(true);
+    try {
+      // pricing
+      const { data: ownerRow } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
+      const cfg = ownerRow?.settings_data?.aiPricingConfig;
+      const pricing = {
+        freeQuotaPerMonth: Number(cfg?.freeQuotaPerMonth ?? 100),
+        pricePerExtraJpy: Number(cfg?.pricePerExtraJpy ?? 5),
+      };
+      setAiPricing(pricing);
+
+      // 全テナント
+      const { data: rows } = await supabase.from('app_settings').select('id, settings_data').neq('id', 'nocolde_owner');
+      const list = (rows || [])
+        .filter(r => !['gallery', 'default'].includes(r.id) && !r.id.endsWith('_gallery'))
+        .map(r => {
+          const s = r.settings_data || {};
+          const m = s.aiUsage?.[monthKey] || { caption: 0, prompt: 0, total: 0 };
+          const total = Number(m.total || 0);
+          const overage = Math.max(0, total - pricing.freeQuotaPerMonth);
+          return {
+            tenantId: r.id,
+            tenantName: s.generalConfig?.appName || r.id,
+            caption: Number(m.caption || 0),
+            prompt: Number(m.prompt || 0),
+            total,
+            overage,
+            overageJpy: overage * pricing.pricePerExtraJpy,
+          };
+        });
+      setUsageList(list);
+    } catch (e) {
+      console.error('loadUsage', e);
+    } finally {
+      setIsLoadingUsage(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'usage' && isAuth) loadUsage(usageMonth);
+    // eslint-disable-next-line
+  }, [activeTab, usageMonth, isAuth]);
+
+  const saveAiPricing = async () => {
+    try {
+      const { data: ownerRow } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
+      const nextData = { ...(ownerRow?.settings_data || {}), aiPricingConfig: aiPricing };
+      await supabase.from('app_settings').upsert({ id: 'nocolde_owner', settings_data: nextData });
+      alert('料金プランを保存しました');
+      loadUsage(usageMonth);
+    } catch (e) {
+      alert('保存失敗');
+    }
+  };
+
+  const handleGenerateFromSamples = async () => {
+    if (!sampleModalTenant) return;
+    const samples = sampleText
+      .split(/\n\s*---+\s*\n|\n\n\n+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 10);
+    if (samples.length === 0) {
+      alert('過去キャプションを1件以上貼り付けてください\n（複数件は空行3つ or "---" で区切ってください）');
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const res = await fetch('/api/owner/generate-prompt-from-samples', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ samples, tenantName: sampleModalTenant.name, tenantId: sampleModalTenant.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'API エラー');
+      updateTenantCaptionPrompt(sampleModalTenant.id, data.prompt);
+      setSampleModalTenant(null);
+      setSampleText('');
+      alert('プロンプトを自動生成しました ✨\n忘れずに「SAVE ALL PROMPTS」で保存してください！');
+    } catch (err) {
+      alert(`生成に失敗しました: ${err.message}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const saveAllPrompts = async () => {
     setIsSaving(true);
     try {
       for (const t of tenants) {
         const { data: current } = await supabase.from('app_settings').select('settings_data').eq('id', t.id).single();
-        const nextData = { ...(current?.settings_data || {}), aiPrompt: t.aiPrompt };
+        const nextData = {
+          ...(current?.settings_data || {}),
+          aiPrompt: t.aiPrompt,
+          captionPrompt: t.captionPrompt,
+          showPriceInCaption: t.showPriceInCaption,
+        };
         await supabase.from('app_settings').update({ settings_data: nextData }).eq('id', t.id);
       }
       alert('すべてのプロンプトを保存しました。');
@@ -315,6 +445,7 @@ export default function OwnerDashboard() {
             {newFeedbacksCount > 0 && <span className="bg-blue-600 text-white text-[9px] px-2 py-0.5 rounded-full">{newFeedbacksCount}</span>}
           </button>
           <button onClick={() => setActiveTab('ai')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'ai' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><Bot size={16}/> AIプロンプト設定</button>
+          <button onClick={() => setActiveTab('usage')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'usage' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><Sparkles size={16}/> AI利用状況・請求</button>
 
           <div className="pt-8 pb-4">
             <button onClick={() => setActiveTab('danger')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'danger' ? 'bg-red-900/30 text-red-500 border border-red-900/50' : 'text-gray-500 hover:bg-red-900/10 hover:text-red-500'}`}><AlertTriangle size={16}/> 危険な操作・初期化</button>
@@ -330,6 +461,7 @@ export default function OwnerDashboard() {
             {activeTab === 'upgrades' && 'UPGRADE REQUESTS'}
             {activeTab === 'feedbacks' && 'CLIENT FEEDBACKS'}
             {activeTab === 'ai' && 'AI PROMPT SETTINGS'}
+            {activeTab === 'usage' && 'AI USAGE & BILLING'}
             {activeTab === 'danger' && 'DANGER ZONE'}
           </h2>
           <div className="flex items-center gap-4">
@@ -515,21 +647,209 @@ export default function OwnerDashboard() {
         )}
 
         {activeTab === 'ai' && (
-          <div className="space-y-6 animate-in fade-in">
-            <header className="mb-6 space-y-2">
-               <h3 className="text-[16px] font-bold text-emerald-400 flex items-center gap-2"><Sparkles size={18}/> 店舗別 AI 画像解析プロンプト</h3>
-               <p className="text-[12px] text-gray-500 leading-relaxed">各店舗が「過去分登録 (URL取込)」を使用した際に、AIに対してどのようにテキストを解析させるかの指示文を個別にチューニングできます。</p>
-            </header>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               {tenants.map(t => (
-                  <div key={t.id} className="bg-[#111111] p-6 rounded-2xl border border-[#222222] shadow-xl flex flex-col">
-                     <h4 className="text-white font-bold mb-4 flex items-center gap-2"><Store size={16} className="text-emerald-500" /> {t.name} <span className="text-gray-600 text-[10px] font-mono">({t.id})</span></h4>
-                     <textarea value={t.aiPrompt ?? DEFAULT_AI_PROMPT} onChange={(e) => updateTenantPrompt(t.id, e.target.value)} className="w-full h-40 bg-black border border-[#333333] rounded-xl p-4 text-[12px] text-emerald-50 outline-none resize-none font-mono focus:border-[#2D4B3E] transition-colors flex-1" placeholder="この店舗専用のAI指示を記述..." />
+          <div className="space-y-10 animate-in fade-in">
+            {/* ① 画像解析用プロンプト */}
+            <section className="space-y-6">
+              <header className="space-y-2">
+                <h3 className="text-[16px] font-bold text-emerald-400 flex items-center gap-2"><Sparkles size={18}/> 店舗別 AI 画像解析プロンプト</h3>
+                <p className="text-[12px] text-gray-500 leading-relaxed">「過去分登録 (URL取込)」で使用される、テキストから情報抽出するAI指示文。</p>
+              </header>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {tenants.map(t => (
+                  <div key={`anal-${t.id}`} className="bg-[#111111] p-6 rounded-2xl border border-[#222222] shadow-xl flex flex-col">
+                    <h4 className="text-white font-bold mb-4 flex items-center gap-2"><Store size={16} className="text-emerald-500" /> {t.name} <span className="text-gray-600 text-[10px] font-mono">({t.id})</span></h4>
+                    <textarea value={t.aiPrompt ?? DEFAULT_AI_PROMPT} onChange={(e) => updateTenantPrompt(t.id, e.target.value)} className="w-full h-40 bg-black border border-[#333333] rounded-xl p-4 text-[12px] text-emerald-50 outline-none resize-none font-mono focus:border-[#2D4B3E] transition-colors flex-1" placeholder="この店舗専用のAI指示を記述..." />
                   </div>
-               ))}
-            </div>
+                ))}
+              </div>
+            </section>
+
+            {/* ② キャプション生成プロンプト */}
+            <section className="space-y-6 pt-8 border-t border-[#222222]">
+              <header className="space-y-2">
+                <h3 className="text-[16px] font-bold text-amber-400 flex items-center gap-2"><Wand2 size={18}/> 店舗別 SNSキャプション生成プロンプト</h3>
+                <p className="text-[12px] text-gray-500 leading-relaxed">投稿用キャプション自動生成のAI指示文。過去キャプションを取り込むと、その店舗のトーンを真似した指示文を自動構築できます ✨</p>
+              </header>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {tenants.map(t => (
+                  <div key={`cap-${t.id}`} className="bg-[#111111] p-6 rounded-2xl border border-amber-900/30 shadow-xl flex flex-col">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-white font-bold flex items-center gap-2"><Store size={16} className="text-amber-500" /> {t.name}</h4>
+                      <button
+                        onClick={() => { setSampleModalTenant(t); setSampleText(''); }}
+                        className="flex items-center gap-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/40 px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-amber-500/20 transition-all"
+                      >
+                        <Wand2 size={12}/> 過去から自動生成
+                      </button>
+                    </div>
+
+                    {/* 金額表示トグル */}
+                    <label className="flex items-center gap-2 mb-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(t.showPriceInCaption)}
+                        onChange={(e) => updateTenantShowPrice(t.id, e.target.checked)}
+                        className="w-4 h-4 accent-amber-500"
+                      />
+                      <span className="text-[12px] font-bold text-amber-200">キャプション内に金額を表示する</span>
+                    </label>
+
+                    <textarea
+                      value={t.captionPrompt ?? DEFAULT_CAPTION_PROMPT}
+                      onChange={(e) => updateTenantCaptionPrompt(t.id, e.target.value)}
+                      className="w-full h-56 bg-black border border-[#333333] rounded-xl p-4 text-[12px] text-amber-50 outline-none resize-none font-mono focus:border-amber-600 transition-colors flex-1"
+                      placeholder="キャプション生成用のAI指示文..."
+                    />
+                    <p className="text-[10px] text-gray-600 mt-2">利用可能な変数: {`{purpose} {color} {vibe} {price} {appName}`}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
             <div className="flex justify-end pt-6 border-t border-[#222222]">
               <button onClick={saveAllPrompts} disabled={isSaving} className="flex items-center justify-center w-full md:w-auto gap-2 bg-[#2D4B3E] text-white px-10 py-4 rounded-xl font-bold text-[13px] tracking-widest hover:bg-[#1f352b] transition-all disabled:opacity-50 shadow-lg shadow-[#2D4B3E]/20"><Save size={16}/> {isSaving ? 'SAVING...' : 'SAVE ALL PROMPTS'}</button>
+            </div>
+          </div>
+        )}
+
+        {/* ★ 過去キャプションから自動生成モーダル */}
+        {sampleModalTenant && (
+          <div
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+            onClick={() => !isGenerating && setSampleModalTenant(null)}
+          >
+            <div
+              className="bg-[#0a0a0a] border border-amber-900/40 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 border-b border-amber-900/30 flex items-center justify-between">
+                <div>
+                  <h3 className="text-amber-400 font-bold text-[16px] flex items-center gap-2"><Wand2 size={18}/> 過去キャプションから自動生成</h3>
+                  <p className="text-[11px] text-gray-500 mt-1">対象店舗: <span className="text-white font-bold">{sampleModalTenant.name}</span></p>
+                </div>
+                <button
+                  onClick={() => !isGenerating && setSampleModalTenant(null)}
+                  className="text-gray-500 hover:text-white"
+                >
+                  <X size={20}/>
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 text-[11px] text-amber-200 leading-relaxed">
+                  💡 過去のInstagram投稿キャプションを5〜10件、下のテキストエリアに貼り付けてください。<br/>
+                  複数件は <code className="bg-black/40 px-1.5 rounded">空行3つ</code> または <code className="bg-black/40 px-1.5 rounded">---</code> で区切ってください。
+                </div>
+                <textarea
+                  value={sampleText}
+                  onChange={(e) => setSampleText(e.target.value)}
+                  placeholder={`例:\n本日納品させていただいたスタンド花...\n#花のある暮らし #札幌花屋\n\n---\n\n今回はピンク系の華やかなアレンジを...\n#フラワーアレンジメント`}
+                  className="w-full h-80 bg-black border border-[#333333] rounded-xl p-4 text-[12px] text-emerald-50 outline-none resize-none font-mono focus:border-amber-600 transition-colors"
+                  disabled={isGenerating}
+                />
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => setSampleModalTenant(null)}
+                    disabled={isGenerating}
+                    className="flex-1 h-11 rounded-xl border border-[#333333] text-gray-400 font-bold text-[12px] hover:bg-[#111] disabled:opacity-50"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    onClick={handleGenerateFromSamples}
+                    disabled={isGenerating}
+                    className="flex-1 h-11 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-bold text-[12px] disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isGenerating ? '生成中...' : <><Wand2 size={14}/> プロンプトを自動生成</>}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'usage' && (
+          <div className="space-y-8 animate-in fade-in">
+            <header className="space-y-2">
+              <h3 className="text-[16px] font-bold text-cyan-400 flex items-center gap-2"><Sparkles size={18}/> AI 利用状況と請求</h3>
+              <p className="text-[12px] text-gray-500 leading-relaxed">各店舗の月別 AI 生成回数と、無料枠超過時の請求額を表示します。</p>
+            </header>
+
+            {/* 料金プラン設定 */}
+            <div className="bg-[#111111] border border-[#222222] rounded-2xl p-6 shadow-xl">
+              <h4 className="text-white font-bold mb-4 text-[13px] tracking-widest">PRICING PLAN</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 tracking-widest">月の無料枠（回数）</label>
+                  <input type="number" value={aiPricing.freeQuotaPerMonth} onChange={(e) => setAiPricing({ ...aiPricing, freeQuotaPerMonth: Number(e.target.value) })}
+                    className="w-full mt-1 bg-black border border-[#333333] rounded-xl p-3 text-[14px] text-white font-mono focus:border-cyan-600 outline-none"/>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 tracking-widest">超過分の単価（円/回）</label>
+                  <input type="number" value={aiPricing.pricePerExtraJpy} onChange={(e) => setAiPricing({ ...aiPricing, pricePerExtraJpy: Number(e.target.value) })}
+                    className="w-full mt-1 bg-black border border-[#333333] rounded-xl p-3 text-[14px] text-white font-mono focus:border-cyan-600 outline-none"/>
+                </div>
+                <button onClick={saveAiPricing} className="h-12 bg-cyan-600 hover:bg-cyan-500 text-black font-bold rounded-xl text-[12px] tracking-widest flex items-center justify-center gap-2"><Save size={14}/> 料金プランを保存</button>
+              </div>
+            </div>
+
+            {/* 月選択 */}
+            <div className="flex items-center gap-3">
+              <label className="text-[12px] text-gray-500 font-bold tracking-widest">対象月:</label>
+              <input type="month" value={usageMonth} onChange={(e) => setUsageMonth(e.target.value)}
+                className="bg-black border border-[#333333] rounded-xl p-2.5 text-[13px] text-white font-mono focus:border-cyan-600 outline-none"/>
+              <button onClick={() => loadUsage(usageMonth)} className="p-2.5 hover:bg-[#222222] rounded-full transition-all text-gray-500">
+                <RefreshCw size={16} className={isLoadingUsage ? 'animate-spin' : ''}/>
+              </button>
+            </div>
+
+            {/* 利用状況テーブル */}
+            <div className="bg-[#111111] border border-[#222222] rounded-2xl shadow-xl overflow-hidden">
+              <table className="w-full text-[12px]">
+                <thead className="bg-black/50 border-b border-[#222222]">
+                  <tr>
+                    <th className="px-6 py-3 text-left font-bold text-gray-500 tracking-widest">店舗</th>
+                    <th className="px-4 py-3 text-right font-bold text-gray-500 tracking-widest">キャプション</th>
+                    <th className="px-4 py-3 text-right font-bold text-gray-500 tracking-widest">プロンプト</th>
+                    <th className="px-4 py-3 text-right font-bold text-gray-500 tracking-widest">合計</th>
+                    <th className="px-4 py-3 text-right font-bold text-gray-500 tracking-widest">超過</th>
+                    <th className="px-6 py-3 text-right font-bold text-gray-500 tracking-widest">請求額</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {usageList.length === 0 && (
+                    <tr><td colSpan="6" className="px-6 py-12 text-center text-gray-600 italic font-mono">この月のデータはまだありません</td></tr>
+                  )}
+                  {usageList.map(u => (
+                    <tr key={u.tenantId} className="border-b border-[#222222]/50 hover:bg-black/30 transition-colors">
+                      <td className="px-6 py-4 text-white font-bold">{u.tenantName}<span className="text-gray-600 text-[10px] font-mono ml-2">({u.tenantId})</span></td>
+                      <td className="px-4 py-4 text-right text-gray-300 font-mono">{u.caption}</td>
+                      <td className="px-4 py-4 text-right text-gray-300 font-mono">{u.prompt}</td>
+                      <td className="px-4 py-4 text-right text-white font-bold font-mono">{u.total} / {aiPricing.freeQuotaPerMonth}</td>
+                      <td className={`px-4 py-4 text-right font-mono ${u.overage > 0 ? 'text-amber-400 font-bold' : 'text-gray-700'}`}>
+                        {u.overage > 0 ? `+${u.overage}` : '—'}
+                      </td>
+                      <td className={`px-6 py-4 text-right font-mono font-bold ${u.overageJpy > 0 ? 'text-cyan-400' : 'text-gray-700'}`}>
+                        {u.overageJpy > 0 ? `¥${u.overageJpy.toLocaleString()}` : '無料枠内'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                {usageList.some(u => u.overageJpy > 0) && (
+                  <tfoot className="bg-black/50 border-t border-cyan-900/40">
+                    <tr>
+                      <td colSpan="5" className="px-6 py-3 text-right text-gray-400 font-bold tracking-widest">この月の請求総額</td>
+                      <td className="px-6 py-3 text-right text-cyan-400 font-bold font-mono text-[14px]">
+                        ¥{usageList.reduce((s, u) => s + u.overageJpy, 0).toLocaleString()}
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+
+            <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-xl p-4 text-[11px] text-cyan-200 leading-relaxed">
+              💡 計測対象: キャプション生成 + プロンプト自動生成 の合計回数。<br/>
+              月をまたぐと自動でカウントがリセットされ、過去月のデータは保持されます。
             </div>
           </div>
         )}

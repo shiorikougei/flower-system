@@ -127,13 +127,29 @@ export default function PortfolioPage() {
           color: newImage.color,
           vibe: newImage.vibe,
           price: newImage.price,
-          appName: appName
+          appName: appName,
+          tenantId: currentTenantId,   // ★ AI利用カウンター用
         })
       });
-      
+
       const data = await response.json();
       if (data.caption) {
         setNewImage({ ...newImage, caption: data.caption });
+      }
+
+      // ★ 月の無料枠を超えた場合はメッセージ表示
+      if (data.usage && data.usage.overage > 0) {
+        alert(
+          `⚠️ 今月のAI生成回数が無料枠（${data.usage.freeQuota}回）を超えました。\n` +
+          `超過: ${data.usage.overage}回 / 追加料金: ¥${data.usage.overageJpy.toLocaleString()}\n` +
+          `※請求は月末にまとめて発生します`
+        );
+      } else if (data.usage) {
+        // 残り回数が少ない時の警告（残10回以下）
+        const remaining = data.usage.freeQuota - data.usage.used;
+        if (remaining <= 10 && remaining > 0) {
+          console.log(`AI生成残り ${remaining}回（今月）`);
+        }
       }
     } catch (err) {
       alert('AI生成に失敗しました。');
