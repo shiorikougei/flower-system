@@ -40,7 +40,14 @@ export default function PrintSlipPage() {
 
   const o = orderData;
   const isDifferent = o.isRecipientDifferent;
-  const itemPrice = Number(o.itemPrice) || 0;
+
+  // ★ EC注文判定: cartItems があれば EC形式
+  const isEcOrder = o.orderType === 'ec' && Array.isArray(o.cartItems) && o.cartItems.length > 0;
+
+  // 金額計算: EC注文ならcartItemsから、それ以外は従来通り
+  const itemPrice = isEcOrder
+    ? o.cartItems.reduce((s, c) => s + Number(c.price) * Number(c.qty), 0)
+    : (Number(o.itemPrice) || 0);
   const shippingFee = Number(o.calculatedFee) || 0;
   const subTotal = itemPrice + shippingFee;
   const tax = Math.floor(subTotal * 0.1);
@@ -100,7 +107,10 @@ export default function PrintSlipPage() {
         <div className="relative z-10 flex flex-col h-full">
           <div>
             <div className="flex justify-between items-start border-b pb-1 mb-1.5" style={{ borderColor: colorCode }}>
-              <h1 className="text-lg font-bold tracking-widest" style={{ color: colorCode }}>{title}</h1>
+              <h1 className="text-lg font-bold tracking-widest flex items-center gap-2" style={{ color: colorCode }}>
+                {title}
+                {isEcOrder && <span className="text-[9px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">EC注文</span>}
+              </h1>
               <div className="text-right text-[9px] space-y-0.5">
                 <p>伝票：{orderId.slice(0, 8).toUpperCase()}　受付：{new Date().toLocaleDateString('ja-JP')}</p>
                 <p>お渡し：<span className="font-bold">{getMethodText(o.receiveMethod || o.deliveryType)}</span>　希望日：<span className="font-bold">{o.receiveDate || o.selectedDate || '未指定'}</span></p>
@@ -142,31 +152,56 @@ export default function PrintSlipPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b">
-                    <td className="p-1">
-                      <span className="font-bold text-xs">{o.flowerType}</span>
-                      <div className="text-[9px] text-gray-600 mt-0.5">用途: {o.flowerPurpose} / 色: {o.flowerColor} / イメージ: {o.flowerVibe}</div>
-                      
-                      {o.cardType === '立札' && (
-                        <div className="mt-1 p-1 border border-dashed border-gray-400 bg-gray-50 rounded w-fit pr-6 leading-tight">
-                          <p className="text-[8px] text-gray-500 mb-0.5 font-bold">【立札の内容】</p>
-                          <p className="font-bold text-[#c62828] text-[10px]">{o.tateInput1 || '祝'}</p>
-                          <p className="font-bold text-[11px] text-gray-800">{o.tateInput3 || o.tateInput2}</p>
-                        </div>
-                      )}
-                      
-                      {o.cardType === 'メッセージカード' && (
-                        <div className="mt-1 p-1 border border-dashed border-gray-400 bg-gray-50 rounded text-[9px] text-gray-800 italic">
-                          「{o.cardMessage}」
-                        </div>
-                      )}
-                    </td>
-                    <td className="p-1 text-center align-top">1</td>
-                    {showPrice && <td className="p-1 text-right align-top">¥{itemPrice.toLocaleString()}</td>}
-                  </tr>
+                  {isEcOrder ? (
+                    // ★ EC注文: cartItems を1行ずつ表示
+                    o.cartItems.map((c, idx) => (
+                      <tr key={idx} className="border-b">
+                        <td className="p-1">
+                          <span className="font-bold text-xs">{c.name}</span>
+                        </td>
+                        <td className="p-1 text-center align-top">{c.qty}</td>
+                        {showPrice && <td className="p-1 text-right align-top">¥{(Number(c.price) * Number(c.qty)).toLocaleString()}</td>}
+                      </tr>
+                    ))
+                  ) : (
+                    // 既存：カスタム注文
+                    <tr className="border-b">
+                      <td className="p-1">
+                        <span className="font-bold text-xs">{o.flowerType}</span>
+                        <div className="text-[9px] text-gray-600 mt-0.5">用途: {o.flowerPurpose} / 色: {o.flowerColor} / イメージ: {o.flowerVibe}</div>
+
+                        {o.cardType === '立札' && (
+                          <div className="mt-1 p-1 border border-dashed border-gray-400 bg-gray-50 rounded w-fit pr-6 leading-tight">
+                            <p className="text-[8px] text-gray-500 mb-0.5 font-bold">【立札の内容】</p>
+                            <p className="font-bold text-[#c62828] text-[10px]">{o.tateInput1 || '祝'}</p>
+                            <p className="font-bold text-[11px] text-gray-800">{o.tateInput3 || o.tateInput2}</p>
+                          </div>
+                        )}
+
+                        {o.cardType === 'メッセージカード' && (
+                          <div className="mt-1 p-1 border border-dashed border-gray-400 bg-gray-50 rounded text-[9px] text-gray-800 italic">
+                            「{o.cardMessage}」
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-1 text-center align-top">1</td>
+                      {showPrice && <td className="p-1 text-right align-top">¥{itemPrice.toLocaleString()}</td>}
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
+
+            {/* ★ EC注文 かつ お客様向け伝票（納品書・お客様控え）には「ありがとう」メッセージを入れる */}
+            {isEcOrder && (slipType === 'customer' || slipType === 'delivery') && (
+              <div className="border border-[#2D4B3E]/30 bg-[#FBFAF9] p-2 mb-1.5 rounded text-center">
+                <p className="text-[11px] font-bold text-[#2D4B3E] tracking-widest mb-0.5">Thank you for your order</p>
+                <p className="text-[9px] text-gray-700 leading-snug">
+                  この度はご注文いただき、誠にありがとうございました。<br/>
+                  またのご利用を心よりお待ちしております。
+                </p>
+              </div>
+            )}
 
             {showPrice && (
               <div className="flex justify-end mb-1.5">
@@ -333,9 +368,11 @@ export default function PrintSlipPage() {
           <button onClick={() => setPrintMode('delivery')} className={`flex-1 py-2.5 text-xs font-bold rounded-md transition-all ${printMode === 'delivery' ? 'bg-white shadow-sm border border-gray-300 text-[#f57f17]' : 'text-gray-500 hover:bg-gray-200'}`}>
             🚚 納品・受領書 のみ
           </button>
-          <button onClick={() => setPrintMode('card')} className={`flex-1 py-2.5 text-xs font-bold rounded-md transition-all ${printMode === 'card' ? 'bg-white shadow-sm border border-[#c62828] text-[#c62828]' : 'text-[#c62828] hover:bg-red-50 border border-transparent'}`}>
-            🏷️ 本番用 立札・カード印刷
-          </button>
+          {!isEcOrder && (
+            <button onClick={() => setPrintMode('card')} className={`flex-1 py-2.5 text-xs font-bold rounded-md transition-all ${printMode === 'card' ? 'bg-white shadow-sm border border-[#c62828] text-[#c62828]' : 'text-[#c62828] hover:bg-red-50 border border-transparent'}`}>
+              🏷️ 本番用 立札・カード印刷
+            </button>
+          )}
         </div>
       </div>
 
