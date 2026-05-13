@@ -394,15 +394,18 @@ export default function OrderDetailModal({
         `).join('');
         return `
           <div class="${fullPage ? 'slip-full' : 'slip'}" style="color:#222;">
-            <!-- 上部：店舗ロゴ・店舗情報 -->
-            <div style="text-align:center; padding-top:4mm; padding-bottom:6mm; border-bottom:0.5pt dashed #bbb;">
-              ${shopLogoUrl ? `<img src="${shopLogoUrl}" alt="${formatText(shopName)}" style="max-height:18mm; max-width:60mm; object-fit:contain; margin:0 auto 3mm auto; display:block;" />` : ''}
-              <div style="font-size:15pt; font-weight:900; color:#222; letter-spacing:0.2em; margin-bottom:2mm;">${formatText(shopName)}</div>
-              <div style="font-size:9pt; color:#555; line-height:1.6;">
-                <div>〒${formatText(shopZip)} ${formatText(shopAddress)}</div>
-                <div>TEL: ${formatText(shopTel)}</div>
-              </div>
+            <!-- 上部：タイトル -->
+            <div style="text-align:center; padding-top:4mm;">
+              <div style="font-size:11pt; letter-spacing:0.4em; color:#117768; font-weight:bold;">Thank you for choosing us</div>
+              <div style="font-size:22pt; font-weight:bold; letter-spacing:0.3em; margin-top:3mm; color:#222;">贈り物のご案内</div>
             </div>
+
+            <!-- タイトル下：ロゴ（大きめ・中央） -->
+            ${shopLogoUrl ? `
+              <div style="text-align:center; margin-top:8mm; padding-bottom:6mm; border-bottom:0.5pt dashed #bbb;">
+                <img src="${shopLogoUrl}" alt="${formatText(shopName)}" style="max-height:25mm; max-width:90mm; object-fit:contain; margin:0 auto; display:block;" />
+              </div>
+            ` : `<div style="margin-top:8mm; padding-bottom:6mm; border-bottom:0.5pt dashed #bbb;"></div>`}
 
             <!-- 中部：お届け先 + メッセージ -->
             <div style="margin:10mm auto 0 auto; max-width:130mm; text-align:center;">
@@ -424,13 +427,19 @@ export default function OrderDetailModal({
 
             <div style="margin:6mm auto 0 auto; max-width:130mm; text-align:center; font-size:9pt; color:#555; line-height:1.7;">
               お花のお手入れ方法やご不明な点がございましたら、<br/>
-              上記の店舗までお気軽にお問い合わせください。
+              下記の店舗までお気軽にお問い合わせください。
             </div>
 
-            <!-- 下部：タイトル -->
-            <div style="margin-top:auto; padding-top:8mm; text-align:center;">
-              <div style="font-size:11pt; letter-spacing:0.4em; color:#117768; font-weight:bold;">Thank you for choosing us</div>
-              <div style="font-size:22pt; font-weight:bold; letter-spacing:0.3em; margin-top:3mm; color:#222;">贈り物のご案内</div>
+            <!-- 下部：店舗情報（左にロゴ + 店名） -->
+            <div style="margin-top:auto; padding-top:8mm; border-top:0.5pt dashed #bbb; text-align:center;">
+              <div style="display:flex; align-items:center; justify-content:center; gap:3mm; margin-bottom:3mm;">
+                ${shopLogoUrl ? `<img src="${shopLogoUrl}" alt="" style="height:8mm; max-width:18mm; object-fit:contain;" />` : ''}
+                <div style="font-size:14pt; font-weight:900; color:#222; letter-spacing:0.15em;">${formatText(shopName)}</div>
+              </div>
+              <div style="font-size:9pt; color:#555; line-height:1.7;">
+                <div>〒${formatText(shopZip)} ${formatText(shopAddress)}</div>
+                <div>TEL: ${formatText(shopTel)}</div>
+              </div>
             </div>
           </div>
         `;
