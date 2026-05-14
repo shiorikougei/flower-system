@@ -46,9 +46,9 @@ export default function HelpCenterPage() {
             </h1>
             <p className="text-[11px] font-bold text-[#999] mt-1">機能の使い方・設定方法・トラブル対処</p>
           </div>
-          <button onClick={printGuide} className="flex items-center gap-1.5 bg-[#FBFAF9] border border-[#EAEAEA] text-[#555] text-[11px] font-bold px-3 py-2 rounded-lg hover:bg-[#EAEAEA]">
-            <Printer size={14}/> マニュアル印刷
-          </button>
+          <a href="/staff/manual" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 bg-[#2D4B3E] text-white text-[11px] font-bold px-3 py-2 rounded-lg hover:bg-[#1f352b]">
+            <Printer size={14}/> 印刷用マニュアルを開く
+          </a>
         </div>
 
         {/* 検索バー */}
