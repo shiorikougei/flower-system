@@ -61,10 +61,11 @@ export default function SettingsPage() {
   const [deliveryAreas, setDeliveryAreas] = useState([]);
   const [shippingSizes, setShippingSizes] = useState(['80', '100', '120']);
   const [shippingRates, setShippingRates] = useState([]); 
-  const [boxFeeConfig, setBoxFeeConfig] = useState({ 
+  const [boxFeeConfig, setBoxFeeConfig] = useState({
     type: 'flat', flatFee: 500, priceTiers: [{ minPrice: 0, fee: 300 }, { minPrice: 10000, fee: 0 }], itemFees: {},
     returnFeeType: 'flat', returnFeeValue: 1000, coolBinEnabled: true, coolBinPeriods: [],
-    freeShippingThresholdEnabled: false, freeShippingThreshold: 15000, isBundleDiscount: true
+    freeShippingThresholdEnabled: false, freeShippingThreshold: 15000, isBundleDiscount: true,
+    applyToDelivery: false, // ★ 自社配達時も箱代を加算するか（デフォルト=しない）
   });
   
   const [timeSlots, setTimeSlots] = useState({
@@ -817,6 +818,26 @@ export default function SettingsPage() {
       <div className="pt-6 space-y-4 border-t border-[#EAEAEA]">
         <label className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Box size={16}/> 梱包（箱代）の計算ロジック</label>
         <div className="flex gap-2 bg-[#FBFAF9] p-1 rounded-xl w-fit">{[{id:'flat',l:'一律'},{id:'price_based',l:'商品代ベース'}].map(t=>(<button key={t.id} onClick={()=>setBoxFeeConfig({...boxFeeConfig, type:t.id})} className={`px-4 py-2 rounded-lg text-xs font-bold ${boxFeeConfig.type===t.id?'bg-white shadow text-[#2D4B3E]':'text-[#999999]'}`}>{t.l}</button>))}</div>
+
+        {/* ★ 自社配達時の箱代加算オプション */}
+        <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA] space-y-2">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={Boolean(boxFeeConfig.applyToDelivery)}
+              onChange={(e) => setBoxFeeConfig({...boxFeeConfig, applyToDelivery: e.target.checked})}
+              className="mt-1 w-4 h-4 accent-[#2D4B3E]"
+            />
+            <div>
+              <p className="text-[12px] font-bold text-[#111]">自社配達時も箱代を加算する</p>
+              <p className="text-[10px] text-[#555] mt-1 leading-relaxed">
+                通常、箱代は<strong>業者配送（佐川等）の時のみ</strong>加算されます。<br/>
+                自社で配達する場合も箱代を取りたい場合は ON にしてください。
+              </p>
+            </div>
+          </label>
+        </div>
+
         {boxFeeConfig.type === 'flat' ? (
           <div className="flex items-center gap-2 bg-[#FBFAF9] p-4 rounded-xl border w-fit"><span className="text-[12px] font-bold">一律加算:</span><input type="number" value={boxFeeConfig.flatFee} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, flatFee:Number(e.target.value)})} className="w-20 h-8 rounded border px-2 text-right font-bold focus:border-[#2D4B3E] outline-none"/>円</div>
         ) : (

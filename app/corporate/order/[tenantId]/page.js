@@ -289,7 +289,7 @@ export default function CorporateOrderPage() {
         else if (normalizedAddress.includes("北区") || normalizedAddress.includes("中央区") || normalizedAddress.includes("東区") || normalizedAddress.includes("西区")) matchedFee = 500;
       }
 
-      if (matchedFee !== null) { 
+      if (matchedFee !== null) {
         baseFee = matchedFee;
         if (selectedItemSettings?.hasReturn) {
           const returnType = appSettings?.boxFeeConfig?.returnFeeType || 'flat';
@@ -297,9 +297,20 @@ export default function CorporateOrderPage() {
           if (returnType === 'flat') pickupFeeAmt = returnVal;
           else if (returnType === 'percent') pickupFeeAmt = Math.floor(baseFee * (returnVal / 100));
         }
-        setCalculatedFee(baseFee); setPickupFee(pickupFeeAmt); setAreaError(''); 
-      } else { 
-        setCalculatedFee(null); setPickupFee(0); setAreaError('自社配達エリア外です。配送をご利用ください。'); 
+        // ★ 自社配達でも箱代を加算する設定の場合
+        if (appSettings?.boxFeeConfig?.applyToDelivery) {
+          if (appSettings.boxFeeConfig.type === 'flat') {
+            boxFee = Number(appSettings.boxFeeConfig.flatFee) || 0;
+          } else if (appSettings.boxFeeConfig.type === 'price_based') {
+            const tiers = appSettings.boxFeeConfig.priceTiers || [];
+            const sorted = [...tiers].sort((a, b) => b.minPrice - a.minPrice);
+            const matchedTier = sorted.find(t => Number(itemPrice) >= Number(t.minPrice));
+            boxFee = matchedTier ? Number(matchedTier.fee) : 0;
+          }
+        }
+        setCalculatedFee(baseFee + boxFee); setPickupFee(pickupFeeAmt); setAreaError('');
+      } else {
+        setCalculatedFee(null); setPickupFee(0); setAreaError('自社配達エリア外です。配送をご利用ください。');
       }
     } else if (receiveMethod === 'sagawa') {
       const prefMatch = rawAddress.match(/^(北海道|東京都|(?:京都|大阪)府|.{2,3}県)/);
