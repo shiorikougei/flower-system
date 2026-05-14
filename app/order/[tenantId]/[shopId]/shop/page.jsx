@@ -9,7 +9,7 @@ import { getCart, addToCart, getCartCount } from '@/utils/cart';
 export default function ShopCatalogPage() {
   const params = useParams();
   const router = useRouter();
-  const tenantId = params?.tenantId || 'default';
+  const tenantId = String(params?.tenantId || 'default').toLowerCase();
   const shopId = params?.shopId || 'default';
 
   const [appSettings, setAppSettings] = useState(null);

@@ -10,7 +10,7 @@ import {
 export default function OrderHistoryPage() {
   const params = useParams();
   const router = useRouter();
-  const tenantId = params?.tenantId || 'default';
+  const tenantId = String(params?.tenantId || 'default').toLowerCase();
   const shopId = params?.shopId || 'default';
 
   // 共通

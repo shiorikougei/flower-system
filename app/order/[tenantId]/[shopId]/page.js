@@ -10,7 +10,8 @@ import { Sparkles, ShoppingBag, ChevronRight, History, User } from 'lucide-react
 
 export default function OrderEntryPage() {
   const params = useParams();
-  const tenantId = params?.tenantId || 'default';
+  // ★ tenantId はDB保存時に小文字に統一されているため、URL大文字でも小文字でクエリ
+  const tenantId = String(params?.tenantId || 'default').toLowerCase();
   const shopId = params?.shopId || 'default';
 
   const [appSettings, setAppSettings] = useState(null);

@@ -88,7 +88,7 @@ function OrderFormContent() {
   const searchParams = useSearchParams();
   const imgId = searchParams.get('img'); // ★ URLから img= のIDを取得
 
-  const tenantId = params?.tenantId || 'default';
+  const tenantId = String(params?.tenantId || 'default').toLowerCase();
   const shopId = params?.shopId || 'default';
 
   const [appSettings, setAppSettings] = useState(null);

@@ -13,7 +13,7 @@ function MyPageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const tenantId = params?.tenantId || 'default';
+  const tenantId = String(params?.tenantId || 'default').toLowerCase();
   const shopId = params?.shopId || 'default';
   const token = searchParams.get('token');
 

@@ -9,7 +9,7 @@ function ThanksContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const tenantId = params?.tenantId || 'default';
+  const tenantId = String(params?.tenantId || 'default').toLowerCase();
   const shopId = params?.shopId || 'default';
 
   // ★ URLパラメータから payment / order_id / from を取得
