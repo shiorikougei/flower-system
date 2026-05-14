@@ -2,9 +2,11 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { supabase } from '@/utils/supabase';
 import {
   ChevronLeft, Package, AlertCircle, CheckCircle2, Mail,
-  Calendar, Plus, Trash2, FileText, RotateCcw, Heart
+  Calendar, Plus, Trash2, FileText, RotateCcw, Heart,
+  Lock, KeyRound, Eye, EyeOff
 } from 'lucide-react';
 
 function MyPageContent() {
@@ -24,6 +26,13 @@ function MyPageContent() {
   // 記念日追加フォーム
   const [annivForm, setAnnivForm] = useState({ title: '', month: '', day: '', notes: '' });
   const [showAnnivForm, setShowAnnivForm] = useState(false);
+
+  // パスワード設定
+  const [hasPassword, setHasPassword] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [pwForm, setPwForm] = useState({ password: '', confirm: '' });
+  const [showPasswordChars, setShowPasswordChars] = useState(false);
+  const [isSavingPw, setIsSavingPw] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -48,10 +57,64 @@ function MyPageContent() {
         setData(mypage);
         setAnniversaries(annivs.items || []);
         if (settings.settings) setAppSettings(settings.settings);
+        // パスワード設定状況も取得
+        if (mypage.email) {
+          fetch(`/api/customer-has-password?tenantId=${tenantId}&email=${encodeURIComponent(mypage.email)}`)
+            .then(r => r.json())
+            .then(d => setHasPassword(Boolean(d.hasPassword)))
+            .catch(() => {});
+        }
       })
       .catch(() => setError('読み込みに失敗しました'))
       .finally(() => setIsLoading(false));
   }, [token, tenantId]);
+
+  // パスワード設定/変更
+  async function savePassword() {
+    if (!pwForm.password || pwForm.password.length < 8) {
+      alert('パスワードは8文字以上で設定してください');
+      return;
+    }
+    if (pwForm.password !== pwForm.confirm) {
+      alert('確認用パスワードが一致しません');
+      return;
+    }
+    setIsSavingPw(true);
+    try {
+      const res = await fetch('/api/customer-set-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newPassword: pwForm.password }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setHasPassword(true);
+      setShowPasswordForm(false);
+      setPwForm({ password: '', confirm: '' });
+      alert('パスワードを設定しました 🔒\n次回からメアド + パスワードでログイン可能です。');
+    } catch (e) {
+      alert('設定に失敗しました: ' + e.message);
+    } finally {
+      setIsSavingPw(false);
+    }
+  }
+
+  // パスワード解除
+  async function removePassword() {
+    if (!confirm('パスワードログインを解除しますか？\n以降はMagic Linkのみでログインできます。')) return;
+    try {
+      const res = await fetch('/api/customer-set-password', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+      if (!res.ok) throw new Error('解除失敗');
+      setHasPassword(false);
+      alert('パスワードを解除しました');
+    } catch (e) {
+      alert(e.message);
+    }
+  }
 
   function formatDate(s) {
     if (!s) return '-';
@@ -206,24 +269,98 @@ function MyPageContent() {
     if (w) { w.document.open(); w.document.write(html); w.document.close(); }
   }
 
-  // 前回注文と同じ内容で再注文
-  function reorder(o) {
+  // 前回注文と同じ内容で再注文（在庫チェック付き）
+  async function reorder(o) {
     const d = o.order_data || {};
     if (Array.isArray(d.cartItems) && d.cartItems.length > 0) {
-      // EC注文 → カートに復元してカート画面へ
-      const cartKey = `florix_cart_${tenantId}`;
-      const cart = d.cartItems.map(c => ({
-        id: c.productId || c.id,
-        name: c.name,
-        price: c.price,
-        qty: c.qty,
-        imageUrl: c.imageUrl || '',
-      }));
-      try { localStorage.setItem(cartKey, JSON.stringify(cart)); } catch (e) {}
-      router.push(`/order/${tenantId}/${shopId}/cart`);
+      // ★ EC注文 → 現在の在庫状況を確認してから復元
+      try {
+        const productIds = d.cartItems.map(c => c.productId || c.id).filter(Boolean);
+        const { data: currentProducts } = await supabase
+          .from('products')
+          .select('id, name, stock, restock_allowed, is_active, price, image_url')
+          .in('id', productIds);
+        const productMap = new Map((currentProducts || []).map(p => [p.id, p]));
+
+        const restored = [];
+        const excluded = [];   // 完全に除外（一点もの・販売停止）
+        const adjusted = [];   // 数量調整
+
+        for (const c of d.cartItems) {
+          const pid = c.productId || c.id;
+          const p = productMap.get(pid);
+
+          // 商品が存在しない or 非公開
+          if (!p || !p.is_active) {
+            excluded.push({ name: c.name, reason: '販売終了' });
+            continue;
+          }
+
+          // 在庫切れ + 一点もの → 再販不可
+          if (Number(p.stock) <= 0 && p.restock_allowed === false) {
+            excluded.push({ name: c.name, reason: '一点もの・販売終了' });
+            continue;
+          }
+
+          // 在庫切れ + 再入荷可（restock_allowed=true）→ 入荷待ち。一旦除外
+          if (Number(p.stock) <= 0 && p.restock_allowed === true) {
+            excluded.push({ name: c.name, reason: '在庫切れ（入荷待ち）' });
+            continue;
+          }
+
+          // 数量調整
+          let qty = Number(c.qty);
+          if (Number(p.stock) < qty) {
+            adjusted.push({ name: c.name, requested: qty, actual: p.stock });
+            qty = p.stock;
+          }
+
+          restored.push({
+            id: pid,
+            name: p.name,
+            price: Number(p.price),
+            qty,
+            imageUrl: p.image_url || c.imageUrl || '',
+          });
+        }
+
+        // 全部除外された
+        if (restored.length === 0) {
+          let msg = '再注文できる商品がありません。\n\n';
+          if (excluded.length > 0) {
+            msg += '【ご注文できない商品】\n';
+            msg += excluded.map(e => `・${e.name}（${e.reason}）`).join('\n');
+          }
+          msg += '\n\n商品ページから他の商品をお選びください。';
+          alert(msg);
+          return;
+        }
+
+        // 一部 or 全部復元できた
+        let msg = '';
+        if (excluded.length > 0) {
+          msg += '【一部商品が除外されました】\n';
+          msg += excluded.map(e => `・${e.name}（${e.reason}）`).join('\n') + '\n\n';
+        }
+        if (adjusted.length > 0) {
+          msg += '【数量を調整しました】\n';
+          msg += adjusted.map(a => `・${a.name}: ${a.requested}個 → ${a.actual}個（在庫上限）`).join('\n') + '\n\n';
+        }
+        msg += `カートに ${restored.length}件 の商品を追加しました。`;
+        if (excluded.length > 0 || adjusted.length > 0) {
+          alert(msg);
+        }
+
+        // カート復元
+        const cartKey = `florix_cart_${tenantId}`;
+        try { localStorage.setItem(cartKey, JSON.stringify(restored)); } catch (e) {}
+        router.push(`/order/${tenantId}/${shopId}/cart`);
+      } catch (err) {
+        console.error('reorder error:', err);
+        alert('在庫の確認に失敗しました。もう一度お試しください。');
+      }
     } else {
-      // カスタム注文 → 入口経由でオーダーメイドへ（prefill 情報は付かないが画面遷移）
-      // (TODO: prefillクエリ対応は次フェーズ)
+      // カスタム注文 → 入口経由でオーダーメイドへ
       alert('オーダーメイド注文ページへ移動します。前回の内容をご参考にご入力ください。');
       router.push(`/order/${tenantId}/${shopId}/custom`);
     }
@@ -262,6 +399,88 @@ function MyPageContent() {
               <p className="text-[14px] font-bold text-[#111111] mt-1">{data.email}</p>
               {customerNameDefault && <p className="text-[12px] text-[#555] mt-2">{customerNameDefault} 様</p>}
             </div>
+
+            {/* ★ パスワード設定（任意） */}
+            <section className="bg-white rounded-2xl border border-[#EAEAEA] overflow-hidden">
+              <div className="p-5 border-b border-[#EAEAEA] flex items-center justify-between flex-wrap gap-2">
+                <h2 className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2">
+                  <Lock size={16}/> ログインパスワード（任意）
+                </h2>
+                <div className="flex items-center gap-2">
+                  {hasPassword && (
+                    <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">設定済み</span>
+                  )}
+                  {!showPasswordForm && (
+                    <button
+                      onClick={() => setShowPasswordForm(true)}
+                      className="flex items-center gap-1 bg-[#2D4B3E] text-white text-[11px] font-bold px-3 py-1.5 rounded-lg hover:bg-[#1f352b]"
+                    >
+                      <KeyRound size={12}/> {hasPassword ? '変更' : '設定'}
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="p-5">
+                {!showPasswordForm ? (
+                  <p className="text-[11px] text-[#999] leading-relaxed">
+                    {hasPassword
+                      ? 'メールアドレス + パスワードでログインできます。万一忘れた場合はMagic Linkで再設定可能です。'
+                      : '未設定の場合は毎回「メールで届くリンク」でログインしていただきます。パスワードを設定すると、メールを開かずにマイページへ素早くアクセスできます🔑'}
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-[11px] text-[#555] leading-relaxed">8文字以上のパスワードを入力してください</p>
+                    <div className="relative">
+                      <input
+                        type={showPasswordChars ? 'text' : 'password'}
+                        placeholder="新しいパスワード"
+                        value={pwForm.password}
+                        onChange={(e) => setPwForm({ ...pwForm, password: e.target.value })}
+                        className="w-full h-11 px-3 pr-10 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswordChars(s => !s)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#999] hover:text-[#555]"
+                      >
+                        {showPasswordChars ? <EyeOff size={14}/> : <Eye size={14}/>}
+                      </button>
+                    </div>
+                    <input
+                      type={showPasswordChars ? 'text' : 'password'}
+                      placeholder="確認のためもう一度"
+                      value={pwForm.confirm}
+                      onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
+                      className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"
+                    />
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        onClick={() => { setShowPasswordForm(false); setPwForm({ password: '', confirm: '' }); }}
+                        disabled={isSavingPw}
+                        className="flex-1 h-10 bg-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-lg disabled:opacity-50"
+                      >
+                        キャンセル
+                      </button>
+                      <button
+                        onClick={savePassword}
+                        disabled={isSavingPw}
+                        className="flex-1 h-10 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-lg hover:bg-[#1f352b] disabled:opacity-50"
+                      >
+                        {isSavingPw ? '保存中...' : (hasPassword ? '変更する' : '設定する')}
+                      </button>
+                    </div>
+                    {hasPassword && (
+                      <button
+                        onClick={removePassword}
+                        className="w-full text-[11px] text-red-500 hover:text-red-700 underline pt-2"
+                      >
+                        パスワードログインを解除する
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </section>
 
             {/* 記念日リマインダー */}
             <section className="bg-white rounded-2xl border border-[#EAEAEA] overflow-hidden">

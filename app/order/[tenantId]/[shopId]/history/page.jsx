@@ -1,22 +1,78 @@
 'use client';
-import { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Search, ChevronLeft, Package, AlertCircle, CheckCircle2, Mail } from 'lucide-react';
+import {
+  Search, ChevronLeft, Package, AlertCircle, CheckCircle2, Mail,
+  Lock, KeyRound, ArrowRight
+} from 'lucide-react';
 
 export default function OrderHistoryPage() {
   const params = useParams();
+  const router = useRouter();
   const tenantId = params?.tenantId || 'default';
   const shopId = params?.shopId || 'default';
 
+  // 共通
   const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
+
+  // パスワード認証
+  const [hasPassword, setHasPassword] = useState(null);    // null=未チェック, true/false
+  const [password, setPassword] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Magic Link
+  const [magicLinkSending, setMagicLinkSending] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
+
+  // 注文番号検索
   const [orderId, setOrderId] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [results, setResults] = useState([]);
-  const [error, setError] = useState('');
   const [searched, setSearched] = useState(false);
-  const [magicLinkSending, setMagicLinkSending] = useState(false);
-  const [magicLinkSent, setMagicLinkSent] = useState(false);
+
+  // メアドを入力した時、パスワード設定済みか確認
+  useEffect(() => {
+    const e = email.trim().toLowerCase();
+    if (!e || !e.includes('@')) {
+      setHasPassword(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/customer-has-password?tenantId=${tenantId}&email=${encodeURIComponent(e)}`);
+        const data = await res.json();
+        setHasPassword(Boolean(data.hasPassword));
+      } catch { setHasPassword(false); }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [email, tenantId]);
+
+  async function handlePasswordLogin(e) {
+    e?.preventDefault?.();
+    if (!email.trim() || !password) {
+      setError('メールアドレスとパスワードを入力してください');
+      return;
+    }
+    setError('');
+    setIsLoggingIn(true);
+    try {
+      const res = await fetch('/api/customer-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId, email: email.trim(), password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'ログインに失敗しました');
+      // マイページへ遷移
+      router.push(`/order/${tenantId}/${shopId}/mypage?token=${encodeURIComponent(data.token)}`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  }
 
   async function sendMagicLink() {
     if (!email.trim()) {
@@ -97,72 +153,86 @@ export default function OrderHistoryPage() {
           <Link href={`/order/${tenantId}/${shopId}`} className="flex items-center gap-1 text-[12px] font-bold text-[#555555] hover:text-[#2D4B3E]">
             <ChevronLeft size={16}/> 戻る
           </Link>
-          <h1 className="text-[16px] font-bold text-[#2D4B3E]">ご注文の確認</h1>
+          <h1 className="text-[16px] font-bold text-[#2D4B3E]">ご注文の確認・マイページ</h1>
           <div className="w-12" />
         </div>
       </header>
 
       <main className="max-w-[800px] mx-auto px-6 pt-10 space-y-8">
         <div>
-          <h1 className="text-[24px] font-bold text-[#2D4B3E]">ご注文の確認・履歴</h1>
-          <p className="text-[12px] text-[#555555] mt-1">ご注文番号とメールアドレスをご入力いただくと、注文内容を確認できます。</p>
+          <h1 className="text-[24px] font-bold text-[#2D4B3E]">マイページにログイン</h1>
+          <p className="text-[12px] text-[#555555] mt-1">ご注文時のメールアドレスでログインしてください。</p>
         </div>
 
-        <form onSubmit={handleSearch} className="bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-4">
-          <div className="space-y-1">
-            <label className="text-[11px] font-bold text-[#999999]">ご注文番号</label>
-            <input
-              type="text"
-              value={orderId}
-              onChange={(e) => setOrderId(e.target.value)}
-              placeholder="例: 1a2b3c4d  または完全な注文番号"
-              className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none"
-              required
-            />
-            <p className="text-[10px] text-[#999999]">注文確認メールの最初の8文字でも検索できます</p>
-          </div>
+        {/* メールアドレス入力 */}
+        <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-4">
           <div className="space-y-1">
             <label className="text-[11px] font-bold text-[#999999]">ご注文時のメールアドレス</label>
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setMagicLinkSent(false); }}
               placeholder="example@example.com"
               className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none"
-              required
             />
           </div>
-          <button
-            type="submit"
-            disabled={isSearching}
-            className="w-full h-12 bg-[#2D4B3E] text-white rounded-xl font-bold text-[13px] hover:bg-[#1f352b] disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            <Search size={16}/> {isSearching ? '検索中...' : '注文を検索する'}
-          </button>
-        </form>
 
-        {/* Magic Link: 注文番号がわからない時 */}
-        <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-3">
-          <p className="text-[12px] font-bold text-[#555555] flex items-center gap-2">
-            <Mail size={14}/> 注文番号がわからない時
-          </p>
-          <p className="text-[11px] text-[#999999] leading-relaxed">
-            上のメールアドレスを入力した上で、こちらをクリックすると、すべての注文履歴をまとめて確認できるリンクをメールでお送りします。
-          </p>
-          {magicLinkSent ? (
-            <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2 text-green-700">
-              <CheckCircle2 size={16}/>
-              <p className="text-[12px] font-bold">確認リンクをメールでお送りしました</p>
+          {/* パスワード設定済みの場合: パスワード入力欄を優先表示 */}
+          {hasPassword && (
+            <form onSubmit={handlePasswordLogin} className="space-y-3 animate-in fade-in">
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-[#999999] flex items-center gap-1"><Lock size={11}/> パスワード</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="パスワード"
+                  className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isLoggingIn}
+                className="w-full h-12 bg-[#2D4B3E] text-white rounded-xl font-bold text-[13px] hover:bg-[#1f352b] disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <KeyRound size={16}/> {isLoggingIn ? 'ログイン中...' : 'パスワードでログイン'}
+              </button>
+              <button
+                type="button"
+                onClick={sendMagicLink}
+                disabled={magicLinkSending}
+                className="w-full text-[11px] text-[#999] hover:text-[#2D4B3E] underline pt-1"
+              >
+                パスワードを忘れた場合（メールでログインリンクを受け取る）
+              </button>
+            </form>
+          )}
+
+          {/* パスワード未設定 or 未確認: Magic Link 優先 */}
+          {(!hasPassword || hasPassword === null) && email.trim() && (
+            <div className="space-y-3 animate-in fade-in">
+              <p className="text-[11px] text-[#999999] leading-relaxed bg-[#FBFAF9] p-3 rounded-lg">
+                {hasPassword === null
+                  ? 'メールアドレスを確認中...'
+                  : '初回ログインです。お送りするメールのリンクからログインしてください。マイページでパスワードを設定すれば次回からはパスワードでログインできます🔑'}
+              </p>
+              {magicLinkSent ? (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2 text-green-700">
+                  <CheckCircle2 size={16}/>
+                  <p className="text-[12px] font-bold">ログインリンクをメールでお送りしました</p>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={sendMagicLink}
+                  disabled={magicLinkSending || !email.trim()}
+                  className="w-full h-12 bg-[#2D4B3E] text-white rounded-xl font-bold text-[13px] hover:bg-[#1f352b] disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <Mail size={16}/> {magicLinkSending ? '送信中...' : 'ログインリンクをメールで受け取る'}
+                </button>
+              )}
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={sendMagicLink}
-              disabled={magicLinkSending || !email}
-              className="w-full h-11 bg-white border border-[#2D4B3E] text-[#2D4B3E] rounded-xl text-[12px] font-bold hover:bg-[#2D4B3E] hover:text-white transition-all disabled:opacity-50"
-            >
-              {magicLinkSending ? '送信中...' : '注文一覧のリンクをメールで受け取る'}
-            </button>
           )}
         </div>
 
@@ -172,6 +242,34 @@ export default function OrderHistoryPage() {
             <p className="text-[12px] font-bold">{error}</p>
           </div>
         )}
+
+        {/* 注文番号での検索（個別注文のみ確認したい場合の補助） */}
+        <details className="bg-white rounded-2xl border border-[#EAEAEA]">
+          <summary className="cursor-pointer p-5 text-[13px] font-bold text-[#555] hover:bg-[#FBFAF9] flex items-center gap-2">
+            <Search size={14}/> 注文番号で単一注文を検索する（ログイン不要）
+          </summary>
+          <form onSubmit={handleSearch} className="p-5 pt-0 space-y-4 border-t border-[#EAEAEA]">
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-[#999999]">ご注文番号</label>
+              <input
+                type="text"
+                value={orderId}
+                onChange={(e) => setOrderId(e.target.value)}
+                placeholder="例: 1a2b3c4d  または完全な注文番号"
+                className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none"
+                required
+              />
+              <p className="text-[10px] text-[#999999]">注文確認メールに記載の最初の8文字でも検索できます</p>
+            </div>
+            <button
+              type="submit"
+              disabled={isSearching || !email.trim()}
+              className="w-full h-11 bg-white border border-[#2D4B3E] text-[#2D4B3E] rounded-xl font-bold text-[12px] hover:bg-[#2D4B3E] hover:text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <Search size={14}/> {isSearching ? '検索中...' : '注文を検索する'}
+            </button>
+          </form>
+        </details>
 
         {searched && !error && results.length > 0 && (
           <div className="space-y-4">
