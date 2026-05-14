@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 import {
   Home, ClipboardList, PlusSquare, CalendarDays, Truck, Briefcase,
-  Users, Building2, Settings, TrendingUp, Lock, Sparkles, MessageSquare, X, Send, Image as ImageIcon, ShoppingBag, UserCheck, ChevronDown, History, Clock
+  Users, Building2, Settings, TrendingUp, Lock, Sparkles, MessageSquare, X, Send, Image as ImageIcon, ShoppingBag, UserCheck, ChevronDown, History, Clock, BookOpen
 } from 'lucide-react';
 import { getCurrentStaff, setCurrentStaff, ROLE_LABELS, ROLE_DESCRIPTIONS, can } from '@/utils/staffRole';
 import { isFeatureEnabled } from '@/utils/features';
@@ -119,9 +119,10 @@ export default function StaffLayout({ children }) {
       ],
     },
     {
-      name: '設定',
+      name: '設定・ヘルプ',
       items: [
         { name: '各種設定', path: '/staff/settings', icon: Settings, perm: 'settings' },
+        { name: 'ヘルプセンター', path: '/staff/help', icon: BookOpen, perm: 'home' },
       ],
     },
     {

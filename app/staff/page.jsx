@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { getCurrentStaff } from '@/utils/staffRole';
 import { clockIn, clockOut, breakStart, breakEnd } from '@/utils/attendance';
+import HelpTooltip from '@/components/HelpTooltip';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -236,7 +237,7 @@ export default function DashboardPage() {
                 <Clock size={22}/>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-bold text-[#999] tracking-widest">あなたの勤怠</p>
+                <p className="text-[10px] font-bold text-[#999] tracking-widest flex items-center gap-1">あなたの勤怠 <HelpTooltip articleId="punch_clock" size={11}/></p>
                 {currentStaff?.name ? (
                   <>
                     <p className="text-[15px] font-bold text-[#111]">{currentStaff.name}</p>

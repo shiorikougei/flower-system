@@ -7,6 +7,7 @@ import {
   ChevronRight, Calendar as CalendarIcon, CalendarDays, Box, MapPin, X,
   LayoutTemplate, Package, Eye, EyeOff, Sparkles, AlertCircle, Link as LinkIcon, Building2, CreditCard, Palette
 } from 'lucide-react';
+import HelpTooltip from '@/components/HelpTooltip';
 
 import TatefudaPreview from '@/components/TatefudaPreview';
 import PaymentTab from '@/components/settings/PaymentTab';
@@ -895,7 +896,7 @@ export default function SettingsPage() {
       : `https://noodleflorix.com/api/line/webhook/${currentTenantId || 'default'}`;
     return (
       <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-6 animate-in fade-in text-left max-w-[800px]">
-        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2">💬 LINE公式アカウント連携</h2>
+        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2">💬 LINE公式アカウント連携 <HelpTooltip articleId="line_setup"/></h2>
         <p className="text-[12px] text-[#555555] leading-relaxed">
           LINE Messaging API と連携すると、注文確認・完成写真・入金確認等の通知を
           <strong className="text-[#117768]"> メール + LINE 両方</strong>でお客様にお届けできます。
@@ -1002,7 +1003,7 @@ export default function SettingsPage() {
     return (
       <div className="space-y-6 animate-in fade-in max-w-[900px]">
         <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-4">
-          <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2"><CalendarDays size={18}/> シフトパターン</h2>
+          <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2"><CalendarDays size={18}/> シフトパターン <HelpTooltip articleId="shift_setup"/></h2>
           <p className="text-[11px] text-[#999]">早番・遅番など、店舗で使うシフトパターンを自由に登録できます。</p>
           <div className="space-y-2">
             {shiftConfig.patterns.map((p, i) => (
@@ -1080,7 +1081,7 @@ export default function SettingsPage() {
 
         {/* ★ 給与計算設定 */}
         <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-4">
-          <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2">💰 給与計算（控除率・残業）</h2>
+          <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2">💰 給与計算（控除率・残業） <HelpTooltip articleId="payroll_setup"/></h2>
           <p className="text-[11px] text-[#999] leading-relaxed">
             勤怠記録と時給から、設定した料率通りに給与計算します。<strong className="text-amber-600">最終チェックは社会保険労務士にご依頼ください。</strong>
           </p>
@@ -1148,7 +1149,7 @@ export default function SettingsPage() {
   const renderStaffTab = () => (
     <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-6 animate-in fade-in text-left">
       <div>
-        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><User size={20}/> スタッフ管理</h2>
+        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><User size={20}/> スタッフ管理 <HelpTooltip articleId="role_explain"/></h2>
         <p className="text-[11px] text-[#999] mt-1 leading-relaxed">
           スタッフを登録すると、各画面の上部のセレクターから「現在誰が操作しているか」を切り替えられます。
           権限により見れる機能が変わります。
@@ -1173,7 +1174,7 @@ export default function SettingsPage() {
 
       {/* ★ PIN認証設定 */}
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
-        <p className="text-[13px] font-bold text-amber-900">🔐 スタッフ切替時のPIN認証</p>
+        <p className="text-[13px] font-bold text-amber-900">🔐 スタッフ切替時のPIN認証 <HelpTooltip articleId="pin_lock"/></p>
         <label className="flex items-start gap-3 cursor-pointer">
           <input type="checkbox" checked={Boolean(staffAuthConfig.requirePin)}
             onChange={(e) => setStaffAuthConfig({...staffAuthConfig, requirePin: e.target.checked})}
