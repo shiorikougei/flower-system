@@ -1,11 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
-import { 
-  Settings as SettingsIcon, ListChecks, Store, Tag, Truck, User, Mail, 
-  Trash2, Plus, Clock, ShieldCheck, RotateCcw, Image as ImageIcon, Ruler, 
-  ChevronRight, Calendar as CalendarIcon, Box, MapPin, X,
-  LayoutTemplate, Package, Eye, EyeOff, Sparkles, AlertCircle, Link as LinkIcon, Building2, CreditCard, Palette 
+import {
+  Settings as SettingsIcon, ListChecks, Store, Tag, Truck, User, Mail,
+  Trash2, Plus, Clock, ShieldCheck, RotateCcw, Image as ImageIcon, Ruler,
+  ChevronRight, Calendar as CalendarIcon, CalendarDays, Box, MapPin, X,
+  LayoutTemplate, Package, Eye, EyeOff, Sparkles, AlertCircle, Link as LinkIcon, Building2, CreditCard, Palette
 } from 'lucide-react';
 
 import TatefudaPreview from '@/components/TatefudaPreview';
@@ -106,6 +106,22 @@ export default function SettingsPage() {
     requireForOwnerOnly: false,  // オーナー以外もPIN必須にするか
   });
 
+  // ★ シフト設定
+  const [shiftConfig, setShiftConfig] = useState({
+    patterns: [
+      { id: 'pat_morning', name: '早番', startTime: '09:00', endTime: '14:00', color: '#FFE4B5' },
+      { id: 'pat_evening', name: '遅番', startTime: '14:00', endTime: '20:00', color: '#B5D4F5' },
+      { id: 'pat_full',    name: '全日', startTime: '09:00', endTime: '20:00', color: '#C5E8C5' },
+    ],
+    requiredStaff: {
+      mon: 1, tue: 1, wed: 1, thu: 1, fri: 1, sat: 2, sun: 2, holiday: 2,
+    },
+    holidayRule: {
+      submitDeadlineDay: 20,    // 毎月20日までに翌月分提出
+      maxPriorities: 1,         // 第1希望のみ（増やせば複数希望可）
+    },
+  });
+
   const tabs = [
     { id: 'general', label: '基本・ロゴ', icon: SettingsIcon },
     { id: 'status', label: 'ステータス', icon: ListChecks },
@@ -116,6 +132,7 @@ export default function SettingsPage() {
     { id: 'rules', label: '立札デザイン', icon: LayoutTemplate },
     { id: 'staff_order', label: '店舗受付', icon: Clock },
     { id: 'staff', label: 'スタッフ', icon: User },
+    { id: 'shift', label: 'シフト設定', icon: CalendarDays },
     { id: 'message', label: '案内文管理', icon: Mail },
     { id: 'payment', label: '決済設定', icon: CreditCard },
     { id: 'line', label: 'LINE連携', icon: Mail },
@@ -139,6 +156,7 @@ export default function SettingsPage() {
     if (s.timeSlots) setTimeSlots(s.timeSlots);
     if (s.lineConfig) setLineConfig(prev => ({...prev, ...s.lineConfig}));
     if (s.staffAuthConfig) setStaffAuthConfig(prev => ({...prev, ...s.staffAuthConfig}));
+    if (s.shiftConfig) setShiftConfig(prev => ({...prev, ...s.shiftConfig}));
 
     if (s.features && s.features.b2b) setIsB2BEnabled(true);
   };
@@ -192,6 +210,7 @@ export default function SettingsPage() {
         shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReplyTemplates, staffOrderConfig, timeSlots,
         lineConfig,
         staffAuthConfig,
+        shiftConfig,
       };
       await supabase.from('app_settings').upsert({ id: currentTenantId, settings_data: payload });
       showToast('success', '設定を保存しました');
@@ -931,6 +950,96 @@ export default function SettingsPage() {
     );
   };
 
+  // ★ シフト設定タブ
+  const renderShiftTab = () => {
+    const dayLabels = { mon:'月', tue:'火', wed:'水', thu:'木', fri:'金', sat:'土', sun:'日', holiday:'祝' };
+    const updatePattern = (i, key, val) => {
+      const next = [...shiftConfig.patterns];
+      next[i] = { ...next[i], [key]: val };
+      setShiftConfig({ ...shiftConfig, patterns: next });
+    };
+    return (
+      <div className="space-y-6 animate-in fade-in max-w-[900px]">
+        <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-4">
+          <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2"><CalendarDays size={18}/> シフトパターン</h2>
+          <p className="text-[11px] text-[#999]">早番・遅番など、店舗で使うシフトパターンを自由に登録できます。</p>
+          <div className="space-y-2">
+            {shiftConfig.patterns.map((p, i) => (
+              <div key={p.id} className="flex flex-wrap items-center gap-2 p-3 rounded-xl border border-[#EAEAEA]" style={{ background: p.color + '40' }}>
+                <input type="text" value={p.name} onChange={e => updatePattern(i, 'name', e.target.value)} placeholder="名称"
+                  className="flex-1 min-w-[120px] h-10 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[13px] font-bold outline-none"/>
+                <input type="time" value={p.startTime} onChange={e => updatePattern(i, 'startTime', e.target.value)}
+                  className="w-28 h-10 px-2 bg-white border border-[#EAEAEA] rounded-lg text-[12px] outline-none"/>
+                <span className="text-[#999]">〜</span>
+                <input type="time" value={p.endTime} onChange={e => updatePattern(i, 'endTime', e.target.value)}
+                  className="w-28 h-10 px-2 bg-white border border-[#EAEAEA] rounded-lg text-[12px] outline-none"/>
+                <input type="color" value={p.color || '#FFE4B5'} onChange={e => updatePattern(i, 'color', e.target.value)}
+                  className="w-10 h-10 border border-[#EAEAEA] rounded-lg cursor-pointer"/>
+                <button onClick={() => setShiftConfig({...shiftConfig, patterns: shiftConfig.patterns.filter((_, idx) => idx !== i)})}
+                  className="text-red-300 hover:text-red-500 p-1"><Trash2 size={14}/></button>
+              </div>
+            ))}
+            <button
+              onClick={() => setShiftConfig({...shiftConfig, patterns: [...shiftConfig.patterns, { id: `pat_${Date.now()}`, name: '', startTime: '10:00', endTime: '18:00', color: '#FFE4B5' }]})}
+              className="text-[12px] font-bold text-[#2D4B3E] border border-dashed border-[#2D4B3E]/40 rounded-xl px-4 py-2 hover:bg-[#2D4B3E]/5"
+            >
+              <Plus size={12} className="inline mr-1"/> パターンを追加
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-4">
+          <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2"><User size={18}/> 必要人数（曜日別）</h2>
+          <p className="text-[11px] text-[#999]">曜日ごとに最低でも必要なスタッフ人数。自動シフト作成時の目安になります。</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {Object.entries(dayLabels).map(([key, label]) => (
+              <div key={key} className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-3 text-center">
+                <p className="text-[12px] font-bold text-[#555] mb-2">{label}{key === 'holiday' ? '日' : '曜'}</p>
+                <input type="number" min="0" max="20"
+                  value={shiftConfig.requiredStaff?.[key] ?? 1}
+                  onChange={e => setShiftConfig({...shiftConfig, requiredStaff: {...(shiftConfig.requiredStaff || {}), [key]: Number(e.target.value)}})}
+                  className="w-16 h-10 text-center text-[16px] font-bold bg-white border border-[#EAEAEA] rounded-lg outline-none"/>
+                <p className="text-[10px] text-[#999] mt-1">名</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-4">
+          <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2"><CalendarIcon size={18}/> 休み希望の運用ルール</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] font-bold text-[#999] tracking-widest">提出〆切日</label>
+              <div className="mt-1 flex items-center gap-2">
+                <span className="text-[12px] text-[#555]">毎月</span>
+                <input type="number" min="1" max="31"
+                  value={shiftConfig.holidayRule?.submitDeadlineDay ?? 20}
+                  onChange={e => setShiftConfig({...shiftConfig, holidayRule: {...(shiftConfig.holidayRule || {}), submitDeadlineDay: Number(e.target.value)}})}
+                  className="w-16 h-10 px-3 text-center bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] font-bold outline-none"/>
+                <span className="text-[12px] text-[#555]">日まで翌月分</span>
+              </div>
+            </div>
+            <div>
+              <label className="text-[11px] font-bold text-[#999] tracking-widest">第〇希望まで提出可能</label>
+              <select
+                value={shiftConfig.holidayRule?.maxPriorities ?? 1}
+                onChange={e => setShiftConfig({...shiftConfig, holidayRule: {...(shiftConfig.holidayRule || {}), maxPriorities: Number(e.target.value)}})}
+                className="w-full mt-1 h-10 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] font-bold outline-none"
+              >
+                <option value={1}>第1希望のみ</option>
+                <option value={2}>第2希望まで</option>
+                <option value={3}>第3希望まで</option>
+              </select>
+            </div>
+          </div>
+          <p className="text-[10px] text-[#999] bg-[#FBFAF9] p-2 rounded-lg leading-relaxed">
+            💡 〆切日を過ぎても受付けるが、自動シフト作成時の優先度が下がる仕様です。
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   const renderStaffTab = () => (
     <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-6 animate-in fade-in text-left">
       <div>
@@ -982,8 +1091,18 @@ export default function SettingsPage() {
       </div>
 
       <div className="space-y-2">
-        {staffList.map((s, i) => (
-          <div key={i} className="bg-[#FBFAF9] p-4 rounded-2xl border border-[#EAEAEA] flex flex-col md:flex-row md:items-center gap-3">
+        {staffList.map((s, i) => {
+          const dayLabels = { mon:'月', tue:'火', wed:'水', thu:'木', fri:'金', sat:'土', sun:'日', holiday:'祝' };
+          const fixedDayOff = Array.isArray(s.fixedDayOff) ? s.fixedDayOff : [];
+          const toggleDayOff = (key) => {
+            const next = [...staffList];
+            const cur = Array.isArray(next[i].fixedDayOff) ? next[i].fixedDayOff : [];
+            next[i] = { ...next[i], fixedDayOff: cur.includes(key) ? cur.filter(d => d !== key) : [...cur, key] };
+            setStaffList(next);
+          };
+          return (
+          <div key={i} className="bg-[#FBFAF9] p-4 rounded-2xl border border-[#EAEAEA] space-y-3">
+            <div className="flex flex-col md:flex-row md:items-center gap-3">
             <div className="flex flex-col flex-1 min-w-0">
               <span className="font-bold text-[14px]">{s.name}</span>
               <span className="text-[9px] text-[#999999] font-bold tracking-tight">所属: {s.store === 'all' ? '全店' : shops.find(sh=>sh.id===Number(s.store))?.name || '不明'}</span>
@@ -1019,8 +1138,29 @@ export default function SettingsPage() {
               <option value="parttime">🟠 バイト</option>
             </select>
             <button onClick={()=>setStaffList(staffList.filter((_,idx)=>idx!==i))} className="text-red-300 hover:text-red-500 p-2"><Trash2 size={16}/></button>
+            </div>
+
+            {/* ★ 固定休 */}
+            <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-[#EAEAEA]">
+              <span className="text-[10px] font-bold text-[#999] tracking-widest">固定休:</span>
+              {Object.entries(dayLabels).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => toggleDayOff(key)}
+                  className={`w-9 h-9 rounded-lg text-[11px] font-bold transition-all ${
+                    fixedDayOff.includes(key)
+                      ? 'bg-[#D97D54] text-white border border-[#D97D54]'
+                      : 'bg-white text-[#555] border border-[#EAEAEA] hover:border-[#D97D54]/40'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+              {fixedDayOff.length === 0 && <span className="text-[10px] text-[#999]">なし（毎日勤務可能）</span>}
+            </div>
           </div>
-        ))}
+          );
+        })}
 
         <div className="flex flex-col md:flex-row gap-2 pt-4 border-t border-[#EAEAEA]">
           <input type="text" placeholder="氏名" value={newStaffName} onChange={(e)=>setNewStaffName(e.target.value)} className="flex-[2] h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E]"/>
@@ -1265,6 +1405,7 @@ export default function SettingsPage() {
         {activeTab === 'rules' && renderRulesTab()}
         {activeTab === 'staff_order' && renderStaffOrderTab()}
         {activeTab === 'staff' && renderStaffTab()}
+        {activeTab === 'shift' && renderShiftTab()}
         {activeTab === 'message' && renderMessageTab()}
         {activeTab === 'payment' && renderPaymentTab()}
         {activeTab === 'line' && renderLineTab()}

@@ -92,6 +92,7 @@ export default function StaffLayout({ children }) {
     { name: '顧客管理', path: '/staff/customers', icon: Users, perm: 'customers' },
     { name: '作品管理', path: '/staff/portfolio', icon: ImageIcon, perm: 'portfolio' },
     { name: '商品管理（EC）', path: '/staff/products', icon: ShoppingBag, perm: 'products' },
+    { name: 'シフト管理', path: '/staff/shift', icon: CalendarDays, perm: 'shift' },
     { name: '各種設定', path: '/staff/settings', icon: Settings, perm: 'settings' },
     { name: '操作履歴・勤怠', path: '/staff/audit', icon: History, perm: 'audit' },
   ];

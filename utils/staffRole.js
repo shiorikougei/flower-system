@@ -41,6 +41,7 @@ export const PERMISSIONS = {
     deleteOrder: true,     // 注文削除
     editPrice: true,       // 価格・金額の編集
     audit: true,           // 操作履歴・勤怠閲覧
+    shift: true,           // シフト管理
   },
   staff: {
     settings: false,
@@ -57,6 +58,7 @@ export const PERMISSIONS = {
     deleteOrder: false,
     editPrice: true,
     audit: false,
+    shift: true,           // スタッフも自分のシフト確認は可
   },
   parttime: {
     settings: false,
@@ -73,6 +75,7 @@ export const PERMISSIONS = {
     deleteOrder: false,
     editPrice: false,
     audit: false,
+    shift: true,           // バイトもシフト確認は可
   },
 };
 
