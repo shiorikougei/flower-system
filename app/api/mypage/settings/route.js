@@ -29,6 +29,7 @@ export async function GET(request) {
         generalConfig: {
           appName: s.generalConfig?.appName || '',
           logoUrl: s.generalConfig?.logoUrl || '',
+          receiptStamp: s.generalConfig?.receiptStamp || { mode: 'auto', imageUrl: '' },
         },
         shops: (s.shops || []).map(sh => ({
           id: sh.id,

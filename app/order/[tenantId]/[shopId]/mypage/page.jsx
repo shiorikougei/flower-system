@@ -261,6 +261,8 @@ function MyPageContent() {
     const shopPhone = shop.phone || '';
     const shopInvoice = shop.invoiceNumber || '';
     const logoUrl = appSettings?.generalConfig?.logoUrl || '';
+    // ★ 印影モード: 'none' | 'auto' | 'image'
+    const stampCfg = appSettings?.generalConfig?.receiptStamp || { mode: 'auto', imageUrl: '' };
     const safeId = String(o.id).slice(0, 8);
     const issueDate = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
     const orderDate = new Date(o.created_at).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -294,6 +296,7 @@ function MyPageContent() {
         .shop-info { font-size: 9pt; line-height: 1.7; }
         .shop-name { font-size: 13pt; font-weight: 900; margin-bottom: 2mm; }
         .stamp { width: 24mm; height: 24mm; border: 2pt solid #c41e3a; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #c41e3a; font-size: 7pt; font-weight: bold; opacity: 0.6; line-height: 1.2; text-align: center; }
+        .stamp-img { width: 28mm; height: 28mm; object-fit: contain; opacity: 0.85; }
       </style></head><body>
       <div class="container">
         <div class="title">領 収 書</div>
@@ -321,7 +324,13 @@ function MyPageContent() {
             <div>TEL: ${shopPhone}</div>
             ${shopInvoice ? `<div>登録番号: ${shopInvoice}</div>` : ''}
           </div>
-          <div class="stamp">${shopName}<br/>領収印</div>
+          ${
+            stampCfg.mode === 'none'
+              ? '<div></div>'
+              : stampCfg.mode === 'image' && stampCfg.imageUrl
+                ? `<img src="${stampCfg.imageUrl}" alt="印影" class="stamp-img"/>`
+                : `<div class="stamp">${shopName}<br/>領収印</div>`
+          }
         </div>
       </div>
       <script>window.onload = function() { setTimeout(function() { window.print(); }, 400); };</script>

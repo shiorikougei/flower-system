@@ -34,10 +34,12 @@ export default function SettingsPage() {
   // ★追加：コピーしたタグの名前を一時的に保持するステート
   const [copiedTag, setCopiedTag] = useState(null);
 
-  const [generalConfig, setGeneralConfig] = useState({ 
-    tenantId: '', 
-    appName: 'FLORIX', 
-    logoUrl: '', logoSize: 100, logoTransparent: false, slipBgUrl: '', slipBgOpacity: 50, systemPassword: '7777'
+  const [generalConfig, setGeneralConfig] = useState({
+    tenantId: '',
+    appName: 'FLORIX',
+    logoUrl: '', logoSize: 100, logoTransparent: false, slipBgUrl: '', slipBgOpacity: 50, systemPassword: '7777',
+    // ★ 領収書の印影設定: mode = 'none' | 'auto' | 'image'
+    receiptStamp: { mode: 'auto', imageUrl: '' }
   });
 
   const [paymentConfig, setPaymentConfig] = useState({
@@ -199,6 +201,22 @@ export default function SettingsPage() {
     r.readAsDataURL(file);
   };
 
+  // ★ 印影画像アップロード（receiptStamp.imageUrl にbase64 or Storage URL格納）
+  const handleStampImg = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 1024 * 1024) {
+      alert('画像サイズは1MB以下にしてください');
+      return;
+    }
+    const r = new FileReader();
+    r.onload = (ev) => setGeneralConfig({
+      ...generalConfig,
+      receiptStamp: { ...(generalConfig.receiptStamp || {}), mode: 'image', imageUrl: ev.target.result }
+    });
+    r.readAsDataURL(file);
+  };
+
   const handleTimeSlotChange = (method, index, value) => {
     setTimeSlots(prev => {
       const newSlots = { ...prev };
@@ -260,6 +278,88 @@ export default function SettingsPage() {
               <div className="flex justify-center border-t pt-4"><div className="relative w-48 h-32 bg-white border shadow-sm overflow-hidden flex flex-col justify-between p-2"><div className="absolute inset-0 z-0 grayscale-[30%] pointer-events-none" style={{ backgroundImage: `url(${generalConfig.slipBgUrl})`, backgroundSize: 'cover', opacity: generalConfig.slipBgOpacity / 100 }} /><span className="relative z-10 text-[10px] font-bold text-green-700">受 注 書</span></div></div>
             </div>
           )}
+        </div>
+
+        {/* ★ 領収書の印影設定 */}
+        <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
+          <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2">🧾 領収書の印影</h3>
+          <p className="text-[11px] text-[#999] leading-relaxed">
+            お客様マイページから発行される領収書PDFの印影を設定します。日本の法律上「印影は必須ではない」ため、印影なしでも有効です。
+          </p>
+
+          <div className="space-y-2">
+            <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer ${(generalConfig.receiptStamp?.mode || 'auto') === 'none' ? 'border-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#EAEAEA]'}`}>
+              <input type="radio" name="receipt-stamp-mode" value="none"
+                checked={(generalConfig.receiptStamp?.mode || 'auto') === 'none'}
+                onChange={() => setGeneralConfig({...generalConfig, receiptStamp: {...(generalConfig.receiptStamp || {}), mode: 'none'}})}
+                className="mt-1 accent-[#2D4B3E]"/>
+              <div className="flex-1">
+                <p className="text-[13px] font-bold text-[#111]">A. 印影なし（テキストのみ）</p>
+                <p className="text-[11px] text-[#555] mt-1">
+                  領収書には印影を表示しません。<br/>
+                  💡 <strong>メリット:</strong> 不正利用リスクゼロ・法的にもOK<br/>
+                  💡 <strong>デメリット:</strong> 「公式っぽくない」と感じるお客様も
+                </p>
+              </div>
+            </label>
+
+            <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer ${(generalConfig.receiptStamp?.mode || 'auto') === 'auto' ? 'border-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#EAEAEA]'}`}>
+              <input type="radio" name="receipt-stamp-mode" value="auto"
+                checked={(generalConfig.receiptStamp?.mode || 'auto') === 'auto'}
+                onChange={() => setGeneralConfig({...generalConfig, receiptStamp: {...(generalConfig.receiptStamp || {}), mode: 'auto'}})}
+                className="mt-1 accent-[#2D4B3E]"/>
+              <div className="flex-1">
+                <p className="text-[13px] font-bold text-[#111]">B. 自動生成印影 <span className="text-[10px] text-[#117768] ml-2">推奨</span></p>
+                <p className="text-[11px] text-[#555] mt-1">
+                  店舗名から自動生成される赤い丸印を表示します（実印影ではないデザイン）。<br/>
+                  💡 <strong>メリット:</strong> 安全（不正コピーされても被害がない）・店舗ごとに自動生成
+                </p>
+                {/* プレビュー */}
+                <div className="mt-3 inline-flex items-center justify-center w-20 h-20 border-2 border-red-600 rounded-full text-red-600 text-[8px] font-bold opacity-60 leading-tight text-center">
+                  {generalConfig.appName || 'お花屋さん'}<br/>領収印
+                </div>
+              </div>
+            </label>
+
+            <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer ${(generalConfig.receiptStamp?.mode || 'auto') === 'image' ? 'border-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#EAEAEA]'}`}>
+              <input type="radio" name="receipt-stamp-mode" value="image"
+                checked={(generalConfig.receiptStamp?.mode || 'auto') === 'image'}
+                onChange={() => setGeneralConfig({...generalConfig, receiptStamp: {...(generalConfig.receiptStamp || {}), mode: 'image'}})}
+                className="mt-1 accent-[#2D4B3E]"/>
+              <div className="flex-1">
+                <p className="text-[13px] font-bold text-[#111]">C. 画像アップロード（実印影）</p>
+                <p className="text-[11px] text-[#555] mt-1 leading-relaxed">
+                  実際の店舗印を画像（透過PNG推奨）でアップロードして表示します。<br/>
+                  💡 <strong>メリット:</strong> 一番リアル<br/>
+                  ⚠️ <strong>注意:</strong> 領収書PDFから画像を抜き取って悪用されるリスクがあります（実害は限定的だが、認印の使用を推奨）
+                </p>
+
+                {(generalConfig.receiptStamp?.mode || 'auto') === 'image' && (
+                  <div className="mt-3 space-y-3 p-3 bg-white rounded-lg border border-[#EAEAEA]">
+                    {!generalConfig.receiptStamp?.imageUrl ? (
+                      <>
+                        <input type="file" accept="image/png,image/jpeg" onChange={handleStampImg} className="block w-full text-[11px]"/>
+                        <p className="text-[10px] text-[#999] leading-relaxed">
+                          📌 推奨: 透過PNG（背景なし）・正方形・1MB以下<br/>
+                          📌 印影以外（背景）が透過されていないと、領収書上で目立つ白枠が出ます
+                        </p>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-4">
+                        <img src={generalConfig.receiptStamp.imageUrl} alt="印影" className="w-20 h-20 object-contain border border-[#EAEAEA] rounded"/>
+                        <div className="flex-1">
+                          <button onClick={() => setGeneralConfig({...generalConfig, receiptStamp: {...generalConfig.receiptStamp, imageUrl: ''}})}
+                            className="text-red-500 hover:text-red-700 text-[11px] font-bold flex items-center gap-1">
+                            <Trash2 size={12}/> 画像を削除
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </label>
+          </div>
         </div>
 
         <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
