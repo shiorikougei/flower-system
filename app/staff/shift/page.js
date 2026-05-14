@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/utils/supabase';
-import { ChevronLeft, ChevronRight, RefreshCw, Lock, Unlock, X, Save } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, Lock, Unlock, X, Save, Sparkles, Heart, BarChart2, CalendarDays, AlertCircle } from 'lucide-react';
 import { canCurrent } from '@/utils/staffRole';
 
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -18,6 +18,10 @@ export default function ShiftPage() {
   const [customMode, setCustomMode] = useState(false);
   const [customForm, setCustomForm] = useState({ name: '', startTime: '10:00', endTime: '18:00' });
   const [allowed, setAllowed] = useState(true);
+  const [holidayRequests, setHolidayRequests] = useState([]);
+  const [attendance, setAttendance] = useState([]);
+  const [viewMode, setViewMode] = useState('shift'); // 'shift' | 'holiday' | 'attendance_check'
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     setAllowed(canCurrent('manageStaff'));
@@ -47,12 +51,36 @@ export default function ShiftPage() {
       const lastDay = new Date(year, month, 0).getDate();
       const from = `${year}-${String(month).padStart(2,'0')}-01`;
       const to = `${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
-      const res = await fetch(`/api/staff/shift?from=${from}&to=${to}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      const d = await res.json();
-      setShifts(d.items || []);
+      const yearMonth = `${year}-${String(month).padStart(2,'0')}`;
+      const headers = { Authorization: `Bearer ${session.access_token}` };
+      const [sRes, hRes, aRes] = await Promise.all([
+        fetch(`/api/staff/shift?from=${from}&to=${to}`, { headers }).then(r => r.json()),
+        fetch(`/api/staff/holiday-request?yearMonth=${yearMonth}`, { headers }).then(r => r.json()).catch(() => ({ items: [] })),
+        fetch(`/api/staff/attendance?from=${from}&to=${to}`, { headers }).then(r => r.json()).catch(() => ({ items: [] })),
+      ]);
+      setShifts(sRes.items || []);
+      setHolidayRequests(hRes.items || []);
+      setAttendance(aRes.items || []);
     } finally { setIsLoading(false); }
+  }
+
+  async function generateShifts() {
+    if (!confirm(`${year}年${month}月のシフトを自動生成しますか？\n（ロック済みのシフトは保持されます）`)) return;
+    setIsGenerating(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const yearMonth = `${year}-${String(month).padStart(2,'0')}`;
+      const res = await fetch('/api/staff/shift-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ yearMonth }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      alert(data.message + (data.lackingDays?.length > 0 ? `\n\n人手不足の日:\n${data.lackingDays.map(l => `${l.date} (${l.actual}/${l.needed}名)`).join('\n')}` : ''));
+      loadShifts();
+    } catch (e) { alert(e.message); }
+    finally { setIsGenerating(false); }
   }
 
   useEffect(() => { loadShifts(); }, [year, month]);
@@ -136,22 +164,130 @@ export default function ShiftPage() {
 
   return (
     <main className="pb-32 font-sans text-left">
-      <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] px-6 md:px-8 py-4 sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-[18px] md:text-[20px] font-bold text-[#2D4B3E] tracking-tight">シフト管理</h1>
-          <p className="text-[11px] font-bold text-[#999] mt-1">月別シフトの確認・編集</p>
+      <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] px-6 md:px-8 py-4 sticky top-0 z-10">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <div>
+            <h1 className="text-[18px] md:text-[20px] font-bold text-[#2D4B3E] tracking-tight">シフト管理</h1>
+            <p className="text-[11px] font-bold text-[#999] mt-1">月別シフトの確認・編集・自動生成</p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button onClick={generateShifts} disabled={isGenerating} className="bg-[#117768] text-white text-[12px] font-bold px-4 h-9 rounded-lg hover:bg-[#0f6a5b] disabled:opacity-50 flex items-center gap-1.5">
+              <Sparkles size={14}/> {isGenerating ? '生成中...' : '自動生成'}
+            </button>
+            <button onClick={() => changeMonth(-1)} className="w-9 h-9 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg flex items-center justify-center hover:bg-[#EAEAEA]"><ChevronLeft size={16}/></button>
+            <span className="text-[15px] font-bold text-[#2D4B3E] min-w-[100px] text-center">{year}年{month}月</span>
+            <button onClick={() => changeMonth(1)} className="w-9 h-9 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg flex items-center justify-center hover:bg-[#EAEAEA]"><ChevronRight size={16}/></button>
+            <button onClick={loadShifts} className="p-2 hover:bg-[#FBFAF9] rounded-full text-[#999]"><RefreshCw size={16} className={isLoading ? 'animate-spin' : ''}/></button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => changeMonth(-1)} className="w-9 h-9 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg flex items-center justify-center hover:bg-[#EAEAEA]"><ChevronLeft size={16}/></button>
-          <span className="text-[15px] font-bold text-[#2D4B3E] min-w-[100px] text-center">{year}年{month}月</span>
-          <button onClick={() => changeMonth(1)} className="w-9 h-9 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg flex items-center justify-center hover:bg-[#EAEAEA]"><ChevronRight size={16}/></button>
-          <button onClick={loadShifts} className="ml-2 p-2 hover:bg-[#FBFAF9] rounded-full text-[#999]"><RefreshCw size={16} className={isLoading ? 'animate-spin' : ''}/></button>
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={() => setViewMode('shift')} className={`px-3 py-1.5 text-[11px] font-bold rounded-lg ${viewMode === 'shift' ? 'bg-[#2D4B3E] text-white' : 'bg-[#FBFAF9] text-[#555]'}`}>
+            <CalendarDays size={11} className="inline mr-1"/> シフト表
+          </button>
+          <button onClick={() => setViewMode('holiday')} className={`px-3 py-1.5 text-[11px] font-bold rounded-lg ${viewMode === 'holiday' ? 'bg-[#2D4B3E] text-white' : 'bg-[#FBFAF9] text-[#555]'}`}>
+            <Heart size={11} className="inline mr-1"/> 希望休一覧 ({holidayRequests.length})
+          </button>
+          <button onClick={() => setViewMode('attendance_check')} className={`px-3 py-1.5 text-[11px] font-bold rounded-lg ${viewMode === 'attendance_check' ? 'bg-[#2D4B3E] text-white' : 'bg-[#FBFAF9] text-[#555]'}`}>
+            <BarChart2 size={11} className="inline mr-1"/> 打刻照合
+          </button>
         </div>
       </header>
 
       <div className="max-w-[1400px] mx-auto p-4 md:p-6">
         {staffList.length === 0 ? (
           <p className="p-12 text-center text-[#999] text-[13px]">スタッフが登録されていません。設定→スタッフ管理から追加してください。</p>
+        ) : viewMode === 'holiday' ? (
+          // ★ 希望休一覧モード
+          <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm p-5">
+            <h3 className="text-[14px] font-bold text-[#2D4B3E] mb-4 flex items-center gap-2">
+              <Heart size={14} className="text-amber-500"/> {year}年{month}月の希望休
+            </h3>
+            {holidayRequests.length === 0 ? (
+              <p className="text-[12px] text-[#999] text-center py-8">提出された希望休はありません</p>
+            ) : (
+              <div className="space-y-2">
+                {Object.entries(holidayRequests.reduce((acc, h) => {
+                  if (!acc[h.staff_name]) acc[h.staff_name] = [];
+                  acc[h.staff_name].push(h);
+                  return acc;
+                }, {})).map(([name, reqs]) => (
+                  <div key={name} className="bg-[#FBFAF9] rounded-xl p-3 border border-[#EAEAEA]">
+                    <p className="text-[13px] font-bold text-[#111] mb-2">{name} <span className="text-[10px] text-[#999] font-normal ml-1">{reqs.length}日</span></p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {reqs.sort((a,b) => a.date.localeCompare(b.date)).map(r => (
+                        <span key={r.id} className="bg-amber-100 border border-amber-300 rounded px-2 py-1 text-[11px] font-bold text-amber-900">
+                          {new Date(r.date).getDate()}日 ({DAY_LABELS[DAY_KEYS[new Date(r.date).getDay()]]})
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : viewMode === 'attendance_check' ? (
+          // ★ 打刻 vs シフト 照合モード
+          <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm overflow-hidden">
+            <div className="p-5 border-b border-[#EAEAEA]">
+              <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2">
+                <BarChart2 size={14}/> 予定 vs 実績 ({year}年{month}月)
+              </h3>
+              <p className="text-[10px] text-[#999] mt-1">遅刻=出勤打刻 &gt; 予定+15分 / 早退=退勤打刻 &lt; 予定-15分 / 欠勤=予定あり打刻なし</p>
+            </div>
+            <table className="w-full text-[11px]">
+              <thead className="bg-[#FBFAF9] border-b border-[#EAEAEA] text-[10px] font-bold text-[#999]">
+                <tr>
+                  <th className="px-3 py-2 text-left">日付</th>
+                  <th className="px-3 py-2 text-left">スタッフ</th>
+                  <th className="px-3 py-2 text-left">予定</th>
+                  <th className="px-3 py-2 text-left">実績</th>
+                  <th className="px-3 py-2 text-center">判定</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#F7F7F7]">
+                {(() => {
+                  // シフトと打刻を日付・スタッフでマッチング
+                  const rows = [];
+                  shifts.filter(s => !s.is_off).forEach(sh => {
+                    const att = attendance.find(a =>
+                      a.staff_name === sh.staff_name &&
+                      a.clock_in_at?.split('T')[0] === sh.date
+                    );
+                    let status = '正常';
+                    let statusClass = 'text-green-600 bg-green-50';
+                    if (!att) { status = '欠勤'; statusClass = 'text-red-600 bg-red-50'; }
+                    else {
+                      const planStart = sh.start_time ? new Date(`${sh.date}T${sh.start_time}:00`) : null;
+                      const planEnd = sh.end_time ? new Date(`${sh.date}T${sh.end_time}:00`) : null;
+                      const actStart = new Date(att.clock_in_at);
+                      const actEnd = att.clock_out_at ? new Date(att.clock_out_at) : null;
+                      const issues = [];
+                      if (planStart && (actStart - planStart) > 15 * 60000) issues.push('遅刻');
+                      if (planEnd && actEnd && (planEnd - actEnd) > 15 * 60000) issues.push('早退');
+                      if (planEnd && !actEnd) issues.push('退勤忘れ?');
+                      if (issues.length > 0) {
+                        status = issues.join('+');
+                        statusClass = 'text-amber-600 bg-amber-50';
+                      }
+                    }
+                    rows.push({ sh, att, status, statusClass });
+                  });
+                  if (rows.length === 0) {
+                    return <tr><td colSpan="5" className="text-center py-8 text-[#999]">シフト or 打刻データがありません</td></tr>;
+                  }
+                  return rows.sort((a,b) => a.sh.date.localeCompare(b.sh.date)).map(({ sh, att, status, statusClass }, i) => (
+                    <tr key={i}>
+                      <td className="px-3 py-2 font-mono">{sh.date.slice(5)}</td>
+                      <td className="px-3 py-2 font-bold">{sh.staff_name}</td>
+                      <td className="px-3 py-2 text-[#555]">{sh.start_time}-{sh.end_time}</td>
+                      <td className="px-3 py-2 text-[#555]">{att ? `${new Date(att.clock_in_at).toTimeString().slice(0,5)}-${att.clock_out_at ? new Date(att.clock_out_at).toTimeString().slice(0,5) : '出勤中'}` : '-'}</td>
+                      <td className="px-3 py-2 text-center"><span className={`px-2 py-0.5 rounded text-[10px] font-bold ${statusClass}`}>{status}</span></td>
+                    </tr>
+                  ));
+                })()}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm overflow-x-auto">
             <table className="border-collapse text-[10px]">
