@@ -1118,11 +1118,11 @@ export default function SettingsPage() {
                 <p className="text-[9px] text-[#999] mt-0.5">簡易源泉</p>
               </div>
               <div>
-                <label className="text-[10px] font-bold text-[#999] tracking-widest">所得税閾値 (円)</label>
+                <label className="text-[10px] font-bold text-[#999] tracking-widest">所得税の課税開始ライン (円)</label>
                 <input type="number" value={payrollConfig.incomeTaxThreshold}
                   onChange={e => setPayrollConfig({...payrollConfig, incomeTaxThreshold: Number(e.target.value)})}
                   className="w-full mt-1 h-10 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] font-bold outline-none"/>
-                <p className="text-[9px] text-[#999] mt-0.5">月給これ未満は非課税</p>
+                <p className="text-[9px] text-[#999] mt-0.5">月給がこの金額未満なら<br/>所得税は引かない（標準: 88,000円）</p>
               </div>
               <div>
                 <label className="text-[10px] font-bold text-[#999] tracking-widest">残業割増 (%)</label>
