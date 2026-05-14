@@ -79,9 +79,107 @@ export async function POST(request) {
       return NextResponse.json({ ok: true, id: open.id });
     }
 
+    if (action === 'manual_insert') {
+      // ★ 手動挿入: 出勤忘れ・退勤忘れの後追い記録
+      const { clockInAt, clockOutAt, notes } = await (async () => {
+        // すでにrequestを消費しているので回避
+        return { clockInAt: null, clockOutAt: null, notes: null };
+      })();
+      // ↑ 上記は使えないので fallthrough
+      return NextResponse.json({ error: 'manual_insertは PUT を使ってください' }, { status: 400 });
+    }
+
     return NextResponse.json({ error: '不正なaction' }, { status: 400 });
   } catch (err) {
     console.error('[attendance POST]', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+// ★ 編集（手動修正）+ 手動挿入
+// PUT /api/staff/attendance
+// Body: { id?, staffName, clockInAt, clockOutAt?, notes? }
+//   id があれば更新、なければ新規挿入
+export async function PUT(request) {
+  try {
+    const auth = await authAndTenant(request);
+    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
+    const { id, staffName, clockInAt, clockOutAt, notes } = await request.json();
+    if (!staffName || !clockInAt) return NextResponse.json({ error: 'staffName/clockInAt必須' }, { status: 400 });
+
+    // 退勤時刻 < 出勤時刻 はエラー
+    if (clockOutAt && new Date(clockOutAt) <= new Date(clockInAt)) {
+      return NextResponse.json({ error: '退勤時刻は出勤時刻より後にしてください' }, { status: 400 });
+    }
+
+    // duration 自動計算
+    const duration = clockOutAt
+      ? Math.floor((new Date(clockOutAt) - new Date(clockInAt)) / 60000)
+      : null;
+
+    if (id) {
+      // 編集
+      const { data: existing } = await auth.supabaseAdmin
+        .from('staff_attendance')
+        .select('id')
+        .eq('id', id)
+        .eq('tenant_id', auth.tenantId)
+        .maybeSingle();
+      if (!existing) return NextResponse.json({ error: '該当レコードなし' }, { status: 404 });
+
+      await auth.supabaseAdmin
+        .from('staff_attendance')
+        .update({
+          staff_name: staffName,
+          clock_in_at: clockInAt,
+          clock_out_at: clockOutAt || null,
+          duration_minutes: duration,
+          notes: notes || null,
+        })
+        .eq('id', id);
+      return NextResponse.json({ ok: true, id });
+    } else {
+      // 新規挿入
+      const { data } = await auth.supabaseAdmin
+        .from('staff_attendance')
+        .insert({
+          tenant_id: auth.tenantId,
+          staff_name: staffName,
+          clock_in_at: clockInAt,
+          clock_out_at: clockOutAt || null,
+          duration_minutes: duration,
+          notes: notes || null,
+        })
+        .select()
+        .single();
+      return NextResponse.json({ ok: true, id: data?.id });
+    }
+  } catch (err) {
+    console.error('[attendance PUT]', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+// 削除
+// DELETE /api/staff/attendance
+// Body: { id }
+export async function DELETE(request) {
+  try {
+    const auth = await authAndTenant(request);
+    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
+    const { id } = await request.json();
+    if (!id) return NextResponse.json({ error: 'id必要' }, { status: 400 });
+
+    await auth.supabaseAdmin
+      .from('staff_attendance')
+      .delete()
+      .eq('id', id)
+      .eq('tenant_id', auth.tenantId);
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

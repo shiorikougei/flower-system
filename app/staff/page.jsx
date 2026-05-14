@@ -3,10 +3,12 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { 
-  Calendar, ShoppingBag, PlusCircle, Settings, 
-  Clock, Package, ChevronRight, Truck, Store 
+import {
+  Calendar, ShoppingBag, PlusCircle, Settings,
+  Clock, Package, ChevronRight, Truck, Store, LogIn, LogOut, UserCheck
 } from 'lucide-react';
+import { getCurrentStaff } from '@/utils/staffRole';
+import { clockIn, clockOut } from '@/utils/attendance';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -14,6 +16,68 @@ export default function DashboardPage() {
   const [recentOrders, setRecentOrders] = useState([]);
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // ★ 勤怠
+  const [currentStaff, setCurrentStaffState] = useState(null);
+  const [openAttendance, setOpenAttendance] = useState([]); // 現在出勤中のスタッフ
+  const [myMonthSummary, setMyMonthSummary] = useState(null);
+  const [isClocking, setIsClocking] = useState(false);
+
+  async function loadAttendanceData() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // 現在出勤中のメンバー
+      const openRes = await fetch('/api/staff/attendance?openOnly=true', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      }).then(r => r.json()).catch(() => ({ items: [] }));
+      setOpenAttendance(openRes.items || []);
+
+      // 今月の自分の集計
+      const staff = getCurrentStaff();
+      if (staff?.name) {
+        const now = new Date();
+        const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        const sumRes = await fetch(`/api/staff/attendance?staff=${encodeURIComponent(staff.name)}&from=${from}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        }).then(r => r.json()).catch(() => ({ summary: [] }));
+        const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        setMyMonthSummary(sumRes.summary?.find(s => s.monthKey === monthKey) || null);
+      }
+    } catch (e) {
+      console.warn('attendance load failed', e);
+    }
+  }
+
+  useEffect(() => {
+    setCurrentStaffState(getCurrentStaff());
+    loadAttendanceData();
+  }, []);
+
+  const handleClockIn = async () => {
+    if (!currentStaff?.name) {
+      alert('左サイドバーからスタッフを選択してから打刻してください');
+      return;
+    }
+    setIsClocking(true);
+    try {
+      await clockIn(currentStaff.name);
+      await loadAttendanceData();
+    } finally { setIsClocking(false); }
+  };
+
+  const handleClockOut = async () => {
+    if (!currentStaff?.name) return;
+    setIsClocking(true);
+    try {
+      await clockOut(currentStaff.name);
+      await loadAttendanceData();
+    } finally { setIsClocking(false); }
+  };
+
+  // 自分が出勤中か
+  const myOpenRecord = currentStaff?.name && openAttendance.find(a => a.staff_name === currentStaff.name);
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -104,6 +168,73 @@ export default function DashboardPage() {
         
         <div className="flex flex-col gap-2">
           <p className="text-[14px] text-[#555555]">本日の業務状況と最新の注文状況を確認しましょう。</p>
+        </div>
+
+        {/* ★ 勤怠カード（TOP配置） */}
+        <div className="bg-gradient-to-br from-[#117768]/5 to-[#2D4B3E]/10 border border-[#117768]/20 rounded-2xl p-5 md:p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            {/* 自分の打刻 */}
+            <div className="flex items-center gap-4 min-w-0 flex-1">
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center text-white shrink-0 ${myOpenRecord ? 'bg-[#117768]' : 'bg-[#999]'}`}>
+                <Clock size={22}/>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-[#999] tracking-widest">あなたの勤怠</p>
+                {currentStaff?.name ? (
+                  <>
+                    <p className="text-[15px] font-bold text-[#111]">{currentStaff.name}</p>
+                    {myOpenRecord ? (
+                      <p className="text-[11px] text-[#117768] font-bold mt-0.5">
+                        ✓ {new Date(myOpenRecord.clock_in_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} から出勤中
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-[#999] mt-0.5">未打刻</p>
+                    )}
+                    {myMonthSummary && (
+                      <p className="text-[10px] text-[#555] mt-1">今月: {myMonthSummary.totalHours}時間 / {myMonthSummary.days}日</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-[12px] text-[#999] mt-1">左サイドバーからスタッフを選択してください</p>
+                )}
+              </div>
+            </div>
+
+            {/* 打刻ボタン */}
+            <div className="flex gap-2 shrink-0">
+              {currentStaff?.name && (
+                <>
+                  {!myOpenRecord ? (
+                    <button onClick={handleClockIn} disabled={isClocking} className="px-5 h-12 bg-[#117768] text-white rounded-xl font-bold text-[13px] hover:bg-[#0f6a5b] disabled:opacity-50 flex items-center gap-2 shadow-sm">
+                      <LogIn size={16}/> 出勤
+                    </button>
+                  ) : (
+                    <button onClick={handleClockOut} disabled={isClocking} className="px-5 h-12 bg-[#D97D54] text-white rounded-xl font-bold text-[13px] hover:bg-[#c26d48] disabled:opacity-50 flex items-center gap-2 shadow-sm">
+                      <LogOut size={16}/> 退勤
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* 現在出勤中のメンバー */}
+          {openAttendance.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-[#117768]/15">
+              <p className="text-[10px] font-bold text-[#117768] tracking-widest mb-2">いま出勤中（{openAttendance.length}名）</p>
+              <div className="flex flex-wrap gap-2">
+                {openAttendance.map(a => (
+                  <div key={a.id} className="bg-white border border-[#117768]/30 rounded-full px-3 py-1.5 flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-[#117768] text-white flex items-center justify-center">
+                      <UserCheck size={12}/>
+                    </div>
+                    <span className="text-[11px] font-bold text-[#111]">{a.staff_name}</span>
+                    <span className="text-[9px] text-[#999]">{new Date(a.clock_in_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}〜</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
