@@ -16,6 +16,7 @@ import { stripe, APP_URL } from '@/utils/stripe';
 import { sendEmail } from '@/utils/email';
 import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatRecipientInfo } from '@/utils/emailTemplates';
 import { sendLineParallelToEmail } from '@/utils/line';
+import { createMypageMagicUrl } from '@/utils/mypageLink';
 
 export async function POST(request) {
   try {
@@ -152,6 +153,14 @@ export async function POST(request) {
           card: 'クレジットカード決済（決済完了）',
           bank_transfer: '銀行振込',
         };
+        // ★ マイページURL（Magic Link）発行
+        const mypageUrl = await createMypageMagicUrl({
+          supabaseAdmin,
+          tenantId,
+          shopId,
+          email: customerEmail,
+        });
+
         const vars = {
           customerName: orderData.customerInfo?.name || 'お客',
           shopName,
@@ -163,6 +172,7 @@ export async function POST(request) {
           deliveryDate: orderData.selectedDate ? `${orderData.selectedDate} ${orderData.selectedTime || ''}`.trim() : '',
           shopPhone,
           recipientInfo: formatRecipientInfo(orderRecord.order_data),
+          mypageUrl,
         };
         const { subject, body } = renderTemplate(tpl, vars);
         const html = bodyToHtml(body, { shopName });

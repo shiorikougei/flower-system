@@ -6,7 +6,7 @@ import { supabase } from '@/utils/supabase';
 import {
   ChevronLeft, Package, AlertCircle, CheckCircle2, Mail,
   Calendar, Plus, Trash2, FileText, RotateCcw, Heart,
-  Lock, KeyRound, Eye, EyeOff
+  Lock, KeyRound, Eye, EyeOff, AtSign
 } from 'lucide-react';
 
 function MyPageContent() {
@@ -33,6 +33,12 @@ function MyPageContent() {
   const [pwForm, setPwForm] = useState({ password: '', confirm: '' });
   const [showPasswordChars, setShowPasswordChars] = useState(false);
   const [isSavingPw, setIsSavingPw] = useState(false);
+
+  // メアド変更
+  const [showEmailChangeForm, setShowEmailChangeForm] = useState(false);
+  const [newEmailInput, setNewEmailInput] = useState('');
+  const [isSendingEmailChange, setIsSendingEmailChange] = useState(false);
+  const [emailChangeSent, setEmailChangeSent] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -96,6 +102,33 @@ function MyPageContent() {
       alert('設定に失敗しました: ' + e.message);
     } finally {
       setIsSavingPw(false);
+    }
+  }
+
+  // メアド変更リクエスト送信
+  async function sendEmailChangeRequest() {
+    if (!newEmailInput.trim() || !newEmailInput.includes('@')) {
+      alert('有効なメールアドレスを入力してください');
+      return;
+    }
+    if (newEmailInput.trim().toLowerCase() === data?.email?.toLowerCase()) {
+      alert('現在のメールアドレスと同じです');
+      return;
+    }
+    setIsSendingEmailChange(true);
+    try {
+      const res = await fetch('/api/mypage/request-email-change', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newEmail: newEmailInput.trim() }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || '送信に失敗しました');
+      setEmailChangeSent(true);
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setIsSendingEmailChange(false);
     }
   }
 
@@ -395,9 +428,70 @@ function MyPageContent() {
           <>
             {/* お客様情報 */}
             <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA]">
-              <p className="text-[11px] text-[#999999] flex items-center gap-1.5"><Mail size={12}/> ご注文時のメールアドレス</p>
-              <p className="text-[14px] font-bold text-[#111111] mt-1">{data.email}</p>
-              {customerNameDefault && <p className="text-[12px] text-[#555] mt-2">{customerNameDefault} 様</p>}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] text-[#999999] flex items-center gap-1.5"><Mail size={12}/> ご注文時のメールアドレス</p>
+                  <p className="text-[14px] font-bold text-[#111111] mt-1 break-all">{data.email}</p>
+                  {customerNameDefault && <p className="text-[12px] text-[#555] mt-2">{customerNameDefault} 様</p>}
+                </div>
+                {!showEmailChangeForm && !emailChangeSent && (
+                  <button
+                    onClick={() => setShowEmailChangeForm(true)}
+                    className="shrink-0 flex items-center gap-1 bg-[#FBFAF9] border border-[#EAEAEA] text-[#555] text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-[#EAEAEA]"
+                  >
+                    <AtSign size={11}/> 変更
+                  </button>
+                )}
+              </div>
+
+              {/* メアド変更フォーム */}
+              {showEmailChangeForm && !emailChangeSent && (
+                <div className="mt-4 pt-4 border-t border-[#EAEAEA] space-y-3">
+                  <p className="text-[11px] text-[#555] leading-relaxed">
+                    新しいメールアドレスを入力してください。確認メールが新メアド宛に送信されます。
+                  </p>
+                  <input
+                    type="email"
+                    value={newEmailInput}
+                    onChange={(e) => setNewEmailInput(e.target.value)}
+                    placeholder="new-email@example.com"
+                    className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"
+                  />
+                  <div className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 leading-relaxed">
+                    ⚠️ 確認リンクをクリックして変更完了するまで、現在のメールアドレスは有効です。<br/>
+                    旧メールアドレス宛にも変更通知メールが送信されます。
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { setShowEmailChangeForm(false); setNewEmailInput(''); }}
+                      disabled={isSendingEmailChange}
+                      className="flex-1 h-10 bg-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-lg disabled:opacity-50"
+                    >
+                      キャンセル
+                    </button>
+                    <button
+                      onClick={sendEmailChangeRequest}
+                      disabled={isSendingEmailChange}
+                      className="flex-1 h-10 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-lg hover:bg-[#1f352b] disabled:opacity-50"
+                    >
+                      {isSendingEmailChange ? '送信中...' : '確認メールを送信'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 送信完了 */}
+              {emailChangeSent && (
+                <div className="mt-4 pt-4 border-t border-[#EAEAEA]">
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-2">
+                    <CheckCircle2 size={16} className="text-green-600 mt-0.5 shrink-0"/>
+                    <div>
+                      <p className="text-[12px] font-bold text-green-800">確認メールを送信しました</p>
+                      <p className="text-[11px] text-green-700 mt-1 leading-relaxed">新しいメールアドレス（{newEmailInput}）の受信箱をご確認ください。リンクをクリックすると変更が完了します。</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ★ パスワード設定（任意） */}

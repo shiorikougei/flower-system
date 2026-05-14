@@ -13,6 +13,7 @@ import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from '@/utils/email';
 import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatRecipientInfo } from '@/utils/emailTemplates';
 import { sendLineParallelToEmail } from '@/utils/line';
+import { createMypageMagicUrl } from '@/utils/mypageLink';
 
 export async function POST(request) {
   try {
@@ -95,6 +96,7 @@ export async function POST(request) {
       shopPhone,
       completionImageUrl: od.completionImage || '',
       recipientInfo: formatRecipientInfo(od),
+      mypageUrl: await createMypageMagicUrl({ supabaseAdmin, tenantId, shopId: od.shopId, email: customerEmail }),
     };
 
     const { subject, body } = renderTemplate(tpl, vars);

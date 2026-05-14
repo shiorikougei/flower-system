@@ -13,6 +13,7 @@ import { stripe } from '@/utils/stripe';
 import { sendEmail } from '@/utils/email';
 import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatRecipientInfo } from '@/utils/emailTemplates';
 import { sendLineParallelToEmail } from '@/utils/line';
+import { createMypageMagicUrl } from '@/utils/mypageLink';
 
 export const runtime = 'nodejs';   // Edgeでは crypto が一部使えないため明示
 export const dynamic = 'force-dynamic';
@@ -112,6 +113,14 @@ export async function POST(request) {
               const pickup = Number(od.pickupFee) || 0;
               const total = (item + fee + pickup) + Math.floor((item + fee + pickup) * 0.1);
 
+              // ★ マイページURL（Magic Link）発行
+              const mypageUrl = await createMypageMagicUrl({
+                supabaseAdmin,
+                tenantId,
+                shopId: od.shopId,
+                email: customerEmail,
+              });
+
               const vars = {
                 customerName: od.customerInfo?.name || 'お客',
                 shopName,
@@ -123,6 +132,7 @@ export async function POST(request) {
                 deliveryDate: od.selectedDate ? `${od.selectedDate} ${od.selectedTime || ''}`.trim() : '',
                 shopPhone,
                 recipientInfo: formatRecipientInfo(od),
+                mypageUrl,
               };
               const { subject, body } = renderTemplate(tpl, vars);
               const html = bodyToHtml(body, { shopName });

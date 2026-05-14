@@ -10,7 +10,7 @@ export const EMAIL_TRIGGERS = [
     label: 'ご注文受付',
     description: 'お客様の注文確定時に自動送信',
     auto: true,
-    variables: ['customerName', 'shopName', 'orderId', 'orderTotal', 'orderItems', 'paymentMethod', 'bankInfo', 'deliveryDate', 'shopPhone', 'recipientInfo'],
+    variables: ['customerName', 'shopName', 'orderId', 'orderTotal', 'orderItems', 'paymentMethod', 'bankInfo', 'deliveryDate', 'shopPhone', 'recipientInfo', 'mypageUrl'],
   },
   {
     id: 'restock_notification',
@@ -106,6 +106,17 @@ export function getPresetTemplates() {
 
 ご不明な点がございましたら、{shopName}までお問い合わせください。
 TEL: {shopPhone}
+
+━━━━━━━━━━━━━━━━━━━━
+🌸 マイページのご案内 🌸
+━━━━━━━━━━━━━━━━━━━━
+下記のリンクから、ご注文履歴の確認・領収書のダウンロード・
+記念日リマインダーのご登録などができます。
+
+{mypageUrl}
+
+※リンクは24時間有効です。
+※マイページではパスワード設定もしていただけます。
 
 またのご利用を心よりお待ちしております。`,
     },

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
-import { Sparkles, ShoppingBag, ChevronRight, History } from 'lucide-react';
+import { Sparkles, ShoppingBag, ChevronRight, History, User } from 'lucide-react';
 
 // ★ お客様の最初の入口：オーダーメイド / 完成品 の2択
 //   従来の /page.js（カスタム注文フォーム）は /custom/page.js に移動
@@ -47,7 +47,7 @@ export default function OrderEntryPage() {
             href={`/order/${tenantId}/${shopId}/history`}
             className="flex items-center gap-1 text-[11px] font-bold text-[#555555] hover:text-[#2D4B3E] px-2 py-1"
           >
-            <History size={12}/> 注文履歴
+            <User size={12}/> マイページ
           </Link>
         </div>
       </header>
@@ -101,6 +101,27 @@ export default function OrderEntryPage() {
                 </p>
               </div>
               <ChevronRight size={20} className="text-[#999999] group-hover:text-[#2D4B3E] transition-colors shrink-0"/>
+            </div>
+          </Link>
+        </div>
+
+        {/* マイページ導線 */}
+        <div className="mt-8 pt-8 border-t border-[#EAEAEA]">
+          <Link
+            href={`/order/${tenantId}/${shopId}/history`}
+            className="block p-5 bg-white border border-[#EAEAEA] rounded-2xl hover:border-[#2D4B3E] transition-all group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-[#FBFAF9] text-[#2D4B3E] flex items-center justify-center shrink-0 group-hover:bg-[#2D4B3E] group-hover:text-white transition-all">
+                <User size={20}/>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[14px] font-bold text-[#111111] mb-0.5">マイページ</p>
+                <p className="text-[11px] text-[#555555] leading-relaxed">
+                  ご注文履歴 ・ 記念日リマインダー ・ 領収書発行 ・ 再注文
+                </p>
+              </div>
+              <ChevronRight size={18} className="text-[#999999] group-hover:text-[#2D4B3E] transition-colors shrink-0"/>
             </div>
           </Link>
         </div>
