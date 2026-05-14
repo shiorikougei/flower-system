@@ -57,6 +57,10 @@ export async function GET(request) {
     let skipped = 0;
     const errors = [];
 
+    // ★ AI使用量も統合
+    const aiPricingCfg = ownerData.aiPricingConfig || { freeQuotaPerMonth: 100, pricePerExtraJpy: 5 };
+    const currentMonthKey = new Date().toISOString().slice(0,7);
+
     for (const t of tenants) {
       try {
         const billing = tenantBilling[t.id] || {};
@@ -64,16 +68,47 @@ export async function GET(request) {
           ? calcWithManualOverride(billing.manualPriceJpy, pricing.taxRate)
           : calcMonthlyFee(t.features, pricing);
 
+        // ★ AI使用料計算
+        const { data: tRow } = await supabaseAdmin.from('app_settings').select('settings_data').eq('id', t.id).single();
+        const monthUsage = tRow?.settings_data?.aiUsage?.[currentMonthKey] || { total: 0 };
+        const aiOverage = Math.max(0, (monthUsage.total || 0) - aiPricingCfg.freeQuotaPerMonth);
+        const aiSubTotal = aiOverage * aiPricingCfg.pricePerExtraJpy;
+        const aiTax = Math.round(aiSubTotal * 0.10);
+        const aiTotal = aiSubTotal + aiTax;
+
+        // 合算
+        const grandTotal = fee.total + aiTotal;
+
         // 0円なら送信スキップ
-        if (fee.total === 0) { skipped++; continue; }
+        if (grandTotal === 0) { skipped++; continue; }
 
         // 請求先メール
         const to = billing.billingEmail;
         if (!to || !to.includes('@')) { skipped++; continue; }
 
+        // ★ Stripe Invoice 作成（クレカ希望テナント）
+        let stripeInvoiceUrl = '';
+        if (billing.paymentMethod === 'card' && process.env.STRIPE_SECRET_KEY) {
+          try {
+            const stripeRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/admin/stripe-invoice`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                tenantId: t.id,
+                tenantName: t.name,
+                billingEmail: to,
+                amount: grandTotal,
+                description: `${targetMonth} FLORIX利用料 (${t.name})`,
+              }),
+            });
+            const stripeData = await stripeRes.json();
+            if (stripeRes.ok) stripeInvoiceUrl = stripeData.hostedInvoiceUrl;
+          } catch (e) { console.warn('[stripe-invoice] failed:', e.message); }
+        }
+
         const featureRows = fee.featureBreakdown ? fee.featureBreakdown.map(f => {
           const item = FEATURE_GROUPS.flatMap(g => g.items).find(i => i.key === f.key);
-          return `<tr><td>${item?.label || f.key}</td><td style="text-align:right;">¥${f.price.toLocaleString()}</td></tr>`;
+          return `<tr><td style="padding:6px;border:0.5pt solid #ddd;">${item?.label || f.key}</td><td style="padding:6px;border:0.5pt solid #ddd;text-align:right;">¥${f.price.toLocaleString()}</td></tr>`;
         }).join('') : '';
 
         const html = `<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"></head>
@@ -84,11 +119,12 @@ export async function GET(request) {
     <p style="font-size:13px;">いつもFLORIXをご利用いただきありがとうございます。<br/>${targetMonth}分の月額利用料金をお知らせいたします。</p>
     <div style="background:#fafafa;border:1.5pt solid #222;padding:16px;margin:16px 0;text-align:center;border-radius:8px;">
       <div style="font-size:11px;color:#666;">${targetMonth} ご請求金額（税込）</div>
-      <div style="font-size:24pt;font-weight:bold;color:#117768;letter-spacing:0.05em;margin-top:4px;">¥${fee.total.toLocaleString()}</div>
-      <div style="font-size:9pt;color:#666;margin-top:4px;">本体 ¥${fee.subTotal.toLocaleString()} / 消費税 ¥${fee.tax.toLocaleString()}</div>
+      <div style="font-size:24pt;font-weight:bold;color:#117768;letter-spacing:0.05em;margin-top:4px;">¥${grandTotal.toLocaleString()}</div>
+      <div style="font-size:9pt;color:#666;margin-top:4px;">サブスク ¥${fee.total.toLocaleString()}${aiTotal > 0 ? ` + AI使用料 ¥${aiTotal.toLocaleString()}` : ''}</div>
     </div>
-    ${fee.manual ? `<p style="font-size:11px;color:#1e40af;background:#f0f9ff;padding:8px;border-radius:4px;">※特別契約による固定料金です${billing.manualReason ? `（${billing.manualReason}）` : ''}</p>` : `
-      <table style="width:100%;border-collapse:collapse;font-size:11px;margin:12px 0;">
+    ${fee.manual ? `<p style="font-size:11px;color:#1e40af;background:#f0f9ff;padding:8px;border-radius:4px;">※特別契約による固定料金${billing.manualReason ? `（${billing.manualReason}）` : ''}</p>` : `
+      <p style="font-size:11px;color:#117768;font-weight:bold;margin:12px 0 4px;">▼ サブスクリプション利用料</p>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;">
         <thead><tr style="background:#f4f4f4;"><th style="padding:6px;border:0.5pt solid #ddd;text-align:left;">項目</th><th style="padding:6px;border:0.5pt solid #ddd;text-align:right;">金額</th></tr></thead>
         <tbody>
           <tr><td style="padding:6px;border:0.5pt solid #ddd;">基本料金</td><td style="padding:6px;border:0.5pt solid #ddd;text-align:right;">¥${fee.basePrice.toLocaleString()}</td></tr>
@@ -96,17 +132,36 @@ export async function GET(request) {
         </tbody>
       </table>
     `}
+    ${aiOverage > 0 ? `
+      <p style="font-size:11px;color:#117768;font-weight:bold;margin:12px 0 4px;">▼ AI生成機能 利用超過分</p>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;">
+        <thead><tr style="background:#f4f4f4;"><th style="padding:6px;border:0.5pt solid #ddd;text-align:left;">項目</th><th style="padding:6px;border:0.5pt solid #ddd;text-align:center;">数量</th><th style="padding:6px;border:0.5pt solid #ddd;text-align:right;">単価</th><th style="padding:6px;border:0.5pt solid #ddd;text-align:right;">金額</th></tr></thead>
+        <tbody>
+          <tr><td style="padding:6px;border:0.5pt solid #ddd;">AI生成（無料枠超過）</td><td style="padding:6px;border:0.5pt solid #ddd;text-align:center;">${aiOverage}回</td><td style="padding:6px;border:0.5pt solid #ddd;text-align:right;">¥${aiPricingCfg.pricePerExtraJpy.toLocaleString()}</td><td style="padding:6px;border:0.5pt solid #ddd;text-align:right;">¥${aiSubTotal.toLocaleString()}</td></tr>
+        </tbody>
+      </table>
+    ` : ''}
+    ${stripeInvoiceUrl ? `
+      <div style="background:#3b82f6;color:white;padding:14px;margin:16px 0;text-align:center;border-radius:8px;">
+        <p style="margin:0 0 8px;font-size:12px;font-weight:bold;">💳 クレジットカードでお支払い</p>
+        <a href="${stripeInvoiceUrl}" style="display:inline-block;background:white;color:#3b82f6;padding:10px 24px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:13px;">支払いページを開く →</a>
+      </div>
+    ` : `
+      <div style="background:#f0fdf4;border:1pt solid #15803d;padding:12px;margin:12px 0;font-size:11px;color:#15803d;border-radius:4px;">
+        🏦 <strong>銀行振込でのお支払い</strong>: 別途お知らせした口座へお振込みください
+      </div>
+    `}
     <div style="background:#fff7ed;border:1pt solid #f97316;padding:12px;margin:12px 0;font-size:12px;color:#c2410c;text-align:center;font-weight:bold;border-radius:4px;">
       お支払い期日: ${dueDate}
     </div>
     <p style="font-size:11px;color:#666;margin-top:24px;line-height:1.6;">
-      ご請求に関するお問い合わせ・解約については、利用規約をご確認いただくか、support@nocolde.com までお問い合わせください。
+      ご請求に関するお問い合わせ・解約については、利用規約をご確認いただくか、marusyou.reishin@gmail.com までお問い合わせください。
     </p>
     <p style="font-size:11px;color:#999;margin-top:32px;padding-top:16px;border-top:1px solid #EAEAEA;text-align:center;">— NocoLde —</p>
   </div>
 </body></html>`;
 
-        const subject = `【NocoLde】${targetMonth} 利用料金のご請求 (${fee.total.toLocaleString()}円)`;
+        const subject = `【NocoLde】${targetMonth} 利用料金のご請求 (${grandTotal.toLocaleString()}円)`;
         const from = `NocoLde <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
         const result = await sendEmail({ to, subject, html, from });
         if (result.error) {

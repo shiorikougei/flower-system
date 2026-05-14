@@ -252,10 +252,24 @@ export default function OwnerDashboard() {
     return calcMonthlyFee(tenant.features || {}, pricingConfig);
   };
 
-  // サブスク請求書PDF発行
+  // ★ AI使用料計算（オーナーページの usageList から取得）
+  const calcAiOverage = (tenantId, monthKey) => {
+    const u = usageList.find(u => u.tenantId === tenantId);
+    if (!u || u.overage === 0) return null;
+    return {
+      qty: u.overage,
+      unit: aiPricing.pricePerExtraJpy,
+      subTotal: u.overageJpy,  // 税抜想定（AI料金マスターは税抜単価）
+      tax: Math.round(u.overageJpy * 0.10),
+      total: u.overageJpy + Math.round(u.overageJpy * 0.10),
+    };
+  };
+
+  // サブスク請求書PDF発行（AI使用料含む・A4 1ページ）
   const printSubscriptionInvoice = (tenant, opts = {}) => {
     const fee = calcTenantFee(tenant);
     const billing = tenantBilling[tenant.id] || {};
+    const aiOverage = calcAiOverage(tenant.id, usageMonth);
     const issueDate = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
     const targetMonth = opts.targetMonth || (() => {
       const d = new Date(); d.setMonth(d.getMonth() + 1);
@@ -274,25 +288,37 @@ export default function OwnerDashboard() {
       return `<tr><td>${item?.label || f.key}</td><td style="text-align:center;">1</td><td style="text-align:right;">¥${f.price.toLocaleString()}</td><td style="text-align:right;">¥${f.price.toLocaleString()}</td></tr>`;
     }).join('') : '';
 
+    // 合算金額
+    const grandSubTotal = fee.subTotal + (aiOverage?.subTotal || 0);
+    const grandTax = fee.tax + (aiOverage?.tax || 0);
+    const grandTotal = fee.total + (aiOverage?.total || 0);
+
+    // 支払い方法
+    const paymentMethod = billing.paymentMethod || 'bank_transfer';
+    const paymentMethodLabel = paymentMethod === 'card' ? 'クレジットカード' : '銀行振込';
+
     const html = `<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"/><title>サブスク請求書_${tenant.id}_${targetMonth}</title>
       <style>
-        @page { size: A4 portrait; margin: 20mm; }
-        body { font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; color: #222; margin: 0; }
-        .container { max-width: 170mm; margin: 0 auto; }
-        .title { text-align: center; font-size: 26pt; font-weight: 900; letter-spacing: 0.5em; padding: 6mm 0; border-bottom: 2pt double #222; margin-bottom: 8mm; }
-        .meta { display: flex; justify-content: space-between; margin-bottom: 8mm; font-size: 10pt; }
-        .target { font-size: 14pt; font-weight: bold; padding: 4mm 0; border-bottom: 0.5pt solid #999; margin-bottom: 6mm; }
-        .amount-block { background: #fafafa; border: 1.5pt solid #222; padding: 8mm; margin: 8mm 0; text-align: center; }
-        .amount-label { font-size: 10pt; color: #666; margin-bottom: 2mm; }
-        .amount-value { font-size: 28pt; font-weight: 900; color: #117768; letter-spacing: 0.1em; }
-        .amount-tax { font-size: 9pt; color: #666; margin-top: 2mm; }
-        table { width: 100%; border-collapse: collapse; margin: 4mm 0; font-size: 10pt; }
-        th, td { padding: 2.5mm 3mm; border-bottom: 0.5pt solid #ddd; }
-        th { background: #f4f4f4; font-weight: bold; }
-        .due { background: #fff7ed; border: 1pt solid #f97316; padding: 4mm; margin: 6mm 0; font-size: 11pt; color: #c2410c; text-align: center; font-weight: bold; }
-        .footer { margin-top: 12mm; padding-top: 6mm; border-top: 0.5pt solid #999; font-size: 9pt; line-height: 1.7; }
-        .footer .name { font-size: 13pt; font-weight: 900; }
-        .manual-note { background: #f0f9ff; border: 1pt solid #3b82f6; padding: 4mm; margin: 4mm 0; font-size: 10pt; color: #1e40af; }
+        @page { size: A4 portrait; margin: 12mm; }
+        * { box-sizing: border-box; }
+        body { font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; color: #222; margin: 0; font-size: 10pt; }
+        .container { max-width: 186mm; margin: 0 auto; }
+        .title { text-align: center; font-size: 20pt; font-weight: 900; letter-spacing: 0.5em; padding: 3mm 0; border-bottom: 1.5pt double #222; margin-bottom: 5mm; }
+        .meta { display: flex; justify-content: space-between; margin-bottom: 4mm; font-size: 9pt; }
+        .target { font-size: 13pt; font-weight: bold; padding: 2mm 0; border-bottom: 0.5pt solid #999; margin-bottom: 4mm; }
+        .amount-block { background: #fafafa; border: 1.2pt solid #222; padding: 5mm; margin: 4mm 0; text-align: center; }
+        .amount-label { font-size: 9pt; color: #666; margin-bottom: 1mm; }
+        .amount-value { font-size: 22pt; font-weight: 900; color: #117768; letter-spacing: 0.05em; }
+        .amount-tax { font-size: 8pt; color: #666; margin-top: 1mm; }
+        table { width: 100%; border-collapse: collapse; margin: 2mm 0; font-size: 9pt; }
+        th, td { padding: 1.5mm 2mm; border-bottom: 0.4pt solid #ddd; }
+        th { background: #f4f4f4; font-weight: bold; font-size: 8.5pt; }
+        .section-h { font-size: 9pt; font-weight: bold; color: #117768; margin: 3mm 0 1mm; padding-bottom: 0.5mm; border-bottom: 0.5pt solid #117768; }
+        .due { background: #fff7ed; border: 0.8pt solid #f97316; padding: 3mm; margin: 4mm 0; font-size: 10pt; color: #c2410c; text-align: center; font-weight: bold; }
+        .payment-method { background: #f0fdf4; border: 0.8pt solid #15803d; padding: 3mm; margin: 2mm 0; font-size: 9pt; color: #15803d; text-align: center; font-weight: bold; }
+        .footer { margin-top: 5mm; padding-top: 3mm; border-top: 0.5pt solid #999; font-size: 8pt; line-height: 1.5; }
+        .footer .name { font-size: 11pt; font-weight: 900; }
+        .manual-note { background: #f0f9ff; border: 0.8pt solid #3b82f6; padding: 2mm; margin: 2mm 0; font-size: 8.5pt; color: #1e40af; }
       </style></head><body>
       <div class="container">
         <div class="title">請 求 書</div>
@@ -301,44 +327,59 @@ export default function OwnerDashboard() {
           <div>発行日: ${issueDate}</div>
         </div>
         <div class="target">${tenant.name} 御中</div>
+
         <div class="amount-block">
-          <div class="amount-label">${targetMonth} 利用料金（税込）</div>
-          <div class="amount-value">¥ ${fee.total.toLocaleString()} -</div>
-          <div class="amount-tax">（本体 ¥${fee.subTotal.toLocaleString()} / 消費税 ¥${fee.tax.toLocaleString()}）</div>
+          <div class="amount-label">${targetMonth} ご請求金額（税込）</div>
+          <div class="amount-value">¥ ${grandTotal.toLocaleString()} -</div>
+          <div class="amount-tax">（本体 ¥${grandSubTotal.toLocaleString()} / 消費税 ¥${grandTax.toLocaleString()}）</div>
         </div>
-        <div style="font-size:11pt; padding:4mm 0;">下記の通りご請求申し上げます。</div>
 
         ${fee.manual ? `
-          <div class="manual-note">
-            ⚠️ 手動設定の固定料金で請求しています${billing.manualReason ? `（理由: ${billing.manualReason}）` : ''}
-          </div>
+          <div class="manual-note">⚠️ 手動設定の固定料金${billing.manualReason ? `（理由: ${billing.manualReason}）` : ''}</div>
+          <div class="section-h">▼ サブスクリプション利用料</div>
           <table>
             <thead><tr><th>項目</th><th style="width:25mm; text-align:right;">金額(税抜)</th></tr></thead>
             <tbody><tr><td>${targetMonth} ご利用料金（特別契約）</td><td style="text-align:right;">¥${fee.subTotal.toLocaleString()}</td></tr></tbody>
           </table>
         ` : `
+          <div class="section-h">▼ サブスクリプション利用料</div>
           <table>
             <thead><tr><th>項目</th><th style="width:18mm; text-align:center;">数量</th><th style="width:25mm; text-align:right;">単価</th><th style="width:25mm; text-align:right;">金額</th></tr></thead>
             <tbody>
               <tr><td>基本料金（注文管理・カレンダー・配達）</td><td style="text-align:center;">1</td><td style="text-align:right;">¥${fee.basePrice.toLocaleString()}</td><td style="text-align:right;">¥${fee.basePrice.toLocaleString()}</td></tr>
               ${featureRows}
+              <tr style="background:#f9f9f9; font-weight:bold;"><td colspan="3" style="text-align:right;">サブスク小計（税抜）</td><td style="text-align:right;">¥${fee.subTotal.toLocaleString()}</td></tr>
             </tbody>
-            <tfoot>
-              <tr style="background:#f4f4f4; font-weight:bold;"><td colspan="3" style="text-align:right;">小計（税抜）</td><td style="text-align:right;">¥${fee.subTotal.toLocaleString()}</td></tr>
-              <tr><td colspan="3" style="text-align:right;">消費税(10%)</td><td style="text-align:right;">¥${fee.tax.toLocaleString()}</td></tr>
-              <tr style="background:#117768; color:white; font-weight:bold;"><td colspan="3" style="text-align:right;">合計</td><td style="text-align:right;">¥${fee.total.toLocaleString()}</td></tr>
-            </tfoot>
           </table>
         `}
 
+        ${aiOverage ? `
+          <div class="section-h">▼ AI生成機能 利用超過分</div>
+          <table>
+            <thead><tr><th>項目</th><th style="width:18mm; text-align:center;">数量</th><th style="width:25mm; text-align:right;">単価</th><th style="width:25mm; text-align:right;">金額</th></tr></thead>
+            <tbody>
+              <tr><td>AI生成（無料枠超過分）</td><td style="text-align:center;">${aiOverage.qty}回</td><td style="text-align:right;">¥${aiOverage.unit.toLocaleString()}</td><td style="text-align:right;">¥${aiOverage.subTotal.toLocaleString()}</td></tr>
+            </tbody>
+          </table>
+        ` : ''}
+
+        <table style="margin-top:3mm;">
+          <tbody>
+            <tr style="background:#f4f4f4; font-weight:bold;"><td colspan="3" style="text-align:right;">小計（税抜）</td><td style="width:25mm; text-align:right;">¥${grandSubTotal.toLocaleString()}</td></tr>
+            <tr><td colspan="3" style="text-align:right;">消費税(10%)</td><td style="text-align:right;">¥${grandTax.toLocaleString()}</td></tr>
+            <tr style="background:#117768; color:white; font-weight:bold; font-size:10pt;"><td colspan="3" style="text-align:right;">合計（税込）</td><td style="text-align:right;">¥${grandTotal.toLocaleString()}</td></tr>
+          </tbody>
+        </table>
+
+        <div class="payment-method">💳 お支払い方法: ${paymentMethodLabel}${paymentMethod === 'card' ? '（請求メールに支払いリンク同封）' : ''}</div>
         <div class="due">お支払い期日: ${dueDate}</div>
 
         <div class="footer">
           <div class="name">${ownerName}</div>
           <div>登録番号: ${ownerInvoice}</div>
-          <div style="margin-top:3mm; color:#666;">お支払いに関するお問い合わせ: support@nocolde.com</div>
-          <div style="margin-top:6mm; padding-top:3mm; border-top:0.3pt dashed #ccc; font-size:8pt; color:#999;">
-            ※当月途中での解約・機能変更は翌月分から反映されます。詳細は利用規約をご確認ください。
+          <div style="margin-top:1mm; color:#666;">お問い合わせ: marusyou.reishin@gmail.com</div>
+          <div style="margin-top:2mm; padding-top:1.5mm; border-top:0.3pt dashed #ccc; font-size:7pt; color:#999;">
+            ※機能変更は即時反映されます（追加月は無料、翌月から課金）。解約・支払いに関する詳細は利用規約をご確認ください。
           </div>
         </div>
       </div>
@@ -1212,6 +1253,7 @@ export default function OwnerDashboard() {
                     <th className="px-4 py-3 text-right font-bold text-gray-500 tracking-widest">自動計算額</th>
                     <th className="px-4 py-3 text-left font-bold text-gray-500 tracking-widest">手動オーバーライド</th>
                     <th className="px-4 py-3 text-right font-bold text-gray-500 tracking-widest">請求額(税込)</th>
+                    <th className="px-4 py-3 text-left font-bold text-gray-500 tracking-widest">支払方法</th>
                     <th className="px-4 py-3 text-left font-bold text-gray-500 tracking-widest">請求先メール</th>
                     <th className="px-4 py-3 text-center font-bold text-gray-500 tracking-widest">アクション</th>
                   </tr>
@@ -1243,6 +1285,14 @@ export default function OwnerDashboard() {
                           {fee.manual && <div className="text-[9px] text-blue-300">手動</div>}
                         </td>
                         <td className="px-4 py-3">
+                          <select value={billing.paymentMethod || 'bank_transfer'}
+                            onChange={e => saveTenantBilling(t.id, { paymentMethod: e.target.value })}
+                            className="h-8 px-2 bg-black border border-[#333] rounded text-[11px] text-white outline-none">
+                            <option value="bank_transfer">🏦 銀行振込</option>
+                            <option value="card">💳 クレカ</option>
+                          </select>
+                        </td>
+                        <td className="px-4 py-3">
                           <input type="email" placeholder="email" value={billing.billingEmail || ''}
                             onChange={e => saveTenantBilling(t.id, { billingEmail: e.target.value })}
                             className="w-44 h-8 px-2 bg-black border border-[#333] rounded text-[11px] text-white outline-none"/>
@@ -1262,7 +1312,7 @@ export default function OwnerDashboard() {
                     <td className="px-4 py-3 text-right text-cyan-400 font-bold font-mono text-[14px]">
                       ¥{tenants.reduce((s, t) => s + calcTenantFee(t).total, 0).toLocaleString()}
                     </td>
-                    <td colSpan="2"></td>
+                    <td colSpan="3"></td>
                   </tr>
                 </tfoot>
               </table>
