@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { getCurrentStaff, setCurrentStaff, ROLE_LABELS, ROLE_DESCRIPTIONS, can } from '@/utils/staffRole';
 import { isFeatureEnabled } from '@/utils/features';
+import UpgradeModal from '@/components/UpgradeModal';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 
@@ -34,6 +35,9 @@ export default function StaffLayout({ children }) {
   const [pinModal, setPinModal] = useState(null); // { staff, onSuccess }
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
+
+  // ★ アップグレードモーダル
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   useEffect(() => {
     const applySettings = (settingsData) => {
@@ -386,14 +390,13 @@ export default function StaffLayout({ children }) {
           {/* オプション機能のアップグレード案内 */}
           <div className="pt-2 border-t border-[#EAEAEA] space-y-2">
             <button
-              onClick={handleUpgradeRequest}
-              disabled={isSending}
-              className="w-full bg-[#2D4B3E] text-white text-[11px] font-bold py-3 rounded-xl shadow-md hover:bg-[#1f352b] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              onClick={() => setShowUpgradeModal(true)}
+              className="w-full bg-[#2D4B3E] text-white text-[11px] font-bold py-3 rounded-xl shadow-md hover:bg-[#1f352b] transition-all flex items-center justify-center gap-2"
             >
-              <Sparkles size={14} /> {isSending ? '送信中...' : '機能アップグレード問い合わせ'}
+              <Sparkles size={14} /> 機能アップグレード
             </button>
             <Link href="/terms" target="_blank" className="block text-center text-[10px] text-[#999] hover:text-[#2D4B3E] underline">
-              利用規約
+              利用規約・解約申請
             </Link>
           </div>
         </div>
@@ -437,6 +440,13 @@ export default function StaffLayout({ children }) {
           </div>
         </div>
       )}
+
+      {/* ★ アップグレードモーダル */}
+      <UpgradeModal
+        open={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        tenantSettings={tenantSettings}
+      />
 
       {/* ★ PIN認証モーダル */}
       {pinModal && (

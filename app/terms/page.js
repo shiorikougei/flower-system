@@ -1,8 +1,51 @@
 'use client';
 import Link from 'next/link';
-import { ChevronLeft, FileText } from 'lucide-react';
+import { useState } from 'react';
+import { supabase } from '@/utils/supabase';
+import { ChevronLeft, FileText, AlertCircle, Send, CheckCircle2 } from 'lucide-react';
 
 export default function TermsPage() {
+  const [showCancelForm, setShowCancelForm] = useState(false);
+  const [cancelForm, setCancelForm] = useState({ tenantName: '', email: '', reason: '', wishMonth: '' });
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  async function submitCancel() {
+    if (!cancelForm.tenantName || !cancelForm.email) {
+      alert('店舗名・連絡先メールアドレスを入力してください');
+      return;
+    }
+    setSending(true);
+    try {
+      // ログイン中ならテナントID取得
+      let tenantId = '';
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
+          tenantId = profile?.tenant_id || '';
+        }
+      } catch {}
+
+      const res = await fetch('/api/admin/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'cancel',
+          tenantId,
+          tenantName: cancelForm.tenantName,
+          subject: `${cancelForm.tenantName} から解約申請`,
+          body: `店舗名: ${cancelForm.tenantName}\n連絡先: ${cancelForm.email}\n希望解約月: ${cancelForm.wishMonth || '未指定'}\n\n【理由】\n${cancelForm.reason || '(記載なし)'}`,
+          metadata: { cancelForm },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setSent(true);
+    } catch (e) { alert('送信失敗: ' + e.message); }
+    finally { setSending(false); }
+  }
+
   return (
     <div className="min-h-screen bg-[#FBFAF9] font-sans text-[#111111]">
       <header className="bg-white border-b border-[#EAEAEA] sticky top-0 z-10">
@@ -32,7 +75,6 @@ export default function TermsPage() {
           <ul>
             <li>・契約は1ヶ月単位で自動更新されます。</li>
             <li>・利用料金は基本料金 + 有効化された機能ごとの追加料金の合計です。</li>
-            <li>・料金は当社のオーナーページから自由に確認・変更できます。</li>
             <li>・モデル店舗等、特別契約の場合は手動設定された固定料金が適用されます。</li>
           </ul>
         </Section>
@@ -44,7 +86,7 @@ export default function TermsPage() {
         </Section>
 
         <Section title="第4条（解約について）">
-          <p>解約をご希望の場合は <strong>解約希望月の前月末日</strong> までに support@nocolde.com にご連絡ください。</p>
+          <p>解約をご希望の場合は <strong>解約希望月の前月末日</strong> までに、下記の解約フォーム または marusyou.reishin@gmail.com までご連絡ください。</p>
           <ul>
             <li>・解約は申請月の翌月末で完了し、それまでは通常通りご利用いただけます。</li>
             <li>・月の途中で解約しても、当月分の日割り返金は致しません。</li>
@@ -54,8 +96,9 @@ export default function TermsPage() {
         </Section>
 
         <Section title="第5条（機能の追加・解除）">
-          <p>機能のオプション追加・解除はオーナーまでお問い合わせください。</p>
-          <p>機能変更は <strong>翌月分から</strong> 反映されます。当月の追加機能料金は発生しません。</p>
+          <p>機能のオプション追加・解除は <strong>管理者</strong> までお問い合わせください。下記「機能アップグレード」フォームから即時申し込みも可能です。</p>
+          <p>月の途中で機能追加のご依頼があった場合は、原則 <strong>即時実装・即時開放</strong> いたします。</p>
+          <p>当月分はお試し期間としてサービスし、料金は <strong>翌月分から発生</strong> いたします。</p>
         </Section>
 
         <Section title="第6条（データの取り扱い）">
@@ -89,8 +132,63 @@ export default function TermsPage() {
 
         <Section title="第10条（お問い合わせ）">
           <p>本サービスに関するお問い合わせは下記までご連絡ください。</p>
-          <p><strong>NocoLde</strong><br/>Email: support@nocolde.com</p>
+          <p><strong>NocoLde</strong><br/>Email: marusyou.reishin@gmail.com</p>
         </Section>
+
+        {/* ★ 解約申請フォーム */}
+        <div className="bg-red-50 p-6 rounded-2xl border-2 border-red-200 space-y-3">
+          <h3 className="text-[14px] font-bold text-red-700 flex items-center gap-2"><AlertCircle size={16}/> 解約申請フォーム</h3>
+          <p className="text-[11px] text-red-900 leading-relaxed">
+            解約をご希望の場合は下記フォームから申請してください。<br/>
+            管理者に通知が届き、確認後ご連絡いたします。
+          </p>
+
+          {!showCancelForm && !sent && (
+            <button onClick={() => setShowCancelForm(true)} className="px-4 py-2 bg-red-600 text-white text-[12px] font-bold rounded-lg hover:bg-red-700">
+              解約申請を開く
+            </button>
+          )}
+
+          {showCancelForm && !sent && (
+            <div className="bg-white p-4 rounded-xl border border-red-200 space-y-3">
+              <div>
+                <label className="text-[11px] font-bold text-[#555] tracking-widest">店舗名 <span className="text-red-500">*</span></label>
+                <input type="text" value={cancelForm.tenantName} onChange={e => setCancelForm({...cancelForm, tenantName: e.target.value})}
+                  className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-red-400"/>
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-[#555] tracking-widest">連絡先メールアドレス <span className="text-red-500">*</span></label>
+                <input type="email" value={cancelForm.email} onChange={e => setCancelForm({...cancelForm, email: e.target.value})}
+                  className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-red-400"/>
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-[#555] tracking-widest">希望解約月（任意）</label>
+                <input type="month" value={cancelForm.wishMonth} onChange={e => setCancelForm({...cancelForm, wishMonth: e.target.value})}
+                  className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-red-400"/>
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-[#555] tracking-widest">解約理由（任意・差し支えなければ）</label>
+                <textarea value={cancelForm.reason} onChange={e => setCancelForm({...cancelForm, reason: e.target.value})}
+                  rows={3} placeholder="使い勝手・料金・他社サービスへの移行など、サービス改善の参考にさせていただきます"
+                  className="w-full mt-1 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-red-400 leading-relaxed"/>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button onClick={() => setShowCancelForm(false)} className="flex-1 h-11 bg-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-lg">キャンセル</button>
+                <button onClick={submitCancel} disabled={sending} className="flex-[2] h-11 bg-red-600 text-white text-[12px] font-bold rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2">
+                  <Send size={14}/> {sending ? '送信中...' : '解約申請を送信'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {sent && (
+            <div className="bg-white p-5 rounded-xl border border-green-200 text-center space-y-2">
+              <CheckCircle2 size={36} className="mx-auto text-green-600"/>
+              <p className="text-[13px] font-bold text-green-700">解約申請を受け付けました</p>
+              <p className="text-[11px] text-[#555] leading-relaxed">管理者に通知が届きました。<br/>2営業日以内にご連絡いたします。</p>
+            </div>
+          )}
+        </div>
 
         <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA] text-[11px] text-[#555] text-center">
           以上
