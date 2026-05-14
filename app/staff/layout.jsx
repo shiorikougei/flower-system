@@ -384,7 +384,7 @@ export default function StaffLayout({ children }) {
           </button>
 
           {/* オプション機能のアップグレード案内 */}
-          <div className="pt-2 border-t border-[#EAEAEA]">
+          <div className="pt-2 border-t border-[#EAEAEA] space-y-2">
             <button
               onClick={handleUpgradeRequest}
               disabled={isSending}
@@ -392,6 +392,9 @@ export default function StaffLayout({ children }) {
             >
               <Sparkles size={14} /> {isSending ? '送信中...' : '機能アップグレード問い合わせ'}
             </button>
+            <Link href="/terms" target="_blank" className="block text-center text-[10px] text-[#999] hover:text-[#2D4B3E] underline">
+              利用規約
+            </Link>
           </div>
         </div>
       </aside>

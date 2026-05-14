@@ -1,0 +1,134 @@
+// 月次サブスク請求自動送付
+// GET /api/cron/monthly-subscription-invoice
+//
+// 毎月1日 朝 8:30 (JST) に実行（vercel.json で定義）
+// - 全テナントの翌月分料金を計算
+// - 請求書HTMLをメールで送付（請求先メール宛）
+// - モデル店舗（manualPriceJpy=0）は送信スキップ可能
+
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { sendEmail } from '@/utils/email';
+import { DEFAULT_PRICING, calcMonthlyFee, calcWithManualOverride } from '@/utils/subscriptionPricing';
+import { FEATURE_GROUPS } from '@/utils/features';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+export async function GET(request) {
+  try {
+    const authHeader = request.headers.get('authorization') || '';
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    }
+
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    // オーナー設定取得
+    const { data: ownerRow } = await supabaseAdmin.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
+    const ownerData = ownerRow?.settings_data || {};
+    const pricing = { ...DEFAULT_PRICING, ...(ownerData.pricingConfig || {}) };
+    const tenantBilling = ownerData.tenantBilling || {};
+
+    // 全テナント取得
+    const { data: rows } = await supabaseAdmin.from('app_settings').select('id, settings_data')
+      .neq('id', 'nocolde_owner');
+    const tenants = (rows || [])
+      .filter(r => !['gallery', 'default'].includes(r.id) && !r.id.endsWith('_gallery'))
+      .map(r => ({
+        id: r.id,
+        name: r.settings_data?.generalConfig?.appName || r.id,
+        features: r.settings_data?.features || {},
+      }));
+
+    // 翌月
+    const next = new Date(); next.setMonth(next.getMonth() + 1);
+    const targetMonth = `${next.getFullYear()}年${next.getMonth() + 1}月`;
+    const dueDate = (() => {
+      const d = new Date(); d.setMonth(d.getMonth() + 1); d.setDate(0);
+      return d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
+    })();
+
+    let sent = 0;
+    let skipped = 0;
+    const errors = [];
+
+    for (const t of tenants) {
+      try {
+        const billing = tenantBilling[t.id] || {};
+        const fee = (billing.manualPriceJpy != null && Number(billing.manualPriceJpy) >= 0)
+          ? calcWithManualOverride(billing.manualPriceJpy, pricing.taxRate)
+          : calcMonthlyFee(t.features, pricing);
+
+        // 0円なら送信スキップ
+        if (fee.total === 0) { skipped++; continue; }
+
+        // 請求先メール
+        const to = billing.billingEmail;
+        if (!to || !to.includes('@')) { skipped++; continue; }
+
+        const featureRows = fee.featureBreakdown ? fee.featureBreakdown.map(f => {
+          const item = FEATURE_GROUPS.flatMap(g => g.items).find(i => i.key === f.key);
+          return `<tr><td>${item?.label || f.key}</td><td style="text-align:right;">¥${f.price.toLocaleString()}</td></tr>`;
+        }).join('') : '';
+
+        const html = `<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#FBFAF9;font-family:'Hiragino Sans',sans-serif;color:#111;line-height:1.7;">
+  <div style="max-width:600px;margin:0 auto;background:white;padding:40px 24px;">
+    <h1 style="font-size:18px;color:#2D4B3E;margin:0 0 16px;">${targetMonth} 利用料金 ご請求のお知らせ</h1>
+    <p style="font-size:13px;">${t.name} 御中</p>
+    <p style="font-size:13px;">いつもFLORIXをご利用いただきありがとうございます。<br/>${targetMonth}分の月額利用料金をお知らせいたします。</p>
+    <div style="background:#fafafa;border:1.5pt solid #222;padding:16px;margin:16px 0;text-align:center;border-radius:8px;">
+      <div style="font-size:11px;color:#666;">${targetMonth} ご請求金額（税込）</div>
+      <div style="font-size:24pt;font-weight:bold;color:#117768;letter-spacing:0.05em;margin-top:4px;">¥${fee.total.toLocaleString()}</div>
+      <div style="font-size:9pt;color:#666;margin-top:4px;">本体 ¥${fee.subTotal.toLocaleString()} / 消費税 ¥${fee.tax.toLocaleString()}</div>
+    </div>
+    ${fee.manual ? `<p style="font-size:11px;color:#1e40af;background:#f0f9ff;padding:8px;border-radius:4px;">※特別契約による固定料金です${billing.manualReason ? `（${billing.manualReason}）` : ''}</p>` : `
+      <table style="width:100%;border-collapse:collapse;font-size:11px;margin:12px 0;">
+        <thead><tr style="background:#f4f4f4;"><th style="padding:6px;border:0.5pt solid #ddd;text-align:left;">項目</th><th style="padding:6px;border:0.5pt solid #ddd;text-align:right;">金額</th></tr></thead>
+        <tbody>
+          <tr><td style="padding:6px;border:0.5pt solid #ddd;">基本料金</td><td style="padding:6px;border:0.5pt solid #ddd;text-align:right;">¥${fee.basePrice.toLocaleString()}</td></tr>
+          ${featureRows}
+        </tbody>
+      </table>
+    `}
+    <div style="background:#fff7ed;border:1pt solid #f97316;padding:12px;margin:12px 0;font-size:12px;color:#c2410c;text-align:center;font-weight:bold;border-radius:4px;">
+      お支払い期日: ${dueDate}
+    </div>
+    <p style="font-size:11px;color:#666;margin-top:24px;line-height:1.6;">
+      ご請求に関するお問い合わせ・解約については、利用規約をご確認いただくか、support@nocolde.com までお問い合わせください。
+    </p>
+    <p style="font-size:11px;color:#999;margin-top:32px;padding-top:16px;border-top:1px solid #EAEAEA;text-align:center;">— NocoLde —</p>
+  </div>
+</body></html>`;
+
+        const subject = `【NocoLde】${targetMonth} 利用料金のご請求 (${fee.total.toLocaleString()}円)`;
+        const from = `NocoLde <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
+        const result = await sendEmail({ to, subject, html, from });
+        if (result.error) {
+          errors.push({ tenant: t.id, error: result.error });
+        } else {
+          sent++;
+        }
+      } catch (e) {
+        errors.push({ tenant: t.id, error: e.message });
+      }
+    }
+
+    return NextResponse.json({
+      executed_at: new Date().toISOString(),
+      target_month: targetMonth,
+      total_tenants: tenants.length,
+      sent,
+      skipped,
+      errors,
+    });
+  } catch (err) {
+    console.error('[monthly-subscription-invoice]', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}

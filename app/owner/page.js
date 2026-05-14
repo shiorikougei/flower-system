@@ -4,9 +4,10 @@ import { supabase } from '@/utils/supabase';
 import {
   Building2, Mail, ArrowUpCircle, Bot, Lock, Unlock,
   CheckCircle, XCircle, RefreshCw, Save, Sparkles, Store,
-  MessageSquare, Trash2, AlertTriangle, Wand2, X, FileText, ToggleLeft, ToggleRight
+  MessageSquare, Trash2, AlertTriangle, Wand2, X, FileText, ToggleLeft, ToggleRight, CreditCard, Send
 } from 'lucide-react';
 import { FEATURE_GROUPS, ALL_FEATURE_KEYS } from '@/utils/features';
+import { DEFAULT_PRICING, calcMonthlyFee, calcWithManualOverride } from '@/utils/subscriptionPricing';
 
 const DEFAULT_AI_PROMPT = '以下のテキストからお花の「価格」「用途」「カラー」「イメージ」をJSON形式で抽出してください。価格はカンマなしの数値で出力してください。';
 const DEFAULT_CAPTION_PROMPT = `あなたは {appName} の SNS担当です。お花の注文を受けて完成した作品をInstagramに投稿します。以下の条件でキャプションを作成してください。
@@ -205,6 +206,147 @@ export default function OwnerDashboard() {
 
   // ★ 機能設定モーダル
   const [featureModalTenant, setFeatureModalTenant] = useState(null);
+
+  // ★ サブスク料金マスター（オーナーレベル）
+  const [pricingConfig, setPricingConfig] = useState(DEFAULT_PRICING);
+  const [tenantBilling, setTenantBilling] = useState({});  // { [tenantId]: { manualPriceJpy, manualReason, billingEmail } }
+
+  // ロード
+  useEffect(() => {
+    if (!isAuth) return;
+    (async () => {
+      try {
+        const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
+        const s = data?.settings_data || {};
+        if (s.pricingConfig) setPricingConfig({...DEFAULT_PRICING, ...s.pricingConfig});
+        if (s.tenantBilling) setTenantBilling(s.tenantBilling);
+      } catch {}
+    })();
+  }, [isAuth]);
+
+  const savePricingConfig = async () => {
+    try {
+      const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
+      const next = { ...(data?.settings_data || {}), pricingConfig };
+      await supabase.from('app_settings').upsert({ id: 'nocolde_owner', settings_data: next });
+      alert('料金マスターを保存しました');
+    } catch (e) { alert('保存失敗: ' + e.message); }
+  };
+
+  const saveTenantBilling = async (tenantId, patch) => {
+    const next = { ...tenantBilling, [tenantId]: { ...(tenantBilling[tenantId] || {}), ...patch } };
+    setTenantBilling(next);
+    try {
+      const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
+      const settings = { ...(data?.settings_data || {}), tenantBilling: next };
+      await supabase.from('app_settings').upsert({ id: 'nocolde_owner', settings_data: settings });
+    } catch (e) { console.warn(e); }
+  };
+
+  // テナントごとの料金計算
+  const calcTenantFee = (tenant) => {
+    const billing = tenantBilling[tenant.id] || {};
+    if (billing.manualPriceJpy && Number(billing.manualPriceJpy) >= 0) {
+      return calcWithManualOverride(billing.manualPriceJpy, pricingConfig.taxRate);
+    }
+    return calcMonthlyFee(tenant.features || {}, pricingConfig);
+  };
+
+  // サブスク請求書PDF発行
+  const printSubscriptionInvoice = (tenant, opts = {}) => {
+    const fee = calcTenantFee(tenant);
+    const billing = tenantBilling[tenant.id] || {};
+    const issueDate = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
+    const targetMonth = opts.targetMonth || (() => {
+      const d = new Date(); d.setMonth(d.getMonth() + 1);
+      return `${d.getFullYear()}年${d.getMonth()+1}月`;
+    })();
+    const dueDate = (() => {
+      const d = new Date(); d.setMonth(d.getMonth() + 1); d.setDate(0);
+      return d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
+    })();
+    const ownerName = 'NocoLde';
+    const ownerInvoice = 'T0000000000000';
+
+    // 機能内訳
+    const featureRows = fee.featureBreakdown ? fee.featureBreakdown.map(f => {
+      const item = FEATURE_GROUPS.flatMap(g => g.items).find(i => i.key === f.key);
+      return `<tr><td>${item?.label || f.key}</td><td style="text-align:center;">1</td><td style="text-align:right;">¥${f.price.toLocaleString()}</td><td style="text-align:right;">¥${f.price.toLocaleString()}</td></tr>`;
+    }).join('') : '';
+
+    const html = `<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"/><title>サブスク請求書_${tenant.id}_${targetMonth}</title>
+      <style>
+        @page { size: A4 portrait; margin: 20mm; }
+        body { font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; color: #222; margin: 0; }
+        .container { max-width: 170mm; margin: 0 auto; }
+        .title { text-align: center; font-size: 26pt; font-weight: 900; letter-spacing: 0.5em; padding: 6mm 0; border-bottom: 2pt double #222; margin-bottom: 8mm; }
+        .meta { display: flex; justify-content: space-between; margin-bottom: 8mm; font-size: 10pt; }
+        .target { font-size: 14pt; font-weight: bold; padding: 4mm 0; border-bottom: 0.5pt solid #999; margin-bottom: 6mm; }
+        .amount-block { background: #fafafa; border: 1.5pt solid #222; padding: 8mm; margin: 8mm 0; text-align: center; }
+        .amount-label { font-size: 10pt; color: #666; margin-bottom: 2mm; }
+        .amount-value { font-size: 28pt; font-weight: 900; color: #117768; letter-spacing: 0.1em; }
+        .amount-tax { font-size: 9pt; color: #666; margin-top: 2mm; }
+        table { width: 100%; border-collapse: collapse; margin: 4mm 0; font-size: 10pt; }
+        th, td { padding: 2.5mm 3mm; border-bottom: 0.5pt solid #ddd; }
+        th { background: #f4f4f4; font-weight: bold; }
+        .due { background: #fff7ed; border: 1pt solid #f97316; padding: 4mm; margin: 6mm 0; font-size: 11pt; color: #c2410c; text-align: center; font-weight: bold; }
+        .footer { margin-top: 12mm; padding-top: 6mm; border-top: 0.5pt solid #999; font-size: 9pt; line-height: 1.7; }
+        .footer .name { font-size: 13pt; font-weight: 900; }
+        .manual-note { background: #f0f9ff; border: 1pt solid #3b82f6; padding: 4mm; margin: 4mm 0; font-size: 10pt; color: #1e40af; }
+      </style></head><body>
+      <div class="container">
+        <div class="title">請 求 書</div>
+        <div class="meta">
+          <div>No. SUB-${tenant.id.slice(0,6)}-${new Date().toISOString().slice(0,7).replace('-','')}</div>
+          <div>発行日: ${issueDate}</div>
+        </div>
+        <div class="target">${tenant.name} 御中</div>
+        <div class="amount-block">
+          <div class="amount-label">${targetMonth} 利用料金（税込）</div>
+          <div class="amount-value">¥ ${fee.total.toLocaleString()} -</div>
+          <div class="amount-tax">（本体 ¥${fee.subTotal.toLocaleString()} / 消費税 ¥${fee.tax.toLocaleString()}）</div>
+        </div>
+        <div style="font-size:11pt; padding:4mm 0;">下記の通りご請求申し上げます。</div>
+
+        ${fee.manual ? `
+          <div class="manual-note">
+            ⚠️ 手動設定の固定料金で請求しています${billing.manualReason ? `（理由: ${billing.manualReason}）` : ''}
+          </div>
+          <table>
+            <thead><tr><th>項目</th><th style="width:25mm; text-align:right;">金額(税抜)</th></tr></thead>
+            <tbody><tr><td>${targetMonth} ご利用料金（特別契約）</td><td style="text-align:right;">¥${fee.subTotal.toLocaleString()}</td></tr></tbody>
+          </table>
+        ` : `
+          <table>
+            <thead><tr><th>項目</th><th style="width:18mm; text-align:center;">数量</th><th style="width:25mm; text-align:right;">単価</th><th style="width:25mm; text-align:right;">金額</th></tr></thead>
+            <tbody>
+              <tr><td>基本料金（注文管理・カレンダー・配達）</td><td style="text-align:center;">1</td><td style="text-align:right;">¥${fee.basePrice.toLocaleString()}</td><td style="text-align:right;">¥${fee.basePrice.toLocaleString()}</td></tr>
+              ${featureRows}
+            </tbody>
+            <tfoot>
+              <tr style="background:#f4f4f4; font-weight:bold;"><td colspan="3" style="text-align:right;">小計（税抜）</td><td style="text-align:right;">¥${fee.subTotal.toLocaleString()}</td></tr>
+              <tr><td colspan="3" style="text-align:right;">消費税(10%)</td><td style="text-align:right;">¥${fee.tax.toLocaleString()}</td></tr>
+              <tr style="background:#117768; color:white; font-weight:bold;"><td colspan="3" style="text-align:right;">合計</td><td style="text-align:right;">¥${fee.total.toLocaleString()}</td></tr>
+            </tfoot>
+          </table>
+        `}
+
+        <div class="due">お支払い期日: ${dueDate}</div>
+
+        <div class="footer">
+          <div class="name">${ownerName}</div>
+          <div>登録番号: ${ownerInvoice}</div>
+          <div style="margin-top:3mm; color:#666;">お支払いに関するお問い合わせ: support@nocolde.com</div>
+          <div style="margin-top:6mm; padding-top:3mm; border-top:0.3pt dashed #ccc; font-size:8pt; color:#999;">
+            ※当月途中での解約・機能変更は翌月分から反映されます。詳細は利用規約をご確認ください。
+          </div>
+        </div>
+      </div>
+      <script>window.onload = function() { setTimeout(function() { window.print(); }, 400); };</script>
+      </body></html>`;
+    const w = window.open('', '_blank');
+    if (w) { w.document.open(); w.document.write(html); w.document.close(); }
+  };
 
 
   // ★ AI利用状況
@@ -529,6 +671,7 @@ export default function OwnerDashboard() {
           </button>
           <button onClick={() => setActiveTab('ai')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'ai' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><Bot size={16}/> AIプロンプト設定</button>
           <button onClick={() => setActiveTab('usage')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'usage' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><Sparkles size={16}/> AI利用状況・請求</button>
+          <button onClick={() => setActiveTab('subscription')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'subscription' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><CreditCard size={16}/> サブスク管理</button>
 
           <div className="pt-8 pb-4">
             <button onClick={() => setActiveTab('danger')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'danger' ? 'bg-red-900/30 text-red-500 border border-red-900/50' : 'text-gray-500 hover:bg-red-900/10 hover:text-red-500'}`}><AlertTriangle size={16}/> 危険な操作・初期化</button>
@@ -545,6 +688,7 @@ export default function OwnerDashboard() {
             {activeTab === 'feedbacks' && 'CLIENT FEEDBACKS'}
             {activeTab === 'ai' && 'AI PROMPT SETTINGS'}
             {activeTab === 'usage' && 'AI USAGE & BILLING'}
+            {activeTab === 'subscription' && 'SUBSCRIPTION MANAGEMENT'}
             {activeTab === 'danger' && 'DANGER ZONE'}
           </h2>
           <div className="flex items-center gap-4">
@@ -1002,6 +1146,131 @@ export default function OwnerDashboard() {
             <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-xl p-4 text-[11px] text-cyan-200 leading-relaxed">
               💡 計測対象: キャプション生成 + プロンプト自動生成 の合計回数。<br/>
               月をまたぐと自動でカウントがリセットされ、過去月のデータは保持されます。
+            </div>
+          </div>
+        )}
+
+        {/* ★ サブスク管理 */}
+        {activeTab === 'subscription' && (
+          <div className="space-y-8 animate-in fade-in">
+            <header className="space-y-2">
+              <h3 className="text-[16px] font-bold text-cyan-400 flex items-center gap-2"><CreditCard size={18}/> サブスク料金管理</h3>
+              <p className="text-[12px] text-gray-500 leading-relaxed">機能ON/OFF と料金マスターから自動計算 + モデル店舗向け手動オーバーライド対応</p>
+            </header>
+
+            {/* 料金マスター */}
+            <div className="bg-[#111111] border border-[#222222] rounded-2xl p-6 shadow-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-white font-bold text-[13px] tracking-widest">料金マスター</h4>
+                <button onClick={savePricingConfig} className="px-4 h-9 bg-cyan-600 hover:bg-cyan-500 text-black font-bold rounded-lg text-[11px] tracking-widest flex items-center gap-2"><Save size={12}/> 料金保存</button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 tracking-widest">基本料金 (税抜/月)</label>
+                  <input type="number" value={pricingConfig.basePrice}
+                    onChange={e => setPricingConfig({...pricingConfig, basePrice: Number(e.target.value)})}
+                    className="w-full mt-1 bg-black border border-[#333333] rounded-lg p-2 text-[13px] text-white font-mono outline-none"/>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 tracking-widest">消費税率 (例: 0.10)</label>
+                  <input type="number" step="0.01" value={pricingConfig.taxRate}
+                    onChange={e => setPricingConfig({...pricingConfig, taxRate: Number(e.target.value)})}
+                    className="w-full mt-1 bg-black border border-[#333333] rounded-lg p-2 text-[13px] text-white font-mono outline-none"/>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-bold text-gray-500 tracking-widest mb-2">機能別 月額追加料金</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {Object.entries(pricingConfig.featurePrices || {}).map(([key, price]) => {
+                    const item = FEATURE_GROUPS.flatMap(g => g.items).find(i => i.key === key);
+                    return (
+                      <div key={key} className="flex items-center gap-2 bg-black border border-[#222] rounded p-2">
+                        <span className="text-[10px] text-gray-400 flex-1 truncate">{item?.label || key}</span>
+                        <span className="text-[10px] text-gray-500">¥</span>
+                        <input type="number" value={price}
+                          onChange={e => setPricingConfig({...pricingConfig, featurePrices: {...pricingConfig.featurePrices, [key]: Number(e.target.value)}})}
+                          className="w-20 bg-transparent border-b border-[#333] text-[12px] text-white text-right font-mono outline-none"/>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* テナント別月額一覧 */}
+            <div className="bg-[#111111] border border-[#222222] rounded-2xl shadow-xl overflow-hidden">
+              <div className="p-4 border-b border-[#222]">
+                <h4 className="text-white font-bold text-[13px] tracking-widest">テナント別 翌月請求額</h4>
+                <p className="text-[10px] text-gray-500 mt-1">機能ONから自動計算 / 手動入力で固定額にも変更可能</p>
+              </div>
+              <table className="w-full text-[12px]">
+                <thead className="bg-black/50 border-b border-[#222]">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-bold text-gray-500 tracking-widest">店舗</th>
+                    <th className="px-4 py-3 text-left font-bold text-gray-500 tracking-widest">機能数</th>
+                    <th className="px-4 py-3 text-right font-bold text-gray-500 tracking-widest">自動計算額</th>
+                    <th className="px-4 py-3 text-left font-bold text-gray-500 tracking-widest">手動オーバーライド</th>
+                    <th className="px-4 py-3 text-right font-bold text-gray-500 tracking-widest">請求額(税込)</th>
+                    <th className="px-4 py-3 text-left font-bold text-gray-500 tracking-widest">請求先メール</th>
+                    <th className="px-4 py-3 text-center font-bold text-gray-500 tracking-widest">アクション</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tenants.map(t => {
+                    const auto = calcMonthlyFee(t.features || {}, pricingConfig);
+                    const billing = tenantBilling[t.id] || {};
+                    const fee = calcTenantFee(t);
+                    const enabledCount = ALL_FEATURE_KEYS.filter(k => t.features?.[k]).length;
+                    return (
+                      <tr key={t.id} className="border-b border-[#222]/50 hover:bg-black/30">
+                        <td className="px-4 py-3 text-white font-bold">{t.name}<div className="text-[9px] text-gray-600 font-mono">{t.id}</div></td>
+                        <td className="px-4 py-3 text-gray-300">{enabledCount}/{ALL_FEATURE_KEYS.length}</td>
+                        <td className="px-4 py-3 text-right text-gray-400 font-mono">¥{auto.total.toLocaleString()}</td>
+                        <td className="px-4 py-3">
+                          <input type="number" placeholder="自動計算"
+                            value={billing.manualPriceJpy ?? ''}
+                            onChange={e => saveTenantBilling(t.id, { manualPriceJpy: e.target.value === '' ? null : Number(e.target.value) })}
+                            className="w-24 h-8 px-2 bg-black border border-[#333] rounded text-[11px] text-white font-mono text-right outline-none"/>
+                          {billing.manualPriceJpy != null && billing.manualPriceJpy >= 0 && (
+                            <input type="text" placeholder="理由(任意)" value={billing.manualReason || ''}
+                              onChange={e => saveTenantBilling(t.id, { manualReason: e.target.value })}
+                              className="w-32 mt-1 h-7 px-2 bg-black border border-[#333] rounded text-[10px] text-gray-400 outline-none"/>
+                          )}
+                        </td>
+                        <td className={`px-4 py-3 text-right font-bold font-mono ${fee.manual ? 'text-blue-400' : 'text-cyan-400'}`}>
+                          ¥{fee.total.toLocaleString()}
+                          {fee.manual && <div className="text-[9px] text-blue-300">手動</div>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <input type="email" placeholder="email" value={billing.billingEmail || ''}
+                            onChange={e => saveTenantBilling(t.id, { billingEmail: e.target.value })}
+                            className="w-44 h-8 px-2 bg-black border border-[#333] rounded text-[11px] text-white outline-none"/>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <button onClick={() => printSubscriptionInvoice(t)} className="inline-flex items-center gap-1 bg-cyan-500/10 text-cyan-400 border border-cyan-500/40 px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-cyan-500/20" title="請求書PDF">
+                            <FileText size={11}/> 発行
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot className="bg-black/50 border-t border-cyan-900/40">
+                  <tr>
+                    <td colSpan="4" className="px-4 py-3 text-right text-gray-400 font-bold tracking-widest">翌月請求総額</td>
+                    <td className="px-4 py-3 text-right text-cyan-400 font-bold font-mono text-[14px]">
+                      ¥{tenants.reduce((s, t) => s + calcTenantFee(t).total, 0).toLocaleString()}
+                    </td>
+                    <td colSpan="2"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-xl p-4 text-[11px] text-cyan-200 leading-relaxed">
+              💡 毎月1日に翌月分の請求書が「請求先メール」に自動送信されます（Cronで実行）。
+              モデル店舗は手動オーバーライドで <strong>0円</strong> も設定可能です。
             </div>
           </div>
         )}
