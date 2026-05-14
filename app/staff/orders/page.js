@@ -1,10 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/utils/supabase'; 
-import { 
+import { supabase } from '@/utils/supabase';
+import {
   Calendar, ChevronRight, Truck, Store, Package, AlertCircle, CheckCircle2
 } from 'lucide-react';
-import OrderDetailModal from '@/components/OrderDetailModal'; 
+import OrderDetailModal from '@/components/OrderDetailModal';
+import { logAction } from '@/utils/auditLog';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -105,6 +106,8 @@ export default function OrdersPage() {
       sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders));
 
       setSelectedOrder({ ...targetOrder, order_data: updatedData });
+      // ★ 操作履歴記録
+      logAction({ action: 'order_status_change', targetType: 'order', targetId: orderId, description: `ステータスを「${newStatus}」に変更` });
     } catch (err) {
       alert('更新に失敗しました。');
     }
@@ -139,6 +142,8 @@ export default function OrdersPage() {
 
       setSelectedOrder(prev => ({ ...prev, order_data: updatedData }));
       if (!opts.skipConfirm) alert('入金済みに更新しました！');
+      // ★ 操作履歴記録
+      logAction({ action: 'order_payment_confirm', targetType: 'order', targetId: orderId, description: '入金済みに更新' });
     } catch (error) {
       console.error(error);
       alert('更新に失敗しました。');
@@ -159,6 +164,8 @@ export default function OrdersPage() {
       sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders));
 
       setSelectedOrder(null);
+      // ★ 操作履歴記録
+      logAction({ action: 'order_archive', targetType: 'order', targetId: orderId, description: isArchive ? '注文を完了' : '注文を未完了に戻す' });
     } catch (err) { alert('更新失敗'); }
   };
 
@@ -183,8 +190,10 @@ export default function OrdersPage() {
       const newOrders = orders.filter(o => o.id !== orderId);
       setOrders(newOrders);
       sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders));
-      setSelectedOrder(null); 
+      setSelectedOrder(null);
       alert('注文を削除しました。');
+      // ★ 操作履歴記録（重要な削除操作）
+      logAction({ action: 'order_delete', targetType: 'order', targetId: orderId, description: '注文を削除' });
     } catch (error) {
       console.error('削除エラー:', error);
       alert('削除に失敗しました。');

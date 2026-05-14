@@ -5,9 +5,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 import {
   Home, ClipboardList, PlusSquare, CalendarDays, Truck, Briefcase,
-  Users, Building2, Settings, TrendingUp, Lock, Sparkles, MessageSquare, X, Send, Image as ImageIcon, ShoppingBag, UserCheck, ChevronDown
+  Users, Building2, Settings, TrendingUp, Lock, Sparkles, MessageSquare, X, Send, Image as ImageIcon, ShoppingBag, UserCheck, ChevronDown, History
 } from 'lucide-react';
 import { getCurrentStaff, setCurrentStaff, ROLE_LABELS, ROLE_DESCRIPTIONS, can } from '@/utils/staffRole';
+import { clockIn, clockOut } from '@/utils/attendance';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 
@@ -26,6 +27,12 @@ export default function StaffLayout({ children }) {
   const [staffList, setStaffList] = useState([]);
   const [currentStaff, setCurrentStaffState] = useState(null);
   const [showStaffPicker, setShowStaffPicker] = useState(false);
+  const [staffAuthConfig, setStaffAuthConfig] = useState({ requirePin: false, requireForOwnerOnly: true });
+
+  // ★ PIN認証モーダル
+  const [pinModal, setPinModal] = useState(null); // { staff, onSuccess }
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
 
   useEffect(() => {
     const applySettings = (settingsData) => {
@@ -36,6 +43,9 @@ export default function StaffLayout({ children }) {
       }
       if (Array.isArray(settingsData?.staffList)) {
         setStaffList(settingsData.staffList);
+      }
+      if (settingsData?.staffAuthConfig) {
+        setStaffAuthConfig(prev => ({ ...prev, ...settingsData.staffAuthConfig }));
       }
     };
 
@@ -83,6 +93,7 @@ export default function StaffLayout({ children }) {
     { name: '作品管理', path: '/staff/portfolio', icon: ImageIcon, perm: 'portfolio' },
     { name: '商品管理（EC）', path: '/staff/products', icon: ShoppingBag, perm: 'products' },
     { name: '各種設定', path: '/staff/settings', icon: Settings, perm: 'settings' },
+    { name: '操作履歴・勤怠', path: '/staff/audit', icon: History, perm: 'audit' },
   ];
 
   const premiumMenuItems = [
@@ -98,11 +109,31 @@ export default function StaffLayout({ children }) {
     ? filterByRole([...baseMenuItems.slice(0, 6), ...premiumMenuItems, ...baseMenuItems.slice(6)])
     : filterByRole(baseMenuItems);
 
-  // スタッフ切替
-  const switchStaff = (s) => {
+  // PIN認証が必要か判定
+  const needsPin = (targetStaff) => {
+    if (!staffAuthConfig.requirePin) return false;
+    if (!targetStaff?.pin) return false;  // PIN未設定なら認証スキップ
+    if (targetStaff.role === 'owner') return true;  // オーナーは常に
+    return staffAuthConfig.requireForOwnerOnly === false;  // 全員必須モードなら
+  };
+
+  const performSwitch = async (s) => {
+    // 退勤打刻（前のスタッフ）
+    if (currentStaff?.name && currentStaff.name !== s?.name) {
+      await clockOut(currentStaff.name);
+    }
+    // 出勤打刻（新しいスタッフ）
+    if (s?.name) {
+      await clockIn(s.name);
+    }
+
     setCurrentStaff(s);
     setCurrentStaffState(s);
     setShowStaffPicker(false);
+    setPinModal(null);
+    setPinInput('');
+    setPinError('');
+
     // 権限変更で見れない画面にいる場合はホームに戻す
     if (s && pathname && !pathname.startsWith('/staff/login')) {
       const stillVisible = activeMenuItems.some(m =>
@@ -118,7 +149,31 @@ export default function StaffLayout({ children }) {
     }
   };
 
-  const clearStaff = () => {
+  // スタッフ切替（PIN認証込み）
+  const switchStaff = (s) => {
+    if (needsPin(s)) {
+      setPinModal({ staff: s });
+      setPinInput('');
+      setPinError('');
+      return;
+    }
+    performSwitch(s);
+  };
+
+  const verifyPin = () => {
+    if (!pinModal?.staff) return;
+    if (pinInput !== pinModal.staff.pin) {
+      setPinError('PINが違います');
+      setPinInput('');
+      return;
+    }
+    performSwitch(pinModal.staff);
+  };
+
+  const clearStaff = async () => {
+    if (currentStaff?.name) {
+      await clockOut(currentStaff.name);
+    }
     setCurrentStaff(null);
     setCurrentStaffState(null);
     setShowStaffPicker(false);
@@ -359,6 +414,37 @@ export default function StaffLayout({ children }) {
                 <Send size={16}/> {isSending ? '送信中...' : '開発元へ送信する'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ★ PIN認証モーダル */}
+      {pinModal && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => { setPinModal(null); setPinInput(''); }}>
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="text-center">
+              <div className="w-14 h-14 mx-auto bg-amber-100 rounded-full flex items-center justify-center mb-3">
+                <Lock size={24} className="text-amber-600"/>
+              </div>
+              <h3 className="text-[16px] font-bold text-[#111]">{pinModal.staff.name} に切替</h3>
+              <p className="text-[11px] text-[#999] mt-1">4桁PINを入力してください</p>
+            </div>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={pinInput}
+              onChange={(e) => { setPinInput(e.target.value.replace(/\D/g, '').slice(0, 4)); setPinError(''); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' && pinInput.length === 4) verifyPin(); }}
+              autoFocus
+              className="w-full h-16 text-center text-[32px] font-bold tracking-[0.6em] bg-[#FBFAF9] border-2 border-[#EAEAEA] rounded-xl outline-none focus:border-amber-500 font-mono"
+              placeholder="••••"
+            />
+            {pinError && <p className="text-[12px] text-red-600 text-center font-bold">{pinError}</p>}
+            <div className="flex gap-2">
+              <button onClick={() => { setPinModal(null); setPinInput(''); }} className="flex-1 h-11 bg-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-xl">キャンセル</button>
+              <button onClick={verifyPin} disabled={pinInput.length !== 4} className="flex-1 h-11 bg-amber-600 text-white text-[12px] font-bold rounded-xl hover:bg-amber-700 disabled:opacity-50">確定</button>
+            </div>
           </div>
         </div>
       )}

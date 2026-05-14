@@ -100,6 +100,12 @@ export default function SettingsPage() {
     addFriendUrl: '',
   });
 
+  // ★ スタッフPIN認証設定
+  const [staffAuthConfig, setStaffAuthConfig] = useState({
+    requirePin: false,           // スタッフ切替時にPIN必須にするか
+    requireForOwnerOnly: false,  // オーナー以外もPIN必須にするか
+  });
+
   const tabs = [
     { id: 'general', label: '基本・ロゴ', icon: SettingsIcon },
     { id: 'status', label: 'ステータス', icon: ListChecks },
@@ -132,6 +138,7 @@ export default function SettingsPage() {
     if (s.autoReplyTemplates) setAutoReplyTemplates(s.autoReplyTemplates);
     if (s.timeSlots) setTimeSlots(s.timeSlots);
     if (s.lineConfig) setLineConfig(prev => ({...prev, ...s.lineConfig}));
+    if (s.staffAuthConfig) setStaffAuthConfig(prev => ({...prev, ...s.staffAuthConfig}));
 
     if (s.features && s.features.b2b) setIsB2BEnabled(true);
   };
@@ -184,9 +191,14 @@ export default function SettingsPage() {
         designOptions,
         shops, flowerItems, staffList, deliveryAreas, shippingSizes, shippingRates, boxFeeConfig, autoReplyTemplates, staffOrderConfig, timeSlots,
         lineConfig,
+        staffAuthConfig,
       };
       await supabase.from('app_settings').upsert({ id: currentTenantId, settings_data: payload });
       showToast('success', '設定を保存しました');
+      // ★ 操作履歴記録（動的import で循環依存回避）
+      import('@/utils/auditLog').then(({ logAction }) => logAction({
+        action: 'settings_save', targetType: 'settings', description: '設定を保存',
+      })).catch(() => {});
     } catch (e) {
       console.error(e);
       showToast('error', '保存に失敗しました');
@@ -937,12 +949,36 @@ export default function SettingsPage() {
         </div>
         <div className="bg-[#117768]/5 border border-[#117768]/20 rounded-xl p-3">
           <p className="font-bold text-[#117768] mb-1">🔵 スタッフ</p>
-          <p className="text-[#555] leading-relaxed">注文管理・売上閲覧・顧客管理（設定×）</p>
+          <p className="text-[#555] leading-relaxed">注文管理・売上閲覧・顧客管理(設定×)</p>
         </div>
         <div className="bg-[#D97D54]/5 border border-[#D97D54]/20 rounded-xl p-3">
           <p className="font-bold text-[#D97D54] mb-1">🟠 バイト</p>
-          <p className="text-[#555] leading-relaxed">注文一覧・対応のみ（売上・設定×）</p>
+          <p className="text-[#555] leading-relaxed">注文一覧・対応のみ(売上・設定×)</p>
         </div>
+      </div>
+
+      {/* ★ PIN認証設定 */}
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+        <p className="text-[13px] font-bold text-amber-900">🔐 スタッフ切替時のPIN認証</p>
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input type="checkbox" checked={Boolean(staffAuthConfig.requirePin)}
+            onChange={(e) => setStaffAuthConfig({...staffAuthConfig, requirePin: e.target.checked})}
+            className="mt-1 w-4 h-4 accent-amber-600"/>
+          <div>
+            <p className="text-[12px] font-bold text-amber-900">オーナー切替時にPIN認証を必須にする</p>
+            <p className="text-[10px] text-amber-700 mt-1">設定変更・スタッフ管理など権限の高いオーナーへの切替時に4桁PIN必要</p>
+          </div>
+        </label>
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input type="checkbox" checked={Boolean(staffAuthConfig.requireForOwnerOnly === false && staffAuthConfig.requirePin)}
+            onChange={(e) => setStaffAuthConfig({...staffAuthConfig, requireForOwnerOnly: !e.target.checked})}
+            disabled={!staffAuthConfig.requirePin}
+            className="mt-1 w-4 h-4 accent-amber-600 disabled:opacity-50"/>
+          <div className={!staffAuthConfig.requirePin ? 'opacity-50' : ''}>
+            <p className="text-[12px] font-bold text-amber-900">スタッフ・バイト切替時もPINを必須にする</p>
+            <p className="text-[10px] text-amber-700 mt-1">忙しい店舗ではOFF推奨。誰がやっても操作履歴に残るので証跡は確保されます</p>
+          </div>
+        </label>
       </div>
 
       <div className="space-y-2">
@@ -952,6 +988,19 @@ export default function SettingsPage() {
               <span className="font-bold text-[14px]">{s.name}</span>
               <span className="text-[9px] text-[#999999] font-bold tracking-tight">所属: {s.store === 'all' ? '全店' : shops.find(sh=>sh.id===Number(s.store))?.name || '不明'}</span>
             </div>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={4}
+              placeholder="PIN(4桁)"
+              value={s.pin || ''}
+              onChange={(e) => {
+                const next = [...staffList];
+                next[i] = { ...next[i], pin: e.target.value.replace(/\D/g, '').slice(0, 4) };
+                setStaffList(next);
+              }}
+              className="w-24 h-10 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[12px] font-bold outline-none focus:border-amber-500 text-center font-mono tracking-widest"
+            />
             <select
               value={s.role || 'staff'}
               onChange={(e) => {

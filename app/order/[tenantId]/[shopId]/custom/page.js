@@ -207,11 +207,13 @@ function OrderFormContent() {
 
         const [settingsRes, galleryRes] = await Promise.all([
           supabase.from('app_settings').select('settings_data').eq('id', tenantId).single(),
-          supabase.from('app_settings').select('settings_data').eq('id', `${tenantId}_gallery`).single()
+          // ★ ギャラリーは公開APIで取得（anonでもRLS気にせず確実に取得できる）
+          fetch(`/api/portfolio/list?tenantId=${encodeURIComponent(tenantId)}`).then(r => r.json()).catch(() => ({ items: [] })),
         ]);
 
         const newSettings = settingsRes.data?.settings_data;
-        const newGallery = galleryRes.data?.settings_data;
+        // 公開APIレスポンスを既存の形式（{ images: [...] }）に整形
+        const newGallery = { images: galleryRes?.items || [] };
 
         if (newSettings) {
           applyDataToState(newSettings, newGallery);

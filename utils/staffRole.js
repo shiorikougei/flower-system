@@ -40,6 +40,7 @@ export const PERMISSIONS = {
     manageStaff: true,     // スタッフ追加/削除
     deleteOrder: true,     // 注文削除
     editPrice: true,       // 価格・金額の編集
+    audit: true,           // 操作履歴・勤怠閲覧
   },
   staff: {
     settings: false,
@@ -55,6 +56,7 @@ export const PERMISSIONS = {
     manageStaff: false,
     deleteOrder: false,
     editPrice: true,
+    audit: false,
   },
   parttime: {
     settings: false,
@@ -70,6 +72,7 @@ export const PERMISSIONS = {
     manageStaff: false,
     deleteOrder: false,
     editPrice: false,
+    audit: false,
   },
 };
 
