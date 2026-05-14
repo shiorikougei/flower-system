@@ -643,7 +643,7 @@ function OrderFormContent() {
       if (!selectedDate) missing.push('お届け希望日');
       if (!selectedTime) missing.push('希望時間');
       if ((receiveMethod === 'delivery' || receiveMethod === 'sagawa') && areaError) missing.push('配送エリアの確認');
-      if (receiveMethod === 'delivery' && absenceAction === '置き配' && !absenceNote) missing.push('置き配の指定場所');
+      // 置き配セクション廃止に伴い、関連バリデーションは削除
       // ★ 要件⑦: 自社配達でお届け先が異なる場合、事前連絡同意が必須
       if (receiveMethod === 'delivery' && isRecipientDifferent && !priorContactAgreed) missing.push('事前連絡への同意');
       // ★ バグ③: 休業日が選ばれていたら次へ進めない
@@ -1118,33 +1118,7 @@ function OrderFormContent() {
                 </div>
               )}
 
-              {receiveMethod === 'delivery' && (
-                <div className="p-8 bg-white rounded-2xl border border-[#EAEAEA] shadow-sm space-y-4 animate-in fade-in mt-6">
-                  <div className="space-y-2">
-                    <label className="text-[12px] font-bold text-[#111111] flex items-center justify-between">
-                      ご不在時の対応 (置き配)
-                      <span className="bg-[#2D4B3E] text-white px-2 py-0.5 rounded text-[9px] font-bold">必須</span>
-                    </label>
-                    <p className="text-[11px] text-[#555555] mb-2 leading-relaxed">生花のため、ご不在時は原則として置き配または宅配ボックスへのお届けとなります。ご希望の対応をお選びください。</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button onClick={() => setAbsenceAction('持ち戻り')} className={`py-4 text-[13px] font-bold rounded-xl border transition-all ${absenceAction === '持ち戻り' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] shadow-md' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>持ち戻り (再配達)</button>
-                      <button onClick={() => setAbsenceAction('置き配')} className={`py-4 text-[13px] font-bold rounded-xl border transition-all ${absenceAction === '置き配' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] shadow-md' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>置き配を希望する</button>
-                    </div>
-                  </div>
-                  {absenceAction === '置き配' && (
-                    <div className="space-y-2 pt-2 animate-in fade-in">
-                      <p className="text-[11px] font-bold text-[#2D4B3E]">置き配の場所</p>
-                      <input 
-                        type="text" 
-                        placeholder="例：玄関のドア前、宅配ボックス、ガスメーターの中 など" 
-                        value={absenceNote} 
-                        onChange={(e) => setAbsenceNote(e.target.value)} 
-                        className="w-full h-14 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none text-[13px] focus:bg-white focus:border-[#2D4B3E] transition-all shadow-inner" 
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* 置き配セクションは廃止（生花は持ち戻りのみ・お電話確認） */}
 
               {/* ★ AI感削減: 帳票/レシート風の落ち着いたデザインに変更 */}
               <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] mt-8">

@@ -412,7 +412,7 @@ export default function CorporateOrderPage() {
       if (!selectedDate) missing.push('お届け希望日');
       if (!selectedTime) missing.push('希望時間');
       if ((receiveMethod === 'delivery' || receiveMethod === 'sagawa') && areaError) missing.push('配送エリアの確認');
-      if (receiveMethod === 'delivery' && absenceAction === '置き配' && !absenceNote) missing.push('置き配の指定場所');
+      // 置き配セクション廃止に伴い、関連バリデーションは削除
       if (!methodAgreed) missing.push('注文内容の同意');
     }
     return missing;

@@ -794,27 +794,7 @@ export default function StaffNewOrderPage() {
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-[#2D4B3E] flex items-center justify-between">
-                    ご不在時の対応 (置き配)
-                  </label>
-                  <p className="text-[11px] text-[#999999] mb-2">原則「持ち戻り」。お得意様や事前合意がある場合のみ「置き配」を選択してください。</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button type="button" onClick={() => setAbsenceAction('持ち戻り')} className={`py-3 text-[12px] font-bold rounded-xl border transition-all ${absenceAction === '持ち戻り' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] shadow-md' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>持ち戻り (再配達)</button>
-                    <button type="button" onClick={() => setAbsenceAction('置き配')} className={`py-3 text-[12px] font-bold rounded-xl border transition-all ${absenceAction === '置き配' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] shadow-md' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>置き配を希望する</button>
-                  </div>
-                </div>
-                {absenceAction === '置き配' && (
-                  <div className="space-y-2 animate-in fade-in">
-                    <input
-                      type="text"
-                      placeholder="例：玄関のドア前、宅配ボックス、ガスメーターの中 など"
-                      value={absenceNote}
-                      onChange={(e) => setAbsenceNote(e.target.value)}
-                      className="w-full h-12 px-4 bg-white border-2 border-[#2D4B3E]/30 rounded-xl outline-none font-bold text-[13px] focus:border-[#2D4B3E] shadow-inner"
-                    />
-                  </div>
-                )}
+                {/* 置き配セクションは廃止 */}
               </div>
             )}
           </div>
