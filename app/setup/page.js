@@ -30,8 +30,11 @@ function SetupContent() {
   }, [token, router]);
 
   const handleSetup = async () => {
+    // ★ tenantId を強制小文字化（URL ケース不整合の予防）
+    const normalizedTenantId = tenantId.toLowerCase();
+
     // テナントIDのバリデーション（半角英数字のみ）
-    if (!/^[a-zA-Z0-9_-]+$/.test(tenantId)) {
+    if (!/^[a-z0-9_-]+$/.test(normalizedTenantId)) {
       alert('テナントIDは半角英数字（ハイフン、アンダーバー可）で入力してください。');
       return;
     }
@@ -48,21 +51,21 @@ function SetupContent() {
 
       // 2. profilesテーブルに紐づけデータを作成（このユーザーはこのテナントのスタッフであるという証明）
       const { error: profileError } = await supabase.from('profiles').insert([
-        { id: authData.user.id, tenant_id: tenantId, role: 'staff' }
+        { id: authData.user.id, tenant_id: normalizedTenantId, role: 'staff' }
       ]);
       if (profileError) throw profileError;
 
       // 3. 初期設定データをapp_settingsに作成（systemPassword をランダム生成）
       const systemPassword = generateSystemPassword();
       const initialSettings = {
-        generalConfig: { tenantId: tenantId, appName: shopName, systemPassword },
+        generalConfig: { tenantId: normalizedTenantId, appName: shopName, systemPassword },
         statusConfig: { type: 'template', customLabels: ['未対応', '制作中', '制作完了', '配達中'] },
         shops: [],
         flowerItems: []
       };
 
       const { error: settingsError } = await supabase.from('app_settings').insert([
-        { id: tenantId, settings_data: initialSettings }
+        { id: normalizedTenantId, settings_data: initialSettings }
       ]);
       if (settingsError) throw settingsError;
 
@@ -71,7 +74,7 @@ function SetupContent() {
         await fetch('/api/setup/send-credentials', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, shopName, tenantId, systemPassword }),
+          body: JSON.stringify({ email, shopName, tenantId: normalizedTenantId, systemPassword }),
         });
       } catch (e) { console.warn('credentials email failed', e); }
 
@@ -164,15 +167,16 @@ function SetupContent() {
           <div className="space-y-5">
             <div className="space-y-2">
               <label className="text-[11px] font-bold text-[#999999] tracking-widest flex items-center gap-1.5">
-                <Key size={14}/> テナントID (URL用・半角英数字)
+                <Key size={14}/> テナントID (URL用・半角小文字英数字)
               </label>
-              <input 
-                type="text" 
-                value={tenantId} 
-                onChange={(e) => setTenantId(e.target.value)} 
-                placeholder="例: my_flower_shop" 
+              <input
+                type="text"
+                value={tenantId}
+                onChange={(e) => setTenantId(e.target.value.toLowerCase())}
+                placeholder="例: my_flower_shop"
                 className="w-full h-14 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-5 text-[14px] font-bold outline-none focus:bg-white focus:border-[#2D4B3E] transition-all font-mono"
               />
+              <p className="text-[10px] text-[#999] mt-1">※URLの一部になります。すべて小文字で保存されます（例: ohana → noodleflorix.com/order/ohana/...）</p>
             </div>
 
             <div className="space-y-2">
