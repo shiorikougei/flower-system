@@ -143,6 +143,15 @@ export async function POST(request, { params }) {
             continue;
           }
 
+          // ★ 同じemailで紐付いている他のline_user_id（旧LINE）を全て無効化
+          //    LINEアカウント変更時、旧アカウントへの通知を止めるため
+          await supabaseAdmin
+            .from('customer_line_links')
+            .update({ is_active: false })
+            .eq('tenant_id', tenantId)
+            .eq('customer_email', email)
+            .neq('line_user_id', lineUserId);
+
           // upsert（既存なら更新）
           await supabaseAdmin
             .from('customer_line_links')

@@ -37,6 +37,11 @@ export async function GET(request) {
           phone: sh.phone,
           invoiceNumber: sh.invoiceNumber,
         })),
+        // LINE 連携の有効状態と友達追加URLのみ公開（トークン等は秘匿）
+        lineConfig: {
+          enabled: Boolean(s.lineConfig?.enabled),
+          addFriendUrl: s.lineConfig?.addFriendUrl || '',
+        },
       },
     });
   } catch (err) {

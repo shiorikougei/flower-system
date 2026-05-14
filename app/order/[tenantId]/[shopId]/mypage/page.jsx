@@ -6,7 +6,7 @@ import { supabase } from '@/utils/supabase';
 import {
   ChevronLeft, Package, AlertCircle, CheckCircle2, Mail,
   Calendar, Plus, Trash2, FileText, RotateCcw, Heart,
-  Lock, KeyRound, Eye, EyeOff, AtSign
+  Lock, KeyRound, Eye, EyeOff, AtSign, MessageCircle, Unlink
 } from 'lucide-react';
 
 function MyPageContent() {
@@ -40,6 +40,10 @@ function MyPageContent() {
   const [isSendingEmailChange, setIsSendingEmailChange] = useState(false);
   const [emailChangeSent, setEmailChangeSent] = useState(false);
 
+  // LINE連携状況
+  const [lineLinks, setLineLinks] = useState([]);
+  const [lineAddFriendUrl, setLineAddFriendUrl] = useState('');
+
   useEffect(() => {
     if (!token) {
       setError('リンクが無効です');
@@ -63,6 +67,9 @@ function MyPageContent() {
         setData(mypage);
         setAnniversaries(annivs.items || []);
         if (settings.settings) setAppSettings(settings.settings);
+        if (settings.settings?.lineConfig?.addFriendUrl) {
+          setLineAddFriendUrl(settings.settings.lineConfig.addFriendUrl);
+        }
         // パスワード設定状況も取得
         if (mypage.email) {
           fetch(`/api/customer-has-password?tenantId=${tenantId}&email=${encodeURIComponent(mypage.email)}`)
@@ -70,6 +77,11 @@ function MyPageContent() {
             .then(d => setHasPassword(Boolean(d.hasPassword)))
             .catch(() => {});
         }
+        // LINE連携一覧
+        fetch(`/api/mypage/line-links?token=${encodeURIComponent(token)}`)
+          .then(r => r.json())
+          .then(d => setLineLinks(d.items || []))
+          .catch(() => {});
       })
       .catch(() => setError('読み込みに失敗しました'))
       .finally(() => setIsLoading(false));
@@ -129,6 +141,23 @@ function MyPageContent() {
       alert(e.message);
     } finally {
       setIsSendingEmailChange(false);
+    }
+  }
+
+  // LINE連携解除
+  async function unlinkLine(id) {
+    if (!confirm('このLINEアカウントとの連携を解除しますか？\n以降、こちらのLINEへ通知が届かなくなります。')) return;
+    try {
+      const res = await fetch('/api/mypage/line-links', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, id }),
+      });
+      if (!res.ok) throw new Error('解除失敗');
+      setLineLinks(prev => prev.map(l => l.id === id ? { ...l, is_active: false } : l));
+      alert('LINE連携を解除しました');
+    } catch (e) {
+      alert(e.message);
     }
   }
 
@@ -573,6 +602,75 @@ function MyPageContent() {
                     )}
                   </div>
                 )}
+              </div>
+            </section>
+
+            {/* ★ LINE連携状況 */}
+            <section className="bg-white rounded-2xl border border-[#EAEAEA] overflow-hidden">
+              <div className="p-5 border-b border-[#EAEAEA]">
+                <h2 className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2">
+                  <MessageCircle size={16} className="text-[#06C755]"/> LINE連携
+                </h2>
+              </div>
+              <div className="p-5 space-y-3">
+                {lineLinks.filter(l => l.is_active).length === 0 ? (
+                  <>
+                    <p className="text-[11px] text-[#999] leading-relaxed">
+                      LINE公式アカウントを友達追加 → トークでメールアドレスを送信すると、
+                      ご注文進捗・完成写真・入金確認をLINEでも受け取れます💬
+                    </p>
+                    {lineAddFriendUrl ? (
+                      <a
+                        href={lineAddFriendUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full h-12 leading-[48px] text-center bg-[#06C755] text-white rounded-xl font-bold text-[13px] hover:bg-[#05a548] transition-all"
+                      >
+                        💬 LINEで通知を受け取る（友達追加）
+                      </a>
+                    ) : (
+                      <p className="text-[11px] text-[#999] italic">※この店舗はまだLINE通知に対応していません</p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[11px] text-[#999] leading-relaxed mb-2">
+                      以下のLINEアカウントに通知が届きます。複数連携も可能です。
+                    </p>
+                    {lineLinks.filter(l => l.is_active).map(link => (
+                      <div key={link.id} className="flex items-center justify-between p-3 bg-[#06C755]/5 rounded-xl border border-[#06C755]/30">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="w-9 h-9 rounded-full bg-[#06C755] text-white flex items-center justify-center shrink-0">
+                            <MessageCircle size={16}/>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[13px] font-bold text-[#111] truncate">{link.display_name || 'LINEユーザー'}</p>
+                            <p className="text-[10px] text-[#999] truncate">連携日: {new Date(link.linked_at).toLocaleDateString('ja-JP')}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => unlinkLine(link.id)}
+                          className="shrink-0 flex items-center gap-1 text-red-500 hover:text-red-700 text-[11px] font-bold px-2 py-1"
+                        >
+                          <Unlink size={12}/> 解除
+                        </button>
+                      </div>
+                    ))}
+                    {lineAddFriendUrl && (
+                      <a
+                        href={lineAddFriendUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block text-center text-[11px] text-[#06C755] hover:text-[#05a548] underline pt-2"
+                      >
+                        別のLINEアカウントを追加で連携する
+                      </a>
+                    )}
+                  </>
+                )}
+                <div className="text-[10px] text-[#999] leading-relaxed bg-[#FBFAF9] p-2.5 rounded-lg mt-2">
+                  💡 LINEを機種変更した場合は、新しいLINEで友達追加 → メールアドレス送信で、自動的に新アカウントに切り替わります。
+                </div>
               </div>
             </section>
 
