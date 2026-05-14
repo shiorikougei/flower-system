@@ -8,6 +8,7 @@ import {
   Users, Building2, Settings, TrendingUp, Lock, Sparkles, MessageSquare, X, Send, Image as ImageIcon, ShoppingBag, UserCheck, ChevronDown, History
 } from 'lucide-react';
 import { getCurrentStaff, setCurrentStaff, ROLE_LABELS, ROLE_DESCRIPTIONS, can } from '@/utils/staffRole';
+import { isFeatureEnabled } from '@/utils/features';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 
@@ -27,6 +28,7 @@ export default function StaffLayout({ children }) {
   const [currentStaff, setCurrentStaffState] = useState(null);
   const [showStaffPicker, setShowStaffPicker] = useState(false);
   const [staffAuthConfig, setStaffAuthConfig] = useState({ requirePin: false, requireForOwnerOnly: true });
+  const [tenantSettings, setTenantSettings] = useState(null);  // features参照用
 
   // ★ PIN認証モーダル
   const [pinModal, setPinModal] = useState(null); // { staff, onSuccess }
@@ -35,6 +37,7 @@ export default function StaffLayout({ children }) {
 
   useEffect(() => {
     const applySettings = (settingsData) => {
+      setTenantSettings(settingsData || null);
       if (settingsData?.generalConfig) {
         setAppName(settingsData.generalConfig.appName || 'FLORIX');
         setLogoUrl(settingsData.generalConfig.logoUrl || '');
@@ -80,35 +83,68 @@ export default function StaffLayout({ children }) {
     fetchSettings();
   }, []);
 
-  // 各メニューに必要な権限を perm で指定
-  const baseMenuItems = [
-    { name: 'ホーム', path: '/staff', icon: Home, perm: 'home' },
-    { name: '店舗注文受付', path: '/staff/new-order', icon: PlusSquare, perm: 'newOrder' },
-    { name: '受注一覧', path: '/staff/orders', icon: ClipboardList, perm: 'orders' },
-    { name: '受注カレンダー', path: '/staff/calendar', icon: CalendarDays, perm: 'calendar' },
-    { name: '配達管理', path: '/staff/deliveries', icon: Truck, perm: 'deliveries' },
-    { name: '売上管理', path: '/staff/sales', icon: TrendingUp, perm: 'sales' },
-    { name: '顧客管理', path: '/staff/customers', icon: Users, perm: 'customers' },
-    { name: '作品管理', path: '/staff/portfolio', icon: ImageIcon, perm: 'portfolio' },
-    { name: '商品管理（EC）', path: '/staff/products', icon: ShoppingBag, perm: 'products' },
-    { name: 'シフト管理', path: '/staff/shift', icon: CalendarDays, perm: 'manageShift' },
-    { name: '自分のシフト', path: '/staff/my-shift', icon: CalendarDays, perm: 'shift' },
-    { name: '各種設定', path: '/staff/settings', icon: Settings, perm: 'settings' },
-    { name: '操作履歴・勤怠', path: '/staff/audit', icon: History, perm: 'audit' },
+  // ★ メニューをカテゴリ別に整理（feature: 機能がONのときだけ表示）
+  const menuCategories = [
+    {
+      name: '業務',
+      items: [
+        { name: 'ホーム', path: '/staff', icon: Home, perm: 'home' },
+        { name: '店舗注文受付', path: '/staff/new-order', icon: PlusSquare, perm: 'newOrder' },
+        { name: '受注一覧', path: '/staff/orders', icon: ClipboardList, perm: 'orders' },
+        { name: '受注カレンダー', path: '/staff/calendar', icon: CalendarDays, perm: 'calendar' },
+        { name: '配達管理', path: '/staff/deliveries', icon: Truck, perm: 'deliveries' },
+      ],
+    },
+    {
+      name: '顧客・作品',
+      items: [
+        { name: '顧客管理', path: '/staff/customers', icon: Users, perm: 'customers', feature: 'customers' },
+        { name: '作品管理', path: '/staff/portfolio', icon: ImageIcon, perm: 'portfolio', feature: 'portfolio' },
+      ],
+    },
+    {
+      name: 'EC・売上',
+      items: [
+        { name: '商品管理（EC）', path: '/staff/products', icon: ShoppingBag, perm: 'products', feature: 'ec' },
+        { name: '売上管理', path: '/staff/sales', icon: TrendingUp, perm: 'sales', feature: 'sales' },
+      ],
+    },
+    {
+      name: 'スタッフ・勤怠',
+      items: [
+        { name: 'シフト管理', path: '/staff/shift', icon: CalendarDays, perm: 'manageShift', feature: 'shiftManagement' },
+        { name: '自分のシフト', path: '/staff/my-shift', icon: CalendarDays, perm: 'shift', feature: 'shiftManagement' },
+        { name: '操作履歴・勤怠', path: '/staff/audit', icon: History, perm: 'audit', feature: 'attendanceManagement' },
+      ],
+    },
+    {
+      name: '設定',
+      items: [
+        { name: '各種設定', path: '/staff/settings', icon: Settings, perm: 'settings' },
+      ],
+    },
+    {
+      name: 'プレミアム',
+      premium: true,
+      items: [
+        { name: '配達業務委託', path: '/staff/setting/drivers', icon: Briefcase, perm: 'deliveries', feature: 'deliveryOutsource' },
+        { name: '法人管理', path: '/staff/corporations', icon: Building2, perm: 'settings', feature: 'b2b' },
+      ],
+    },
   ];
 
-  const premiumMenuItems = [
-    { name: '配達業務委託', path: '/staff/setting/drivers', icon: Briefcase, perm: 'deliveries' },
-    { name: '法人管理', path: '/staff/corporations', icon: Building2, perm: 'settings' },
-  ];
-
-  // ★ role に応じてフィルタ（未設定はオーナー扱い＝全表示）
+  // role + features でフィルタ
   const currentRole = currentStaff?.role || 'owner';
-  const filterByRole = (items) => items.filter(item => can(currentRole, item.perm));
+  const filteredCategories = menuCategories.map(cat => ({
+    ...cat,
+    items: cat.items.filter(item =>
+      can(currentRole, item.perm) &&
+      (!item.feature || isFeatureEnabled(tenantSettings, item.feature))
+    ),
+  })).filter(cat => cat.items.length > 0);
 
-  const activeMenuItems = isPremiumPlan
-    ? filterByRole([...baseMenuItems.slice(0, 6), ...premiumMenuItems, ...baseMenuItems.slice(6)])
-    : filterByRole(baseMenuItems);
+  // 旧コードとの互換用（switchStaff内で使用）
+  const activeMenuItems = filteredCategories.flatMap(cat => cat.items);
 
   // PIN認証が必要か判定
   const needsPin = (targetStaff) => {
@@ -311,24 +347,31 @@ export default function StaffLayout({ children }) {
           </div>
         </div>
         
-        <nav className="p-4 space-y-1.5 flex-1 overflow-y-auto hide-scrollbar">
-          {activeMenuItems.map(item => {
-            const isActive = item.path === '/staff' 
-              ? pathname === '/staff' 
-              : pathname?.startsWith(item.path);
-            const Icon = item.icon;
-            return (
-              <Link 
-                key={item.path} href={item.path} 
-                className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold text-[13px] tracking-wider transition-all ${
-                  isActive ? 'bg-[#2D4B3E]/5 text-[#2D4B3E] border border-[#2D4B3E]/10 shadow-sm' : 'text-[#555555] hover:bg-[#F7F7F7] border border-transparent'
-                }`}
-              >
-                <Icon size={18} className={isActive ? 'text-[#2D4B3E]' : 'text-[#999999]'} />
-                {item.name}
-              </Link>
-            );
-          })}
+        <nav className="p-4 space-y-4 flex-1 overflow-y-auto hide-scrollbar">
+          {filteredCategories.map(cat => (
+            <div key={cat.name} className="space-y-1">
+              <p className={`text-[10px] font-bold tracking-[0.2em] uppercase mb-1.5 px-2 ${cat.premium ? 'text-yellow-600' : 'text-[#999999]'}`}>
+                {cat.premium && '✨ '}{cat.name}
+              </p>
+              {cat.items.map(item => {
+                const isActive = item.path === '/staff'
+                  ? pathname === '/staff'
+                  : pathname?.startsWith(item.path);
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.path} href={item.path}
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold text-[12.5px] tracking-wider transition-all ${
+                      isActive ? 'bg-[#2D4B3E]/5 text-[#2D4B3E] border border-[#2D4B3E]/10 shadow-sm' : 'text-[#555555] hover:bg-[#F7F7F7] border border-transparent'
+                    }`}
+                  >
+                    <Icon size={16} className={isActive ? 'text-[#2D4B3E]' : 'text-[#999999]'} />
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         <div className="p-5 bg-[#F7F7F7] border-t border-[#EAEAEA] shrink-0 space-y-3">
@@ -339,31 +382,16 @@ export default function StaffLayout({ children }) {
             <MessageSquare size={14} /> アプリの要望・バグ報告
           </button>
 
-          {!isPremiumPlan && (
-            <div className="pt-2 border-t border-[#EAEAEA]">
-              <p className="text-[10px] font-bold text-[#999999] mb-3 flex items-center gap-1.5">
-                <Lock size={12} /> プレミアム機能
-              </p>
-              <div className="space-y-2 mb-4">
-                {premiumMenuItems.map(item => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={item.path} className="flex items-center gap-3 px-4 py-3 bg-white/50 rounded-xl border border-[#EAEAEA] opacity-60 grayscale cursor-not-allowed">
-                      <Icon size={16} className="text-[#999999]" />
-                      <span className="text-[12px] font-bold text-[#555555]">{item.name}</span>
-                    </div>
-                  );
-                })}
-              </div>
-              <button 
-                onClick={handleUpgradeRequest}
-                disabled={isSending}
-                className="w-full bg-[#2D4B3E] text-white text-[11px] font-bold py-3 rounded-xl shadow-md hover:bg-[#1f352b] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                <Sparkles size={14} /> {isSending ? '送信中...' : 'プランをアップグレード'}
-              </button>
-            </div>
-          )}
+          {/* オプション機能のアップグレード案内 */}
+          <div className="pt-2 border-t border-[#EAEAEA]">
+            <button
+              onClick={handleUpgradeRequest}
+              disabled={isSending}
+              className="w-full bg-[#2D4B3E] text-white text-[11px] font-bold py-3 rounded-xl shadow-md hover:bg-[#1f352b] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <Sparkles size={14} /> {isSending ? '送信中...' : '機能アップグレード問い合わせ'}
+            </button>
+          </div>
         </div>
       </aside>
       

@@ -133,22 +133,50 @@ export default function SettingsPage() {
     },
   });
 
-  const tabs = [
-    { id: 'general', label: '基本・ロゴ', icon: SettingsIcon },
-    { id: 'status', label: 'ステータス', icon: ListChecks },
-    { id: 'design', label: 'デザイン選択肢', icon: Palette },
-    { id: 'shop', label: '店舗・口座・特別日', icon: Store },
-    { id: 'items', label: '商品・納期', icon: Tag },
-    { id: 'shipping', label: '配送・時間枠', icon: Truck },
-    { id: 'rules', label: '立札デザイン', icon: LayoutTemplate },
-    { id: 'staff_order', label: '店舗受付', icon: Clock },
-    { id: 'staff', label: 'スタッフ', icon: User },
-    { id: 'shift', label: 'シフト設定', icon: CalendarDays },
-    { id: 'message', label: '案内文管理', icon: Mail },
-    { id: 'payment', label: '決済設定', icon: CreditCard },
-    { id: 'line', label: 'LINE連携', icon: Mail },
-    { id: 'links', label: 'URL発行', icon: LinkIcon },
+  // ★ タブをカテゴリ別に整理
+  const tabCategories = [
+    {
+      name: '基本',
+      tabs: [
+        { id: 'general', label: '基本・ロゴ', icon: SettingsIcon },
+        { id: 'shop', label: '店舗・口座・特別日', icon: Store },
+        { id: 'staff_order', label: '店舗受付', icon: Clock },
+      ],
+    },
+    {
+      name: '商品・配送',
+      tabs: [
+        { id: 'items', label: '商品・納期', icon: Tag },
+        { id: 'shipping', label: '配送・時間枠', icon: Truck },
+        { id: 'design', label: 'デザイン選択肢', icon: Palette },
+        { id: 'rules', label: '立札デザイン', icon: LayoutTemplate },
+      ],
+    },
+    {
+      name: 'スタッフ・シフト',
+      tabs: [
+        { id: 'status', label: 'ステータス', icon: ListChecks },
+        { id: 'staff', label: 'スタッフ', icon: User },
+        { id: 'shift', label: 'シフト設定', icon: CalendarDays },
+      ],
+    },
+    {
+      name: '通知・連携',
+      tabs: [
+        { id: 'message', label: '案内文管理', icon: Mail },
+        { id: 'line', label: 'LINE連携', icon: Mail },
+        { id: 'links', label: 'URL発行', icon: LinkIcon },
+      ],
+    },
+    {
+      name: '決済',
+      tabs: [
+        { id: 'payment', label: '決済設定', icon: CreditCard },
+      ],
+    },
   ];
+  // 旧コード互換のため
+  const tabs = tabCategories.flatMap(c => c.tabs);
 
   const applySettings = (s) => {
     if (s.generalConfig) setGeneralConfig(prev => ({...prev, ...s.generalConfig}));
@@ -1516,9 +1544,17 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-[#FBFAF9] flex flex-col font-sans text-left pb-40">
       <header className="h-20 bg-white/80 backdrop-blur-md border-b flex items-center justify-between px-6 md:px-12 sticky top-0 z-50 shadow-sm">
         <h1 className="text-[16px] font-bold text-[#2D4B3E] tracking-tight">システム設定</h1>
-        <div className="hidden md:flex flex-1 mx-6 overflow-x-auto bg-[#F7F7F7] p-1 rounded-xl border border-[#EAEAEA] hide-scrollbar">
-          {tabs.map((t) => (
-            <button key={t.id} onClick={() => setActiveTab(t.id)} className={`whitespace-nowrap px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${activeTab === t.id ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}>{t.label}</button>
+        {/* ★ カテゴリ別タブ表示 */}
+        <div className="hidden md:flex flex-1 mx-6 overflow-x-auto hide-scrollbar gap-2">
+          {tabCategories.map(cat => (
+            <div key={cat.name} className="flex flex-col items-start shrink-0">
+              <span className="text-[8px] font-bold text-[#999999] tracking-widest mb-0.5 px-1">{cat.name}</span>
+              <div className="flex bg-[#F7F7F7] p-1 rounded-xl border border-[#EAEAEA]">
+                {cat.tabs.map(t => (
+                  <button key={t.id} onClick={() => setActiveTab(t.id)} className={`whitespace-nowrap px-3 py-1 text-[11px] font-bold rounded-lg transition-all ${activeTab === t.id ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}>{t.label}</button>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
         <div className="flex items-center gap-4 shrink-0">
@@ -1533,8 +1569,17 @@ export default function SettingsPage() {
         </div>
       </header>
 
-      <div className="md:hidden flex overflow-x-auto bg-white border-b p-2 hide-scrollbar sticky top-20 z-40 shadow-sm">
-        {tabs.map((t) => (<button key={t.id} onClick={() => setActiveTab(t.id)} className={`whitespace-nowrap px-4 py-2 text-[12px] font-bold rounded-lg transition-all ${activeTab === t.id ? 'bg-[#2D4B3E] text-white shadow-md' : 'text-[#999999]'}`}>{t.label}</button>))}
+      <div className="md:hidden bg-white border-b p-2 sticky top-20 z-40 shadow-sm space-y-2">
+        {tabCategories.map(cat => (
+          <div key={cat.name}>
+            <p className="text-[9px] font-bold text-[#999999] tracking-widest px-1 mb-1">{cat.name}</p>
+            <div className="flex overflow-x-auto hide-scrollbar gap-1">
+              {cat.tabs.map(t => (
+                <button key={t.id} onClick={() => setActiveTab(t.id)} className={`whitespace-nowrap px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all ${activeTab === t.id ? 'bg-[#2D4B3E] text-white shadow-md' : 'bg-[#FBFAF9] text-[#999999]'}`}>{t.label}</button>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
       <main className={`flex-1 max-w-[1000px] mx-auto w-full py-10 px-6 transition-all ${!isAdmin ? 'opacity-40 pointer-events-none grayscale' : ''}`}>

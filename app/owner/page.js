@@ -4,8 +4,9 @@ import { supabase } from '@/utils/supabase';
 import {
   Building2, Mail, ArrowUpCircle, Bot, Lock, Unlock,
   CheckCircle, XCircle, RefreshCw, Save, Sparkles, Store,
-  MessageSquare, Trash2, AlertTriangle, Wand2, X, FileText
+  MessageSquare, Trash2, AlertTriangle, Wand2, X, FileText, ToggleLeft, ToggleRight
 } from 'lucide-react';
+import { FEATURE_GROUPS, ALL_FEATURE_KEYS } from '@/utils/features';
 
 const DEFAULT_AI_PROMPT = '以下のテキストからお花の「価格」「用途」「カラー」「イメージ」をJSON形式で抽出してください。価格はカンマなしの数値で出力してください。';
 const DEFAULT_CAPTION_PROMPT = `あなたは {appName} の SNS担当です。お花の注文を受けて完成した作品をInstagramに投稿します。以下の条件でキャプションを作成してください。
@@ -201,6 +202,28 @@ export default function OwnerDashboard() {
   const [sampleModalTenant, setSampleModalTenant] = useState(null);
   const [sampleText, setSampleText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // ★ 機能設定モーダル
+  const [featureModalTenant, setFeatureModalTenant] = useState(null);
+
+  // ★ 全店出勤状況
+  const [attendanceOverview, setAttendanceOverview] = useState(null);
+  const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
+
+  const loadAttendanceOverview = async () => {
+    setIsLoadingAttendance(true);
+    try {
+      const res = await fetch('/api/owner/attendance-overview');
+      const data = await res.json();
+      setAttendanceOverview(data);
+    } catch (e) { console.warn(e); }
+    finally { setIsLoadingAttendance(false); }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'attendance' && isAuth) loadAttendanceOverview();
+    // eslint-disable-next-line
+  }, [activeTab, isAuth]);
 
   // ★ AI利用状況
   const [usageList, setUsageList] = useState([]);
@@ -524,6 +547,7 @@ export default function OwnerDashboard() {
           </button>
           <button onClick={() => setActiveTab('ai')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'ai' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><Bot size={16}/> AIプロンプト設定</button>
           <button onClick={() => setActiveTab('usage')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'usage' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><Sparkles size={16}/> AI利用状況・請求</button>
+          <button onClick={() => setActiveTab('attendance')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'attendance' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><CheckCircle size={16}/> 全店 出勤状況</button>
 
           <div className="pt-8 pb-4">
             <button onClick={() => setActiveTab('danger')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'danger' ? 'bg-red-900/30 text-red-500 border border-red-900/50' : 'text-gray-500 hover:bg-red-900/10 hover:text-red-500'}`}><AlertTriangle size={16}/> 危険な操作・初期化</button>
@@ -540,6 +564,7 @@ export default function OwnerDashboard() {
             {activeTab === 'feedbacks' && 'CLIENT FEEDBACKS'}
             {activeTab === 'ai' && 'AI PROMPT SETTINGS'}
             {activeTab === 'usage' && 'AI USAGE & BILLING'}
+            {activeTab === 'attendance' && 'ATTENDANCE OVERVIEW'}
             {activeTab === 'danger' && 'DANGER ZONE'}
           </h2>
           <div className="flex items-center gap-4">
@@ -589,20 +614,18 @@ export default function OwnerDashboard() {
                           </div>
                         </td>
                         <td className="px-6 py-5">
-                          <div className="flex flex-col gap-3">
-                            <div onClick={() => toggleFeature(t.id, 'b2b')} className="flex items-center gap-3 cursor-pointer group">
-                              <div className={`w-9 h-5 rounded-full transition-all flex items-center px-0.5 ${f.b2b ? 'bg-[#2D4B3E]' : 'bg-[#333333]'}`}>
-                                <div className={`w-4 h-4 bg-white rounded-full transition-all shadow-sm ${f.b2b ? 'translate-x-4' : ''}`}></div>
-                              </div>
-                              <span className={`text-[11px] font-bold tracking-widest transition-colors ${f.b2b ? 'text-white' : 'text-gray-600 group-hover:text-gray-400'}`}>法人管理ポータル</span>
-                            </div>
-                            <div onClick={() => toggleFeature(t.id, 'deliveryOutsource')} className="flex items-center gap-3 cursor-pointer group">
-                              <div className={`w-9 h-5 rounded-full transition-all flex items-center px-0.5 ${f.deliveryOutsource ? 'bg-[#2D4B3E]' : 'bg-[#333333]'}`}>
-                                <div className={`w-4 h-4 bg-white rounded-full transition-all shadow-sm ${f.deliveryOutsource ? 'translate-x-4' : ''}`}></div>
-                              </div>
-                              <span className={`text-[11px] font-bold tracking-widest transition-colors ${f.deliveryOutsource ? 'text-white' : 'text-gray-600 group-hover:text-gray-400'}`}>配達業務委託</span>
-                            </div>
-                          </div>
+                          {(() => {
+                            const enabledCount = ALL_FEATURE_KEYS.filter(k => f?.[k]).length;
+                            return (
+                              <button
+                                onClick={() => setFeatureModalTenant(t)}
+                                className="bg-[#2D4B3E]/10 border border-[#2D4B3E]/40 text-emerald-400 px-3 py-2 rounded-lg text-[10px] font-bold tracking-widest hover:bg-[#2D4B3E]/20 flex items-center gap-2"
+                              >
+                                <Sparkles size={12}/>
+                                機能設定 ({enabledCount}/{ALL_FEATURE_KEYS.length})
+                              </button>
+                            );
+                          })()}
                         </td>
                         <td className="px-6 py-5 text-center">
                           <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-widest flex items-center justify-center gap-1 w-fit mx-auto ${t.status === 'active' ? 'bg-[#2D4B3E]/20 text-green-400 border border-[#2D4B3E]/50' : 'bg-red-900/20 text-red-500 border border-red-900/50'}`}>
@@ -775,6 +798,71 @@ export default function OwnerDashboard() {
         )}
 
         {/* ★ 過去キャプションから自動生成モーダル */}
+        {/* ★ 機能設定モーダル */}
+        {featureModalTenant && (
+          <div
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+            onClick={() => setFeatureModalTenant(null)}
+          >
+            <div
+              className="bg-[#0a0a0a] border border-[#222222] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 border-b border-[#222222] flex items-center justify-between">
+                <div>
+                  <h3 className="text-emerald-400 font-bold text-[16px] flex items-center gap-2"><Sparkles size={18}/> 機能ON/OFF</h3>
+                  <p className="text-[11px] text-gray-500 mt-1">対象: <span className="text-white font-bold">{featureModalTenant.name}</span></p>
+                </div>
+                <button onClick={() => setFeatureModalTenant(null)} className="text-gray-500 hover:text-white"><X size={20}/></button>
+              </div>
+              <div className="p-6 space-y-6">
+                {FEATURE_GROUPS.map(group => (
+                  <div key={group.name}>
+                    <h4 className="text-[12px] font-bold text-emerald-400 tracking-widest mb-3">{group.name}</h4>
+                    <div className="space-y-2">
+                      {group.items.map(item => {
+                        const isOn = item.alwaysOn || (featureModalTenant.features?.[item.key] === true);
+                        return (
+                          <div
+                            key={item.key}
+                            onClick={() => {
+                              if (item.alwaysOn) return;
+                              toggleFeature(featureModalTenant.id, item.key);
+                              // モーダル内state更新
+                              setFeatureModalTenant(prev => ({
+                                ...prev,
+                                features: {
+                                  ...(prev.features || {}),
+                                  [item.key]: !prev.features?.[item.key],
+                                },
+                              }));
+                            }}
+                            className={`flex items-start gap-3 p-3 rounded-xl border transition-all ${
+                              item.alwaysOn ? 'border-[#333333] bg-[#1a1a1a] cursor-not-allowed opacity-70' :
+                              isOn ? 'border-emerald-700 bg-emerald-950/30 cursor-pointer hover:border-emerald-500' :
+                              'border-[#333333] bg-black cursor-pointer hover:border-[#555555]'
+                            }`}
+                          >
+                            <div className={`mt-0.5 w-10 h-6 rounded-full transition-all flex items-center px-0.5 ${isOn ? 'bg-emerald-600' : 'bg-[#333333]'}`}>
+                              <div className={`w-5 h-5 bg-white rounded-full transition-all ${isOn ? 'translate-x-4' : ''}`}></div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-[13px] font-bold ${isOn ? 'text-white' : 'text-gray-400'}`}>
+                                {item.label}{item.alwaysOn && <span className="text-[9px] text-gray-600 ml-2">基本機能</span>}
+                              </p>
+                              <p className="text-[10px] text-gray-500 mt-0.5">{item.description}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {sampleModalTenant && (
           <div
             className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
@@ -926,6 +1014,60 @@ export default function OwnerDashboard() {
               💡 計測対象: キャプション生成 + プロンプト自動生成 の合計回数。<br/>
               月をまたぐと自動でカウントがリセットされ、過去月のデータは保持されます。
             </div>
+          </div>
+        )}
+
+        {/* ★ 全店出勤状況 */}
+        {activeTab === 'attendance' && (
+          <div className="space-y-6 animate-in fade-in">
+            <header className="space-y-2 flex items-center justify-between">
+              <div>
+                <h3 className="text-[16px] font-bold text-cyan-400 flex items-center gap-2"><CheckCircle size={18}/> 全店舗 出勤状況</h3>
+                <p className="text-[12px] text-gray-500 leading-relaxed">現在出勤中のスタッフを店舗別に表示します</p>
+              </div>
+              <button onClick={loadAttendanceOverview} className="p-2 hover:bg-[#222222] rounded-full text-gray-500">
+                <RefreshCw size={16} className={isLoadingAttendance ? 'animate-spin' : ''}/>
+              </button>
+            </header>
+
+            {!attendanceOverview ? (
+              <div className="bg-[#111111] border border-[#222222] rounded-2xl p-12 text-center text-gray-600 italic font-mono">読込中...</div>
+            ) : attendanceOverview.totalOpen === 0 ? (
+              <div className="bg-[#111111] border border-[#222222] rounded-2xl p-12 text-center text-gray-600 italic font-mono">現在出勤中のスタッフはいません</div>
+            ) : (
+              <>
+                <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-2xl p-4 text-center">
+                  <p className="text-[10px] text-cyan-400 font-bold tracking-widest">CURRENTLY WORKING</p>
+                  <p className="text-[36px] font-bold text-white mt-1">{attendanceOverview.totalOpen}<span className="text-[14px] text-cyan-400 ml-2">名</span></p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {attendanceOverview.byTenant.map(t => (
+                    <div key={t.tenantId} className="bg-[#111111] border border-[#222222] rounded-2xl p-5">
+                      <div className="border-b border-[#222222] pb-3 mb-3">
+                        <p className="text-[10px] text-gray-500 font-mono">{t.tenantId}</p>
+                        <p className="text-[14px] font-bold text-white mt-0.5">{t.tenantName}</p>
+                        <p className="text-[10px] text-cyan-400 mt-1">{t.records.length}名 出勤中</p>
+                      </div>
+                      <div className="space-y-2">
+                        {t.records.map(r => (
+                          <div key={r.id} className="flex items-center justify-between bg-black p-2.5 rounded-lg">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[12px] font-bold text-white truncate">{r.staffName}</p>
+                              <p className="text-[9px] text-gray-500 font-mono">
+                                {new Date(r.clockInAt).toLocaleString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}〜
+                              </p>
+                            </div>
+                            {r.isOnBreak && (
+                              <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full">☕休憩中</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
 
