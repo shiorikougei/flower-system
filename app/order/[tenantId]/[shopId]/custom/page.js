@@ -238,18 +238,55 @@ function OrderFormContent() {
     return appSettings?.flowerItems?.find(i => i.name === flowerType) || {};
   }, [flowerType, appSettings]);
 
+  // ★ 類似スコアリング: 部分一致でも「近いもの」を提案
+  //   purpose 完全一致 = +3点 / color = +2点 / vibe = +2点
+  //   price ±20%以内 = +1点 / ±50%以内 = +0.5点
+  //   flowerType も一致してれば優先度UP +1点
+  //   何も条件入ってなければ全件最新順表示（インスピレーション用）
   const matchingImages = useMemo(() => {
     if (!portfolioImages || portfolioImages.length === 0) return [];
-    return portfolioImages.filter(img => {
-      let match = true;
-      // ★ 種類による絞り込みも追加
-      if (flowerType && img.flowerType && img.flowerType !== flowerType) match = false;
-      if (flowerPurpose && flowerPurpose !== 'その他' && img.purpose && img.purpose !== flowerPurpose) match = false;
-      if (flowerColor && flowerColor !== 'おまかせ' && img.color && img.color !== flowerColor) match = false;
-      if (flowerVibe && flowerVibe !== 'その他' && flowerVibe !== 'おまかせ' && img.vibe && img.vibe !== flowerVibe) match = false;
-      return match;
+
+    const hasAnyCondition = flowerType || flowerPurpose || flowerColor || flowerVibe || itemPrice;
+    // 何も条件入ってなければ最新6件を表示
+    if (!hasAnyCondition) {
+      return portfolioImages.slice(0, 6).map(img => ({ ...img, _score: 0, _matched: [] }));
+    }
+
+    const targetPrice = Number(itemPrice) || 0;
+
+    const scored = portfolioImages.map(img => {
+      let score = 0;
+      const matched = [];
+
+      if (flowerType && img.flowerType === flowerType) {
+        score += 1;
+        matched.push('種類');
+      }
+      if (flowerPurpose && flowerPurpose !== 'その他' && img.purpose === flowerPurpose) {
+        score += 3;
+        matched.push('用途');
+      }
+      if (flowerColor && flowerColor !== 'おまかせ' && img.color === flowerColor) {
+        score += 2;
+        matched.push('色');
+      }
+      if (flowerVibe && flowerVibe !== 'その他' && flowerVibe !== 'おまかせ' && img.vibe === flowerVibe) {
+        score += 2;
+        matched.push('イメージ');
+      }
+      if (targetPrice && img.price) {
+        const diff = Math.abs(Number(img.price) - targetPrice) / targetPrice;
+        if (diff <= 0.2) { score += 1; matched.push('予算'); }
+        else if (diff <= 0.5) { score += 0.5; }
+      }
+      return { ...img, _score: score, _matched: matched };
     });
-  }, [portfolioImages, flowerType, flowerPurpose, flowerColor, flowerVibe]);
+
+    return scored
+      .filter(img => img._score > 0)
+      .sort((a, b) => b._score - a._score)
+      .slice(0, 8);  // 上位8件まで
+  }, [portfolioImages, flowerType, flowerPurpose, flowerColor, flowerVibe, itemPrice]);
 
   const handleSelectImage = (img) => {
     if (selectedImage?.id === img.id) {
@@ -796,12 +833,12 @@ function OrderFormContent() {
               {matchingImages.length > 0 && (
                 <div className="bg-[#2D4B3E]/5 -mx-8 -mt-8 p-6 pb-8 mb-4 rounded-t-[28px] border-b border-[#EAEAEA] space-y-4">
                    <p className="text-[11px] font-bold text-[#2D4B3E] flex items-center gap-2">
-                      条件に合うおすすめのスタイル
+                      ✨ こんな感じはいかがですか？（過去のお作り例）
                    </p>
                    <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar">
                      {matchingImages.map(img => (
                        <div key={img.id} className="shrink-0 w-[140px] space-y-2 snap-center">
-                         <div 
+                         <div
                            onClick={() => handleSelectImage(img)}
                            className={`relative aspect-square rounded-2xl overflow-hidden border-4 transition-all cursor-pointer ${selectedImage?.id === img.id ? 'border-[#2D4B3E] shadow-lg scale-105' : 'border-transparent hover:scale-105'}`}
                          >
@@ -809,6 +846,14 @@ function OrderFormContent() {
                            {selectedImage?.id === img.id && (
                              <div className="absolute inset-0 bg-[#2D4B3E]/30 flex items-center justify-center backdrop-blur-[1px]">
                                <span className="bg-[#2D4B3E] text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-sm">選択中</span>
+                             </div>
+                           )}
+                           {/* マッチ理由バッジ */}
+                           {img._matched && img._matched.length > 0 && selectedImage?.id !== img.id && (
+                             <div className="absolute top-1.5 left-1.5 right-1.5 flex flex-wrap gap-1">
+                               {img._matched.map((m, i) => (
+                                 <span key={i} className="bg-[#2D4B3E]/90 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">{m}✓</span>
+                               ))}
                              </div>
                            )}
                          </div>
