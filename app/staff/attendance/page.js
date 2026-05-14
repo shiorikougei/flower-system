@@ -171,34 +171,65 @@ export default function AttendancePage() {
     const totalWorkedMin = (payroll?.hours.totalMinutes || 0);
     const totalH = totalWorkedMin > 0 ? `${Math.floor(totalWorkedMin/60)}時間${totalWorkedMin%60}分` : '-';
 
+    // 複数打刻を1セルに集約（行が増えないように）
+    const rowsCompact = [];
+    for (let d = 1; d <= lastDay; d++) {
+      const records = dayMap[d] || [];
+      const dayObj = new Date(yyyy, mm - 1, d);
+      const dayLabel = dayLabels[dayObj.getDay()];
+      const isWeek = dayObj.getDay() === 0 || dayObj.getDay() === 6;
+
+      if (records.length === 0) {
+        rowsCompact.push(`<tr><td>${d}</td><td class="day ${isWeek ? 'holiday' : ''}">${dayLabel}</td><td colspan="5" class="empty">-</td></tr>`);
+      } else {
+        const ins = records.map(r => fmtT(r.clock_in_at)).join('<br/>');
+        const outs = records.map(r => fmtT(r.clock_out_at)).join('<br/>');
+        const breaks = records.map(r => r.break_minutes ? `${r.break_minutes}分` : '-').join('<br/>');
+        const works = records.map(r => {
+          const w = (r.duration_minutes || 0) - (r.break_minutes || 0);
+          return w > 0 ? `${Math.floor(w/60)}:${String(w%60).padStart(2,'0')}` : '-';
+        }).join('<br/>');
+        const notes = records.map(r => r.notes || '').filter(Boolean).join(' / ');
+        rowsCompact.push(`<tr>
+          <td>${d}</td>
+          <td class="day ${isWeek ? 'holiday' : ''}">${dayLabel}</td>
+          <td>${ins}</td>
+          <td>${outs}</td>
+          <td>${breaks}</td>
+          <td>${works}</td>
+          <td class="notes">${notes}</td>
+        </tr>`);
+      }
+    }
+
     const html = `<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"/>
       <title>出勤簿_${staffName}_${monthKey}</title>
       <style>
-        @page { size: A4 landscape; margin: 8mm; }
+        @page { size: A4 landscape; margin: 10mm; }
         * { box-sizing: border-box; }
-        body { font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; color: #222; margin: 0; font-size: 9pt; }
-        h1 { text-align: center; font-size: 14pt; margin: 0 0 3mm; letter-spacing: 0.3em; border-bottom: 1.5pt double #222; padding-bottom: 2mm; }
-        .meta { display: flex; justify-content: space-between; margin-bottom: 3mm; font-size: 9pt; }
-        .meta strong { font-size: 11pt; }
-        .layout { display: grid; grid-template-columns: 1fr 70mm; gap: 4mm; }
-        table { width: 100%; border-collapse: collapse; font-size: 8pt; }
-        th, td { border: 0.4pt solid #999; padding: 0.8mm 1.5mm; text-align: center; }
-        th { background: #f4f4f4; font-weight: bold; font-size: 7.5pt; }
-        td.day { width: 6mm; }
+        html, body { margin: 0; padding: 0; }
+        body { font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; color: #222; font-size: 7.5pt; }
+        h1 { text-align: center; font-size: 12pt; margin: 0 0 2mm; letter-spacing: 0.3em; border-bottom: 1pt double #222; padding-bottom: 1.5mm; }
+        .meta { display: flex; justify-content: space-between; margin-bottom: 2mm; font-size: 8pt; }
+        .meta strong { font-size: 10pt; }
+        .layout { display: grid; grid-template-columns: 1fr 60mm; gap: 3mm; }
+        table { width: 100%; border-collapse: collapse; font-size: 7pt; table-layout: fixed; }
+        th, td { border: 0.3pt solid #999; padding: 0.4mm 1mm; text-align: center; vertical-align: middle; line-height: 1.2; }
+        th { background: #f4f4f4; font-weight: bold; font-size: 6.5pt; padding: 1mm 1mm; }
         td.day.holiday { color: #c00; }
         td.empty { color: #ccc; }
-        td.notes { text-align: left; font-size: 7.5pt; color: #555; max-width: 30mm; overflow: hidden; }
-        .right-panel { display: flex; flex-direction: column; gap: 2mm; }
-        .summary, .payroll { padding: 2mm 3mm; border: 0.5pt solid #999; font-size: 8.5pt; }
+        td.notes { text-align: left; font-size: 6.5pt; color: #555; overflow: hidden; }
+        .right-panel { display: flex; flex-direction: column; gap: 1.5mm; }
+        .summary, .payroll { padding: 1.5mm 2mm; border: 0.4pt solid #999; font-size: 7.5pt; }
         .summary { background: #fafafa; }
-        .payroll { border: 0.8pt solid #117768; background: #f4faf8; }
-        .summary-row, .payroll-row { display: flex; justify-content: space-between; padding: 0.5mm 0; }
-        .payroll-title { font-weight: bold; color: #117768; margin-bottom: 1mm; font-size: 9pt; }
-        .payroll-row.total { border-top: 1pt solid #117768; margin-top: 1mm; padding-top: 1.5mm; font-weight: bold; font-size: 10pt; color: #117768; }
-        .signature { display: flex; gap: 3mm; margin-top: 2mm; }
-        .signature-box { flex: 1; border: 0.4pt solid #999; padding: 1.5mm; min-height: 12mm; font-size: 7pt; }
-        .signature-box .label { color: #999; font-size: 6.5pt; margin-bottom: 0.5mm; }
-        .footer-note { font-size: 6.5pt; color: #999; margin-top: 2mm; line-height: 1.4; }
+        .payroll { border: 0.6pt solid #117768; background: #f4faf8; }
+        .summary-row, .payroll-row { display: flex; justify-content: space-between; padding: 0.3mm 0; }
+        .payroll-title { font-weight: bold; color: #117768; margin-bottom: 0.5mm; font-size: 8pt; }
+        .payroll-row.total { border-top: 0.8pt solid #117768; margin-top: 0.5mm; padding-top: 1mm; font-weight: bold; font-size: 9pt; color: #117768; }
+        .signature { display: flex; gap: 2mm; }
+        .signature-box { flex: 1; border: 0.3pt solid #999; padding: 1mm; min-height: 10mm; font-size: 6pt; }
+        .signature-box .label { color: #999; font-size: 5.5pt; }
+        .footer-note { font-size: 5.5pt; color: #999; line-height: 1.3; }
       </style></head><body>
         <h1>出 勤 簿</h1>
         <div class="meta">
@@ -208,13 +239,22 @@ export default function AttendancePage() {
         </div>
         <div class="layout">
           <table>
+            <colgroup>
+              <col style="width:5mm;"/>
+              <col style="width:5mm;"/>
+              <col style="width:13mm;"/>
+              <col style="width:13mm;"/>
+              <col style="width:10mm;"/>
+              <col style="width:13mm;"/>
+              <col/>
+            </colgroup>
             <thead><tr>
-              <th style="width:6mm;">日</th><th style="width:6mm;">曜</th>
-              <th style="width:11mm;">出勤</th><th style="width:11mm;">退勤</th>
-              <th style="width:11mm;">休憩</th><th style="width:13mm;">勤務時間</th>
+              <th>日</th><th>曜</th>
+              <th>出勤</th><th>退勤</th>
+              <th>休憩</th><th>勤務時間</th>
               <th>備考</th>
             </tr></thead>
-            <tbody>${rows.join('')}</tbody>
+            <tbody>${rowsCompact.join('')}</tbody>
           </table>
           <div class="right-panel">
             <div class="summary">
