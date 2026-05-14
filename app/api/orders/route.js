@@ -14,7 +14,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe, APP_URL } from '@/utils/stripe';
 import { sendEmail } from '@/utils/email';
-import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatRecipientInfo } from '@/utils/emailTemplates';
+import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatRecipientInfo, formatLineAddFriendBlock } from '@/utils/emailTemplates';
 import { sendLineParallelToEmail } from '@/utils/line';
 import { createMypageMagicUrl } from '@/utils/mypageLink';
 
@@ -173,6 +173,7 @@ export async function POST(request) {
           shopPhone,
           recipientInfo: formatRecipientInfo(orderRecord.order_data),
           mypageUrl,
+          lineAddFriendUrl: formatLineAddFriendBlock(settings.lineConfig),
         };
         const { subject, body } = renderTemplate(tpl, vars);
         const html = bodyToHtml(body, { shopName });

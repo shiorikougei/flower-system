@@ -10,7 +10,7 @@ export const EMAIL_TRIGGERS = [
     label: 'ご注文受付',
     description: 'お客様の注文確定時に自動送信',
     auto: true,
-    variables: ['customerName', 'shopName', 'orderId', 'orderTotal', 'orderItems', 'paymentMethod', 'bankInfo', 'deliveryDate', 'shopPhone', 'recipientInfo', 'mypageUrl'],
+    variables: ['customerName', 'shopName', 'orderId', 'orderTotal', 'orderItems', 'paymentMethod', 'bankInfo', 'deliveryDate', 'shopPhone', 'recipientInfo', 'mypageUrl', 'lineAddFriendUrl'],
   },
   {
     id: 'restock_notification',
@@ -118,6 +118,7 @@ TEL: {shopPhone}
 ※リンクは24時間有効です。
 ※マイページではパスワード設定もしていただけます。
 
+{lineAddFriendUrl}
 またのご利用を心よりお待ちしております。`,
     },
     {
@@ -343,6 +344,26 @@ export function findTemplateFor(triggerId, autoReplyTemplates, { shopId } = {}) 
 
   // 最後にプリセット
   return presets.find(p => p.trigger === triggerId) || null;
+}
+
+// ===============================================================
+// LINE友達追加URLを案内文化（{lineAddFriendUrl} 変数の置換用）
+// 設定がなければ空文字を返す（メール本文がスッキリ）
+// ===============================================================
+export function formatLineAddFriendBlock(lineConfig) {
+  const url = lineConfig?.addFriendUrl || '';
+  if (!url || !lineConfig?.enabled) return '';
+  return `
+━━━━━━━━━━━━━━━━━━━━
+💬 LINEでも通知を受け取れます
+━━━━━━━━━━━━━━━━━━━━
+LINE公式アカウントを友達追加 → メールアドレスを送信していただくと、
+ご注文進捗・完成写真・入金確認をLINEでもお届けします。
+
+▼ 友達追加はこちらから
+${url}
+
+`;
 }
 
 // ===============================================================

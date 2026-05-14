@@ -11,7 +11,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from '@/utils/email';
-import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatRecipientInfo } from '@/utils/emailTemplates';
+import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatRecipientInfo, formatLineAddFriendBlock } from '@/utils/emailTemplates';
 import { sendLineParallelToEmail } from '@/utils/line';
 import { createMypageMagicUrl } from '@/utils/mypageLink';
 
@@ -97,6 +97,7 @@ export async function POST(request) {
       completionImageUrl: od.completionImage || '',
       recipientInfo: formatRecipientInfo(od),
       mypageUrl: await createMypageMagicUrl({ supabaseAdmin, tenantId, shopId: od.shopId, email: customerEmail }),
+      lineAddFriendUrl: formatLineAddFriendBlock(settings.lineConfig),
     };
 
     const { subject, body } = renderTemplate(tpl, vars);
