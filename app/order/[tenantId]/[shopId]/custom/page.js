@@ -693,7 +693,6 @@ function OrderFormContent() {
   const pickupNote = targetShopData.pickupNote || 'ご来店予定日時に店舗までお越しください。';
   const deliveryNote = targetShopData.deliveryNote || '交通状況により配達時間が前後する場合がございます。';
   const shippingNote = targetShopData.shippingNote || '発送準備期間＋配送日数がかかります。交通状況により遅延する場合がございます。';
-  const absenceInstruction = targetShopData.absenceInstruction || '生花のため、ご不在時は原則として置き配または宅配ボックスへのお届けとなります。ご希望の対応をお選びください。';
 
   if (isLoading) return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-sans"><div className="text-[#2D4B3E] font-bold animate-pulse">読み込み中...</div></div>;
 
@@ -1234,7 +1233,6 @@ function OrderFormContent() {
                   {receiveMethod === 'delivery' && (
                     <>
                       <p>{deliveryNote}</p>
-                      <p className="text-[#2D4B3E] font-bold">{absenceInstruction}</p>
                       {parsedPickupFee > 0 && <p className="font-bold text-orange-600">※ご注文の商品には回収が必要な器（スタンド等）が含まれているため、回収費用(¥{parsedPickupFee.toLocaleString()})が加算されています。</p>}
                     </>
                   )}

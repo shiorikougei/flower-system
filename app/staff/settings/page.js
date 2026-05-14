@@ -656,10 +656,6 @@ export default function SettingsPage() {
                 <label className="text-[10px] font-bold text-[#999999]">業者配送のご案内</label>
                 <textarea value={shop.shippingNote ?? '発送準備期間＋配送日数がかかります。交通状況により遅延する場合がございます。'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, shippingNote:e.target.value}:s))} className="w-full h-24 bg-[#FBFAF9] border rounded-xl p-3 text-[12px] outline-none resize-none focus:border-[#2D4B3E]"/>
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">置き配に関するご案内 (自社配達時)</label>
-                <textarea value={shop.absenceInstruction ?? '生花のため、ご不在時は原則として置き配または宅配ボックスへのお届けとなります。ご希望の対応をお選びください。'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, absenceInstruction:e.target.value}:s))} className="w-full h-24 bg-[#FBFAF9] border rounded-xl p-3 text-[12px] outline-none resize-none focus:border-[#2D4B3E]"/>
-              </div>
             </div>
           </div>
         </div>
@@ -670,8 +666,7 @@ export default function SettingsPage() {
           specialHours:[], deliverySpecialHours:[], enabledTatePatterns: ['p5', 'p7'],
           bankName: '', branchName: '', accountType: '普通', accountNumber: '', accountName: '',
           pickupNote: 'ご来店予定日時に店舗までお越しください。', deliveryNote: '交通状況により配達時間が前後する場合がございます。', shippingNote: '発送準備期間＋配送日数がかかります。交通状況により遅延する場合がございます。',
-          absenceInstruction: '生花のため、ご不在時は原則として置き配または宅配ボックスへのお届けとなります。ご希望の対応をお選びください。'
-        }])} 
+        }])}
         className="w-full py-10 border-2 border-dashed border-[#EAEAEA] rounded-2xl text-[#999999] font-bold transition-all hover:border-[#2D4B3E] shadow-sm"
       >
         + 店舗を新規追加
