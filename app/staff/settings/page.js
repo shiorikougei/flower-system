@@ -921,12 +921,71 @@ export default function SettingsPage() {
 
   const renderStaffTab = () => (
     <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-6 animate-in fade-in text-left">
-      <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><User size={20}/> スタッフ管理</h2>
-      <div className="space-y-3">
+      <div>
+        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><User size={20}/> スタッフ管理</h2>
+        <p className="text-[11px] text-[#999] mt-1 leading-relaxed">
+          スタッフを登録すると、各画面の上部のセレクターから「現在誰が操作しているか」を切り替えられます。
+          権限により見れる機能が変わります。
+        </p>
+      </div>
+
+      {/* 権限の凡例 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px]">
+        <div className="bg-[#2D4B3E]/5 border border-[#2D4B3E]/20 rounded-xl p-3">
+          <p className="font-bold text-[#2D4B3E] mb-1">🟢 オーナー</p>
+          <p className="text-[#555] leading-relaxed">全機能・設定変更・売上・スタッフ管理</p>
+        </div>
+        <div className="bg-[#117768]/5 border border-[#117768]/20 rounded-xl p-3">
+          <p className="font-bold text-[#117768] mb-1">🔵 スタッフ</p>
+          <p className="text-[#555] leading-relaxed">注文管理・売上閲覧・顧客管理（設定×）</p>
+        </div>
+        <div className="bg-[#D97D54]/5 border border-[#D97D54]/20 rounded-xl p-3">
+          <p className="font-bold text-[#D97D54] mb-1">🟠 バイト</p>
+          <p className="text-[#555] leading-relaxed">注文一覧・対応のみ（売上・設定×）</p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
         {staffList.map((s, i) => (
-          <div key={i} className="flex justify-between items-center bg-[#FBFAF9] p-4 rounded-2xl border border-[#EAEAEA]"><div className="flex flex-col"><span className="font-bold text-[14px]">{s.name}</span><span className="text-[9px] text-[#999999] font-bold tracking-tight">所属: {s.store === 'all' ? '全店' : shops.find(sh=>sh.id===Number(s.store))?.name || '不明'}</span></div><button onClick={()=>setStaffList(staffList.filter((_,idx)=>idx!==i))} className="text-red-300 hover:text-red-500 p-2"><Trash2 size={16}/></button></div>
+          <div key={i} className="bg-[#FBFAF9] p-4 rounded-2xl border border-[#EAEAEA] flex flex-col md:flex-row md:items-center gap-3">
+            <div className="flex flex-col flex-1 min-w-0">
+              <span className="font-bold text-[14px]">{s.name}</span>
+              <span className="text-[9px] text-[#999999] font-bold tracking-tight">所属: {s.store === 'all' ? '全店' : shops.find(sh=>sh.id===Number(s.store))?.name || '不明'}</span>
+            </div>
+            <select
+              value={s.role || 'staff'}
+              onChange={(e) => {
+                const next = [...staffList];
+                next[i] = { ...next[i], role: e.target.value };
+                setStaffList(next);
+              }}
+              className={`h-10 px-3 bg-white border rounded-lg text-[12px] font-bold outline-none focus:border-[#2D4B3E] ${
+                (s.role || 'staff') === 'owner' ? 'border-[#2D4B3E]/40 text-[#2D4B3E]' :
+                (s.role || 'staff') === 'staff' ? 'border-[#117768]/40 text-[#117768]' :
+                'border-[#D97D54]/40 text-[#D97D54]'
+              }`}
+            >
+              <option value="owner">🟢 オーナー</option>
+              <option value="staff">🔵 スタッフ</option>
+              <option value="parttime">🟠 バイト</option>
+            </select>
+            <button onClick={()=>setStaffList(staffList.filter((_,idx)=>idx!==i))} className="text-red-300 hover:text-red-500 p-2"><Trash2 size={16}/></button>
+          </div>
         ))}
-        <div className="flex flex-col md:flex-row gap-2 pt-4 border-t border-[#EAEAEA]"><input type="text" placeholder="氏名" value={newStaffName} onChange={(e)=>setNewStaffName(e.target.value)} className="flex-[2] h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E]"/><select value={newStaffStore} onChange={(e)=>setNewStaffStore(e.target.value)} className="flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"><option value="all">全店</option>{shops.map(shop=><option key={shop.id} value={shop.id}>{shop.name}</option>)}</select><button onClick={()=>{if(newStaffName.trim()){setStaffList([...staffList,{name:newStaffName, store:newStaffStore}]); setNewStaffName('');}}} className="bg-[#2D4B3E] text-white px-6 h-12 rounded-xl font-bold text-[13px] shadow-sm hover:bg-[#1f352b] transition-all">追加</button></div>
+
+        <div className="flex flex-col md:flex-row gap-2 pt-4 border-t border-[#EAEAEA]">
+          <input type="text" placeholder="氏名" value={newStaffName} onChange={(e)=>setNewStaffName(e.target.value)} className="flex-[2] h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E]"/>
+          <select value={newStaffStore} onChange={(e)=>setNewStaffStore(e.target.value)} className="flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]">
+            <option value="all">全店</option>
+            {shops.map(shop=><option key={shop.id} value={shop.id}>{shop.name}</option>)}
+          </select>
+          <button onClick={()=>{
+            if(newStaffName.trim()){
+              setStaffList([...staffList,{name:newStaffName, store:newStaffStore, role: 'staff'}]);
+              setNewStaffName('');
+            }
+          }} className="bg-[#2D4B3E] text-white px-6 h-12 rounded-xl font-bold text-[13px] shadow-sm hover:bg-[#1f352b] transition-all">追加</button>
+        </div>
       </div>
     </div>
   );

@@ -5,8 +5,9 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 import {
   Home, ClipboardList, PlusSquare, CalendarDays, Truck, Briefcase,
-  Users, Building2, Settings, TrendingUp, Lock, Sparkles, MessageSquare, X, Send, Image as ImageIcon, ShoppingBag
+  Users, Building2, Settings, TrendingUp, Lock, Sparkles, MessageSquare, X, Send, Image as ImageIcon, ShoppingBag, UserCheck, ChevronDown
 } from 'lucide-react';
+import { getCurrentStaff, setCurrentStaff, ROLE_LABELS, ROLE_DESCRIPTIONS, can } from '@/utils/staffRole';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 
@@ -21,6 +22,11 @@ export default function StaffLayout({ children }) {
   const [feedbackType, setFeedbackType] = useState('アップデート依頼');
   const [feedbackText, setFeedbackText] = useState('');
 
+  // ★ スタッフ切替
+  const [staffList, setStaffList] = useState([]);
+  const [currentStaff, setCurrentStaffState] = useState(null);
+  const [showStaffPicker, setShowStaffPicker] = useState(false);
+
   useEffect(() => {
     const applySettings = (settingsData) => {
       if (settingsData?.generalConfig) {
@@ -28,7 +34,13 @@ export default function StaffLayout({ children }) {
         setLogoUrl(settingsData.generalConfig.logoUrl || '');
         setIsPremiumPlan(settingsData.generalConfig.isPremiumPlan || false);
       }
+      if (Array.isArray(settingsData?.staffList)) {
+        setStaffList(settingsData.staffList);
+      }
     };
+
+    // 現在のスタッフをlocalStorageからロード
+    setCurrentStaffState(getCurrentStaff());
 
     async function fetchSettings() {
       try {
@@ -59,27 +71,59 @@ export default function StaffLayout({ children }) {
     fetchSettings();
   }, []);
 
+  // 各メニューに必要な権限を perm で指定
   const baseMenuItems = [
-    { name: 'ホーム', path: '/staff', icon: Home },
-    { name: '店舗注文受付', path: '/staff/new-order', icon: PlusSquare },
-    { name: '受注一覧', path: '/staff/orders', icon: ClipboardList },
-    { name: '受注カレンダー', path: '/staff/calendar', icon: CalendarDays },
-    { name: '配達管理', path: '/staff/deliveries', icon: Truck },
-    { name: '売上管理', path: '/staff/sales', icon: TrendingUp },
-    { name: '顧客管理', path: '/staff/customers', icon: Users },
-    { name: '作品管理', path: '/staff/portfolio', icon: ImageIcon },
-    { name: '商品管理（EC）', path: '/staff/products', icon: ShoppingBag },
-    { name: '各種設定', path: '/staff/settings', icon: Settings },
+    { name: 'ホーム', path: '/staff', icon: Home, perm: 'home' },
+    { name: '店舗注文受付', path: '/staff/new-order', icon: PlusSquare, perm: 'newOrder' },
+    { name: '受注一覧', path: '/staff/orders', icon: ClipboardList, perm: 'orders' },
+    { name: '受注カレンダー', path: '/staff/calendar', icon: CalendarDays, perm: 'calendar' },
+    { name: '配達管理', path: '/staff/deliveries', icon: Truck, perm: 'deliveries' },
+    { name: '売上管理', path: '/staff/sales', icon: TrendingUp, perm: 'sales' },
+    { name: '顧客管理', path: '/staff/customers', icon: Users, perm: 'customers' },
+    { name: '作品管理', path: '/staff/portfolio', icon: ImageIcon, perm: 'portfolio' },
+    { name: '商品管理（EC）', path: '/staff/products', icon: ShoppingBag, perm: 'products' },
+    { name: '各種設定', path: '/staff/settings', icon: Settings, perm: 'settings' },
   ];
 
   const premiumMenuItems = [
-    { name: '配達業務委託', path: '/staff/setting/drivers', icon: Briefcase },
-    { name: '法人管理', path: '/staff/corporations', icon: Building2 },
+    { name: '配達業務委託', path: '/staff/setting/drivers', icon: Briefcase, perm: 'deliveries' },
+    { name: '法人管理', path: '/staff/corporations', icon: Building2, perm: 'settings' },
   ];
 
-  const activeMenuItems = isPremiumPlan 
-    ? [...baseMenuItems.slice(0, 6), ...premiumMenuItems, ...baseMenuItems.slice(6)]
-    : baseMenuItems;
+  // ★ role に応じてフィルタ（未設定はオーナー扱い＝全表示）
+  const currentRole = currentStaff?.role || 'owner';
+  const filterByRole = (items) => items.filter(item => can(currentRole, item.perm));
+
+  const activeMenuItems = isPremiumPlan
+    ? filterByRole([...baseMenuItems.slice(0, 6), ...premiumMenuItems, ...baseMenuItems.slice(6)])
+    : filterByRole(baseMenuItems);
+
+  // スタッフ切替
+  const switchStaff = (s) => {
+    setCurrentStaff(s);
+    setCurrentStaffState(s);
+    setShowStaffPicker(false);
+    // 権限変更で見れない画面にいる場合はホームに戻す
+    if (s && pathname && !pathname.startsWith('/staff/login')) {
+      const stillVisible = activeMenuItems.some(m =>
+        m.path === '/staff' ? pathname === '/staff' : pathname.startsWith(m.path)
+      );
+      if (!stillVisible) {
+        window.location.href = '/staff';
+      } else {
+        window.location.reload();
+      }
+    } else {
+      window.location.reload();
+    }
+  };
+
+  const clearStaff = () => {
+    setCurrentStaff(null);
+    setCurrentStaffState(null);
+    setShowStaffPicker(false);
+    window.location.reload();
+  };
 
   const handleUpgradeRequest = async () => {
     if (!confirm('アップグレード料金について問い合わせ、機能の解放を依頼しますか？')) return;
@@ -153,7 +197,7 @@ export default function StaffLayout({ children }) {
   return (
     <div className="min-h-screen bg-[#FBFAF9] flex flex-col md:flex-row font-sans text-[#111111]">
       <aside className="w-full md:w-64 bg-white border-r border-[#EAEAEA] md:fixed h-full z-40 flex flex-col">
-        <div className="p-8 flex flex-col gap-1 border-b border-[#EAEAEA] shrink-0">
+        <div className="p-6 flex flex-col gap-1 border-b border-[#EAEAEA] shrink-0">
           {logoUrl ? (
             <img src={logoUrl} alt={appName} className="h-8 object-contain object-left mb-1" />
           ) : (
@@ -163,6 +207,65 @@ export default function StaffLayout({ children }) {
             管理ワークスペース
             {isPremiumPlan && <Sparkles size={10} className="text-yellow-500" />}
           </span>
+
+          {/* ★ スタッフ切替ピッカー */}
+          <div className="mt-3 relative">
+            <button
+              onClick={() => setShowStaffPicker(s => !s)}
+              className="w-full flex items-center justify-between gap-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-3 py-2 hover:border-[#2D4B3E] transition-all"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0 ${
+                  currentStaff?.role === 'owner' ? 'bg-[#2D4B3E]' :
+                  currentStaff?.role === 'staff' ? 'bg-[#117768]' :
+                  currentStaff?.role === 'parttime' ? 'bg-[#D97D54]' : 'bg-[#999]'
+                }`}>
+                  <UserCheck size={13}/>
+                </div>
+                <div className="text-left min-w-0">
+                  <p className="text-[11px] font-bold text-[#111] truncate">{currentStaff?.name || '未選択'}</p>
+                  <p className="text-[9px] text-[#999] truncate">{currentStaff?.role ? ROLE_LABELS[currentStaff.role] : '※全機能アクセス'}</p>
+                </div>
+              </div>
+              <ChevronDown size={14} className="text-[#999] shrink-0"/>
+            </button>
+
+            {showStaffPicker && (
+              <div className="absolute top-full mt-2 left-0 right-0 bg-white border border-[#EAEAEA] rounded-xl shadow-lg z-50 overflow-hidden">
+                <div className="p-2 max-h-80 overflow-y-auto">
+                  {staffList.length === 0 ? (
+                    <p className="text-[11px] text-[#999] p-3 text-center">スタッフ未登録<br/>設定→スタッフから追加してください</p>
+                  ) : staffList.map((s, i) => (
+                    <button
+                      key={i}
+                      onClick={() => switchStaff(s)}
+                      className={`w-full flex items-center gap-2 p-2.5 rounded-lg hover:bg-[#FBFAF9] transition-all text-left ${currentStaff?.name === s.name ? 'bg-[#2D4B3E]/5' : ''}`}
+                    >
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0 ${
+                        s.role === 'owner' ? 'bg-[#2D4B3E]' :
+                        s.role === 'staff' ? 'bg-[#117768]' :
+                        s.role === 'parttime' ? 'bg-[#D97D54]' : 'bg-[#117768]'
+                      }`}>
+                        <UserCheck size={13}/>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[12px] font-bold text-[#111] truncate">{s.name}</p>
+                        <p className="text-[9px] text-[#999] truncate">{ROLE_LABELS[s.role || 'staff']}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                {currentStaff && (
+                  <button
+                    onClick={clearStaff}
+                    className="w-full p-2.5 text-[11px] font-bold text-[#999] hover:bg-[#FBFAF9] border-t border-[#EAEAEA]"
+                  >
+                    選択を解除
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
         
         <nav className="p-4 space-y-1.5 flex-1 overflow-y-auto hide-scrollbar">
