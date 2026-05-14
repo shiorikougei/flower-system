@@ -56,6 +56,7 @@ export async function GET(request) {
     let sent = 0;
     let skipped = 0;
     const errors = [];
+    const newInvoiceRecords = []; // ★ 送信履歴用
 
     // ★ AI使用量も統合
     const aiPricingCfg = ownerData.aiPricingConfig || { freeQuotaPerMonth: 100, pricePerExtraJpy: 5 };
@@ -64,8 +65,11 @@ export async function GET(request) {
     for (const t of tenants) {
       try {
         const billing = tenantBilling[t.id] || {};
-        const fee = (billing.manualPriceJpy != null && Number(billing.manualPriceJpy) >= 0)
-          ? calcWithManualOverride(billing.manualPriceJpy, pricing.taxRate)
+        // ★ manualPriceJpy === 0 もモニター店舗用に有効（null/空欄のみ自動計算）
+        const m = billing.manualPriceJpy;
+        const useManual = m != null && m !== '' && Number(m) >= 0;
+        const fee = useManual
+          ? calcWithManualOverride(Number(m), pricing.taxRate)
           : calcMonthlyFee(t.features, pricing);
 
         // ★ AI使用料計算
@@ -168,10 +172,39 @@ export async function GET(request) {
           errors.push({ tenant: t.id, error: result.error });
         } else {
           sent++;
+          // ★ 請求履歴に追加（管理ページの請求・入金管理タブで参照）
+          newInvoiceRecords.push({
+            id: `inv_${t.id}_${targetMonth}_${Date.now()}`,
+            tenantId: t.id,
+            tenantName: t.name,
+            month: targetMonth,
+            subscriptionTotal: fee.total,
+            aiTotal,
+            grandTotal,
+            paymentMethod: billing.paymentMethod || 'bank_transfer',
+            billingEmail: to,
+            sentAt: new Date().toISOString(),
+            paidAt: null,
+            status: 'unpaid',
+            stripeInvoiceUrl: stripeInvoiceUrl || '',
+            via: 'cron',
+          });
         }
       } catch (e) {
         errors.push({ tenant: t.id, error: e.message });
       }
+    }
+
+    // ★ 請求履歴を nocolde_owner に追記保存
+    if (newInvoiceRecords.length > 0) {
+      try {
+        const existing = ownerData.invoices || [];
+        const merged = [...existing, ...newInvoiceRecords];
+        await supabaseAdmin.from('app_settings').upsert({
+          id: 'nocolde_owner',
+          settings_data: { ...ownerData, invoices: merged },
+        });
+      } catch (e) { console.warn('[invoice-record] save failed:', e.message); }
     }
 
     return NextResponse.json({

@@ -211,6 +211,10 @@ export default function OwnerDashboard() {
   const [pricingConfig, setPricingConfig] = useState(DEFAULT_PRICING);
   const [tenantBilling, setTenantBilling] = useState({});  // { [tenantId]: { manualPriceJpy, manualReason, billingEmail } }
 
+  // ★ 請求・入金管理
+  const [invoices, setInvoices] = useState([]);
+  const [invoiceFilter, setInvoiceFilter] = useState({ status: 'all', month: '', tenantId: '' });
+
   // ロード
   useEffect(() => {
     if (!isAuth) return;
@@ -225,9 +229,53 @@ export default function OwnerDashboard() {
           featurePrices: { ...DEFAULT_PRICING.featurePrices, ...(s.pricingConfig.featurePrices || {}) },
         });
         if (s.tenantBilling) setTenantBilling(s.tenantBilling);
+        if (s.invoices) setInvoices(s.invoices);
       } catch {}
     })();
   }, [isAuth]);
+
+  // 入金記録ハンドラ
+  const reloadInvoices = async () => {
+    try {
+      const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
+      setInvoices(data?.settings_data?.invoices || []);
+    } catch {}
+  };
+  const markInvoicePaid = async (id, paid) => {
+    try {
+      await fetch('/api/admin/invoice-record', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: paid ? 'paid' : 'unpaid' }),
+      });
+      await reloadInvoices();
+    } catch (e) { alert('更新失敗: ' + e.message); }
+  };
+  const deleteInvoice = async (id) => {
+    if (!confirm('この請求記録を削除しますか？')) return;
+    try {
+      await fetch(`/api/admin/invoice-record?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      await reloadInvoices();
+    } catch (e) { alert('削除失敗: ' + e.message); }
+  };
+  const recordManualInvoice = async (tenant, fee, aiOverage, grandTotal, billing) => {
+    try {
+      const month = (() => { const d = new Date(); d.setMonth(d.getMonth()+1); return `${d.getFullYear()}年${d.getMonth()+1}月`; })();
+      await fetch('/api/admin/invoice-record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantId: tenant.id, tenantName: tenant.name, month,
+          subscriptionTotal: fee.total,
+          aiTotal: aiOverage?.total || 0,
+          grandTotal,
+          paymentMethod: billing.paymentMethod || 'bank_transfer',
+          billingEmail: billing.billingEmail || '',
+        }),
+      });
+      await reloadInvoices();
+    } catch (e) { console.warn('invoice-record manual fail', e); }
+  };
 
   const savePricingConfig = async () => {
     try {
@@ -249,10 +297,12 @@ export default function OwnerDashboard() {
   };
 
   // テナントごとの料金計算
+  // ★ manualPriceJpy === 0 もモニター店舗用に有効（null/未入力のみ自動計算）
   const calcTenantFee = (tenant) => {
     const billing = tenantBilling[tenant.id] || {};
-    if (billing.manualPriceJpy && Number(billing.manualPriceJpy) >= 0) {
-      return calcWithManualOverride(billing.manualPriceJpy, pricingConfig.taxRate);
+    const m = billing.manualPriceJpy;
+    if (m != null && m !== '' && Number(m) >= 0) {
+      return calcWithManualOverride(Number(m), pricingConfig.taxRate);
     }
     return calcMonthlyFee(tenant.features || {}, pricingConfig);
   };
@@ -718,6 +768,12 @@ export default function OwnerDashboard() {
           <button onClick={() => setActiveTab('ai')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'ai' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><Bot size={16}/> AIプロンプト設定</button>
           <button onClick={() => setActiveTab('usage')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'usage' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><Sparkles size={16}/> AI利用状況・請求</button>
           <button onClick={() => setActiveTab('subscription')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'subscription' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><CreditCard size={16}/> サブスク管理</button>
+          <button onClick={() => setActiveTab('billing')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center justify-between ${activeTab === 'billing' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}>
+            <span className="flex items-center gap-3"><FileText size={16}/> 請求・入金管理</span>
+            {invoices.filter(i => i.status === 'unpaid').length > 0 && (
+              <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-orange-500 text-white">{invoices.filter(i => i.status === 'unpaid').length}</span>
+            )}
+          </button>
 
           <div className="pt-8 pb-4">
             <button onClick={() => setActiveTab('danger')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'danger' ? 'bg-red-900/30 text-red-500 border border-red-900/50' : 'text-gray-500 hover:bg-red-900/10 hover:text-red-500'}`}><AlertTriangle size={16}/> 危険な操作・初期化</button>
@@ -735,6 +791,7 @@ export default function OwnerDashboard() {
             {activeTab === 'ai' && 'AI PROMPT SETTINGS'}
             {activeTab === 'usage' && 'AI USAGE & BILLING'}
             {activeTab === 'subscription' && 'SUBSCRIPTION MANAGEMENT'}
+            {activeTab === 'billing' && 'BILLING & PAYMENT'}
             {activeTab === 'danger' && 'DANGER ZONE'}
           </h2>
           <div className="flex items-center gap-4">
@@ -750,7 +807,7 @@ export default function OwnerDashboard() {
                 <thead className="bg-[#1a1a1a] border-b border-[#333333] text-[10px] font-bold text-gray-400 tracking-widest uppercase">
                   <tr>
                     <th className="px-6 py-4">店舗名 (ID)</th>
-                    <th className="px-6 py-4">月額料金設定</th>
+                    <th className="px-6 py-4">翌月請求額</th>
                     <th className="px-6 py-4">機能の個別解放</th>
                     <th className="px-6 py-4 text-center">ステータス</th>
                     <th className="px-6 py-4 text-right">強制操作</th>
@@ -766,22 +823,22 @@ export default function OwnerDashboard() {
                           <div className="text-[10px] text-gray-500 font-mono mt-1">{t.id}</div>
                         </td>
                         <td className="px-6 py-5">
-                          <div className="flex items-center gap-2">
-                            <span className="text-gray-500">¥</span>
-                            <input 
-                              type="number" 
-                              value={t.price} 
-                              onChange={(e) => handlePriceChange(t.id, e.target.value)} 
-                              className="bg-black border border-[#333333] rounded px-3 py-1.5 w-24 text-white outline-none focus:border-[#2D4B3E] font-mono" 
-                            />
-                            <button 
-                              onClick={() => handleSavePrice(t.id, t.price)}
-                              disabled={savingPriceId === t.id}
-                              className="px-3 py-1.5 bg-[#2D4B3E] text-white text-[10px] font-bold rounded hover:bg-[#1f352b] transition-all disabled:opacity-50"
-                            >
-                              {savingPriceId === t.id ? '更新中...' : '更新'}
-                            </button>
-                          </div>
+                          {(() => {
+                            const fee = calcTenantFee(t);
+                            const billing = tenantBilling[t.id] || {};
+                            const m = billing.manualPriceJpy;
+                            const isManual = m != null && m !== '';
+                            return (
+                              <button
+                                onClick={() => setActiveTab('subscription')}
+                                className="text-left hover:opacity-80"
+                                title="サブスク管理タブで編集"
+                              >
+                                <div className="font-mono text-emerald-400 font-bold text-[14px]">¥{fee.total.toLocaleString()}</div>
+                                <div className="text-[9px] text-gray-500 mt-0.5">{isManual ? `手動 (¥${Number(m).toLocaleString()})` : '自動計算'} → 編集</div>
+                              </button>
+                            );
+                          })()}
                         </td>
                         <td className="px-6 py-5">
                           {(() => {
@@ -1303,7 +1360,13 @@ export default function OwnerDashboard() {
                             className="w-44 h-8 px-2 bg-black border border-[#333] rounded text-[11px] text-white outline-none"/>
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <button onClick={() => printSubscriptionInvoice(t)} className="inline-flex items-center gap-1 bg-cyan-500/10 text-cyan-400 border border-cyan-500/40 px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-cyan-500/20" title="請求書PDF">
+                          <button onClick={() => {
+                            const fee = calcTenantFee(t);
+                            const aiOverage = calcAiOverage(t.id, usageMonth);
+                            const grandTotal = fee.total + (aiOverage?.total || 0);
+                            printSubscriptionInvoice(t);
+                            recordManualInvoice(t, fee, aiOverage, grandTotal, billing);
+                          }} className="inline-flex items-center gap-1 bg-cyan-500/10 text-cyan-400 border border-cyan-500/40 px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-cyan-500/20" title="請求書PDF発行+履歴記録">
                             <FileText size={11}/> 発行
                           </button>
                         </td>
@@ -1325,10 +1388,175 @@ export default function OwnerDashboard() {
 
             <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-xl p-4 text-[11px] text-cyan-200 leading-relaxed">
               💡 毎月1日に翌月分の請求書が「請求先メール」に自動送信されます（Cronで実行）。
-              モデル店舗は手動オーバーライドで <strong>0円</strong> も設定可能です。
+              モデル店舗は手動オーバーライドで <strong>0円</strong> も設定可能です。送信履歴は「請求・入金管理」タブで確認できます。
             </div>
           </div>
         )}
+
+        {/* ★ 請求・入金管理 */}
+        {activeTab === 'billing' && (() => {
+          const filtered = invoices.filter(i => {
+            if (invoiceFilter.status !== 'all' && i.status !== invoiceFilter.status) return false;
+            if (invoiceFilter.tenantId && i.tenantId !== invoiceFilter.tenantId) return false;
+            if (invoiceFilter.month && !String(i.month).includes(invoiceFilter.month)) return false;
+            return true;
+          }).sort((a, b) => (b.sentAt || '').localeCompare(a.sentAt || ''));
+
+          const stats = {
+            total: invoices.length,
+            unpaid: invoices.filter(i => i.status === 'unpaid').length,
+            paid: invoices.filter(i => i.status === 'paid').length,
+            unpaidAmount: invoices.filter(i => i.status === 'unpaid').reduce((s, i) => s + (i.grandTotal || 0), 0),
+            paidAmount: invoices.filter(i => i.status === 'paid').reduce((s, i) => s + (i.grandTotal || 0), 0),
+          };
+          const months = [...new Set(invoices.map(i => i.month).filter(Boolean))].sort().reverse();
+
+          return (
+            <div className="space-y-6 animate-in fade-in">
+              {/* サマリー */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-[#111111] border border-[#222222] rounded-2xl p-5">
+                  <div className="text-[10px] text-gray-500 tracking-widest mb-1">送付済み合計</div>
+                  <div className="text-[24px] font-mono font-bold text-white">{stats.total}</div>
+                  <div className="text-[10px] text-gray-500 mt-1">件</div>
+                </div>
+                <div className="bg-[#111111] border border-orange-500/30 rounded-2xl p-5">
+                  <div className="text-[10px] text-orange-400 tracking-widest mb-1">未入金</div>
+                  <div className="text-[24px] font-mono font-bold text-orange-400">{stats.unpaid}</div>
+                  <div className="text-[10px] text-orange-300 mt-1">¥{stats.unpaidAmount.toLocaleString()}</div>
+                </div>
+                <div className="bg-[#111111] border border-emerald-500/30 rounded-2xl p-5">
+                  <div className="text-[10px] text-emerald-400 tracking-widest mb-1">入金済</div>
+                  <div className="text-[24px] font-mono font-bold text-emerald-400">{stats.paid}</div>
+                  <div className="text-[10px] text-emerald-300 mt-1">¥{stats.paidAmount.toLocaleString()}</div>
+                </div>
+                <div className="bg-[#111111] border border-[#222222] rounded-2xl p-5">
+                  <div className="text-[10px] text-gray-500 tracking-widest mb-1">入金率</div>
+                  <div className="text-[24px] font-mono font-bold text-white">
+                    {stats.total > 0 ? Math.round(stats.paid / stats.total * 100) : 0}<span className="text-[14px] text-gray-500">%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* フィルター */}
+              <div className="bg-[#111111] border border-[#222222] rounded-2xl p-5 flex flex-wrap items-end gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 tracking-widest block mb-1">状態</label>
+                  <select value={invoiceFilter.status} onChange={e => setInvoiceFilter({...invoiceFilter, status: e.target.value})}
+                    className="bg-black border border-[#333333] rounded px-3 py-2 text-white text-[12px] outline-none focus:border-[#2D4B3E]">
+                    <option value="all">すべて</option>
+                    <option value="unpaid">未入金のみ</option>
+                    <option value="paid">入金済のみ</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 tracking-widest block mb-1">月</label>
+                  <select value={invoiceFilter.month} onChange={e => setInvoiceFilter({...invoiceFilter, month: e.target.value})}
+                    className="bg-black border border-[#333333] rounded px-3 py-2 text-white text-[12px] outline-none focus:border-[#2D4B3E]">
+                    <option value="">すべて</option>
+                    {months.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 tracking-widest block mb-1">店舗</label>
+                  <select value={invoiceFilter.tenantId} onChange={e => setInvoiceFilter({...invoiceFilter, tenantId: e.target.value})}
+                    className="bg-black border border-[#333333] rounded px-3 py-2 text-white text-[12px] outline-none focus:border-[#2D4B3E]">
+                    <option value="">すべて</option>
+                    {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                </div>
+                <button onClick={reloadInvoices} className="px-4 py-2 bg-[#2D4B3E] text-white text-[11px] font-bold rounded hover:bg-[#1f352b]">
+                  <RefreshCw size={12} className="inline mr-1"/> 再読込
+                </button>
+              </div>
+
+              {/* 請求リスト */}
+              <div className="bg-[#111111] rounded-2xl border border-[#222222] overflow-x-auto shadow-2xl">
+                <table className="w-full text-left min-w-[1000px]">
+                  <thead className="bg-[#1a1a1a] border-b border-[#333333] text-[10px] font-bold text-gray-400 tracking-widest uppercase">
+                    <tr>
+                      <th className="px-4 py-3">送付日</th>
+                      <th className="px-4 py-3">対象月</th>
+                      <th className="px-4 py-3">店舗</th>
+                      <th className="px-4 py-3 text-right">金額(税込)</th>
+                      <th className="px-4 py-3">支払方法</th>
+                      <th className="px-4 py-3 text-center">状態</th>
+                      <th className="px-4 py-3">入金日</th>
+                      <th className="px-4 py-3 text-right">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#222222] text-[12px]">
+                    {filtered.map(inv => (
+                      <tr key={inv.id} className="hover:bg-[#1a1a1a] transition-all">
+                        <td className="px-4 py-3 font-mono text-gray-400 text-[11px]">
+                          {inv.sentAt ? new Date(inv.sentAt).toLocaleDateString('ja-JP') : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-white">{inv.month}</td>
+                        <td className="px-4 py-3">
+                          <div className="text-white font-bold">{inv.tenantName}</div>
+                          <div className="text-[9px] text-gray-500 font-mono">{inv.tenantId}</div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="font-mono text-emerald-400 font-bold">¥{(inv.grandTotal||0).toLocaleString()}</div>
+                          {inv.aiTotal > 0 && (
+                            <div className="text-[9px] text-gray-500">うちAI ¥{inv.aiTotal.toLocaleString()}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {inv.paymentMethod === 'card' ? (
+                            <span className="text-[10px] text-blue-400">💳 クレカ</span>
+                          ) : (
+                            <span className="text-[10px] text-gray-400">🏦 銀行振込</span>
+                          )}
+                          {inv.stripeInvoiceUrl && (
+                            <a href={inv.stripeInvoiceUrl} target="_blank" rel="noopener noreferrer" className="block text-[9px] text-blue-400 underline mt-0.5">Stripe請求書</a>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {inv.status === 'paid' ? (
+                            <span className="px-2 py-1 rounded-full text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">入金済</span>
+                          ) : (
+                            <span className="px-2 py-1 rounded-full text-[10px] bg-orange-500/20 text-orange-400 border border-orange-500/40">未入金</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-gray-400 text-[11px]">
+                          {inv.paidAt ? new Date(inv.paidAt).toLocaleDateString('ja-JP') : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {inv.status === 'unpaid' ? (
+                              <button onClick={() => markInvoicePaid(inv.id, true)}
+                                className="px-3 py-1.5 bg-emerald-600/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold rounded hover:bg-emerald-600 hover:text-white">
+                                入金記録
+                              </button>
+                            ) : (
+                              <button onClick={() => markInvoicePaid(inv.id, false)}
+                                className="px-3 py-1.5 bg-gray-600/20 text-gray-400 border border-gray-500/40 text-[10px] font-bold rounded hover:bg-gray-600 hover:text-white">
+                                未入金に戻す
+                              </button>
+                            )}
+                            <button onClick={() => deleteInvoice(inv.id)}
+                              className="p-1.5 text-gray-500 hover:bg-red-900/30 hover:text-red-500 rounded border border-transparent hover:border-red-900/50">
+                              <Trash2 size={12}/>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {filtered.length === 0 && (
+                      <tr><td colSpan="8" className="px-6 py-12 text-center text-gray-600 italic">請求記録なし</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-xl p-4 text-[11px] text-cyan-200 leading-relaxed">
+                💡 月初の自動送信時に履歴が追加されます。「サブスク管理」タブの<strong>発行</strong>ボタンからの手動送信も自動で記録されます。<br/>
+                銀行振込テナントは入金確認後、<strong>「入金記録」</strong>を押してください。クレカ(Stripe)テナントは Stripe ダッシュボードで入金状況を確認できます。
+              </div>
+            </div>
+          );
+        })()}
 
         {activeTab === 'danger' && (
           <div className="space-y-6 animate-in fade-in">
