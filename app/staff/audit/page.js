@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 import { ACTION_LABELS } from '@/utils/auditLog';
 import { canCurrent } from '@/utils/staffRole';
-import { History, Clock, RefreshCw, User, Filter, Edit2, Trash2, Plus, X } from 'lucide-react';
+import { calcPayroll, getPayrollWarnings, DEFAULT_PAYROLL_CONFIG } from '@/utils/payroll';
+import { History, Clock, RefreshCw, User, Filter, Edit2, Trash2, Plus, X, FileText, AlertCircle } from 'lucide-react';
 
 export default function AuditPage() {
   const [tab, setTab] = useState('audit'); // 'audit' | 'attendance'
@@ -18,7 +19,12 @@ export default function AuditPage() {
   const [editForm, setEditForm] = useState(null); // null | { id?, staffName, clockInAt, clockOutAt, notes }
   const [staffList, setStaffList] = useState([]);
 
-  // スタッフ名リスト取得（編集UI用）
+  // 給与計算用設定 + 年間累計データ
+  const [payrollConfig, setPayrollConfig] = useState(DEFAULT_PAYROLL_CONFIG);
+  const [allYearAttendance, setAllYearAttendance] = useState([]);
+  const [appName, setAppName] = useState('');
+
+  // スタッフ名リスト取得 + payrollConfig 取得 + 年間勤怠取得
   useEffect(() => {
     (async () => {
       try {
@@ -27,7 +33,17 @@ export default function AuditPage() {
         const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
         if (!profile?.tenant_id) return;
         const { data } = await supabase.from('app_settings').select('settings_data').eq('id', profile.tenant_id).single();
-        setStaffList(data?.settings_data?.staffList || []);
+        const s = data?.settings_data || {};
+        setStaffList(s.staffList || []);
+        if (s.payrollConfig) setPayrollConfig({...DEFAULT_PAYROLL_CONFIG, ...s.payrollConfig});
+        setAppName(s.generalConfig?.appName || '');
+
+        // 年初からの勤怠取得（扶養計算用）
+        const yearStart = `${new Date().getFullYear()}-01-01`;
+        const yearRes = await fetch(`/api/staff/attendance?from=${yearStart}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        }).then(r => r.json()).catch(() => ({ items: [] }));
+        setAllYearAttendance(yearRes.items || []);
       } catch {}
     })();
   }, []);
@@ -140,6 +156,137 @@ export default function AuditPage() {
     return new Date(s).toLocaleString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
   }
 
+  // ★ 出勤簿PDF発行（スタッフ・月単位）
+  function printAttendanceSheet(staffName, monthKey) {
+    const [yyyy, mm] = monthKey.split('-').map(Number);
+    const lastDay = new Date(yyyy, mm, 0).getDate();
+    const monthAttendance = attendance.filter(a =>
+      a.staff_name === staffName &&
+      a.clock_in_at?.startsWith(monthKey)
+    );
+    const staff = staffList.find(s => s.name === staffName);
+
+    // 給与計算
+    let payroll = null;
+    if (staff?.payrollEnabled && payrollConfig.enabled) {
+      payroll = calcPayroll(staff, monthAttendance, payrollConfig);
+    }
+
+    // 日別マップ
+    const dayMap = {};
+    monthAttendance.forEach(a => {
+      const d = new Date(a.clock_in_at).getDate();
+      if (!dayMap[d]) dayMap[d] = [];
+      dayMap[d].push(a);
+    });
+
+    const fmt = (s) => s ? new Date(s).toTimeString().slice(0, 5) : '-';
+    const rows = [];
+    for (let d = 1; d <= lastDay; d++) {
+      const records = dayMap[d] || [];
+      const dayObj = new Date(yyyy, mm - 1, d);
+      const dayLabels = ['日', '月', '火', '水', '木', '金', '土'];
+      const dayLabel = dayLabels[dayObj.getDay()];
+      const isHoliday = dayObj.getDay() === 0 || dayObj.getDay() === 6;
+
+      if (records.length === 0) {
+        rows.push(`<tr><td>${d}</td><td class="day ${isHoliday ? 'holiday' : ''}">${dayLabel}</td><td colspan="4" class="empty">-</td></tr>`);
+      } else {
+        records.forEach((r, idx) => {
+          rows.push(`<tr>
+            <td>${idx === 0 ? d : ''}</td>
+            <td class="day ${isHoliday ? 'holiday' : ''}">${idx === 0 ? dayLabel : ''}</td>
+            <td>${fmt(r.clock_in_at)}</td>
+            <td>${fmt(r.clock_out_at)}</td>
+            <td>${r.duration_minutes ? `${Math.floor(r.duration_minutes/60)}:${String(r.duration_minutes%60).padStart(2,'0')}` : '-'}</td>
+            <td class="notes">${r.notes || ''}</td>
+          </tr>`);
+        });
+      }
+    }
+
+    const totalH = payroll ? `${Math.floor(payroll.hours.totalMinutes/60)}時間${payroll.hours.totalMinutes%60}分` : '-';
+    const html = `<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"/>
+      <title>出勤簿_${staffName}_${monthKey}</title>
+      <style>
+        @page { size: A4 portrait; margin: 15mm; }
+        body { font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; color: #222; margin: 0; }
+        h1 { text-align: center; font-size: 20pt; margin: 0 0 6mm; letter-spacing: 0.3em; border-bottom: 2pt double #222; padding-bottom: 4mm; }
+        .meta { display: flex; justify-content: space-between; margin-bottom: 6mm; font-size: 11pt; }
+        .meta strong { font-size: 14pt; }
+        table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+        th, td { border: 0.5pt solid #999; padding: 1.5mm 2mm; text-align: center; }
+        th { background: #f4f4f4; font-weight: bold; font-size: 9pt; }
+        td.day { width: 8mm; }
+        td.day.holiday { color: #c00; }
+        td.empty { color: #ccc; }
+        td.notes { text-align: left; font-size: 8.5pt; color: #555; }
+        .summary { margin-top: 6mm; padding: 4mm; background: #fafafa; border: 1pt solid #999; }
+        .summary-row { display: flex; justify-content: space-between; font-size: 11pt; padding: 1mm 0; }
+        .payroll { margin-top: 6mm; padding: 4mm; border: 1pt solid #117768; background: #f4faf8; }
+        .payroll-title { font-weight: bold; color: #117768; margin-bottom: 3mm; font-size: 12pt; }
+        .payroll-row { display: flex; justify-content: space-between; padding: 1mm 0; font-size: 10pt; }
+        .payroll-row.total { border-top: 1.5pt solid #117768; margin-top: 2mm; padding-top: 3mm; font-weight: bold; font-size: 13pt; color: #117768; }
+        .signature { margin-top: 10mm; display: flex; justify-content: space-between; gap: 8mm; }
+        .signature-box { flex: 1; border: 0.5pt solid #999; padding: 4mm; min-height: 18mm; font-size: 9pt; }
+        .signature-box .label { color: #999; font-size: 8pt; margin-bottom: 2mm; }
+        .footer-note { font-size: 8pt; color: #999; margin-top: 6mm; line-height: 1.6; }
+      </style></head><body>
+        <h1>出 勤 簿</h1>
+        <div class="meta">
+          <div>店舗: <strong>${appName || ''}</strong></div>
+          <div>対象月: <strong>${yyyy}年${mm}月</strong></div>
+          <div>氏名: <strong>${staffName}</strong></div>
+        </div>
+        <table>
+          <thead><tr>
+            <th style="width:8mm;">日</th><th style="width:8mm;">曜</th>
+            <th style="width:14mm;">出勤</th><th style="width:14mm;">退勤</th>
+            <th style="width:14mm;">勤務時間</th><th>備考</th>
+          </tr></thead>
+          <tbody>${rows.join('')}</tbody>
+        </table>
+        <div class="summary">
+          <div class="summary-row"><span>勤務日数</span><strong>${payroll?.hours.days ?? Object.keys(dayMap).length} 日</strong></div>
+          <div class="summary-row"><span>合計勤務時間</span><strong>${totalH}</strong></div>
+          ${payroll ? `
+            <div class="summary-row"><span>うち残業時間</span><span>${Math.floor(payroll.hours.overtimeMinutes/60)}時間${payroll.hours.overtimeMinutes%60}分</span></div>
+          ` : ''}
+        </div>
+
+        ${payroll ? `
+          <div class="payroll">
+            <div class="payroll-title">💰 給与計算（目安）</div>
+            <div class="payroll-row"><span>時給</span><span>¥${payroll.hourlyWage.toLocaleString()}</span></div>
+            <div class="payroll-row"><span>基本給</span><span>¥${payroll.baseAmount.toLocaleString()}</span></div>
+            <div class="payroll-row"><span>残業手当（割増 ${payrollConfig.overtimePremiumRate}%）</span><span>¥${payroll.overtimeAmount.toLocaleString()}</span></div>
+            <div class="payroll-row" style="font-weight:bold; border-top:0.5pt solid #999; margin-top:1mm; padding-top:2mm;"><span>支給合計（総額）</span><span>¥${payroll.grossAmount.toLocaleString()}</span></div>
+            ${payroll.deductions.employmentInsurance > 0 ? `<div class="payroll-row"><span>雇用保険</span><span>− ¥${payroll.deductions.employmentInsurance.toLocaleString()}</span></div>` : ''}
+            ${payroll.deductions.socialInsurance > 0 ? `<div class="payroll-row"><span>社会保険</span><span>− ¥${payroll.deductions.socialInsurance.toLocaleString()}</span></div>` : ''}
+            ${payroll.deductions.incomeTax > 0 ? `<div class="payroll-row"><span>所得税源泉</span><span>− ¥${payroll.deductions.incomeTax.toLocaleString()}</span></div>` : ''}
+            <div class="payroll-row total"><span>差引支給額</span><span>¥${payroll.netAmount.toLocaleString()}</span></div>
+          </div>
+        ` : ''}
+
+        <div class="signature">
+          <div class="signature-box">
+            <div class="label">本人確認サイン</div>
+          </div>
+          <div class="signature-box">
+            <div class="label">承認</div>
+          </div>
+        </div>
+
+        <div class="footer-note">
+          ※給与額は概算です。正式な金額は給与明細をご確認ください。<br/>
+          発行日: ${new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}
+        </div>
+        <script>window.onload = function() { setTimeout(function() { window.print(); }, 400); };</script>
+      </body></html>`;
+    const w = window.open('', '_blank');
+    if (w) { w.document.open(); w.document.write(html); w.document.close(); }
+  }
+
   if (!allowed) {
     return (
       <main className="p-12 text-center">
@@ -230,16 +377,68 @@ export default function AuditPage() {
                 <p className="text-[12px] text-[#999]">勤怠記録がありません</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {summary.sort((a, b) => b.monthKey.localeCompare(a.monthKey)).map(s => (
-                    <div key={`${s.staffName}_${s.monthKey}`} className="bg-[#FBFAF9] p-3 rounded-xl border border-[#EAEAEA]">
-                      <p className="text-[11px] text-[#999]">{s.monthKey}</p>
-                      <p className="text-[14px] font-bold text-[#111] mt-0.5">{s.staffName}</p>
-                      <div className="flex items-baseline justify-between mt-2">
-                        <p className="text-[20px] font-bold text-[#2D4B3E]">{s.totalHours}<span className="text-[10px] ml-1">時間</span></p>
-                        <p className="text-[10px] text-[#999]">{s.days}日勤務</p>
+                  {summary.sort((a, b) => b.monthKey.localeCompare(a.monthKey)).map(s => {
+                    const staffInfo = staffList.find(st => st.name === s.staffName);
+                    const monthAttendance = attendance.filter(a =>
+                      a.staff_name === s.staffName && a.clock_in_at?.startsWith(s.monthKey)
+                    );
+                    const payroll = (staffInfo?.payrollEnabled && payrollConfig.enabled)
+                      ? calcPayroll(staffInfo, monthAttendance, payrollConfig) : null;
+                    // 年初からの累計
+                    const ytdAttendance = allYearAttendance.filter(a => a.staff_name === s.staffName);
+                    const ytdGross = (staffInfo?.payrollEnabled && payrollConfig.enabled)
+                      ? calcPayroll(staffInfo, ytdAttendance, payrollConfig).grossAmount : 0;
+                    const warnings = staffInfo ? getPayrollWarnings(staffInfo, ytdGross, s.totalHours) : [];
+
+                    return (
+                      <div key={`${s.staffName}_${s.monthKey}`} className="bg-[#FBFAF9] p-3 rounded-xl border border-[#EAEAEA] space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11px] text-[#999]">{s.monthKey}</p>
+                            <p className="text-[14px] font-bold text-[#111] mt-0.5">{s.staffName}</p>
+                          </div>
+                          <button
+                            onClick={() => printAttendanceSheet(s.staffName, s.monthKey)}
+                            className="text-[10px] font-bold text-[#117768] border border-[#117768]/40 bg-white px-2 py-1 rounded-lg hover:bg-[#117768]/10 flex items-center gap-1 shrink-0 ml-2"
+                          >
+                            <FileText size={11}/> 出勤簿
+                          </button>
+                        </div>
+                        <div className="flex items-baseline justify-between">
+                          <p className="text-[20px] font-bold text-[#2D4B3E]">{s.totalHours}<span className="text-[10px] ml-1">時間</span></p>
+                          <p className="text-[10px] text-[#999]">{s.days}日勤務</p>
+                        </div>
+                        {payroll && (
+                          <div className="pt-2 border-t border-[#EAEAEA] space-y-0.5">
+                            <div className="flex justify-between text-[10px] text-[#555]">
+                              <span>支給総額</span><span className="font-bold">¥{payroll.grossAmount.toLocaleString()}</span>
+                            </div>
+                            {payroll.deductions.total > 0 && (
+                              <div className="flex justify-between text-[10px] text-red-500">
+                                <span>控除合計</span><span>− ¥{payroll.deductions.total.toLocaleString()}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between text-[12px] font-bold text-[#117768] pt-0.5 border-t border-[#EAEAEA]">
+                              <span>差引支給</span><span>¥{payroll.netAmount.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        )}
+                        {warnings.length > 0 && (
+                          <div className="space-y-1 pt-1">
+                            {warnings.map((w, i) => (
+                              <div key={i} className={`flex items-start gap-1 text-[10px] font-bold p-1.5 rounded ${
+                                w.severity === 'high' ? 'bg-red-50 text-red-700 border border-red-200' :
+                                'bg-amber-50 text-amber-700 border border-amber-200'
+                              }`}>
+                                <AlertCircle size={11} className="shrink-0 mt-0.5"/>
+                                <span className="leading-tight">{w.message}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

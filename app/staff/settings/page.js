@@ -106,6 +106,17 @@ export default function SettingsPage() {
     requireForOwnerOnly: false,  // オーナー以外もPIN必須にするか
   });
 
+  // ★ 給与計算設定（店舗共通）
+  const [payrollConfig, setPayrollConfig] = useState({
+    enabled: false,
+    employmentInsuranceRate: 0.6,
+    socialInsuranceRate: 14.5,
+    incomeTaxThreshold: 88000,
+    incomeTaxRate: 3.063,
+    overtimePremiumRate: 25,
+    overtimeThresholdHours: 8,
+  });
+
   // ★ シフト設定
   const [shiftConfig, setShiftConfig] = useState({
     patterns: [
@@ -157,6 +168,7 @@ export default function SettingsPage() {
     if (s.lineConfig) setLineConfig(prev => ({...prev, ...s.lineConfig}));
     if (s.staffAuthConfig) setStaffAuthConfig(prev => ({...prev, ...s.staffAuthConfig}));
     if (s.shiftConfig) setShiftConfig(prev => ({...prev, ...s.shiftConfig}));
+    if (s.payrollConfig) setPayrollConfig(prev => ({...prev, ...s.payrollConfig}));
 
     if (s.features && s.features.b2b) setIsB2BEnabled(true);
   };
@@ -211,6 +223,7 @@ export default function SettingsPage() {
         lineConfig,
         staffAuthConfig,
         shiftConfig,
+        payrollConfig,
       };
       await supabase.from('app_settings').upsert({ id: currentTenantId, settings_data: payload });
       showToast('success', '設定を保存しました');
@@ -1036,6 +1049,70 @@ export default function SettingsPage() {
             💡 〆切日を過ぎても受付けるが、自動シフト作成時の優先度が下がる仕様です。
           </p>
         </div>
+
+        {/* ★ 給与計算設定 */}
+        <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-4">
+          <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2">💰 給与計算（控除率・残業）</h2>
+          <p className="text-[11px] text-[#999] leading-relaxed">
+            勤怠記録と時給から給与を試算します。<strong className="text-amber-600">あくまで目安です。</strong>正式な給与計算は社労士か給与ソフトをご利用ください。
+          </p>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" checked={Boolean(payrollConfig.enabled)}
+              onChange={(e) => setPayrollConfig({...payrollConfig, enabled: e.target.checked})}
+              className="mt-1 w-4 h-4 accent-[#117768]"/>
+            <div>
+              <p className="text-[12px] font-bold text-[#111]">給与計算機能を有効化する</p>
+              <p className="text-[10px] text-[#555] mt-1">スタッフ管理に時給入力・勤怠ページに給与表示が追加されます</p>
+            </div>
+          </label>
+
+          {payrollConfig.enabled && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-3 border-t border-[#EAEAEA]">
+              <div>
+                <label className="text-[10px] font-bold text-[#999] tracking-widest">雇用保険率 (%)</label>
+                <input type="number" step="0.1" value={payrollConfig.employmentInsuranceRate}
+                  onChange={e => setPayrollConfig({...payrollConfig, employmentInsuranceRate: Number(e.target.value)})}
+                  className="w-full mt-1 h-10 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] font-bold outline-none"/>
+                <p className="text-[9px] text-[#999] mt-0.5">標準 0.6%</p>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-[#999] tracking-widest">社会保険率 (%)</label>
+                <input type="number" step="0.1" value={payrollConfig.socialInsuranceRate}
+                  onChange={e => setPayrollConfig({...payrollConfig, socialInsuranceRate: Number(e.target.value)})}
+                  className="w-full mt-1 h-10 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] font-bold outline-none"/>
+                <p className="text-[9px] text-[#999] mt-0.5">健保+厚年合計</p>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-[#999] tracking-widest">所得税率 (%)</label>
+                <input type="number" step="0.01" value={payrollConfig.incomeTaxRate}
+                  onChange={e => setPayrollConfig({...payrollConfig, incomeTaxRate: Number(e.target.value)})}
+                  className="w-full mt-1 h-10 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] font-bold outline-none"/>
+                <p className="text-[9px] text-[#999] mt-0.5">簡易源泉</p>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-[#999] tracking-widest">所得税閾値 (円)</label>
+                <input type="number" value={payrollConfig.incomeTaxThreshold}
+                  onChange={e => setPayrollConfig({...payrollConfig, incomeTaxThreshold: Number(e.target.value)})}
+                  className="w-full mt-1 h-10 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] font-bold outline-none"/>
+                <p className="text-[9px] text-[#999] mt-0.5">月給これ未満は非課税</p>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-[#999] tracking-widest">残業割増 (%)</label>
+                <input type="number" value={payrollConfig.overtimePremiumRate}
+                  onChange={e => setPayrollConfig({...payrollConfig, overtimePremiumRate: Number(e.target.value)})}
+                  className="w-full mt-1 h-10 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] font-bold outline-none"/>
+                <p className="text-[9px] text-[#999] mt-0.5">法定 25%以上</p>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-[#999] tracking-widest">残業判定 (時間/日)</label>
+                <input type="number" value={payrollConfig.overtimeThresholdHours}
+                  onChange={e => setPayrollConfig({...payrollConfig, overtimeThresholdHours: Number(e.target.value)})}
+                  className="w-full mt-1 h-10 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] font-bold outline-none"/>
+                <p className="text-[9px] text-[#999] mt-0.5">これ超で残業</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -1158,6 +1235,71 @@ export default function SettingsPage() {
               ))}
               {fixedDayOff.length === 0 && <span className="text-[10px] text-[#999]">なし（毎日勤務可能）</span>}
             </div>
+
+            {/* ★ 給与設定（payrollConfig.enabled の時だけ表示） */}
+            {payrollConfig.enabled && (
+              <div className="pt-2 border-t border-[#EAEAEA] space-y-2">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="text-[10px] font-bold text-[#117768] tracking-widest">💰 給与:</span>
+                  <label className="flex items-center gap-1.5 text-[11px] font-bold cursor-pointer">
+                    <input type="checkbox" checked={Boolean(s.payrollEnabled)}
+                      onChange={(e) => { const next = [...staffList]; next[i] = {...next[i], payrollEnabled: e.target.checked}; setStaffList(next); }}
+                      className="w-4 h-4 accent-[#117768]"/>
+                    給与計算対象
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-[#999]">時給</span>
+                    <input type="number" placeholder="1100" value={s.hourlyWage || ''}
+                      onChange={(e) => { const next = [...staffList]; next[i] = {...next[i], hourlyWage: Number(e.target.value) || 0}; setStaffList(next); }}
+                      className="w-20 h-8 px-2 bg-white border border-[#EAEAEA] rounded text-[11px] text-right font-bold outline-none"/>
+                    <span className="text-[10px] text-[#999]">円</span>
+                  </div>
+                </div>
+
+                {s.payrollEnabled && (
+                  <>
+                    <div className="flex items-center gap-3 flex-wrap text-[11px]">
+                      <span className="text-[10px] font-bold text-[#999]">控除:</span>
+                      {[
+                        { key: 'employment', label: '雇用保険' },
+                        { key: 'social', label: '社会保険' },
+                        { key: 'incomeTax', label: '所得税' },
+                      ].map(opt => (
+                        <label key={opt.key} className="flex items-center gap-1 cursor-pointer">
+                          <input type="checkbox"
+                            checked={Boolean(s.insurance?.[opt.key])}
+                            onChange={(e) => {
+                              const next = [...staffList];
+                              next[i] = { ...next[i], insurance: { ...(next[i].insurance || {}), [opt.key]: e.target.checked } };
+                              setStaffList(next);
+                            }}
+                            className="w-3.5 h-3.5 accent-[#117768]"/>
+                          {opt.label}
+                        </label>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-3 flex-wrap text-[11px]">
+                      <span className="text-[10px] font-bold text-[#999]">扶養:</span>
+                      <select value={s.dependencyLimitYen ?? 0}
+                        onChange={(e) => { const next = [...staffList]; next[i] = {...next[i], dependencyLimitYen: Number(e.target.value)}; setStaffList(next); }}
+                        className="h-8 px-2 bg-white border border-[#EAEAEA] rounded text-[11px] font-bold outline-none">
+                        <option value="0">対象外</option>
+                        <option value="1030000">103万円</option>
+                        <option value="1300000">130万円</option>
+                        <option value="1500000">150万円</option>
+                        <option value="2010000">201万円</option>
+                      </select>
+                      <span className="text-[10px] font-bold text-[#999] ml-2">月上限:</span>
+                      <input type="number" placeholder="160" value={s.monthlyHourLimit || ''}
+                        onChange={(e) => { const next = [...staffList]; next[i] = {...next[i], monthlyHourLimit: Number(e.target.value) || 0}; setStaffList(next); }}
+                        className="w-16 h-8 px-2 bg-white border border-[#EAEAEA] rounded text-[11px] text-right font-bold outline-none"/>
+                      <span className="text-[10px] text-[#999]">時間/月</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
           );
         })}
