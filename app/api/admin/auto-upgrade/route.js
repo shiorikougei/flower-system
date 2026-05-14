@@ -12,7 +12,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from '@/utils/email';
 import { FEATURE_GROUPS } from '@/utils/features';
-import { DEFAULT_PRICING, calcMonthlyFee } from '@/utils/subscriptionPricing';
+import { DEFAULT_PRICING, calcMonthlyFee, calcWithManualOverride } from '@/utils/subscriptionPricing';
 
 export const runtime = 'nodejs';
 const ADMIN_EMAIL = 'marusyou.reishin@gmail.com';
@@ -72,7 +72,14 @@ export async function POST(request) {
     // 料金プレビュー（オーナー設定があれば取得）
     const { data: ownerRow } = await supabaseAdmin.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
     const pricing = { ...DEFAULT_PRICING, ...(ownerRow?.settings_data?.pricingConfig || {}) };
-    const newFee = calcMonthlyFee(nextFeatures, pricing);
+    // ★ 手動オーバーライドがあればそちらを優先（モデル店舗・特別契約）
+    const tenantBilling = ownerRow?.settings_data?.tenantBilling?.[tenantId] || {};
+    const m = tenantBilling.manualPriceJpy;
+    const useManual = m != null && m !== '' && Number(m) >= 0;
+    const newFee = useManual
+      ? calcWithManualOverride(Number(m), pricing.taxRate)
+      : calcMonthlyFee(nextFeatures, pricing);
+    const isManualOverride = useManual;
 
     const html = `<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#FBFAF9;font-family:'Hiragino Sans',sans-serif;color:#111;line-height:1.7;">
@@ -92,8 +99,10 @@ export async function POST(request) {
     </div>
     <div style="background:#fff7ed;border:1pt solid #f97316;padding:12px;border-radius:8px;margin:12px 0;">
       <p style="font-size:11px;color:#c2410c;font-weight:bold;margin:0;">📋 料金変更</p>
-      <p style="font-size:14px;font-weight:bold;color:#c2410c;margin:6px 0;">翌月から ¥${newFee.total.toLocaleString()}/月（税込）</p>
-      <p style="font-size:10px;color:#9a3412;margin:0;">※当月分はお試し期間として無償でご利用いただけます。</p>
+      <p style="font-size:14px;font-weight:bold;color:#c2410c;margin:6px 0;">翌月から ¥${newFee.total.toLocaleString()}/月（税込）${isManualOverride ? '【特別契約・据え置き】' : ''}</p>
+      <p style="font-size:10px;color:#9a3412;margin:0;">${isManualOverride
+        ? '※特別契約（固定料金）のため、機能を追加しても月額は据え置きです。'
+        : '※当月分はお試し期間として無償でご利用いただけます。'}</p>
     </div>
     <p style="font-size:11px;color:#999;margin-top:24px;padding-top:16px;border-top:1px solid #EAEAEA;">
       ※即時 features を ON にしました。確認は: https://noodleflorix.com/owner

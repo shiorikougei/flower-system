@@ -10,7 +10,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
 import { FEATURE_GROUPS } from '@/utils/features';
-import { DEFAULT_PRICING, calcMonthlyFee } from '@/utils/subscriptionPricing';
+import { DEFAULT_PRICING, calcMonthlyFee, calcWithManualOverride } from '@/utils/subscriptionPricing';
 import { X, CheckCircle2, ExternalLink, Sparkles, AlertCircle } from 'lucide-react';
 
 export default function UpgradeModal({ open, onClose, tenantSettings }) {
@@ -24,6 +24,12 @@ export default function UpgradeModal({ open, onClose, tenantSettings }) {
   // pricing は基本マスター（サーバーから動的取得しないシンプル版）
   const pricing = DEFAULT_PRICING;
 
+  // ★ 手動オーバーライド（モデル店舗・特別契約）
+  //    オーナーがサブスク管理タブで保存すると tenantSettings.subscriptionBilling にミラーされる
+  const billing = tenantSettings?.subscriptionBilling || {};
+  const m = billing.manualPriceJpy;
+  const hasManual = m != null && m !== '' && Number(m) >= 0;
+
   // 未開放の機能リスト
   const availableUpgrades = useMemo(() => {
     return FEATURE_GROUPS.flatMap(g =>
@@ -33,14 +39,20 @@ export default function UpgradeModal({ open, onClose, tenantSettings }) {
     );
   }, [currentFeatures]);
 
-  // 選択合計
+  // 選択合計（手動オーバーライドがあれば固定額のまま）
   const summary = useMemo(() => {
+    if (hasManual) {
+      return calcWithManualOverride(Number(m), pricing.taxRate);
+    }
     const previewFeatures = { ...currentFeatures };
     Object.keys(selected).forEach(k => { if (selected[k]) previewFeatures[k] = true; });
     return calcMonthlyFee(previewFeatures, pricing);
-  }, [selected, currentFeatures]);
+  }, [selected, currentFeatures, hasManual, m]);
 
-  const currentFee = useMemo(() => calcMonthlyFee(currentFeatures, pricing), [currentFeatures]);
+  const currentFee = useMemo(() => {
+    if (hasManual) return calcWithManualOverride(Number(m), pricing.taxRate);
+    return calcMonthlyFee(currentFeatures, pricing);
+  }, [currentFeatures, hasManual, m]);
   const diff = summary.total - currentFee.total;
 
   const submitUpgrade = async () => {
@@ -132,18 +144,34 @@ export default function UpgradeModal({ open, onClose, tenantSettings }) {
               {Object.values(selected).some(Boolean) && (
                 <div className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-4 space-y-2">
                   <p className="text-[11px] font-bold text-[#2D4B3E] tracking-widest">料金変更プレビュー</p>
+
+                  {hasManual && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[11px] text-blue-900 leading-relaxed">
+                      📌 お客様は<strong>特別契約（固定料金）</strong>のため、機能を追加しても月額は<strong> ¥{currentFee.total.toLocaleString()}/月 のまま据え置き</strong>です。
+                      {billing.manualReason && <><br/><span className="text-[10px] text-blue-700">理由: {billing.manualReason}</span></>}
+                    </div>
+                  )}
+
                   <div className="flex justify-between text-[12px] text-[#555]">
-                    <span>現在の月額（税込）</span>
+                    <span>現在の月額（税込）{hasManual && <span className="text-[10px] text-blue-600 ml-1">[手動]</span>}</span>
                     <span>¥{currentFee.total.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-[14px] font-bold text-[#117768] pt-2 border-t border-[#EAEAEA]">
-                    <span>翌月からの月額（税込）</span>
+                    <span>翌月からの月額（税込）{hasManual && <span className="text-[10px] text-blue-600 ml-1">[手動]</span>}</span>
                     <span>¥{summary.total.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-[11px] text-[#D97D54] font-bold">
-                    <span>差額</span>
-                    <span>+¥{diff.toLocaleString()}/月</span>
-                  </div>
+                  {!hasManual && (
+                    <div className="flex justify-between text-[11px] text-[#D97D54] font-bold">
+                      <span>差額</span>
+                      <span>+¥{diff.toLocaleString()}/月</span>
+                    </div>
+                  )}
+                  {hasManual && diff === 0 && (
+                    <div className="flex justify-between text-[11px] text-blue-700 font-bold">
+                      <span>差額</span>
+                      <span>±¥0（特別契約）</span>
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -230,6 +230,25 @@ export default function OwnerDashboard() {
         });
         if (s.tenantBilling) setTenantBilling(s.tenantBilling);
         if (s.invoices) setInvoices(s.invoices);
+
+        // ★ 既存テナントの subscriptionBilling を一度だけミラー
+        //   （マニュアル料金や支払方法をアップグレードモーダルで参照できるように）
+        if (s.tenantBilling && !s.billingMirroredAt) {
+          try {
+            const entries = Object.entries(s.tenantBilling);
+            for (const [tid, billing] of entries) {
+              const { data: tData } = await supabase.from('app_settings').select('settings_data').eq('id', tid).single();
+              if (tData?.settings_data) {
+                const next = { ...tData.settings_data, subscriptionBilling: billing };
+                await supabase.from('app_settings').update({ settings_data: next }).eq('id', tid);
+              }
+            }
+            await supabase.from('app_settings').upsert({
+              id: 'nocolde_owner',
+              settings_data: { ...s, billingMirroredAt: new Date().toISOString() },
+            });
+          } catch (e) { console.warn('billing mirror failed', e); }
+        }
       } catch {}
     })();
   }, [isAuth]);
@@ -290,9 +309,15 @@ export default function OwnerDashboard() {
     const next = { ...tenantBilling, [tenantId]: { ...(tenantBilling[tenantId] || {}), ...patch } };
     setTenantBilling(next);
     try {
+      // (1) オーナーデータに保存
       const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
       const settings = { ...(data?.settings_data || {}), tenantBilling: next };
       await supabase.from('app_settings').upsert({ id: 'nocolde_owner', settings_data: settings });
+
+      // (2) 該当テナントの settings にもミラー（アップグレードモーダル等で参照するため）
+      const { data: tData } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
+      const tNext = { ...(tData?.settings_data || {}), subscriptionBilling: next[tenantId] || {} };
+      await supabase.from('app_settings').update({ settings_data: tNext }).eq('id', tenantId);
     } catch (e) { console.warn(e); }
   };
 
