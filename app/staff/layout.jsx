@@ -8,7 +8,6 @@ import {
   Users, Building2, Settings, TrendingUp, Lock, Sparkles, MessageSquare, X, Send, Image as ImageIcon, ShoppingBag, UserCheck, ChevronDown, History
 } from 'lucide-react';
 import { getCurrentStaff, setCurrentStaff, ROLE_LABELS, ROLE_DESCRIPTIONS, can } from '@/utils/staffRole';
-import { clockIn, clockOut } from '@/utils/attendance';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 
@@ -92,7 +91,7 @@ export default function StaffLayout({ children }) {
     { name: '顧客管理', path: '/staff/customers', icon: Users, perm: 'customers' },
     { name: '作品管理', path: '/staff/portfolio', icon: ImageIcon, perm: 'portfolio' },
     { name: '商品管理（EC）', path: '/staff/products', icon: ShoppingBag, perm: 'products' },
-    { name: 'シフト管理', path: '/staff/shift', icon: CalendarDays, perm: 'shift' },
+    { name: 'シフト管理', path: '/staff/shift', icon: CalendarDays, perm: 'manageShift' },
     { name: '自分のシフト', path: '/staff/my-shift', icon: CalendarDays, perm: 'shift' },
     { name: '各種設定', path: '/staff/settings', icon: Settings, perm: 'settings' },
     { name: '操作履歴・勤怠', path: '/staff/audit', icon: History, perm: 'audit' },
@@ -119,16 +118,8 @@ export default function StaffLayout({ children }) {
     return staffAuthConfig.requireForOwnerOnly === false;  // 全員必須モードなら
   };
 
-  const performSwitch = async (s) => {
-    // 退勤打刻（前のスタッフ）
-    if (currentStaff?.name && currentStaff.name !== s?.name) {
-      await clockOut(currentStaff.name);
-    }
-    // 出勤打刻（新しいスタッフ）
-    if (s?.name) {
-      await clockIn(s.name);
-    }
-
+  const performSwitch = (s) => {
+    // ★ 自動打刻は廃止。打刻は TOP ページの「出勤/退勤」ボタンから明示的に行う
     setCurrentStaff(s);
     setCurrentStaffState(s);
     setShowStaffPicker(false);
@@ -136,18 +127,15 @@ export default function StaffLayout({ children }) {
     setPinInput('');
     setPinError('');
 
-    // 権限変更で見れない画面にいる場合はホームに戻す
+    // 権限変更で見れない画面にいる場合はホームに戻す（リロードはしない）
     if (s && pathname && !pathname.startsWith('/staff/login')) {
       const stillVisible = activeMenuItems.some(m =>
         m.path === '/staff' ? pathname === '/staff' : pathname.startsWith(m.path)
       );
       if (!stillVisible) {
+        // soft navigation
         window.location.href = '/staff';
-      } else {
-        window.location.reload();
       }
-    } else {
-      window.location.reload();
     }
   };
 
@@ -172,14 +160,12 @@ export default function StaffLayout({ children }) {
     performSwitch(pinModal.staff);
   };
 
-  const clearStaff = async () => {
-    if (currentStaff?.name) {
-      await clockOut(currentStaff.name);
-    }
+  const clearStaff = () => {
+    // ★ 自動打刻廃止（手動）
     setCurrentStaff(null);
     setCurrentStaffState(null);
     setShowStaffPicker(false);
-    window.location.reload();
+    // リロードしない（state更新だけで反映）
   };
 
   const handleUpgradeRequest = async () => {

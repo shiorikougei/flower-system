@@ -53,14 +53,18 @@ export default function ShiftPage() {
       const to = `${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
       const yearMonth = `${year}-${String(month).padStart(2,'0')}`;
       const headers = { Authorization: `Bearer ${session.access_token}` };
-      const [sRes, hRes, aRes] = await Promise.all([
+      // ★ 軽量化: シフト+希望休だけ常にロード、attendanceは照合モード時だけ
+      const promises = [
         fetch(`/api/staff/shift?from=${from}&to=${to}`, { headers }).then(r => r.json()),
         fetch(`/api/staff/holiday-request?yearMonth=${yearMonth}`, { headers }).then(r => r.json()).catch(() => ({ items: [] })),
-        fetch(`/api/staff/attendance?from=${from}&to=${to}`, { headers }).then(r => r.json()).catch(() => ({ items: [] })),
-      ]);
-      setShifts(sRes.items || []);
-      setHolidayRequests(hRes.items || []);
-      setAttendance(aRes.items || []);
+      ];
+      if (viewMode === 'attendance_check') {
+        promises.push(fetch(`/api/staff/attendance?from=${from}&to=${to}`, { headers }).then(r => r.json()).catch(() => ({ items: [] })));
+      }
+      const results = await Promise.all(promises);
+      setShifts(results[0].items || []);
+      setHolidayRequests(results[1].items || []);
+      if (results[2]) setAttendance(results[2].items || []);
     } finally { setIsLoading(false); }
   }
 
@@ -83,7 +87,7 @@ export default function ShiftPage() {
     finally { setIsGenerating(false); }
   }
 
-  useEffect(() => { loadShifts(); }, [year, month]);
+  useEffect(() => { loadShifts(); }, [year, month, viewMode]);
 
   // カレンダーの日付配列を生成
   const dates = useMemo(() => {

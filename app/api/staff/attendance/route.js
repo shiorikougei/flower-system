@@ -60,7 +60,7 @@ export async function POST(request) {
     }
 
     if (action === 'clock_out') {
-      // 出勤中レコードを退勤化
+      // 出勤中レコードを退勤化（休憩中なら休憩も終了させる）
       const { data: open } = await auth.supabaseAdmin
         .from('staff_attendance')
         .select('*')
@@ -72,11 +72,65 @@ export async function POST(request) {
         .maybeSingle();
       if (!open) return NextResponse.json({ ok: true, noOpen: true });
 
+      const now = new Date();
+      let breakMinutes = open.break_minutes || 0;
+      // 休憩中なら自動で締める
+      if (open.break_start_at) {
+        breakMinutes += Math.floor((now - new Date(open.break_start_at)) / 60000);
+      }
       await auth.supabaseAdmin
         .from('staff_attendance')
-        .update({ clock_out_at: new Date().toISOString() })
+        .update({
+          clock_out_at: now.toISOString(),
+          break_minutes: breakMinutes,
+          break_start_at: null,
+        })
         .eq('id', open.id);
       return NextResponse.json({ ok: true, id: open.id });
+    }
+
+    if (action === 'break_start') {
+      // 休憩開始（出勤中レコードの break_start_at をセット）
+      const { data: open } = await auth.supabaseAdmin
+        .from('staff_attendance')
+        .select('*')
+        .eq('tenant_id', auth.tenantId)
+        .eq('staff_name', staffName)
+        .is('clock_out_at', null)
+        .order('clock_in_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!open) return NextResponse.json({ error: '出勤中の打刻がありません' }, { status: 400 });
+      if (open.break_start_at) return NextResponse.json({ ok: true, already: true });
+      await auth.supabaseAdmin
+        .from('staff_attendance')
+        .update({ break_start_at: new Date().toISOString() })
+        .eq('id', open.id);
+      return NextResponse.json({ ok: true, id: open.id });
+    }
+
+    if (action === 'break_end') {
+      // 休憩終了（break_minutes に加算して break_start_at を null に）
+      const { data: open } = await auth.supabaseAdmin
+        .from('staff_attendance')
+        .select('*')
+        .eq('tenant_id', auth.tenantId)
+        .eq('staff_name', staffName)
+        .is('clock_out_at', null)
+        .order('clock_in_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!open || !open.break_start_at) return NextResponse.json({ ok: true, noBreak: true });
+
+      const addMinutes = Math.floor((new Date() - new Date(open.break_start_at)) / 60000);
+      await auth.supabaseAdmin
+        .from('staff_attendance')
+        .update({
+          break_minutes: (open.break_minutes || 0) + addMinutes,
+          break_start_at: null,
+        })
+        .eq('id', open.id);
+      return NextResponse.json({ ok: true, id: open.id, addedMinutes: addMinutes });
     }
 
     if (action === 'manual_insert') {

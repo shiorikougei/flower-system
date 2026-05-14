@@ -24,7 +24,7 @@ export default function AuditPage() {
   const [allYearAttendance, setAllYearAttendance] = useState([]);
   const [appName, setAppName] = useState('');
 
-  // スタッフ名リスト取得 + payrollConfig 取得 + 年間勤怠取得
+  // スタッフ名リスト + payrollConfig 取得（軽量）
   useEffect(() => {
     (async () => {
       try {
@@ -37,8 +37,18 @@ export default function AuditPage() {
         setStaffList(s.staffList || []);
         if (s.payrollConfig) setPayrollConfig({...DEFAULT_PAYROLL_CONFIG, ...s.payrollConfig});
         setAppName(s.generalConfig?.appName || '');
+      } catch {}
+    })();
+  }, []);
 
-        // 年初からの勤怠取得（扶養計算用）
+  // ★ 年間勤怠は給与計算が有効＋勤怠タブを開いた時だけ取得（重いため遅延ロード）
+  useEffect(() => {
+    if (tab !== 'attendance' || !payrollConfig.enabled) return;
+    if (allYearAttendance.length > 0) return;  // 既にロード済みならスキップ
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
         const yearStart = `${new Date().getFullYear()}-01-01`;
         const yearRes = await fetch(`/api/staff/attendance?from=${yearStart}`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
@@ -46,7 +56,7 @@ export default function AuditPage() {
         setAllYearAttendance(yearRes.items || []);
       } catch {}
     })();
-  }, []);
+  }, [tab, payrollConfig.enabled, allYearAttendance.length]);
 
   // 打刻保存（新規 or 編集）
   async function saveAttendance() {

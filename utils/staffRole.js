@@ -41,7 +41,8 @@ export const PERMISSIONS = {
     deleteOrder: true,     // 注文削除
     editPrice: true,       // 価格・金額の編集
     audit: true,           // 操作履歴・勤怠閲覧
-    shift: true,           // シフト管理
+    shift: true,           // 自分のシフト確認
+    manageShift: true,     // シフト管理（他人のシフト編集）
   },
   staff: {
     settings: false,
@@ -58,7 +59,8 @@ export const PERMISSIONS = {
     deleteOrder: false,
     editPrice: true,
     audit: false,
-    shift: true,           // スタッフも自分のシフト確認は可
+    shift: true,           // 自分のシフト確認は可
+    manageShift: false,    // 他人のシフト編集は不可
   },
   parttime: {
     settings: false,
@@ -75,7 +77,8 @@ export const PERMISSIONS = {
     deleteOrder: false,
     editPrice: false,
     audit: false,
-    shift: true,           // バイトもシフト確認は可
+    shift: true,           // 自分のシフト確認は可
+    manageShift: false,    // 他人のシフト編集は不可
   },
 };
 

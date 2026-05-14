@@ -1,14 +1,14 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/utils/supabase';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Calendar, ShoppingBag, PlusCircle, Settings,
-  Clock, Package, ChevronRight, Truck, Store, LogIn, LogOut, UserCheck
+  Clock, Package, ChevronRight, Truck, Store, LogIn, LogOut, UserCheck, Coffee, Pause, Play, AlertCircle, Bell
 } from 'lucide-react';
 import { getCurrentStaff } from '@/utils/staffRole';
-import { clockIn, clockOut } from '@/utils/attendance';
+import { clockIn, clockOut, breakStart, breakEnd } from '@/utils/attendance';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -76,8 +76,27 @@ export default function DashboardPage() {
     } finally { setIsClocking(false); }
   };
 
+  const handleBreakStart = async () => {
+    if (!currentStaff?.name) return;
+    setIsClocking(true);
+    try {
+      await breakStart(currentStaff.name);
+      await loadAttendanceData();
+    } finally { setIsClocking(false); }
+  };
+
+  const handleBreakEnd = async () => {
+    if (!currentStaff?.name) return;
+    setIsClocking(true);
+    try {
+      await breakEnd(currentStaff.name);
+      await loadAttendanceData();
+    } finally { setIsClocking(false); }
+  };
+
   // 自分が出勤中か
   const myOpenRecord = currentStaff?.name && openAttendance.find(a => a.staff_name === currentStaff.name);
+  const isOnBreak = myOpenRecord?.break_start_at;
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -144,6 +163,44 @@ export default function DashboardPage() {
     return map[method] || method;
   };
 
+  // ★ 新規注文（直近1時間以内 + 未着手）
+  const recentNewOrders = useMemo(() => {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    return orders.filter(o => {
+      const created = new Date(o.created_at);
+      const status = o.order_data?.status || 'new';
+      const currentStatus = o.order_data?.currentStatus || '';
+      // 1時間以内 + 受注/new ステータス
+      return created > oneHourAgo &&
+        (status === 'new' || currentStatus === '受注' || currentStatus === '');
+    });
+  }, [orders]);
+
+  // ★ 進捗悪い注文（納品予定3日以内 + 未対応 or 未制作）
+  const delayedOrders = useMemo(() => {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const threeDaysLater = new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000);
+    return orders.filter(o => {
+      const d = o.order_data || {};
+      const status = d.status || 'new';
+      const cur = d.currentStatus || '';
+      // 完了・キャンセルは除外
+      if (status === 'completed' || status === '完了' || status === 'キャンセル') return false;
+      const dateStr = d.receiveMethod === 'sagawa' ? (d.shippingDate || d.selectedDate) : d.selectedDate;
+      if (!dateStr) return false;
+      const targetDate = new Date(dateStr);
+      if (isNaN(targetDate.getTime())) return false;
+      // 3日以内 + 未制作
+      const inDanger = targetDate >= today && targetDate <= threeDaysLater;
+      const notProgressed = !cur || cur === '受注' || cur === '受付' || cur === 'new';
+      return inDanger && notProgressed;
+    }).sort((a, b) => {
+      const da = new Date(a.order_data?.receiveMethod === 'sagawa' ? (a.order_data?.shippingDate || a.order_data?.selectedDate) : a.order_data?.selectedDate);
+      const db = new Date(b.order_data?.receiveMethod === 'sagawa' ? (b.order_data?.shippingDate || b.order_data?.selectedDate) : b.order_data?.selectedDate);
+      return da - db;
+    });
+  }, [orders]);
+
   // 本日の受取方法別の内訳（配送は発送日基準）
   const todayStr = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
   const todayOrdersList = orders.filter(o => {
@@ -184,9 +241,19 @@ export default function DashboardPage() {
                   <>
                     <p className="text-[15px] font-bold text-[#111]">{currentStaff.name}</p>
                     {myOpenRecord ? (
-                      <p className="text-[11px] text-[#117768] font-bold mt-0.5">
-                        ✓ {new Date(myOpenRecord.clock_in_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} から出勤中
-                      </p>
+                      <>
+                        <p className="text-[11px] text-[#117768] font-bold mt-0.5">
+                          ✓ {new Date(myOpenRecord.clock_in_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} から出勤中
+                        </p>
+                        {isOnBreak && (
+                          <p className="text-[11px] text-amber-600 font-bold mt-0.5 flex items-center gap-1">
+                            <Coffee size={11}/> 休憩中（{new Date(myOpenRecord.break_start_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}〜）
+                          </p>
+                        )}
+                        {myOpenRecord.break_minutes > 0 && (
+                          <p className="text-[10px] text-[#999] mt-0.5">本日の休憩累計: {myOpenRecord.break_minutes}分</p>
+                        )}
+                      </>
                     ) : (
                       <p className="text-[11px] text-[#999] mt-0.5">未打刻</p>
                     )}
@@ -201,7 +268,7 @@ export default function DashboardPage() {
             </div>
 
             {/* 打刻ボタン */}
-            <div className="flex gap-2 shrink-0">
+            <div className="flex flex-wrap gap-2 shrink-0">
               {currentStaff?.name && (
                 <>
                   {!myOpenRecord ? (
@@ -209,9 +276,21 @@ export default function DashboardPage() {
                       <LogIn size={16}/> 出勤
                     </button>
                   ) : (
-                    <button onClick={handleClockOut} disabled={isClocking} className="px-5 h-12 bg-[#D97D54] text-white rounded-xl font-bold text-[13px] hover:bg-[#c26d48] disabled:opacity-50 flex items-center gap-2 shadow-sm">
-                      <LogOut size={16}/> 退勤
-                    </button>
+                    <>
+                      {/* 休憩ボタン */}
+                      {!isOnBreak ? (
+                        <button onClick={handleBreakStart} disabled={isClocking} className="px-4 h-12 bg-amber-500 text-white rounded-xl font-bold text-[13px] hover:bg-amber-600 disabled:opacity-50 flex items-center gap-2 shadow-sm">
+                          <Coffee size={16}/> 休憩開始
+                        </button>
+                      ) : (
+                        <button onClick={handleBreakEnd} disabled={isClocking} className="px-4 h-12 bg-amber-700 text-white rounded-xl font-bold text-[13px] hover:bg-amber-800 disabled:opacity-50 flex items-center gap-2 shadow-sm animate-pulse">
+                          <Play size={16}/> 休憩終了
+                        </button>
+                      )}
+                      <button onClick={handleClockOut} disabled={isClocking || isOnBreak} className="px-5 h-12 bg-[#D97D54] text-white rounded-xl font-bold text-[13px] hover:bg-[#c26d48] disabled:opacity-50 flex items-center gap-2 shadow-sm" title={isOnBreak ? '休憩を終了してから退勤してください' : ''}>
+                        <LogOut size={16}/> 退勤
+                      </button>
+                    </>
                   )}
                 </>
               )}
@@ -230,12 +309,78 @@ export default function DashboardPage() {
                     </div>
                     <span className="text-[11px] font-bold text-[#111]">{a.staff_name}</span>
                     <span className="text-[9px] text-[#999]">{new Date(a.clock_in_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}〜</span>
+                    {a.break_start_at && <span className="text-[9px] font-bold text-amber-600">☕休憩中</span>}
                   </div>
                 ))}
               </div>
             </div>
           )}
         </div>
+
+        {/* ★ 新規注文通知 */}
+        {recentNewOrders.length > 0 && (
+          <div onClick={() => router.push('/staff/orders')} className="bg-blue-50 border-2 border-blue-300 rounded-2xl p-5 cursor-pointer hover:bg-blue-100 transition-all animate-in slide-in-from-top-2">
+            <div className="flex items-start gap-3">
+              <div className="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center shrink-0 animate-pulse">
+                <Bell size={20}/>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[14px] font-bold text-blue-900">📩 新規注文 {recentNewOrders.length}件</p>
+                <p className="text-[11px] text-blue-700 mt-1">直近1時間以内に入った未対応の注文です。確認してください。</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {recentNewOrders.slice(0, 3).map(o => {
+                    const d = o.order_data || {};
+                    const isEc = d.orderType === 'ec';
+                    return (
+                      <div key={o.id} className="bg-white px-3 py-1.5 rounded-lg border border-blue-200 text-[11px]">
+                        <span className="font-bold mr-1">{isEc ? '🛒EC' : '📝カスタム'}</span>
+                        {d.customerInfo?.name || 'お客様'} - {Math.round((Date.now() - new Date(o.created_at)) / 60000)}分前
+                      </div>
+                    );
+                  })}
+                  {recentNewOrders.length > 3 && (
+                    <div className="bg-blue-100 px-3 py-1.5 rounded-lg text-[11px] font-bold text-blue-700">+ {recentNewOrders.length - 3}件</div>
+                  )}
+                </div>
+              </div>
+              <ChevronRight size={20} className="text-blue-500 shrink-0"/>
+            </div>
+          </div>
+        )}
+
+        {/* ★ 進捗悪い注文の警告 */}
+        {delayedOrders.length > 0 && (
+          <div onClick={() => router.push('/staff/orders')} className="bg-red-50 border-2 border-red-300 rounded-2xl p-5 cursor-pointer hover:bg-red-100 transition-all">
+            <div className="flex items-start gap-3">
+              <div className="w-12 h-12 rounded-full bg-red-500 text-white flex items-center justify-center shrink-0">
+                <AlertCircle size={20}/>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[14px] font-bold text-red-900">⚠️ 進捗が遅れている注文 {delayedOrders.length}件</p>
+                <p className="text-[11px] text-red-700 mt-1">納品予定が3日以内なのに未着手です。早めの対応を！</p>
+                <div className="mt-2 space-y-1">
+                  {delayedOrders.slice(0, 3).map(o => {
+                    const d = o.order_data || {};
+                    const dateStr = d.receiveMethod === 'sagawa' ? (d.shippingDate || d.selectedDate) : d.selectedDate;
+                    const daysLeft = Math.ceil((new Date(dateStr) - new Date()) / (24 * 60 * 60 * 1000));
+                    return (
+                      <div key={o.id} className="bg-white px-3 py-1.5 rounded-lg border border-red-200 text-[11px] flex items-center justify-between">
+                        <span><strong>{d.customerInfo?.name || 'お客様'}</strong> {d.flowerType ? `・${d.flowerType}` : ''}</span>
+                        <span className={`font-bold ${daysLeft <= 0 ? 'text-red-700' : daysLeft <= 1 ? 'text-red-600' : 'text-amber-600'}`}>
+                          {daysLeft <= 0 ? '本日!!' : `あと${daysLeft}日`}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {delayedOrders.length > 3 && (
+                    <div className="bg-red-100 px-3 py-1.5 rounded-lg text-[11px] font-bold text-red-700">+ {delayedOrders.length - 3}件</div>
+                  )}
+                </div>
+              </div>
+              <ChevronRight size={20} className="text-red-500 shrink-0"/>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           
