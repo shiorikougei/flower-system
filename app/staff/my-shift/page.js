@@ -81,29 +81,59 @@ export default function MyShiftPage() {
     return today > prevMonth && today < targetFirstDay;
   })();
 
-  async function toggleHoliday(dateStr) {
+  // モーダル管理
+  const [holidayModal, setHolidayModal] = useState(null); // { date, existing }
+  const [holidayForm, setHolidayForm] = useState({ allDay: true, startTime: '13:00', endTime: '18:00' });
+
+  function openHolidayModal(dateStr) {
     if (!currentStaff?.name) {
       alert('左サイドバーからスタッフを選択してください');
       return;
     }
     const existing = holidayMap[dateStr];
+    setHolidayModal({ date: dateStr, existing });
+    if (existing) {
+      setHolidayForm({
+        allDay: !existing.start_time,
+        startTime: existing.start_time || '13:00',
+        endTime: existing.end_time || '18:00',
+      });
+    } else {
+      setHolidayForm({ allDay: true, startTime: '13:00', endTime: '18:00' });
+    }
+  }
+
+  async function saveHoliday() {
+    if (!holidayModal) return;
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (existing) {
-        // 削除
-        await fetch('/api/staff/holiday-request', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-          body: JSON.stringify({ id: existing.id }),
-        });
-      } else {
-        // 追加
-        await fetch('/api/staff/holiday-request', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-          body: JSON.stringify({ staffName: currentStaff.name, yearMonth, date: dateStr }),
-        });
-      }
+      const payload = {
+        staffName: currentStaff.name,
+        yearMonth,
+        date: holidayModal.date,
+        startTime: holidayForm.allDay ? null : holidayForm.startTime,
+        endTime: holidayForm.allDay ? null : holidayForm.endTime,
+      };
+      await fetch('/api/staff/holiday-request', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify(payload),
+      });
+      setHolidayModal(null);
+      loadData();
+    } catch (e) { alert(e.message); }
+  }
+
+  async function deleteHoliday() {
+    if (!holidayModal?.existing) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      await fetch('/api/staff/holiday-request', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ id: holidayModal.existing.id }),
+      });
+      setHolidayModal(null);
       loadData();
     } catch (e) { alert(e.message); }
   }
@@ -127,8 +157,8 @@ export default function MyShiftPage() {
     <main className="pb-32 font-sans text-left">
       <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] px-6 md:px-8 py-4 sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-[18px] md:text-[20px] font-bold text-[#2D4B3E] tracking-tight">{currentStaff.name} のシフト</h1>
-          <p className="text-[11px] font-bold text-[#999] mt-1">確定シフトの確認 + 希望休の提出</p>
+          <h1 className="text-[18px] md:text-[20px] font-bold text-[#2D4B3E] tracking-tight">休み希望登録</h1>
+          <p className="text-[11px] font-bold text-[#999] mt-1">{currentStaff.name} ・ 終日 or 時間指定で登録できます</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => changeMonth(-1)} className="w-9 h-9 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg flex items-center justify-center"><ChevronLeft size={16}/></button>
@@ -171,7 +201,7 @@ export default function MyShiftPage() {
               return (
                 <button
                   key={d.dateStr}
-                  onClick={() => !sh && toggleHoliday(d.dateStr)}
+                  onClick={() => !sh && openHolidayModal(d.dateStr)}
                   disabled={!!sh}
                   className={`aspect-square rounded-lg border-2 transition-all p-1 text-left flex flex-col ${
                     sh?.is_off ? 'bg-[#D97D54]/10 border-[#D97D54]/30 cursor-not-allowed' :
@@ -193,7 +223,9 @@ export default function MyShiftPage() {
                       {sh.start_time && <div className="opacity-80">{sh.start_time}-{sh.end_time}</div>}
                     </div>
                   ) : hr ? (
-                    <span className="text-[8px] font-bold text-amber-700 mt-auto">🌙 希望休</span>
+                    <span className="text-[8px] font-bold text-amber-700 mt-auto">
+                      {hr.start_time ? `🕒 ${hr.start_time}-${hr.end_time}` : '🌙 終日休'}
+                    </span>
                   ) : isFixedOff ? (
                     <span className="text-[8px] text-[#D97D54]/60 mt-auto">固休</span>
                   ) : null}
@@ -219,6 +251,44 @@ export default function MyShiftPage() {
           </div>
         )}
       </div>
+
+      {/* ★ 休み希望登録モーダル */}
+      {holidayModal && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setHolidayModal(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[15px] font-bold text-[#111]">休み希望の登録</h3>
+            <p className="text-[12px] text-[#555]">{holidayModal.date} ({DAY_LABELS[DAY_KEYS[new Date(holidayModal.date).getDay()]]})</p>
+
+            <div className="space-y-2">
+              <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer ${holidayForm.allDay ? 'bg-[#D97D54]/10 border-[#D97D54]/40' : 'bg-[#FBFAF9] border-[#EAEAEA]'}`}>
+                <input type="radio" checked={holidayForm.allDay} onChange={() => setHolidayForm({...holidayForm, allDay: true})} className="w-4 h-4 accent-[#D97D54]"/>
+                <span className="text-[13px] font-bold">🌙 終日休み</span>
+              </label>
+              <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer ${!holidayForm.allDay ? 'bg-amber-50 border-amber-300' : 'bg-[#FBFAF9] border-[#EAEAEA]'}`}>
+                <input type="radio" checked={!holidayForm.allDay} onChange={() => setHolidayForm({...holidayForm, allDay: false})} className="w-4 h-4 accent-amber-500"/>
+                <span className="text-[13px] font-bold">🕒 時間指定</span>
+              </label>
+              {!holidayForm.allDay && (
+                <div className="flex items-center gap-2 mt-2 ml-6">
+                  <input type="time" value={holidayForm.startTime} onChange={e => setHolidayForm({...holidayForm, startTime: e.target.value})}
+                    className="flex-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none"/>
+                  <span className="text-[#999]">〜</span>
+                  <input type="time" value={holidayForm.endTime} onChange={e => setHolidayForm({...holidayForm, endTime: e.target.value})}
+                    className="flex-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none"/>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              {holidayModal.existing && (
+                <button onClick={deleteHoliday} className="flex-1 h-11 bg-red-50 border border-red-200 text-red-600 text-[12px] font-bold rounded-lg hover:bg-red-100">削除</button>
+              )}
+              <button onClick={() => setHolidayModal(null)} className="flex-1 h-11 bg-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-lg">キャンセル</button>
+              <button onClick={saveHoliday} className="flex-1 h-11 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-lg hover:bg-[#1f352b]">{holidayModal.existing ? '更新' : '登録'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

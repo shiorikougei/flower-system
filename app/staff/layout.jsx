@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 import {
   Home, ClipboardList, PlusSquare, CalendarDays, Truck, Briefcase,
-  Users, Building2, Settings, TrendingUp, Lock, Sparkles, MessageSquare, X, Send, Image as ImageIcon, ShoppingBag, UserCheck, ChevronDown, History
+  Users, Building2, Settings, TrendingUp, Lock, Sparkles, MessageSquare, X, Send, Image as ImageIcon, ShoppingBag, UserCheck, ChevronDown, History, Clock
 } from 'lucide-react';
 import { getCurrentStaff, setCurrentStaff, ROLE_LABELS, ROLE_DESCRIPTIONS, can } from '@/utils/staffRole';
 import { isFeatureEnabled } from '@/utils/features';
@@ -113,8 +113,9 @@ export default function StaffLayout({ children }) {
       name: 'スタッフ・勤怠',
       items: [
         { name: 'シフト管理', path: '/staff/shift', icon: CalendarDays, perm: 'manageShift', feature: 'shiftManagement' },
-        { name: '自分のシフト', path: '/staff/my-shift', icon: CalendarDays, perm: 'shift', feature: 'shiftManagement' },
-        { name: '操作履歴・勤怠', path: '/staff/audit', icon: History, perm: 'audit', feature: 'attendanceManagement' },
+        { name: '休み希望登録', path: '/staff/my-shift', icon: CalendarDays, perm: 'shift', feature: 'shiftManagement' },
+        { name: '勤怠管理', path: '/staff/attendance', icon: Clock, perm: 'audit', feature: 'attendanceManagement' },
+        { name: '操作履歴', path: '/staff/audit', icon: History, perm: 'audit' },
       ],
     },
     {
@@ -124,8 +125,7 @@ export default function StaffLayout({ children }) {
       ],
     },
     {
-      name: 'プレミアム',
-      premium: true,
+      name: '拡張機能',
       items: [
         { name: '配達業務委託', path: '/staff/setting/drivers', icon: Briefcase, perm: 'deliveries', feature: 'deliveryOutsource' },
         { name: '法人管理', path: '/staff/corporations', icon: Building2, perm: 'settings', feature: 'b2b' },
@@ -350,8 +350,8 @@ export default function StaffLayout({ children }) {
         <nav className="p-4 space-y-4 flex-1 overflow-y-auto hide-scrollbar">
           {filteredCategories.map(cat => (
             <div key={cat.name} className="space-y-1">
-              <p className={`text-[10px] font-bold tracking-[0.2em] uppercase mb-1.5 px-2 ${cat.premium ? 'text-yellow-600' : 'text-[#999999]'}`}>
-                {cat.premium && '✨ '}{cat.name}
+              <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-1.5 px-2 text-[#999999]">
+                {cat.name}
               </p>
               {cat.items.map(item => {
                 const isActive = item.path === '/staff'

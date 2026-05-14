@@ -1082,7 +1082,7 @@ export default function SettingsPage() {
         <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-4">
           <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2">💰 給与計算（控除率・残業）</h2>
           <p className="text-[11px] text-[#999] leading-relaxed">
-            勤怠記録と時給から給与を試算します。<strong className="text-amber-600">あくまで目安です。</strong>正式な給与計算は社労士か給与ソフトをご利用ください。
+            勤怠記録と時給から、設定した料率通りに給与計算します。<strong className="text-amber-600">最終チェックは社会保険労務士にご依頼ください。</strong>
           </p>
           <label className="flex items-start gap-3 cursor-pointer">
             <input type="checkbox" checked={Boolean(payrollConfig.enabled)}
@@ -1262,6 +1262,19 @@ export default function SettingsPage() {
                 </button>
               ))}
               {fixedDayOff.length === 0 && <span className="text-[10px] text-[#999]">なし（毎日勤務可能）</span>}
+            </div>
+
+            {/* ★ 基本出勤時間（自動シフト生成のデフォルト） */}
+            <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-[#EAEAEA]">
+              <span className="text-[10px] font-bold text-[#999] tracking-widest">基本出勤時間:</span>
+              <input type="time" value={s.defaultStartTime || ''}
+                onChange={(e) => { const next = [...staffList]; next[i] = {...next[i], defaultStartTime: e.target.value}; setStaffList(next); }}
+                className="h-8 px-2 bg-white border border-[#EAEAEA] rounded text-[11px] outline-none"/>
+              <span className="text-[#999] text-[11px]">〜</span>
+              <input type="time" value={s.defaultEndTime || ''}
+                onChange={(e) => { const next = [...staffList]; next[i] = {...next[i], defaultEndTime: e.target.value}; setStaffList(next); }}
+                className="h-8 px-2 bg-white border border-[#EAEAEA] rounded text-[11px] outline-none"/>
+              <span className="text-[10px] text-[#999]">（自動シフト生成時のデフォルト時間）</span>
             </div>
 
             {/* ★ 給与設定（payrollConfig.enabled の時だけ表示） */}

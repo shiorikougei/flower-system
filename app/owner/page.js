@@ -206,24 +206,6 @@ export default function OwnerDashboard() {
   // ★ 機能設定モーダル
   const [featureModalTenant, setFeatureModalTenant] = useState(null);
 
-  // ★ 全店出勤状況
-  const [attendanceOverview, setAttendanceOverview] = useState(null);
-  const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
-
-  const loadAttendanceOverview = async () => {
-    setIsLoadingAttendance(true);
-    try {
-      const res = await fetch('/api/owner/attendance-overview');
-      const data = await res.json();
-      setAttendanceOverview(data);
-    } catch (e) { console.warn(e); }
-    finally { setIsLoadingAttendance(false); }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'attendance' && isAuth) loadAttendanceOverview();
-    // eslint-disable-next-line
-  }, [activeTab, isAuth]);
 
   // ★ AI利用状況
   const [usageList, setUsageList] = useState([]);
@@ -547,7 +529,6 @@ export default function OwnerDashboard() {
           </button>
           <button onClick={() => setActiveTab('ai')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'ai' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><Bot size={16}/> AIプロンプト設定</button>
           <button onClick={() => setActiveTab('usage')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'usage' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><Sparkles size={16}/> AI利用状況・請求</button>
-          <button onClick={() => setActiveTab('attendance')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'attendance' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><CheckCircle size={16}/> 全店 出勤状況</button>
 
           <div className="pt-8 pb-4">
             <button onClick={() => setActiveTab('danger')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'danger' ? 'bg-red-900/30 text-red-500 border border-red-900/50' : 'text-gray-500 hover:bg-red-900/10 hover:text-red-500'}`}><AlertTriangle size={16}/> 危険な操作・初期化</button>
@@ -564,7 +545,6 @@ export default function OwnerDashboard() {
             {activeTab === 'feedbacks' && 'CLIENT FEEDBACKS'}
             {activeTab === 'ai' && 'AI PROMPT SETTINGS'}
             {activeTab === 'usage' && 'AI USAGE & BILLING'}
-            {activeTab === 'attendance' && 'ATTENDANCE OVERVIEW'}
             {activeTab === 'danger' && 'DANGER ZONE'}
           </h2>
           <div className="flex items-center gap-4">
@@ -812,6 +792,7 @@ export default function OwnerDashboard() {
                 <div>
                   <h3 className="text-emerald-400 font-bold text-[16px] flex items-center gap-2"><Sparkles size={18}/> 機能ON/OFF</h3>
                   <p className="text-[11px] text-gray-500 mt-1">対象: <span className="text-white font-bold">{featureModalTenant.name}</span></p>
+                  <p className="text-[10px] text-emerald-400/70 mt-1">💡 トグル切替で自動保存されます</p>
                 </div>
                 <button onClick={() => setFeatureModalTenant(null)} className="text-gray-500 hover:text-white"><X size={20}/></button>
               </div>
@@ -858,6 +839,14 @@ export default function OwnerDashboard() {
                     </div>
                   </div>
                 ))}
+              </div>
+              <div className="p-4 border-t border-[#222222] sticky bottom-0 bg-[#0a0a0a]">
+                <button
+                  onClick={() => setFeatureModalTenant(null)}
+                  className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 text-black font-bold rounded-xl text-[12px] tracking-widest flex items-center justify-center gap-2"
+                >
+                  <CheckCircle size={14}/> 設定完了・閉じる
+                </button>
               </div>
             </div>
           </div>
@@ -1014,60 +1003,6 @@ export default function OwnerDashboard() {
               💡 計測対象: キャプション生成 + プロンプト自動生成 の合計回数。<br/>
               月をまたぐと自動でカウントがリセットされ、過去月のデータは保持されます。
             </div>
-          </div>
-        )}
-
-        {/* ★ 全店出勤状況 */}
-        {activeTab === 'attendance' && (
-          <div className="space-y-6 animate-in fade-in">
-            <header className="space-y-2 flex items-center justify-between">
-              <div>
-                <h3 className="text-[16px] font-bold text-cyan-400 flex items-center gap-2"><CheckCircle size={18}/> 全店舗 出勤状況</h3>
-                <p className="text-[12px] text-gray-500 leading-relaxed">現在出勤中のスタッフを店舗別に表示します</p>
-              </div>
-              <button onClick={loadAttendanceOverview} className="p-2 hover:bg-[#222222] rounded-full text-gray-500">
-                <RefreshCw size={16} className={isLoadingAttendance ? 'animate-spin' : ''}/>
-              </button>
-            </header>
-
-            {!attendanceOverview ? (
-              <div className="bg-[#111111] border border-[#222222] rounded-2xl p-12 text-center text-gray-600 italic font-mono">読込中...</div>
-            ) : attendanceOverview.totalOpen === 0 ? (
-              <div className="bg-[#111111] border border-[#222222] rounded-2xl p-12 text-center text-gray-600 italic font-mono">現在出勤中のスタッフはいません</div>
-            ) : (
-              <>
-                <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-2xl p-4 text-center">
-                  <p className="text-[10px] text-cyan-400 font-bold tracking-widest">CURRENTLY WORKING</p>
-                  <p className="text-[36px] font-bold text-white mt-1">{attendanceOverview.totalOpen}<span className="text-[14px] text-cyan-400 ml-2">名</span></p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {attendanceOverview.byTenant.map(t => (
-                    <div key={t.tenantId} className="bg-[#111111] border border-[#222222] rounded-2xl p-5">
-                      <div className="border-b border-[#222222] pb-3 mb-3">
-                        <p className="text-[10px] text-gray-500 font-mono">{t.tenantId}</p>
-                        <p className="text-[14px] font-bold text-white mt-0.5">{t.tenantName}</p>
-                        <p className="text-[10px] text-cyan-400 mt-1">{t.records.length}名 出勤中</p>
-                      </div>
-                      <div className="space-y-2">
-                        {t.records.map(r => (
-                          <div key={r.id} className="flex items-center justify-between bg-black p-2.5 rounded-lg">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-[12px] font-bold text-white truncate">{r.staffName}</p>
-                              <p className="text-[9px] text-gray-500 font-mono">
-                                {new Date(r.clockInAt).toLocaleString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}〜
-                              </p>
-                            </div>
-                            {r.isOnBreak && (
-                              <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full">☕休憩中</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
           </div>
         )}
 

@@ -130,14 +130,18 @@ export async function POST(request) {
       for (const s of staffList) {
         if (lockedKeys.has(`${s.name}__${d.dateStr}`)) { skippedLocked++; continue; }
         const isOff = !chosenNames.has(s.name);
+        // ★ スタッフ個別の基本出勤時間 > パターンの順で優先
+        const startTime = (!isOff && s.defaultStartTime) ? s.defaultStartTime : (isOff ? null : pattern.startTime);
+        const endTime = (!isOff && s.defaultEndTime) ? s.defaultEndTime : (isOff ? null : pattern.endTime);
+        const patternName = (!isOff && s.defaultStartTime) ? `${startTime}-${endTime}` : (isOff ? null : pattern.name);
         upserts.push({
           tenant_id: auth.tenantId,
           staff_name: s.name,
           date: d.dateStr,
-          pattern_id: isOff ? null : pattern.id,
-          pattern_name: isOff ? null : pattern.name,
-          start_time: isOff ? null : pattern.startTime,
-          end_time: isOff ? null : pattern.endTime,
+          pattern_id: isOff ? null : (s.defaultStartTime ? 'custom' : pattern.id),
+          pattern_name: patternName,
+          start_time: startTime,
+          end_time: endTime,
           is_off: isOff,
           is_auto_generated: true,
           locked: false,

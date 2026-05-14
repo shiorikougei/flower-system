@@ -55,7 +55,7 @@ export async function PUT(request) {
   try {
     const auth = await authAndTenant(request);
     if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
-    const { staffName, yearMonth, date, priority, notes } = await request.json();
+    const { staffName, yearMonth, date, priority, notes, startTime, endTime } = await request.json();
     if (!staffName || !yearMonth || !date) {
       return NextResponse.json({ error: 'staffName/yearMonth/date必須' }, { status: 400 });
     }
@@ -67,6 +67,8 @@ export async function PUT(request) {
       priority: priority || 1,
       notes: notes || null,
       status: 'pending',
+      start_time: startTime || null,
+      end_time: endTime || null,
     }, { onConflict: 'tenant_id,staff_name,date' });
     return NextResponse.json({ ok: true });
   } catch (err) {
