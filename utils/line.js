@@ -16,11 +16,17 @@ const LINE_PUSH_URL = 'https://api.line.me/v2/bot/message/push';
 /**
  * テナントの LINE 設定を取得
  *   { enabled, channelAccessToken, channelSecret, channelId, addFriendUrl }
+ *
+ * ★サブスク機能 `lineIntegration` がOFFのテナントは強制的に enabled=false にする
+ *   （既存のlineConfig.enabledチェック箇所を改修せずにゲーティングできる）
  */
 export function getLineConfig(settings) {
   const cfg = settings?.lineConfig || {};
+  const features = settings?.features || {};
+  const subscriptionEnabled = Boolean(features.lineIntegration);
   return {
-    enabled: Boolean(cfg.enabled),
+    enabled: subscriptionEnabled && Boolean(cfg.enabled),
+    subscriptionEnabled,                                // サブスクで有効化されているか
     channelAccessToken: cfg.channelAccessToken || '',
     channelSecret: cfg.channelSecret || '',
     channelId: cfg.channelId || '',

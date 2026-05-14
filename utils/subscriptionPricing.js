@@ -17,6 +17,7 @@ export const DEFAULT_PRICING = {
     shiftManagement: 1500,          // シフト管理
     attendanceManagement: 1500,     // 勤怠管理
     payroll: 2000,                  // 給与計算
+    lineIntegration: 1500,          // LINE公式アカウント連携
     b2b: 3000,                      // 法人ページ
     deliveryOutsource: 5000,        // 配達業務委託
     posRegister: 3000,              // POSレジ

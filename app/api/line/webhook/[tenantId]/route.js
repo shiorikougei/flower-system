@@ -70,6 +70,14 @@ export async function POST(request, { params }) {
       .select('settings_data')
       .eq('id', tenantId)
       .single();
+
+    // ★サブスクで LINE連携 が未契約のテナントは弾く
+    const features = settingsRow?.settings_data?.features || {};
+    if (!features.lineIntegration) {
+      console.warn('[line/webhook] subscription feature lineIntegration disabled for', tenantId);
+      return NextResponse.json({ error: 'LINE連携サブスク未契約' }, { status: 403 });
+    }
+
     const lineCfg = settingsRow?.settings_data?.lineConfig || {};
     const channelSecret = lineCfg.channelSecret || '';
     const channelAccessToken = lineCfg.channelAccessToken || '';

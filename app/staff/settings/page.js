@@ -31,6 +31,7 @@ export default function SettingsPage() {
   const [currentTenantId, setCurrentTenantId] = useState(null);
   
   const [isB2BEnabled, setIsB2BEnabled] = useState(false);
+  const [isLineFeatureEnabled, setIsLineFeatureEnabled] = useState(false);
   
   // ★追加：コピーしたタグの名前を一時的に保持するステート
   const [copiedTag, setCopiedTag] = useState(null);
@@ -165,7 +166,8 @@ export default function SettingsPage() {
       name: '通知・連携',
       tabs: [
         { id: 'message', label: '案内文管理', icon: Mail },
-        { id: 'line', label: 'LINE連携', icon: Mail },
+        // ★ LINE連携はサブスク機能。未契約のテナントには表示しない
+        ...(isLineFeatureEnabled ? [{ id: 'line', label: 'LINE連携', icon: Mail }] : []),
         { id: 'links', label: 'URL発行', icon: LinkIcon },
       ],
     },
@@ -200,6 +202,7 @@ export default function SettingsPage() {
     if (s.payrollConfig) setPayrollConfig(prev => ({...prev, ...s.payrollConfig}));
 
     if (s.features && s.features.b2b) setIsB2BEnabled(true);
+    setIsLineFeatureEnabled(Boolean(s.features?.lineIntegration));
   };
 
   useEffect(() => {

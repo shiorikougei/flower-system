@@ -34,6 +34,12 @@ export const FEATURE_GROUPS = [
     ],
   },
   {
+    name: '通知・連携系（オプション）',
+    items: [
+      { key: 'lineIntegration', label: 'LINE公式アカウント連携', description: '注文確認・完成写真・入金確認等を LINE 併送' },
+    ],
+  },
+  {
     name: '法人・拡張系（プレミアム）',
     items: [
       { key: 'b2b', label: '法人ページ', description: '法人取引・継続発注' },

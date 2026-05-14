@@ -218,7 +218,12 @@ export default function OwnerDashboard() {
       try {
         const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
         const s = data?.settings_data || {};
-        if (s.pricingConfig) setPricingConfig({...DEFAULT_PRICING, ...s.pricingConfig});
+        if (s.pricingConfig) setPricingConfig({
+          ...DEFAULT_PRICING,
+          ...s.pricingConfig,
+          // ★ 新規追加された feature の price をマージ（lineIntegration 等）
+          featurePrices: { ...DEFAULT_PRICING.featurePrices, ...(s.pricingConfig.featurePrices || {}) },
+        });
         if (s.tenantBilling) setTenantBilling(s.tenantBilling);
       } catch {}
     })();
