@@ -9,6 +9,21 @@ const DEFAULT_FROM = process.env.EMAIL_FROM || 'order@noodleflorix.com';
 const DEFAULT_FROM_NAME = process.env.EMAIL_FROM_NAME || 'Florix';
 
 /**
+ * 送信専用フッター（共通）
+ * このメールアドレスへの返信は確認されない旨をお客様に明示
+ * @param {object} opts - { contactEmail?: string } 連絡先メールアドレス（デフォルトは管理者）
+ */
+export function noReplyFooter({ contactEmail = 'marusyou.reishin@gmail.com' } = {}) {
+  return `
+    <div style="margin-top:32px;padding:14px;background:#f9f5ed;border:1pt solid #e5d9bd;border-radius:8px;font-size:11px;color:#92722c;line-height:1.6;">
+      ⚠️ <strong>このメールは送信専用アドレスから自動送信されています。</strong><br/>
+      ご返信いただいてもご対応できかねますので、お問い合わせは下記までご連絡ください。<br/>
+      📩 <a href="mailto:${contactEmail}" style="color:#92722c;text-decoration:underline;">${contactEmail}</a>
+    </div>
+  `;
+}
+
+/**
  * メール送信
  * @param {object} params
  * @param {string} params.to - 宛先メールアドレス
@@ -147,6 +162,11 @@ export function buildOrderConfirmationEmail({ order, shopName, bankInfo }) {
       ご不明な点がございましたら、${escapeHtml(shopName)} までお問い合わせください。<br>
       このメールはご注文を確認した時点で自動送信されています。
     </p>
+
+    <div style="margin-top:24px;padding:14px;background:#f9f5ed;border:1pt solid #e5d9bd;border-radius:8px;font-size:11px;color:#92722c;line-height:1.6;">
+      ⚠️ <strong>このメールは送信専用アドレスから自動送信されています。</strong><br/>
+      ご返信いただいてもご対応できかねますので、お問い合わせは <strong>${escapeHtml(shopName)}</strong> までご連絡ください。
+    </div>
   </div>
 </body>
 </html>`;

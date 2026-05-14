@@ -369,9 +369,17 @@ export default function StaffLayout({ children }) {
             >
               <Sparkles size={14} /> 機能アップグレード
             </button>
-            <Link href="/terms" target="_blank" className="block text-center text-[10px] text-[#999] hover:text-[#2D4B3E] underline">
-              利用規約・解約申請
-            </Link>
+            <div className="flex flex-col gap-1">
+              <Link href="/terms" target="_blank" className="block text-center text-[10px] text-[#999] hover:text-[#2D4B3E] underline">
+                利用規約・解約申請
+              </Link>
+              <Link href="/privacy-policy" target="_blank" className="block text-center text-[10px] text-[#999] hover:text-[#2D4B3E] underline">
+                プライバシーポリシー
+              </Link>
+              <Link href="/legal" target="_blank" className="block text-center text-[10px] text-[#999] hover:text-[#2D4B3E] underline">
+                特定商取引法に基づく表記
+              </Link>
+            </div>
           </div>
         </div>
       </aside>

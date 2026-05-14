@@ -167,6 +167,11 @@ export async function GET(request) {
     <p style="font-size:11px;color:#666;margin-top:24px;line-height:1.6;">
       ご請求に関するお問い合わせ・解約については、利用規約をご確認いただくか、marusyou.reishin@gmail.com までお問い合わせください。
     </p>
+    <div style="margin-top:24px;padding:14px;background:#f9f5ed;border:1pt solid #e5d9bd;border-radius:8px;font-size:11px;color:#92722c;line-height:1.6;">
+      ⚠️ <strong>このメールは送信専用アドレスから自動送信されています。</strong><br/>
+      ご返信いただいてもご対応できかねますので、お問い合わせは
+      📩 <a href="mailto:marusyou.reishin@gmail.com" style="color:#92722c;text-decoration:underline;">marusyou.reishin@gmail.com</a> までご連絡ください。
+    </div>
     <p style="font-size:11px;color:#999;margin-top:32px;padding-top:16px;border-top:1px solid #EAEAEA;text-align:center;">— NocoLde —</p>
   </div>
 </body></html>`;

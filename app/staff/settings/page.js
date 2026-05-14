@@ -451,6 +451,14 @@ export default function SettingsPage() {
                   {showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}
                 </button>
               </div>
+              {(generalConfig.systemPassword === '7777' || !generalConfig.systemPassword) && (
+                <div className="mt-3 bg-amber-50 border-2 border-amber-300 rounded-lg p-3 text-[11px] text-amber-900 leading-relaxed">
+                  ⚠️ <strong>初期パスワード「7777」のままです。</strong> セキュリティのため、推測されにくいパスワードに変更して「変更を保存」を押してください。
+                </div>
+              )}
+              <p className="text-[10px] text-red-700 mt-2">
+                💡 忘れた場合は管理者（NocoLde）に連絡すれば、登録メアド宛に再発行メールを送ります。
+              </p>
             </div>
           </div>
         </div>

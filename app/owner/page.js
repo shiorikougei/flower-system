@@ -366,7 +366,7 @@ export default function OwnerDashboard() {
       return d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
     })();
     const ownerName = 'NocoLde';
-    const ownerInvoice = 'T0000000000000';
+    const ownerInvoice = ''; // 適格請求書発行事業者番号 (取得後ここに記載)
 
     // 機能内訳
     const featureRows = fee.featureBreakdown ? fee.featureBreakdown.map(f => {
@@ -462,7 +462,7 @@ export default function OwnerDashboard() {
 
         <div class="footer">
           <div class="name">${ownerName}</div>
-          <div>登録番号: ${ownerInvoice}</div>
+          ${ownerInvoice ? `<div>登録番号: ${ownerInvoice}</div>` : ''}
           <div style="margin-top:1mm; color:#666;">お問い合わせ: marusyou.reishin@gmail.com</div>
           <div style="margin-top:2mm; padding-top:1.5mm; border-top:0.3pt dashed #ccc; font-size:7pt; color:#999;">
             ※機能変更は即時反映されます（追加月は無料、翌月から課金）。解約・支払いに関する詳細は利用規約をご確認ください。
@@ -537,7 +537,7 @@ export default function OwnerDashboard() {
     const taxExcluded = Math.floor(usage.overageJpy / 1.1);
     const tax = usage.overageJpy - taxExcluded;
     const ownerName = 'NocoLde';
-    const ownerInvoice = 'T0000000000000';
+    const ownerInvoice = ''; // 適格請求書発行事業者番号 (取得後ここに記載)
     const dueDate = (() => {
       const d = new Date();
       d.setMonth(d.getMonth() + 1);
@@ -595,9 +595,9 @@ export default function OwnerDashboard() {
         <div class="footer">
           <div class="issuer-info">
             <div class="issuer-name">${ownerName}</div>
-            <div>登録番号: ${ownerInvoice}</div>
+            ${ownerInvoice ? `<div>登録番号: ${ownerInvoice}</div>` : ''}
             <div style="margin-top:3mm; color:#666;">お支払いに関するお問い合わせ:</div>
-            <div>support@nocolde.com</div>
+            <div>marusyou.reishin@gmail.com</div>
           </div>
         </div>
       </div>
@@ -684,6 +684,36 @@ export default function OwnerDashboard() {
       alert('削除中にエラーが発生しました。');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // ★ 設定パスワード再発行
+  const reissueSystemPassword = async (tenantId, tenantName) => {
+    if (!confirm(`【${tenantName}】の設定画面ロック解除パスワードを再発行しますか？\n登録メールアドレス宛にメールを送付します。`)) return;
+    try {
+      // (1) ランダム生成
+      const newPassword = String(Math.floor(100000 + Math.random() * 900000));
+      // (2) 対象テナントの settings_data.generalConfig.systemPassword を更新
+      const { data } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
+      const settings = data?.settings_data || {};
+      const generalConfig = { ...(settings.generalConfig || {}), systemPassword: newPassword };
+      await supabase.from('app_settings').update({ settings_data: { ...settings, generalConfig } }).eq('id', tenantId);
+      // (3) 送付先メアド取得 (請求先 or オーナーAuthメアド)
+      const billing = tenantBilling[tenantId] || {};
+      const toEmail = billing.billingEmail || prompt('送付先メールアドレスを入力してください（請求先メール未設定）');
+      if (!toEmail || !toEmail.includes('@')) { alert('メアドが未設定/不正のため送信スキップ。新パスワード: ' + newPassword); return; }
+      // (4) メール送信
+      const res = await fetch('/api/setup/send-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: toEmail, shopName: tenantName, tenantId, systemPassword: newPassword, isReissue: true }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error);
+      alert(`✅ 再発行完了\n新パスワード: ${newPassword}\n${toEmail} 宛に送信しました。`);
+    } catch (e) {
+      console.error(e);
+      alert('再発行失敗: ' + e.message);
     }
   };
 
@@ -898,7 +928,14 @@ export default function OwnerDashboard() {
                             >
                               {t.status === 'active' ? 'ロックする' : 'ロック解除'}
                             </button>
-                            <button 
+                            <button
+                              onClick={() => reissueSystemPassword(t.id, t.name)}
+                              className="p-2 rounded-lg text-gray-500 hover:bg-amber-900/30 hover:text-amber-400 transition-all border border-transparent hover:border-amber-700/50"
+                              title="設定パスワード再発行（登録メアド宛に送付）"
+                            >
+                              🔑
+                            </button>
+                            <button
                               onClick={() => handleDeleteTenant(t.id)}
                               className="p-2 rounded-lg text-gray-500 hover:bg-red-900/30 hover:text-red-500 transition-all border border-transparent hover:border-red-900/50"
                               title="テナントを削除"
@@ -1433,7 +1470,7 @@ export default function OwnerDashboard() {
                             onChange={e => saveTenantBilling(t.id, { paymentMethod: e.target.value })}
                             className="h-8 px-2 bg-black border border-[#333] rounded text-[11px] text-white outline-none">
                             <option value="bank_transfer">🏦 銀行振込</option>
-                            <option value="card">💳 クレカ</option>
+                            <option value="card" disabled>💳 クレカ（準備中）</option>
                           </select>
                         </td>
                         <td className="px-4 py-3">
