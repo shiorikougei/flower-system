@@ -1677,19 +1677,110 @@ export default function OwnerDashboard() {
           );
         })()}
 
-        {activeTab === 'danger' && (
-          <div className="space-y-6 animate-in fade-in">
-            <header className="mb-6 space-y-2">
-               <h3 className="text-[16px] font-bold text-red-500 flex items-center gap-2"><AlertTriangle size={18}/> 危険な操作 (データ初期化)</h3>
-               <p className="text-[12px] text-gray-500 leading-relaxed">システムの本稼働前などに、不要なテストデータを一括で消去するためのメニューです。<br/>一度削除したデータは復元できません。</p>
-            </header>
-            <div className="bg-[#1a1111] p-8 rounded-2xl border border-red-900/50 shadow-xl space-y-4">
-              <h4 className="text-white font-bold text-[14px]">すべてのテスト注文データを削除する</h4>
-              <p className="text-[12px] text-gray-400">現在データベースに登録されている、すべての店舗の「注文データ（履歴・伝票）」を完全に消去し、真っ新な状態に戻します。（店舗の設定は消えません）</p>
-              <button onClick={handleClearAllOrders} disabled={isSaving} className="mt-4 flex items-center justify-center gap-2 bg-red-600 text-white px-8 py-3 rounded-xl font-bold text-[13px] tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-900/50 disabled:opacity-50"><Trash2 size={16}/> 注文データを全件削除</button>
+        {activeTab === 'danger' && (() => {
+          const handleClear = async (target, label) => {
+            if (!confirm(`本当に「${label}」を全件削除しますか？\n（店舗設定や機能ON/OFFは保たれます）\nこの操作は取り消せません。`)) return;
+            try {
+              const res = await fetch('/api/admin/danger-clear', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targets: [target] }),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error);
+              const summary = (data.results || []).map(r => `${r.table}: ${r.ok ? `✓ ${r.deleted}件` : `✗ ${r.error}`}`).join('\n');
+              alert(`✅ 削除完了\n\n${summary}\n\n※ ${data.note || ''}`);
+            } catch (e) {
+              alert('エラー: ' + e.message);
+            }
+          };
+
+          return (
+            <div className="space-y-6 animate-in fade-in">
+              <header className="mb-6 space-y-2">
+                <h3 className="text-[16px] font-bold text-red-500 flex items-center gap-2"><AlertTriangle size={18}/> 危険な操作 (データ初期化)</h3>
+                <p className="text-[12px] text-gray-500 leading-relaxed">
+                  テストデータを一括で消去するメニュー。<br/>
+                  <strong className="text-emerald-400">店舗の各種設定（料金・スタッフ・店舗情報・機能ON/OFF）は保たれます。</strong><br/>
+                  テーブル単位のデータのみ削除されます。一度削除すると復元不可。
+                </p>
+              </header>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-[#1a1111] p-6 rounded-2xl border border-red-900/50 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[24px]">📋</span>
+                    <h4 className="text-white font-bold text-[13px]">注文データ</h4>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">orders テーブル全件（履歴・伝票・進捗等）</p>
+                  <button onClick={() => handleClear('orders', '注文データ')} className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl font-bold text-[11px] transition-all shadow-md">
+                    <Trash2 size={12}/> 注文データを全削除
+                  </button>
+                </div>
+
+                <div className="bg-[#1a1111] p-6 rounded-2xl border border-red-900/50 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[24px]">👥</span>
+                    <h4 className="text-white font-bold text-[13px]">顧客データ</h4>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">顧客カルテ・記念日・LINE連携・マイページPW・セッション・メアド変更履歴</p>
+                  <button onClick={() => handleClear('customers', '顧客データ')} className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl font-bold text-[11px] transition-all shadow-md">
+                    <Trash2 size={12}/> 顧客データを全削除
+                  </button>
+                </div>
+
+                <div className="bg-[#1a1111] p-6 rounded-2xl border border-red-900/50 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[24px]">🛒</span>
+                    <h4 className="text-white font-bold text-[13px]">商品データ (EC)</h4>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">products・stock_notifications</p>
+                  <button onClick={() => handleClear('products', '商品データ')} className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl font-bold text-[11px] transition-all shadow-md">
+                    <Trash2 size={12}/> 商品データを全削除
+                  </button>
+                </div>
+
+                <div className="bg-[#1a1111] p-6 rounded-2xl border border-red-900/50 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[24px]">⏰</span>
+                    <h4 className="text-white font-bold text-[13px]">勤怠・シフト・操作履歴</h4>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">staff_attendance, shift_schedules, shift_holiday_requests, audit_log</p>
+                  <button onClick={() => handleClear('staff_attendance', '勤怠・シフト・操作履歴')} className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl font-bold text-[11px] transition-all shadow-md">
+                    <Trash2 size={12}/> 勤怠系を全削除
+                  </button>
+                </div>
+              </div>
+
+              {/* 一括削除 */}
+              <div className="bg-[#2a0e0e] p-6 rounded-2xl border-2 border-red-700 shadow-2xl">
+                <h4 className="text-red-300 font-bold text-[14px] flex items-center gap-2">
+                  <AlertTriangle size={16}/> 全テストデータを一括削除
+                </h4>
+                <p className="text-[11px] text-red-200/80 mt-2 leading-relaxed">
+                  上記4カテゴリすべてを一度に削除します。<strong className="text-white">店舗設定は無傷</strong>です。<br/>
+                  ローンチ直前のクリーンアップに使用してください。
+                </p>
+                <button
+                  onClick={() => handleClear('all', '全テストデータ')}
+                  className="mt-4 flex items-center justify-center gap-2 bg-red-700 hover:bg-red-600 text-white px-8 py-3 rounded-xl font-bold text-[13px] tracking-widest transition-all shadow-lg shadow-red-900/50"
+                >
+                  <Trash2 size={16}/> 全テストデータを一括削除
+                </button>
+              </div>
+
+              {/* レガシーボタン: 旧 handleClearAllOrders */}
+              <details className="bg-[#111] border border-[#222] rounded-2xl p-4">
+                <summary className="cursor-pointer text-[11px] text-gray-500 hover:text-gray-300">レガシーメニュー</summary>
+                <div className="mt-3 p-4 border border-red-900/40 rounded-xl">
+                  <button onClick={handleClearAllOrders} disabled={isSaving} className="flex items-center justify-center gap-2 bg-red-900/40 text-red-300 px-6 py-2 rounded-xl text-[12px] font-bold hover:bg-red-900/60 disabled:opacity-50">
+                    <Trash2 size={14}/> 旧: 注文データ全件削除
+                  </button>
+                </div>
+              </details>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </main>
     </div>
   );
