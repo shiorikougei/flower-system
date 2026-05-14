@@ -1,12 +1,22 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
-import { 
-  Search, User, Phone, Mail, MapPin, ShoppingBag, 
-  Calendar, ChevronRight, X, Filter, PieChart
+import {
+  Search, User, Phone, Mail, MapPin, ShoppingBag,
+  Calendar, ChevronRight, X, Filter, PieChart, Heart,
+  MessageCircle, Palette, Sparkles, Lock, Trash2, ArrowRight, Check
 } from 'lucide-react';
 
 export default function CustomersPage() {
+  return (
+    <Suspense fallback={<div className="p-20 text-center text-[#999] font-bold">読み込み中...</div>}>
+      <CustomersPageContent />
+    </Suspense>
+  );
+}
+
+function CustomersPageContent() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -16,6 +26,13 @@ export default function CustomersPage() {
   const [filterMonth, setFilterMonth] = useState('all');
   const [filterType, setFilterType] = useState('all'); // all, new, repeat
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+
+  // ★ 顧客詳細データ（記念日・LINE）
+  const [customerDetail, setCustomerDetail] = useState(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+
+  // ★ URL ?email=xxx で開いた時、対応する顧客を自動選択
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     fetchOrders();
@@ -110,8 +127,94 @@ export default function CustomersPage() {
       }
     });
 
+    // ★ 各顧客に「好み傾向」を集計して付加
+    Object.values(cmap).forEach(customer => {
+      const counts = { color: {}, purpose: {}, vibe: {} };
+      const prices = [];
+      customer.orders.forEach(o => {
+        const d = o.order_data || {};
+        if (d.flowerColor) counts.color[d.flowerColor] = (counts.color[d.flowerColor] || 0) + 1;
+        if (d.flowerPurpose) counts.purpose[d.flowerPurpose] = (counts.purpose[d.flowerPurpose] || 0) + 1;
+        if (d.flowerVibe) counts.vibe[d.flowerVibe] = (counts.vibe[d.flowerVibe] || 0) + 1;
+        if (Number(d.itemPrice) > 0) prices.push(Number(d.itemPrice));
+      });
+      const top3 = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, 3);
+      const avgPrice = prices.length > 0 ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
+      const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+      const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+
+      customer.preferences = {
+        topColors: top3(counts.color),
+        topPurposes: top3(counts.purpose),
+        topVibes: top3(counts.vibe),
+        avgPrice,
+        minPrice,
+        maxPrice,
+        sampleSize: prices.length,
+      };
+    });
+
     return Object.values(cmap);
   }, [orders]);
+
+  // ★ URL ?email=xxx で指定があれば対応する顧客を自動選択
+  useEffect(() => {
+    const targetEmail = searchParams.get('email');
+    if (targetEmail && customers.length > 0 && !selectedCustomer) {
+      const found = customers.find(c => c.email?.toLowerCase() === targetEmail.toLowerCase());
+      if (found) setSelectedCustomer(found);
+    }
+  }, [searchParams, customers, selectedCustomer]);
+
+  // ★ 顧客モーダル開いた時、詳細データ取得（記念日・LINE）
+  useEffect(() => {
+    if (!selectedCustomer || !selectedCustomer.email) {
+      setCustomerDetail(null);
+      return;
+    }
+    (async () => {
+      setIsLoadingDetail(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const res = await fetch(`/api/staff/customer-detail?email=${encodeURIComponent(selectedCustomer.email)}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        const data = await res.json();
+        if (res.ok) setCustomerDetail(data);
+      } catch (e) {
+        console.warn('detail load failed', e);
+      } finally {
+        setIsLoadingDetail(false);
+      }
+    })();
+  }, [selectedCustomer]);
+
+  // LINE 紐付け操作
+  const handleLineAction = async (action, linkId, newEmail = null) => {
+    if (action === 'delete' && !confirm('このLINE紐付けを完全に削除しますか？')) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/staff/customer-line-manage', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ action, linkId, newEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      // 詳細を再取得
+      const detailRes = await fetch(`/api/staff/customer-detail?email=${encodeURIComponent(selectedCustomer.email)}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      setCustomerDetail(await detailRes.json());
+      alert('更新しました');
+    } catch (e) {
+      alert(e.message);
+    }
+  };
 
   // 存在する「注文月」のリストを生成（セレクトボックス用）
   const availableMonths = useMemo(() => {
@@ -411,10 +514,154 @@ export default function CustomersPage() {
                 </div>
               </div>
 
+              {/* ★ 好み傾向 */}
+              {selectedCustomer.preferences?.sampleSize > 0 && (
+                <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm p-6">
+                  <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#F7F7F7] pb-3 mb-4 flex items-center gap-2">
+                    <Sparkles size={16}/> 好み傾向の自動集計
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[12px]">
+                    <div className="bg-[#FBFAF9] rounded-xl p-3">
+                      <p className="text-[10px] text-[#999] font-bold mb-2 flex items-center gap-1"><Palette size={11}/> よく選ぶカラー</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedCustomer.preferences.topColors.length === 0 ? (
+                          <span className="text-[10px] text-[#999]">データなし</span>
+                        ) : selectedCustomer.preferences.topColors.map(([k, v], i) => (
+                          <span key={i} className={`px-2 py-1 rounded-lg text-[11px] font-bold ${i === 0 ? 'bg-[#D97D54] text-white' : 'bg-white border border-[#EAEAEA] text-[#555]'}`}>{k} <span className="opacity-70 ml-1">×{v}</span></span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="bg-[#FBFAF9] rounded-xl p-3">
+                      <p className="text-[10px] text-[#999] font-bold mb-2">よく選ぶ用途</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedCustomer.preferences.topPurposes.length === 0 ? (
+                          <span className="text-[10px] text-[#999]">データなし</span>
+                        ) : selectedCustomer.preferences.topPurposes.map(([k, v], i) => (
+                          <span key={i} className={`px-2 py-1 rounded-lg text-[11px] font-bold ${i === 0 ? 'bg-[#2D4B3E] text-white' : 'bg-white border border-[#EAEAEA] text-[#555]'}`}>{k} <span className="opacity-70 ml-1">×{v}</span></span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="bg-[#FBFAF9] rounded-xl p-3">
+                      <p className="text-[10px] text-[#999] font-bold mb-2">よく選ぶイメージ</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedCustomer.preferences.topVibes.length === 0 ? (
+                          <span className="text-[10px] text-[#999]">データなし</span>
+                        ) : selectedCustomer.preferences.topVibes.map(([k, v], i) => (
+                          <span key={i} className={`px-2 py-1 rounded-lg text-[11px] font-bold ${i === 0 ? 'bg-[#117768] text-white' : 'bg-white border border-[#EAEAEA] text-[#555]'}`}>{k} <span className="opacity-70 ml-1">×{v}</span></span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="bg-[#FBFAF9] rounded-xl p-3">
+                      <p className="text-[10px] text-[#999] font-bold mb-2">予算帯（商品代）</p>
+                      <p className="text-[14px] font-bold text-[#2D4B3E]">¥{selectedCustomer.preferences.avgPrice.toLocaleString()}<span className="text-[10px] text-[#999] font-normal ml-1">平均</span></p>
+                      <p className="text-[10px] text-[#999] mt-1">範囲: ¥{selectedCustomer.preferences.minPrice.toLocaleString()} 〜 ¥{selectedCustomer.preferences.maxPrice.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ★ 記念日リマインダー（マイページ登録分） */}
+              {customerDetail?.anniversaries && customerDetail.anniversaries.length > 0 && (
+                <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm p-6">
+                  <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#F7F7F7] pb-3 mb-4 flex items-center gap-2">
+                    <Heart size={16} className="text-[#D97D54]"/> 記念日リマインダー <span className="text-[10px] text-[#999] font-normal ml-2">マイページで登録</span>
+                  </h3>
+                  <div className="space-y-2">
+                    {customerDetail.anniversaries.map(a => (
+                      <div key={a.id} className="flex items-center justify-between bg-[#FBFAF9] rounded-xl p-3">
+                        <div>
+                          <p className="text-[13px] font-bold text-[#111]">{a.title}</p>
+                          <p className="text-[11px] text-[#555] mt-0.5">毎年 {a.month}/{a.day}{a.notes ? ` ・ ${a.notes}` : ''}</p>
+                        </div>
+                        <span className="text-[10px] text-[#999]">{a.last_notified_at ? `前回送信: ${new Date(a.last_notified_at).toLocaleDateString('ja-JP')}` : '未送信'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ★ LINE連携管理 */}
+              <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm p-6">
+                <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#F7F7F7] pb-3 mb-4 flex items-center gap-2">
+                  <MessageCircle size={16} className="text-[#06C755]"/> LINE連携管理
+                </h3>
+                {isLoadingDetail ? (
+                  <p className="text-[12px] text-[#999]">読み込み中...</p>
+                ) : customerDetail?.lineLinks?.length === 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-[12px] text-[#999]">このメアドにLINE紐付けはありません</p>
+                    <details className="text-[11px]">
+                      <summary className="cursor-pointer text-[#2D4B3E] font-bold py-2">他メアドのLINEを移動する（手動マージ）</summary>
+                      <div className="mt-2 space-y-2 p-3 bg-[#FBFAF9] rounded-xl">
+                        <p className="text-[10px] text-[#999] leading-relaxed">
+                          ※過去注文番号で本人確認した上で、別メアドのLINE紐付けをこちらに移動できます
+                        </p>
+                        {customerDetail?.allLineLinksInTenant?.filter(l => l.customer_email !== selectedCustomer.email).length === 0 ? (
+                          <p className="text-[10px] text-[#999]">移動可能なLINE紐付けがありません</p>
+                        ) : (
+                          customerDetail?.allLineLinksInTenant?.filter(l => l.customer_email !== selectedCustomer.email).slice(0, 10).map(l => (
+                            <div key={l.id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-[#EAEAEA]">
+                              <div className="text-[11px] min-w-0 flex-1">
+                                <p className="font-bold truncate">{l.display_name || 'LINEユーザー'}</p>
+                                <p className="text-[#999] truncate">現在: {l.customer_email}</p>
+                              </div>
+                              <button
+                                onClick={() => handleLineAction('reassign', l.id, selectedCustomer.email)}
+                                className="text-[10px] font-bold bg-[#2D4B3E] text-white px-2 py-1 rounded ml-2 shrink-0 hover:bg-[#1f352b]"
+                              >
+                                <ArrowRight size={10} className="inline mr-1"/>移動
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </details>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {customerDetail?.lineLinks?.map(link => (
+                      <div key={link.id} className={`flex items-center justify-between p-3 rounded-xl border ${link.is_active ? 'bg-[#06C755]/5 border-[#06C755]/30' : 'bg-[#FBFAF9] border-[#EAEAEA] opacity-60'}`}>
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${link.is_active ? 'bg-[#06C755] text-white' : 'bg-[#999] text-white'}`}>
+                            <MessageCircle size={16}/>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[13px] font-bold text-[#111] truncate">{link.display_name || 'LINEユーザー'}</p>
+                            <p className="text-[10px] text-[#999] truncate">{link.is_active ? `連携中・${new Date(link.linked_at).toLocaleDateString('ja-JP')}〜` : '無効化済'}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {link.is_active ? (
+                            <button onClick={() => handleLineAction('disable', link.id)} className="text-[10px] font-bold text-amber-600 hover:text-amber-800 px-2 py-1">無効化</button>
+                          ) : (
+                            <button onClick={() => handleLineAction('enable', link.id)} className="text-[10px] font-bold text-green-600 hover:text-green-800 px-2 py-1"><Check size={11} className="inline"/> 有効化</button>
+                          )}
+                          <button onClick={() => handleLineAction('delete', link.id)} className="text-red-400 hover:text-red-600 p-1">
+                            <Trash2 size={12}/>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* パスワード設定状況 */}
+              {customerDetail?.hasPassword && (
+                <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm p-4 flex items-center gap-3">
+                  <Lock size={16} className="text-[#117768]"/>
+                  <div>
+                    <p className="text-[12px] font-bold text-[#117768]">マイページパスワード設定済み</p>
+                    {customerDetail.lastLoginAt && (
+                      <p className="text-[10px] text-[#999] mt-0.5">最終ログイン: {new Date(customerDetail.lastLoginAt).toLocaleString('ja-JP')}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* 注文履歴タイムライン */}
               <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm p-6">
                 <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#F7F7F7] pb-3 mb-4 flex items-center gap-2">
-                  {/* ★ここです！ CalendarIconじゃなくてCalendarに修正！💥 */}
                   <Calendar size={16} /> 過去の注文履歴
                 </h3>
                 <div className="space-y-4">

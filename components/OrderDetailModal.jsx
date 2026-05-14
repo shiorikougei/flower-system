@@ -717,6 +717,15 @@ export default function OrderDetailModal({
           </div>
 
           <div className="flex flex-wrap items-center gap-2 ml-auto">
+            {modalData.customerInfo?.email && (
+              <a
+                href={`/staff/customers?email=${encodeURIComponent(modalData.customerInfo.email)}`}
+                className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all"
+                title="このお客様の顧客カルテを開く"
+              >
+                <User size={14} /> <span className="hidden sm:inline">顧客カルテ</span>
+              </a>
+            )}
             <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all">
               <Printer size={14} /> <span className="hidden sm:inline">印刷 / PDF出力</span>
             </button>
