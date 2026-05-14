@@ -15,6 +15,8 @@ export default function ShiftPage() {
   const [shiftConfig, setShiftConfig] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [editCell, setEditCell] = useState(null); // { staff, date, current }
+  const [customMode, setCustomMode] = useState(false);
+  const [customForm, setCustomForm] = useState({ name: '', startTime: '10:00', endTime: '18:00' });
   const [allowed, setAllowed] = useState(true);
 
   useEffect(() => {
@@ -206,7 +208,13 @@ export default function ShiftPage() {
                           {sh?.is_off ? (
                             <span className="text-[10px] font-bold">休</span>
                           ) : sh ? (
-                            <span className="text-[9px] font-bold leading-tight block">{sh.pattern_name}{sh.locked && <Lock size={8} className="inline ml-0.5"/>}</span>
+                            <div className="text-[9px] font-bold leading-tight">
+                              {sh.pattern_name && <div>{sh.pattern_name}</div>}
+                              {sh.start_time && sh.end_time && (
+                                <div className="text-[8px] opacity-80">{sh.start_time}-{sh.end_time}</div>
+                              )}
+                              {sh.locked && <Lock size={8} className="inline"/>}
+                            </div>
                           ) : isFixedOff ? (
                             <span className="text-[9px] text-[#D97D54]/60">固休</span>
                           ) : (
@@ -225,54 +233,133 @@ export default function ShiftPage() {
 
       {/* 編集モーダル */}
       {editCell && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setEditCell(null)}>
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => { setEditCell(null); setCustomMode(false); }}>
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-[15px] font-bold text-[#111]">{editCell.staff.name}</h3>
                 <p className="text-[11px] text-[#999]">{editCell.date}</p>
               </div>
-              <button onClick={() => setEditCell(null)} className="text-[#999] hover:text-[#111]"><X size={18}/></button>
+              <button onClick={() => { setEditCell(null); setCustomMode(false); }} className="text-[#999] hover:text-[#111]"><X size={18}/></button>
             </div>
 
-            {/* シフトパターン選択 */}
-            <div className="space-y-2">
-              <p className="text-[11px] font-bold text-[#555]">シフトを選択</p>
-              <div className="grid grid-cols-2 gap-2">
-                {(shiftConfig?.patterns || []).map(p => (
+            {!customMode ? (
+              <>
+                {/* シフトパターン選択 */}
+                <div className="space-y-2">
+                  <p className="text-[11px] font-bold text-[#555]">シフトを選択</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(shiftConfig?.patterns || []).map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => saveCell({
+                          staffName: editCell.staff.name,
+                          date: editCell.date,
+                          patternId: p.id,
+                          patternName: p.name,
+                          startTime: p.startTime,
+                          endTime: p.endTime,
+                          isOff: false,
+                          locked: editCell.current?.locked || false,
+                        })}
+                        className="p-3 rounded-xl border border-[#EAEAEA] hover:border-[#2D4B3E] text-left"
+                        style={{ background: p.color + '40' }}
+                      >
+                        <p className="text-[13px] font-bold">{p.name}</p>
+                        <p className="text-[10px] text-[#555]">{p.startTime}〜{p.endTime}</p>
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => saveCell({
+                        staffName: editCell.staff.name,
+                        date: editCell.date,
+                        isOff: true,
+                        locked: editCell.current?.locked || false,
+                      })}
+                      className="p-3 rounded-xl border border-[#D97D54]/40 bg-[#D97D54]/10 hover:bg-[#D97D54]/20 text-left"
+                    >
+                      <p className="text-[13px] font-bold text-[#D97D54]">休み</p>
+                      <p className="text-[10px] text-[#999]">出勤なし</p>
+                    </button>
+                    {/* ★ カスタム時間 */}
+                    <button
+                      onClick={() => {
+                        setCustomMode(true);
+                        // 既存値があればプリセット
+                        setCustomForm({
+                          name: editCell.current?.pattern_name || '',
+                          startTime: editCell.current?.start_time || '10:00',
+                          endTime: editCell.current?.end_time || '18:00',
+                        });
+                      }}
+                      className="p-3 rounded-xl border border-dashed border-[#117768]/50 bg-[#117768]/5 hover:bg-[#117768]/10 text-left"
+                    >
+                      <p className="text-[13px] font-bold text-[#117768]">⏱ カスタム時間</p>
+                      <p className="text-[10px] text-[#999]">時刻を自由入力</p>
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* カスタム時間入力 */}
+                <div className="space-y-3">
+                  <button onClick={() => setCustomMode(false)} className="text-[10px] text-[#999] hover:text-[#2D4B3E]">← パターン選択に戻る</button>
+                  <p className="text-[11px] font-bold text-[#117768]">⏱ カスタム時間で登録</p>
+                  <div>
+                    <label className="text-[10px] font-bold text-[#999] tracking-widest">名称（任意）</label>
+                    <input
+                      type="text"
+                      value={customForm.name}
+                      onChange={e => setCustomForm({...customForm, name: e.target.value})}
+                      placeholder="例: 研修・短時間・臨時 など"
+                      className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <label className="text-[10px] font-bold text-[#999] tracking-widest">開始</label>
+                      <input
+                        type="time"
+                        value={customForm.startTime}
+                        onChange={e => setCustomForm({...customForm, startTime: e.target.value})}
+                        className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none"
+                      />
+                    </div>
+                    <span className="text-[#999] mt-5">〜</span>
+                    <div className="flex-1">
+                      <label className="text-[10px] font-bold text-[#999] tracking-widest">終了</label>
+                      <input
+                        type="time"
+                        value={customForm.endTime}
+                        onChange={e => setCustomForm({...customForm, endTime: e.target.value})}
+                        className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none"
+                      />
+                    </div>
+                  </div>
                   <button
-                    key={p.id}
-                    onClick={() => saveCell({
-                      staffName: editCell.staff.name,
-                      date: editCell.date,
-                      patternId: p.id,
-                      patternName: p.name,
-                      startTime: p.startTime,
-                      endTime: p.endTime,
-                      isOff: false,
-                      locked: editCell.current?.locked || false,
-                    })}
-                    className="p-3 rounded-xl border border-[#EAEAEA] hover:border-[#2D4B3E] text-left"
-                    style={{ background: p.color + '40' }}
+                    onClick={() => {
+                      if (!customForm.startTime || !customForm.endTime) { alert('開始・終了時刻を入力してください'); return; }
+                      if (customForm.endTime <= customForm.startTime) { alert('終了時刻は開始時刻より後にしてください'); return; }
+                      saveCell({
+                        staffName: editCell.staff.name,
+                        date: editCell.date,
+                        patternId: 'custom',
+                        patternName: customForm.name || `${customForm.startTime}-${customForm.endTime}`,
+                        startTime: customForm.startTime,
+                        endTime: customForm.endTime,
+                        isOff: false,
+                        locked: editCell.current?.locked || false,
+                      });
+                      setCustomMode(false);
+                    }}
+                    className="w-full h-11 bg-[#117768] text-white text-[13px] font-bold rounded-lg hover:bg-[#0f6a5b]"
                   >
-                    <p className="text-[13px] font-bold">{p.name}</p>
-                    <p className="text-[10px] text-[#555]">{p.startTime}〜{p.endTime}</p>
+                    この時間で登録
                   </button>
-                ))}
-                <button
-                  onClick={() => saveCell({
-                    staffName: editCell.staff.name,
-                    date: editCell.date,
-                    isOff: true,
-                    locked: editCell.current?.locked || false,
-                  })}
-                  className="p-3 rounded-xl border border-[#D97D54]/40 bg-[#D97D54]/10 hover:bg-[#D97D54]/20 text-left"
-                >
-                  <p className="text-[13px] font-bold text-[#D97D54]">休み</p>
-                  <p className="text-[10px] text-[#999]">出勤なし</p>
-                </button>
-              </div>
-            </div>
+                </div>
+              </>
+            )}
 
             {/* ロック切替・削除 */}
             <div className="flex gap-2 pt-3 border-t border-[#EAEAEA]">
