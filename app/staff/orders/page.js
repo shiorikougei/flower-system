@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import OrderDetailModal from '@/components/OrderDetailModal';
 import { logAction } from '@/utils/auditLog';
+import HelpTooltip from '@/components/HelpTooltip';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -243,7 +244,7 @@ export default function OrdersPage() {
     <div className="min-h-screen bg-[#FBFAF9] font-sans pb-32">
       <div className="bg-white border-b border-[#EAEAEA] sticky top-0 z-30 px-6 py-4 shadow-sm">
         <div className="max-w-[1000px] mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h1 className="text-[20px] font-bold text-[#2D4B3E]">受注一覧</h1>
+          <h1 className="text-[20px] font-bold text-[#2D4B3E] flex items-center gap-2">受注一覧 <HelpTooltip articleId="order_status"/> <HelpTooltip articleId="order_payment" size={14}/></h1>
           
           <div className="flex bg-[#F7F7F7] p-1 rounded-xl border border-[#EAEAEA] w-fit">
             <button 

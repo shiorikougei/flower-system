@@ -2,8 +2,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 import { Plus, Package, Edit2, Trash2, Image as ImageIcon, X, AlertCircle, Save, ToggleLeft, ToggleRight, Bell, Send } from 'lucide-react';
+import FeatureGate from '@/components/FeatureGate';
+import HelpTooltip from '@/components/HelpTooltip';
 
 export default function StaffProductsPage() {
+  return <FeatureGate feature="ec" label="商品管理（EC）"><StaffProductsPageInner/></FeatureGate>;
+}
+
+function StaffProductsPageInner() {
   const [tenantId, setTenantId] = useState(null);
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -187,7 +193,7 @@ export default function StaffProductsPage() {
     <main className="pb-32 font-sans">
       <header className="h-20 bg-white/80 backdrop-blur-md border-b border-[#EAEAEA] flex items-center justify-between px-6 md:px-8 sticky top-0 z-10">
         <div>
-          <h1 className="text-[18px] font-bold tracking-tight text-[#2D4B3E]">商品管理（EC）</h1>
+          <h1 className="text-[18px] font-bold tracking-tight text-[#2D4B3E] flex items-center gap-2">商品管理（EC） <HelpTooltip articleId="product_register"/> <HelpTooltip articleId="restock_notification" size={14}/></h1>
           <p className="text-[11px] text-[#999999] mt-0.5">プリセット商品のカタログ・在庫を管理</p>
         </div>
         <button

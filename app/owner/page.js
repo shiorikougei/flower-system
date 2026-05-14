@@ -322,14 +322,20 @@ export default function OwnerDashboard() {
   };
 
   // テナントごとの料金計算
-  // ★ manualPriceJpy === 0 もモニター店舗用に有効（null/未入力のみ自動計算）
+  // ★ 優先順位:
+  //   (1) manualPriceJpy 指定 → 全体固定額（既存）
+  //   (2) featureOverrides 指定 → 機能ごとに上書き計算（新規）
+  //   (3) どちらも無し → 料金マスターで自動計算
   const calcTenantFee = (tenant) => {
     const billing = tenantBilling[tenant.id] || {};
     const m = billing.manualPriceJpy;
     if (m != null && m !== '' && Number(m) >= 0) {
       return calcWithManualOverride(Number(m), pricingConfig.taxRate);
     }
-    return calcMonthlyFee(tenant.features || {}, pricingConfig);
+    const overrides = (billing.basePriceOverride != null && billing.basePriceOverride !== '') || (billing.featurePriceOverrides && Object.keys(billing.featurePriceOverrides).length > 0)
+      ? { basePrice: billing.basePriceOverride, featurePrices: billing.featurePriceOverrides }
+      : null;
+    return calcMonthlyFee(tenant.features || {}, pricingConfig, overrides);
   };
 
   // ★ AI使用料計算（オーナーページの usageList から取得）
@@ -1079,7 +1085,7 @@ export default function OwnerDashboard() {
                           <div
                             key={item.key}
                             onClick={() => {
-                              if (item.alwaysOn) return;
+                              if (item.alwaysOn || item.comingSoon) return;
                               toggleFeature(featureModalTenant.id, item.key);
                               // モーダル内state更新
                               setFeatureModalTenant(prev => ({
@@ -1092,16 +1098,19 @@ export default function OwnerDashboard() {
                             }}
                             className={`flex items-start gap-3 p-3 rounded-xl border transition-all ${
                               item.alwaysOn ? 'border-[#333333] bg-[#1a1a1a] cursor-not-allowed opacity-70' :
+                              item.comingSoon ? 'border-amber-900/40 bg-amber-950/10 cursor-not-allowed opacity-60' :
                               isOn ? 'border-emerald-700 bg-emerald-950/30 cursor-pointer hover:border-emerald-500' :
                               'border-[#333333] bg-black cursor-pointer hover:border-[#555555]'
                             }`}
                           >
-                            <div className={`mt-0.5 w-10 h-6 rounded-full transition-all flex items-center px-0.5 ${isOn ? 'bg-emerald-600' : 'bg-[#333333]'}`}>
-                              <div className={`w-5 h-5 bg-white rounded-full transition-all ${isOn ? 'translate-x-4' : ''}`}></div>
+                            <div className={`mt-0.5 w-10 h-6 rounded-full transition-all flex items-center px-0.5 ${item.comingSoon ? 'bg-amber-900/40' : isOn ? 'bg-emerald-600' : 'bg-[#333333]'}`}>
+                              <div className={`w-5 h-5 bg-white rounded-full transition-all ${isOn && !item.comingSoon ? 'translate-x-4' : ''}`}></div>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className={`text-[13px] font-bold ${isOn ? 'text-white' : 'text-gray-400'}`}>
-                                {item.label}{item.alwaysOn && <span className="text-[9px] text-gray-600 ml-2">基本機能</span>}
+                              <p className={`text-[13px] font-bold flex items-center gap-2 ${isOn && !item.comingSoon ? 'text-white' : 'text-gray-400'}`}>
+                                {item.label}
+                                {item.alwaysOn && <span className="text-[9px] text-gray-600">基本機能</span>}
+                                {item.comingSoon && <span className="text-[9px] font-bold text-amber-500 bg-amber-950/40 border border-amber-700/40 px-2 py-0.5 rounded-full">準備中</span>}
                               </p>
                               <p className="text-[10px] text-gray-500 mt-0.5">{item.description}</p>
                             </div>
@@ -1365,6 +1374,41 @@ export default function OwnerDashboard() {
                             <input type="text" placeholder="理由(任意)" value={billing.manualReason || ''}
                               onChange={e => saveTenantBilling(t.id, { manualReason: e.target.value })}
                               className="w-32 mt-1 h-7 px-2 bg-black border border-[#333] rounded text-[10px] text-gray-400 outline-none"/>
+                          )}
+                          {/* ★ 機能別オーバーライド（詳細） */}
+                          {(billing.manualPriceJpy == null || billing.manualPriceJpy === '') && (
+                            <details className="mt-1">
+                              <summary className="cursor-pointer text-[9px] text-gray-500 hover:text-cyan-400">⚙️ 機能別の単価調整</summary>
+                              <div className="mt-2 p-2 bg-black border border-[#222] rounded space-y-1.5 w-64">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-[9px] text-gray-500 flex-1">基本料金</span>
+                                  <span className="text-[9px] text-gray-600">¥</span>
+                                  <input type="number" placeholder={`既定 ${pricingConfig.basePrice}`}
+                                    value={billing.basePriceOverride ?? ''}
+                                    onChange={e => saveTenantBilling(t.id, { basePriceOverride: e.target.value === '' ? null : Number(e.target.value) })}
+                                    className="w-16 h-6 px-1 bg-[#0a0a0a] border border-[#333] rounded text-[10px] text-white font-mono text-right outline-none"/>
+                                </div>
+                                {ALL_FEATURE_KEYS.filter(k => t.features?.[k]).map(k => {
+                                  const featItem = FEATURE_GROUPS.flatMap(g => g.items).find(i => i.key === k);
+                                  const ov = billing.featurePriceOverrides?.[k];
+                                  return (
+                                    <div key={k} className="flex items-center gap-1">
+                                      <span className="text-[9px] text-gray-500 flex-1 truncate">{featItem?.label || k}</span>
+                                      <span className="text-[9px] text-gray-600">¥</span>
+                                      <input type="number" placeholder={`既定 ${pricingConfig.featurePrices?.[k] ?? 0}`}
+                                        value={ov ?? ''}
+                                        onChange={e => {
+                                          const next = { ...(billing.featurePriceOverrides || {}) };
+                                          if (e.target.value === '') delete next[k]; else next[k] = Number(e.target.value);
+                                          saveTenantBilling(t.id, { featurePriceOverrides: next });
+                                        }}
+                                        className="w-16 h-6 px-1 bg-[#0a0a0a] border border-[#333] rounded text-[10px] text-white font-mono text-right outline-none"/>
+                                    </div>
+                                  );
+                                })}
+                                <p className="text-[8px] text-gray-600 pt-1 border-t border-[#222]">空欄＝既定 / 0＝無料</p>
+                              </div>
+                            </details>
                           )}
                         </td>
                         <td className={`px-4 py-3 text-right font-bold font-mono ${fee.manual ? 'text-blue-400' : 'text-cyan-400'}`}>

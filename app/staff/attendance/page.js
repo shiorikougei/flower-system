@@ -4,8 +4,14 @@ import { supabase } from '@/utils/supabase';
 import { canCurrent } from '@/utils/staffRole';
 import { calcPayroll, getPayrollWarnings, DEFAULT_PAYROLL_CONFIG } from '@/utils/payroll';
 import { Clock, RefreshCw, Edit2, Trash2, Plus, X, FileText, AlertCircle } from 'lucide-react';
+import FeatureGate from '@/components/FeatureGate';
+import HelpTooltip from '@/components/HelpTooltip';
 
 export default function AttendancePage() {
+  return <FeatureGate feature="attendanceManagement" label="勤怠管理"><AttendancePageInner/></FeatureGate>;
+}
+
+function AttendancePageInner() {
   const [attendance, setAttendance] = useState([]);
   const [summary, setSummary] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,6 +54,8 @@ export default function AttendancePage() {
         const s = data?.settings_data || {};
         setStaffList(s.staffList || []);
         if (s.payrollConfig) setPayrollConfig({...DEFAULT_PAYROLL_CONFIG, ...s.payrollConfig});
+        // ★ payrollConfig.enabled は features.payroll に連動
+        setPayrollConfig(prev => ({ ...prev, enabled: Boolean(s.features?.payroll) }));
         setAppName(s.generalConfig?.appName || '');
       } catch {}
     })();
@@ -303,7 +311,7 @@ export default function AttendancePage() {
     <main className="pb-32 font-sans text-left">
       <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] px-6 md:px-8 py-4 sticky top-0 z-10 flex items-center justify-between">
         <div>
-          <h1 className="text-[18px] md:text-[20px] font-bold text-[#2D4B3E] tracking-tight">勤怠管理</h1>
+          <h1 className="text-[18px] md:text-[20px] font-bold text-[#2D4B3E] tracking-tight flex items-center gap-2">勤怠管理 <HelpTooltip articleId="attendance_book_pdf"/></h1>
           <p className="text-[11px] font-bold text-[#999] mt-1">出退勤・休憩記録の管理 + 給与計算</p>
         </div>
         <button onClick={loadAttendance} className="p-2 hover:bg-[#FBFAF9] rounded-full text-[#999]">

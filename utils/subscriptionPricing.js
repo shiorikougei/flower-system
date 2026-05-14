@@ -29,18 +29,26 @@ export const DEFAULT_PRICING = {
  * 月額自動計算（features ON のものだけ加算）
  * @param {Object} features - { ec: true, sales: false, ... }
  * @param {Object} pricing - DEFAULT_PRICING の上書き
+ * @param {Object} overrides - 機能別手動料金 { basePrice?: number, featurePrices?: { ec: 0, sales: 1000 } }
+ *                              指定された機能は overrides の値で計算（モデル店舗・特別契約用）
  * @returns { basePrice, featureBreakdown, subTotal, tax, total }
  */
-export function calcMonthlyFee(features, pricing = DEFAULT_PRICING) {
-  const basePrice = Number(pricing.basePrice) || 0;
+export function calcMonthlyFee(features, pricing = DEFAULT_PRICING, overrides = null) {
+  const basePrice = (overrides?.basePrice != null && overrides.basePrice !== '')
+    ? Number(overrides.basePrice)
+    : (Number(pricing.basePrice) || 0);
   const featurePrices = pricing.featurePrices || {};
+  const featureOverrides = overrides?.featurePrices || {};
   const breakdown = [];
   let subTotal = basePrice;
 
   Object.keys(featurePrices).forEach(key => {
     if (features?.[key]) {
-      const price = Number(featurePrices[key]) || 0;
-      breakdown.push({ key, price });
+      const overridden = featureOverrides[key];
+      const price = (overridden != null && overridden !== '')
+        ? Number(overridden)
+        : (Number(featurePrices[key]) || 0);
+      breakdown.push({ key, price, overridden: overridden != null && overridden !== '' });
       subTotal += price;
     }
   });

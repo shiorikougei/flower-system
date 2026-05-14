@@ -126,14 +126,17 @@ export default function StaffLogin() {
               {isLoading ? <Loader2 size={18} className="animate-spin" /> : 'ログイン'}
             </button>
 
-            <div className="text-center pt-4 border-t border-[#FBFAF9]">
-              <button 
-                type="button" 
-                onClick={() => { setIsResetMode(true); setMessage({type:'', text:''}); }} 
-                className="text-[11px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-colors"
+            <div className="text-center pt-4 border-t border-[#FBFAF9] space-y-2">
+              <button
+                type="button"
+                onClick={() => { setIsResetMode(true); setMessage({type:'', text:''}); }}
+                className="text-[11px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-colors block w-full"
               >
                 パスワードをお忘れですか？
               </button>
+              <a href="/staff/help#cant_login" className="text-[10px] text-[#bbb] hover:text-[#2D4B3E] underline">
+                ログインできない時のヘルプを見る
+              </a>
             </div>
           </form>
         ) : (

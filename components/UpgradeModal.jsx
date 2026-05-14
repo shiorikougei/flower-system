@@ -29,8 +29,14 @@ export default function UpgradeModal({ open, onClose, tenantSettings }) {
   const billing = tenantSettings?.subscriptionBilling || {};
   const m = billing.manualPriceJpy;
   const hasManual = m != null && m !== '' && Number(m) >= 0;
+  // 機能別オーバーライド
+  const hasFeatureOverrides = (billing.basePriceOverride != null && billing.basePriceOverride !== '') ||
+    (billing.featurePriceOverrides && Object.keys(billing.featurePriceOverrides).length > 0);
+  const featureOverrides = hasFeatureOverrides
+    ? { basePrice: billing.basePriceOverride, featurePrices: billing.featurePriceOverrides }
+    : null;
 
-  // 未開放の機能リスト
+  // 未開放の機能リスト（準備中も「予告」として表示）
   const availableUpgrades = useMemo(() => {
     return FEATURE_GROUPS.flatMap(g =>
       g.items
@@ -38,6 +44,9 @@ export default function UpgradeModal({ open, onClose, tenantSettings }) {
         .map(i => ({ ...i, groupName: g.name, price: pricing.featurePrices[i.key] || 0 }))
     );
   }, [currentFeatures]);
+  // 準備中フラグは別配列に分けてサブスク選択不可
+  const readyUpgrades = availableUpgrades.filter(i => !i.comingSoon);
+  const comingSoonUpgrades = availableUpgrades.filter(i => i.comingSoon);
 
   // 選択合計（手動オーバーライドがあれば固定額のまま）
   const summary = useMemo(() => {
@@ -46,13 +55,13 @@ export default function UpgradeModal({ open, onClose, tenantSettings }) {
     }
     const previewFeatures = { ...currentFeatures };
     Object.keys(selected).forEach(k => { if (selected[k]) previewFeatures[k] = true; });
-    return calcMonthlyFee(previewFeatures, pricing);
-  }, [selected, currentFeatures, hasManual, m]);
+    return calcMonthlyFee(previewFeatures, pricing, featureOverrides);
+  }, [selected, currentFeatures, hasManual, m, featureOverrides]);
 
   const currentFee = useMemo(() => {
     if (hasManual) return calcWithManualOverride(Number(m), pricing.taxRate);
-    return calcMonthlyFee(currentFeatures, pricing);
-  }, [currentFeatures, hasManual, m]);
+    return calcMonthlyFee(currentFeatures, pricing, featureOverrides);
+  }, [currentFeatures, hasManual, m, featureOverrides]);
   const diff = summary.total - currentFee.total;
 
   const submitUpgrade = async () => {
@@ -109,6 +118,9 @@ export default function UpgradeModal({ open, onClose, tenantSettings }) {
           <div>
             <h3 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2">
               <Sparkles size={18}/> 機能アップグレード
+              <a href="/staff/help#feature_missing" target="_blank" rel="noopener noreferrer" title="機能が見つからない時" className="text-[#999] hover:text-[#2D4B3E]">
+                <span className="text-[11px] border border-[#EAEAEA] rounded-full w-5 h-5 inline-flex items-center justify-center">?</span>
+              </a>
             </h3>
             <p className="text-[11px] text-[#999] mt-1">追加したい機能にチェックを入れてください</p>
           </div>
@@ -123,7 +135,7 @@ export default function UpgradeModal({ open, onClose, tenantSettings }) {
           ) : (
             <>
               <div className="space-y-2">
-                {availableUpgrades.map(item => (
+                {readyUpgrades.map(item => (
                   <label key={item.key} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer ${selected[item.key] ? 'border-[#117768] bg-[#117768]/5' : 'border-[#EAEAEA] hover:border-[#2D4B3E]/40'}`}>
                     <input type="checkbox" checked={Boolean(selected[item.key])}
                       onChange={(e) => setSelected(s => ({ ...s, [item.key]: e.target.checked }))}
@@ -138,6 +150,26 @@ export default function UpgradeModal({ open, onClose, tenantSettings }) {
                     </div>
                   </label>
                 ))}
+
+                {/* 準備中機能：操作不可で「準備中」バッジ */}
+                {comingSoonUpgrades.length > 0 && (
+                  <div className="pt-4 mt-4 border-t border-dashed border-[#EAEAEA] space-y-2">
+                    <p className="text-[10px] font-bold text-[#999] tracking-widest">— Coming Soon —</p>
+                    {comingSoonUpgrades.map(item => (
+                      <div key={item.key} className="flex items-start gap-3 p-3 rounded-xl border border-dashed border-[#EAEAEA] bg-[#FBFAF9] opacity-70">
+                        <div className="mt-1 w-5 h-5 rounded bg-[#EAEAEA] flex items-center justify-center text-[10px] text-[#999]">🔒</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <p className="text-[13px] font-bold text-[#777]">{item.label}</p>
+                            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full shrink-0">準備中</span>
+                          </div>
+                          <p className="text-[11px] text-[#888] mt-0.5">{item.description}</p>
+                          <p className="text-[9px] text-[#bbb] mt-1">[{item.groupName}]</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* 料金変更プレビュー */}

@@ -1,9 +1,10 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/utils/supabase'; 
-import { 
-  ChevronLeft, ChevronRight, RefreshCw, Calendar as CalendarIcon, 
+import {
+  ChevronLeft, ChevronRight, RefreshCw, Calendar as CalendarIcon,
 } from 'lucide-react';
+import HelpTooltip from '@/components/HelpTooltip';
 import OrderDetailModal from '@/components/OrderDetailModal'; 
 
 export default function CalendarPage() {
@@ -290,7 +291,7 @@ export default function CalendarPage() {
     <div className="pb-32 font-sans">
       <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] flex flex-col md:flex-row md:items-center justify-between px-4 md:px-8 py-3 md:h-20 gap-3 sticky top-0 z-10">
         <div className="flex items-center justify-between w-full md:w-auto">
-          <h1 className="text-[16px] md:text-[18px] font-bold tracking-tight text-[#2D4B3E]">納品カレンダー</h1>
+          <h1 className="text-[16px] md:text-[18px] font-bold tracking-tight text-[#2D4B3E] flex items-center gap-2">納品カレンダー <HelpTooltip articleId="order_status"/></h1>
           <button onClick={() => fetchData(true)} className="md:hidden flex items-center gap-1 px-3 py-1.5 bg-white border border-[#EAEAEA] rounded-lg text-[10px] font-bold text-[#555555] hover:border-[#2D4B3E] transition-all shadow-sm">
             <RefreshCw size={12} /> 更新
           </button>

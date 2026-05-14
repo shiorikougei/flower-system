@@ -40,11 +40,11 @@ export const FEATURE_GROUPS = [
     ],
   },
   {
-    name: '法人・拡張系（プレミアム）',
+    name: '法人・拡張系（準備中）',
     items: [
-      { key: 'b2b', label: '法人ページ', description: '法人取引・継続発注' },
-      { key: 'deliveryOutsource', label: '配達業務委託', description: '外部ドライバー連携' },
-      { key: 'posRegister', label: 'POSレジ', description: '店頭レジ機能' },
+      { key: 'b2b', label: '法人ページ', description: '法人取引・継続発注', comingSoon: true },
+      { key: 'deliveryOutsource', label: '配達業務委託', description: '外部ドライバー連携', comingSoon: true },
+      { key: 'posRegister', label: 'POSレジ', description: '店頭レジ機能', comingSoon: true },
     ],
   },
 ];

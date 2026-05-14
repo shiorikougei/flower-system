@@ -203,6 +203,8 @@ export default function SettingsPage() {
 
     if (s.features && s.features.b2b) setIsB2BEnabled(true);
     setIsLineFeatureEnabled(Boolean(s.features?.lineIntegration));
+    // ★ payrollConfig.enabled は features.payroll に強制連動（二重管理を解消）
+    setPayrollConfig(prev => ({ ...prev, enabled: Boolean(s.features?.payroll) }));
   };
 
   useEffect(() => {
@@ -631,7 +633,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="pt-6 border-t border-[#FBFAF9] space-y-4">
-            <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><AlertCircle size={16}/> 注意書き・ご案内テキスト設定</h3>
+            <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><AlertCircle size={16}/> 注意書き・ご案内テキスト設定 <HelpTooltip articleId="mail_not_sent"/></h3>
             <p className="text-[10px] text-[#999999]">お客様のオーダー画面で表示される、各受取方法ごとの注意書きを店舗別に設定できます。</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
@@ -1088,15 +1090,19 @@ export default function SettingsPage() {
           <p className="text-[11px] text-[#999] leading-relaxed">
             勤怠記録と時給から、設定した料率通りに給与計算します。<strong className="text-amber-600">最終チェックは社会保険労務士にご依頼ください。</strong>
           </p>
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input type="checkbox" checked={Boolean(payrollConfig.enabled)}
-              onChange={(e) => setPayrollConfig({...payrollConfig, enabled: e.target.checked})}
-              className="mt-1 w-4 h-4 accent-[#117768]"/>
-            <div>
-              <p className="text-[12px] font-bold text-[#111]">給与計算機能を有効化する</p>
-              <p className="text-[10px] text-[#555] mt-1">スタッフ管理に時給入力・勤怠ページに給与表示が追加されます</p>
+          <div className={`p-3 rounded-xl border ${payrollConfig.enabled ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
+            <div className="flex items-center gap-2">
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${payrollConfig.enabled ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'}`}>
+                {payrollConfig.enabled ? '✓ ON' : 'OFF'}
+              </span>
+              <p className="text-[12px] font-bold text-[#111]">給与計算機能（サブスク連動）</p>
             </div>
-          </label>
+            <p className="text-[10px] text-[#555] mt-2 leading-relaxed">
+              {payrollConfig.enabled
+                ? '給与計算サブスクが有効です。下の各項目で料率を調整してください。'
+                : 'NocoLdeのサブスクで「給与計算」を契約するとON。サイドバー下部の「機能アップグレード」からお申し込みください。'}
+            </p>
+          </div>
 
           {payrollConfig.enabled && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-3 border-t border-[#EAEAEA]">

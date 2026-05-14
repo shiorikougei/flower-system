@@ -237,29 +237,29 @@ export default function DashboardPage() {
                 <Clock size={22}/>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-bold text-[#999] tracking-widest flex items-center gap-1">あなたの勤怠 <HelpTooltip articleId="punch_clock" size={11}/></p>
+                <p className="text-[12px] font-bold text-[#555] tracking-widest flex items-center gap-1">あなたの勤怠 <HelpTooltip articleId="punch_clock" size={12}/></p>
                 {currentStaff?.name ? (
                   <>
-                    <p className="text-[15px] font-bold text-[#111]">{currentStaff.name}</p>
+                    <p className="text-[16px] font-bold text-[#111]">{currentStaff.name}</p>
                     {myOpenRecord ? (
                       <>
-                        <p className="text-[11px] text-[#117768] font-bold mt-0.5">
+                        <p className="text-[13px] text-[#117768] font-bold mt-0.5">
                           ✓ {new Date(myOpenRecord.clock_in_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} から出勤中
                         </p>
                         {isOnBreak && (
-                          <p className="text-[11px] text-amber-600 font-bold mt-0.5 flex items-center gap-1">
-                            <Coffee size={11}/> 休憩中（{new Date(myOpenRecord.break_start_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}〜）
+                          <p className="text-[12px] text-amber-600 font-bold mt-0.5 flex items-center gap-1">
+                            <Coffee size={12}/> 休憩中（{new Date(myOpenRecord.break_start_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}〜）
                           </p>
                         )}
                         {myOpenRecord.break_minutes > 0 && (
-                          <p className="text-[10px] text-[#999] mt-0.5">本日の休憩累計: {myOpenRecord.break_minutes}分</p>
+                          <p className="text-[11px] text-[#777] mt-0.5">本日の休憩累計: {myOpenRecord.break_minutes}分</p>
                         )}
                       </>
                     ) : (
-                      <p className="text-[11px] text-[#999] mt-0.5">未打刻</p>
+                      <p className="text-[12px] text-[#999] mt-0.5">未打刻</p>
                     )}
                     {myMonthSummary && (
-                      <p className="text-[10px] text-[#555] mt-1">今月: {myMonthSummary.totalHours}時間 / {myMonthSummary.days}日</p>
+                      <p className="text-[11px] text-[#555] mt-1">今月: {myMonthSummary.totalHours}時間 / {myMonthSummary.days}日</p>
                     )}
                   </>
                 ) : (
@@ -415,7 +415,7 @@ export default function DashboardPage() {
             </div>
           </div>
           
-          <div onClick={() => router.push('/staff/orders')} className="bg-white rounded-2xl p-6 border border-[#EAEAEA] shadow-sm flex flex-col gap-4 relative overflow-hidden group cursor-pointer hover:shadow-md hover:-translate-y-1 hover:border-[#E74C3C]/40 transition-all duration-300">
+          <div onClick={() => router.push('/staff/orders?filter=uncompleted')} className="bg-white rounded-2xl p-6 border border-[#EAEAEA] shadow-sm flex flex-col gap-4 relative overflow-hidden group cursor-pointer hover:shadow-md hover:-translate-y-1 hover:border-[#E74C3C]/40 transition-all duration-300">
             <div className="flex items-start justify-between relative z-10">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><Clock size={20}/></div>

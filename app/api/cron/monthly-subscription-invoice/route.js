@@ -65,12 +65,18 @@ export async function GET(request) {
     for (const t of tenants) {
       try {
         const billing = tenantBilling[t.id] || {};
-        // ★ manualPriceJpy === 0 もモニター店舗用に有効（null/空欄のみ自動計算）
+        // ★ 優先順位: (1)固定額 manualPriceJpy → (2)機能別オーバーライド → (3)自動計算
         const m = billing.manualPriceJpy;
         const useManual = m != null && m !== '' && Number(m) >= 0;
+        const hasFeatureOverrides = (billing.basePriceOverride != null && billing.basePriceOverride !== '') ||
+          (billing.featurePriceOverrides && Object.keys(billing.featurePriceOverrides).length > 0);
         const fee = useManual
           ? calcWithManualOverride(Number(m), pricing.taxRate)
-          : calcMonthlyFee(t.features, pricing);
+          : calcMonthlyFee(
+              t.features,
+              pricing,
+              hasFeatureOverrides ? { basePrice: billing.basePriceOverride, featurePrices: billing.featurePriceOverrides } : null
+            );
 
         // ★ AI使用料計算
         const { data: tRow } = await supabaseAdmin.from('app_settings').select('settings_data').eq('id', t.id).single();

@@ -1,16 +1,22 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
-import { 
-  Wand2, Copy, ExternalLink, CheckCircle, Trash2, 
+import {
+  Wand2, Copy, ExternalLink, CheckCircle, Trash2,
   Plus, Link as LinkIcon, Image as ImageIcon, Loader2, Sparkles, LayoutGrid,
   Camera, ArrowRight // ★ アイコン追加
 } from 'lucide-react';
+import FeatureGate from '@/components/FeatureGate';
+import HelpTooltip from '@/components/HelpTooltip';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 const GALLERY_CACHE_KEY = 'florix_gallery_cache';
 
 export default function PortfolioPage() {
+  return <FeatureGate feature="portfolio" label="作品管理"><PortfolioPageInner/></FeatureGate>;
+}
+
+function PortfolioPageInner() {
   const [appSettings, setAppSettings] = useState(null);
   const [images, setImages] = useState([]);
   
@@ -243,7 +249,7 @@ export default function PortfolioPage() {
     <div className="bg-[#FBFAF9] flex flex-col font-sans text-[#111111] pb-32 min-h-screen">
       
       <header className="h-20 bg-white/80 backdrop-blur-md border-b border-[#EAEAEA] flex items-center justify-between px-6 md:px-8 sticky top-0 z-10">
-        <h1 className="text-[18px] font-bold tracking-tight text-[#2D4B3E]">作品・SNS連携管理</h1>
+        <h1 className="text-[18px] font-bold tracking-tight text-[#2D4B3E] flex items-center gap-2">作品・SNS連携管理 <HelpTooltip articleId="product_register"/></h1>
       </header>
 
       <div className="max-w-[1000px] mx-auto w-full p-4 md:p-8 space-y-6">

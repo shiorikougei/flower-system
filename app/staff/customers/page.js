@@ -7,8 +7,18 @@ import {
   Calendar, ChevronRight, X, Filter, PieChart, Heart,
   MessageCircle, Palette, Sparkles, Lock, Trash2, ArrowRight, Check
 } from 'lucide-react';
+import FeatureGate from '@/components/FeatureGate';
+import HelpTooltip from '@/components/HelpTooltip';
 
 export default function CustomersPage() {
+  return (
+    <FeatureGate feature="customers" label="顧客管理">
+      <CustomersPageInner/>
+    </FeatureGate>
+  );
+}
+
+function CustomersPageInner() {
   return (
     <Suspense fallback={<div className="p-20 text-center text-[#999] font-bold">読み込み中...</div>}>
       <CustomersPageContent />
@@ -292,7 +302,7 @@ function CustomersPageContent() {
     <main className="pb-32 font-sans text-left">
       <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] flex flex-col md:flex-row md:items-center justify-between px-6 md:px-8 py-4 sticky top-0 z-10 gap-4">
         <div>
-          <h1 className="text-[18px] md:text-[20px] font-bold text-[#2D4B3E] tracking-tight">顧客リスト＆分析</h1>
+          <h1 className="text-[18px] md:text-[20px] font-bold text-[#2D4B3E] tracking-tight flex items-center gap-2">顧客リスト＆分析 <HelpTooltip articleId="customer_card"/></h1>
           <p className="text-[11px] font-bold text-[#999] mt-1">自動名寄せ・リピート率分析</p>
         </div>
         
@@ -583,7 +593,7 @@ function CustomersPageContent() {
               {/* ★ LINE連携管理 */}
               <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm p-6">
                 <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#F7F7F7] pb-3 mb-4 flex items-center gap-2">
-                  <MessageCircle size={16} className="text-[#06C755]"/> LINE連携管理
+                  <MessageCircle size={16} className="text-[#06C755]"/> LINE連携管理 <HelpTooltip articleId="line_manual_link"/>
                 </h3>
                 {isLoadingDetail ? (
                   <p className="text-[12px] text-[#999]">読み込み中...</p>

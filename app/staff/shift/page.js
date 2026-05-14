@@ -3,11 +3,17 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/utils/supabase';
 import { ChevronLeft, ChevronRight, RefreshCw, Lock, Unlock, X, Save, Sparkles, Heart, BarChart2, CalendarDays, AlertCircle } from 'lucide-react';
 import { canCurrent } from '@/utils/staffRole';
+import FeatureGate from '@/components/FeatureGate';
+import HelpTooltip from '@/components/HelpTooltip';
 
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 const DAY_LABELS = { sun: '日', mon: '月', tue: '火', wed: '水', thu: '木', fri: '金', sat: '土' };
 
 export default function ShiftPage() {
+  return <FeatureGate feature="shiftManagement" label="シフト管理"><ShiftPageInner/></FeatureGate>;
+}
+
+function ShiftPageInner() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth() + 1); // 1-12
   const [shifts, setShifts] = useState([]);
@@ -171,7 +177,7 @@ export default function ShiftPage() {
       <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] px-6 md:px-8 py-4 sticky top-0 z-10">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
           <div>
-            <h1 className="text-[18px] md:text-[20px] font-bold text-[#2D4B3E] tracking-tight">シフト管理</h1>
+            <h1 className="text-[18px] md:text-[20px] font-bold text-[#2D4B3E] tracking-tight flex items-center gap-2">シフト管理 <HelpTooltip articleId="shift_auto_generate"/></h1>
             <p className="text-[11px] font-bold text-[#999] mt-1">月別シフトの確認・編集・自動生成</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">

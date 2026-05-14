@@ -129,13 +129,15 @@ export default function StaffLayout({ children }) {
         { name: 'ヘルプセンター', path: '/staff/help', icon: BookOpen, perm: 'home' },
       ],
     },
-    {
-      name: '拡張機能',
-      items: [
-        { name: '配達業務委託', path: '/staff/setting/drivers', icon: Briefcase, perm: 'deliveries', feature: 'deliveryOutsource' },
-        { name: '法人管理', path: '/staff/corporations', icon: Building2, perm: 'settings', feature: 'b2b' },
-      ],
-    },
+    // ★ 拡張機能（準備中）: 機能はまだ未実装。サイドバーには出さず、
+    //    オーナーページのアップグレード画面で「準備中」表示のみ
+    // {
+    //   name: '拡張機能',
+    //   items: [
+    //     { name: '配達業務委託', path: '/staff/settings/drivers', icon: Briefcase, perm: 'deliveries', feature: 'deliveryOutsource' },
+    //     { name: '法人管理', path: '/staff/corporate', icon: Building2, perm: 'settings', feature: 'b2b' },
+    //   ],
+    // },
   ];
 
   // role + features でフィルタ
@@ -209,36 +211,8 @@ export default function StaffLayout({ children }) {
     // リロードしない（state更新だけで反映）
   };
 
-  const handleUpgradeRequest = async () => {
-    if (!confirm('アップグレード料金について問い合わせ、機能の解放を依頼しますか？')) return;
-    setIsSending(true);
-    try {
-      const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
-      const ownerData = data?.settings_data || {};
-      const currentReqs = ownerData.upgradeRequests || [];
-
-      const newReq = {
-        id: `req_${Date.now()}`,
-        tenantId: 'current_shop', 
-        tenantName: appName,
-        featureKey: 'premium',
-        featureName: 'プレミアムプラン一式 (配達委託・法人管理)',
-        date: new Date().toISOString().split('T')[0],
-        status: 'pending'
-      };
-
-      await supabase.from('app_settings').upsert({
-        id: 'nocolde_owner',
-        settings_data: { ...ownerData, upgradeRequests: [newReq, ...currentReqs] }
-      });
-      
-      alert('アップグレードの問い合わせを送信しました！オーナーからの連絡をお待ちください。');
-    } catch (err) {
-      alert('送信に失敗しました。');
-    } finally {
-      setIsSending(false);
-    }
-  };
+  // 旧アップグレード依頼関数は UpgradeModal に統合済みのため削除
+  // （current_shop ハードコードのため動作していなかった）
 
   const handleFeedbackSubmit = async (e) => {
     e.preventDefault();

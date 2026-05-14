@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { Store, AlertCircle, Calendar, ChevronRight, Package } from 'lucide-react';
 import TatefudaPreview from '@/components/TatefudaPreview';
+import HelpTooltip from '@/components/HelpTooltip';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 const GALLERY_CACHE_KEY = 'florix_gallery_cache';
@@ -457,7 +458,7 @@ export default function StaffNewOrderPage() {
       <main className="flex-1 flex flex-col min-w-0">
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-[#EAEAEA] flex items-center justify-between px-8 sticky top-0 z-10">
           <h1 className="text-[18px] font-bold tracking-tight text-[#2D4B3E] flex items-center gap-3">
-            店舗注文受付 (代理入力)
+            店舗注文受付 (代理入力) <HelpTooltip articleId="order_status"/>
             <div className="flex gap-2">
               {staffConfig.ignoreLeadTime && <span className="text-[10px] bg-orange-100 text-orange-700 border border-orange-200 px-2 py-1 rounded-md font-bold">納期制限 解除中</span>}
               {staffConfig.allowCustomPrice && <span className="text-[10px] bg-orange-100 text-orange-700 border border-orange-200 px-2 py-1 rounded-md font-bold">金額自由入力 解除中</span>}

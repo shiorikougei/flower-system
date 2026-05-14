@@ -72,14 +72,20 @@ export async function POST(request) {
     // 料金プレビュー（オーナー設定があれば取得）
     const { data: ownerRow } = await supabaseAdmin.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
     const pricing = { ...DEFAULT_PRICING, ...(ownerRow?.settings_data?.pricingConfig || {}) };
-    // ★ 手動オーバーライドがあればそちらを優先（モデル店舗・特別契約）
+    // ★ 手動オーバーライド優先順位: 全体固定 > 機能別 > 自動計算
     const tenantBilling = ownerRow?.settings_data?.tenantBilling?.[tenantId] || {};
     const m = tenantBilling.manualPriceJpy;
     const useManual = m != null && m !== '' && Number(m) >= 0;
+    const hasFeatureOverrides = (tenantBilling.basePriceOverride != null && tenantBilling.basePriceOverride !== '') ||
+      (tenantBilling.featurePriceOverrides && Object.keys(tenantBilling.featurePriceOverrides).length > 0);
     const newFee = useManual
       ? calcWithManualOverride(Number(m), pricing.taxRate)
-      : calcMonthlyFee(nextFeatures, pricing);
-    const isManualOverride = useManual;
+      : calcMonthlyFee(
+          nextFeatures,
+          pricing,
+          hasFeatureOverrides ? { basePrice: tenantBilling.basePriceOverride, featurePrices: tenantBilling.featurePriceOverrides } : null
+        );
+    const isManualOverride = useManual || hasFeatureOverrides;
 
     const html = `<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#FBFAF9;font-family:'Hiragino Sans',sans-serif;color:#111;line-height:1.7;">
