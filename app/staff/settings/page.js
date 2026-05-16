@@ -983,10 +983,10 @@ export default function SettingsPage() {
               <p className="col-span-full text-[11px] text-orange-700 italic">下の「業者配送 サイズ・地域マスタ」でサイズを登録してください。</p>
             ) : (
               shippingSizes.map(size => (
-                <div key={size} className="bg-white border border-orange-200 rounded-lg p-3">
-                  <label className="text-[10px] font-bold text-orange-900">{size} サイズ</label>
-                  <div className="flex items-center gap-1 mt-1">
-                    <span className="text-[12px] text-orange-700">¥</span>
+                <div key={size} className="bg-white border border-orange-200 rounded-lg p-3 space-y-2">
+                  <label className="text-[11px] font-bold text-orange-900 block">{size} サイズ</label>
+                  <div className="flex items-center gap-1.5 bg-[#FBFAF9] border border-orange-300 rounded-md px-2 h-10 focus-within:border-orange-500 focus-within:bg-white transition-colors">
+                    <span className="text-[13px] font-bold text-orange-700">¥</span>
                     <input
                       type="number"
                       value={boxFeeConfig.ecBoxFees?.[size] ?? 0}
@@ -994,7 +994,7 @@ export default function SettingsPage() {
                         ...boxFeeConfig,
                         ecBoxFees: { ...(boxFeeConfig.ecBoxFees || {}), [size]: Number(e.target.value) }
                       })}
-                      className="flex-1 h-9 px-2 bg-orange-50 border border-orange-200 rounded text-[13px] font-bold text-right outline-none focus:border-orange-500"
+                      className="flex-1 bg-transparent text-[14px] font-bold text-right outline-none border-0 min-w-0"
                     />
                   </div>
                 </div>
