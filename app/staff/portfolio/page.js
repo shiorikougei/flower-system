@@ -144,7 +144,12 @@ function PortfolioPageInner() {
 
       const data = await response.json();
       if (data.caption) {
-        setNewImage({ ...newImage, caption: data.caption });
+        // ★ 管理番号があれば、キャプションの先頭に自動挿入
+        const mn = (newImage.managementNo || '').trim();
+        const finalCaption = mn
+          ? `📋 ${mn}\n\n${data.caption}`
+          : data.caption;
+        setNewImage({ ...newImage, caption: finalCaption });
       }
 
       // ★ 月の無料枠を超えた場合はメッセージ表示
@@ -523,13 +528,22 @@ function PortfolioPageInner() {
                   ></textarea>
                 </div>
 
-                {/* ★ 管理番号 */}
+                {/* ★ 管理番号（キャプション先頭にも自動反映） */}
                 <div>
-                  <label className="text-[11px] font-bold text-[#999999]">📋 管理番号 <span className="text-[10px] text-[#bbb]">(注文から自動引き継ぎ・手動編集可)</span></label>
+                  <label className="text-[11px] font-bold text-[#999999]">📋 管理番号 <span className="text-[10px] text-[#bbb]">(注文から自動引き継ぎ・キャプション先頭にも反映)</span></label>
                   <input
                     type="text"
                     value={newImage.managementNo || ''}
-                    onChange={e => setNewImage({ ...newImage, managementNo: e.target.value })}
+                    onChange={e => {
+                      const newMn = e.target.value;
+                      // キャプション先頭の「📋 xxx\n\n」を新しい管理番号で置換 or 追加
+                      const cap = newImage.caption || '';
+                      const stripped = cap.replace(/^📋\s+\S+\n+/, ''); // 既存の管理番号行を削除
+                      const newCap = newMn.trim()
+                        ? `📋 ${newMn.trim()}\n\n${stripped}`
+                        : stripped;
+                      setNewImage({ ...newImage, managementNo: newMn, caption: newCap });
+                    }}
                     placeholder="例: 20260514-001"
                     className="w-full h-11 px-3 mt-1 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] font-mono outline-none focus:border-[#2D4B3E]"
                   />
