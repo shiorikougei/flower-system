@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/utils/supabase';
 import {
   Wand2, Copy, ExternalLink, CheckCircle, Trash2,
@@ -38,6 +38,12 @@ function PortfolioPageInner() {
 
   // ★ 管理番号検索クエリ
   const [searchQuery, setSearchQuery] = useState('');
+
+  // ★ 作品化済みの注文を除外したリスト（納品写真から作成タブ用）
+  const pendingCompletedOrders = useMemo(() => {
+    const registeredIds = new Set((images || []).map(img => img.sourceOrderId).filter(Boolean));
+    return completedOrders.filter(o => !registeredIds.has(o.id));
+  }, [completedOrders, images]);
 
   const defaultDesignOptions = {
     purposes: ['誕生日', '開店', 'お供え', '就任・昇進祝い', '移転祝い'],
@@ -115,6 +121,7 @@ function PortfolioPageInner() {
       color: d.flowerColor || '',
       vibe: d.flowerVibe || '',
       managementNo: d.managementNo || '', // ★ 管理番号を引き継ぐ
+      sourceOrderId: order.id, // ★ 紐付け（作品化済み判定用）
       uploadFile: 'from_order' // 注文からの引き継ぎであることを示すフラグ
     });
     setActiveTab('new'); // 新規登録タブに移動！
@@ -208,6 +215,7 @@ function PortfolioPageInner() {
         color: newImage.color,
         vibe: newImage.vibe,
         managementNo: newImage.managementNo || '', // ★ 管理番号
+        sourceOrderId: newImage.sourceOrderId || null, // ★ 元注文との紐付け（作品化済み判定用）
       };
 
       const updatedImages = [newItem, ...images];
@@ -216,7 +224,7 @@ function PortfolioPageInner() {
       if (dbError) throw dbError;
 
       setImages(updatedImages);
-      setNewImage({ id: '', url: '', caption: '', price: '', flowerType: '', purpose: '', color: '', vibe: '', managementNo: '', uploadFile: null });
+      setNewImage({ id: '', url: '', caption: '', price: '', flowerType: '', purpose: '', color: '', vibe: '', managementNo: '', sourceOrderId: null, uploadFile: null });
       setActiveTab('list');
       alert('作品データを保存しました！');
 
@@ -271,7 +279,7 @@ function PortfolioPageInner() {
           {/* ★ 新規追加：納品写真から作成タブ */}
           <button onClick={() => setActiveTab('from_orders')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all ${activeTab === 'from_orders' ? 'bg-white shadow-sm text-[#D97D54]' : 'text-[#999999] hover:text-[#555555]'}`}>
             <Camera size={16}/> 納品写真から作成
-            {completedOrders.length > 0 && <span className={`ml-1 px-1.5 rounded-full text-[10px] ${activeTab === 'from_orders' ? 'bg-[#D97D54]/10 text-[#D97D54]' : 'bg-[#D97D54] text-white'}`}>{completedOrders.length}</span>}
+            {pendingCompletedOrders.length > 0 && <span className={`ml-1 px-1.5 rounded-full text-[10px] ${activeTab === 'from_orders' ? 'bg-[#D97D54]/10 text-[#D97D54]' : 'bg-[#D97D54] text-white'}`}>{pendingCompletedOrders.length}</span>}
           </button>
           <button onClick={() => setActiveTab('new')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all ${activeTab === 'new' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}>
             <Plus size={16}/> 手動で新規登録
@@ -377,14 +385,14 @@ function PortfolioPageInner() {
               <Camera size={18}/> 注文詳細でアップロードされた完成写真
             </h2>
             
-            {completedOrders.length === 0 ? (
+            {pendingCompletedOrders.length === 0 ? (
               <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#EAEAEA] text-[#999999] text-[13px] font-bold">
-                まだ完成写真がアップロードされた注文はありません。<br/>
-                <span className="text-[11px] font-normal block mt-2">注文詳細画面から完成写真をアップロードすると、ここに自動的に表示されます。</span>
+                作品登録が必要な完成写真はありません。<br/>
+                <span className="text-[11px] font-normal block mt-2">注文詳細画面から完成写真をアップロードすると、ここに自動的に表示されます。<br/>登録済みの作品は「登録済み一覧」タブから確認できます。</span>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {completedOrders.map(order => {
+                {pendingCompletedOrders.map(order => {
                   const d = order.order_data;
                   return (
                     <div key={order.id} className="bg-white rounded-2xl border border-[#EAEAEA] overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col group">
