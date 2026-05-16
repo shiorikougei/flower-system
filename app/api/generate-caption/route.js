@@ -10,8 +10,20 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { incrementUsage, getMonthlyUsage, getAiPricing } from '@/utils/aiUsage';
+import { requireAuthedUser } from '@/utils/adminAuth';
 
 export const runtime = 'nodejs';
+
+// ★ 簡易レート制限（テナント/分）— OpenAI 課金踏み台防止
+const rateMap = new Map();
+function checkRate(key, maxPerMin = 20) {
+  const now = Date.now();
+  const entry = rateMap.get(key) || { count: 0, resetAt: now + 60000 };
+  if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + 60000; }
+  entry.count++;
+  rateMap.set(key, entry);
+  return entry.count <= maxPerMin;
+}
 
 const DEFAULT_CAPTION_PROMPT = `あなたは {appName} の SNS担当です。お花の注文を受けて完成した作品をInstagramに投稿します。以下の条件でキャプションを作成してください。
 
@@ -36,30 +48,43 @@ const DEFAULT_CAPTION_PROMPT = `あなたは {appName} の SNS担当です。お
 
 export async function POST(request) {
   try {
+    // ★ 認証必須: スタッフの自テナント呼び出しのみ許可
+    const auth = await requireAuthedUser(request);
+    if (!auth.ok) return auth.response;
+
     const body = await request.json();
     const { purpose, color, vibe, price, appName, tenantId } = body;
+
+    // ★ tenantId 必須 + 認証ユーザーの自テナントのみ許可（OpenAI課金踏み台防止）
+    if (!tenantId) {
+      return NextResponse.json({ error: 'tenantId が必要です' }, { status: 400 });
+    }
+    if (String(auth.tenant_id) !== String(tenantId)) {
+      return NextResponse.json({ error: '他テナントでは呼び出せません' }, { status: 403 });
+    }
+    // レート制限: 1テナント20回/分
+    if (!checkRate(`cap_${tenantId}`)) {
+      return NextResponse.json({ error: 'リクエスト過多です' }, { status: 429 });
+    }
 
     // 1. テナント設定から captionPrompt / showPriceInCaption を取得
     let captionPrompt = DEFAULT_CAPTION_PROMPT;
     let showPrice = true;
-    let supabase = null;
-    if (tenantId) {
-      try {
-        supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL,
-          process.env.SUPABASE_SERVICE_ROLE_KEY
-        );
-        const { data } = await supabase
-          .from('app_settings')
-          .select('settings_data')
-          .eq('id', tenantId)
-          .single();
-        const settings = data?.settings_data || {};
-        if (settings.captionPrompt) captionPrompt = settings.captionPrompt;
-        if (typeof settings.showPriceInCaption === 'boolean') showPrice = settings.showPriceInCaption;
-      } catch (e) {
-        console.warn('[generate-caption] テナント設定取得失敗、デフォルト使用', e?.message);
-      }
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+    try {
+      const { data } = await supabase
+        .from('app_settings')
+        .select('settings_data')
+        .eq('id', tenantId)
+        .single();
+      const settings = data?.settings_data || {};
+      if (settings.captionPrompt) captionPrompt = settings.captionPrompt;
+      if (typeof settings.showPriceInCaption === 'boolean') showPrice = settings.showPriceInCaption;
+    } catch (e) {
+      console.warn('[generate-caption] テナント設定取得失敗、デフォルト使用', e?.message);
     }
 
     // ★ 利用カウンター: 月の無料枠を超えていないかチェック

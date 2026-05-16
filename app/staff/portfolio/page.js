@@ -135,9 +135,13 @@ function PortfolioPageInner() {
     setIsGenerating(true);
     
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch('/api/generate-caption', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
         body: JSON.stringify({
           flowerType: newImage.flowerType,
           purpose: newImage.purpose,

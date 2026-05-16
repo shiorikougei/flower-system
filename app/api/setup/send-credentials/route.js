@@ -6,6 +6,7 @@
 // 既存テナントのパスワード再発行にも使用
 
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { sendEmail, noReplyFooter } from '@/utils/email';
 import { requireOwner } from '@/utils/adminAuth';
 
@@ -18,15 +19,28 @@ export async function POST(request) {
       return NextResponse.json({ error: 'email/systemPassword必須' }, { status: 400 });
     }
 
-    // ★ 再発行は NocoLde スーパー管理者のみ、初回setupは setup-token 経由なので一定許容
+    // ★ 再発行は NocoLde スーパー管理者のみ
     if (isReissue) {
       const auth = await requireOwner(request);
       if (!auth.ok) return auth.response;
     } else {
-      // 初回 setup: setupToken を検証（無いと拒否）
+      // ★ 初回 setup: 招待トークンを DB の nocolde_owner.invitations で実値検証
       const setupToken = request.headers.get('x-setup-token') || '';
       if (!setupToken || setupToken.length < 6) {
         return NextResponse.json({ error: 'setupToken が必要です' }, { status: 401 });
+      }
+      const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+      );
+      const { data: ownerRow } = await supabaseAdmin
+        .from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
+      const invitations = ownerRow?.settings_data?.invitations || [];
+      const matched = invitations.find(inv =>
+        inv.token === setupToken && String(inv.email).toLowerCase() === String(email).toLowerCase()
+      );
+      if (!matched) {
+        return NextResponse.json({ error: '無効な招待トークンです' }, { status: 403 });
       }
     }
 

@@ -12,6 +12,12 @@ export async function POST(request) {
       return NextResponse.json({ error: '必須項目が不足しています' }, { status: 400 });
     }
 
+    // ★ 最低 8 桁必須 + SQL ワイルドカード文字をエスケープ（総当たり攻撃防止）
+    const sanitizedOrderId = String(orderId).replace(/[%_\\]/g, '');
+    if (sanitizedOrderId.length < 8) {
+      return NextResponse.json({ error: '注文番号は8文字以上を入力してください' }, { status: 400 });
+    }
+
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return NextResponse.json({ error: 'サーバー設定エラー' }, { status: 500 });
     }
@@ -20,18 +26,17 @@ export async function POST(request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // 注文番号は uuid なので、prefix 検索 or 完全一致のどちらにするか
-    // 8桁の頭文字でも見つかるようにしておく（お客様向けは短い番号の方が便利）
+    // 注文番号は uuid。8文字以上 prefix 検索 or 完全一致
     let query = supabaseAdmin
       .from('orders')
       .select('id, created_at, payment_status, paid_at, order_data')
       .eq('tenant_id', tenantId);
 
-    // 8文字以下なら prefix 検索、それ以上なら完全一致
-    if (orderId.length <= 12) {
-      query = query.ilike('id::text', `${orderId}%`);
+    if (sanitizedOrderId.length < 36) {
+      // UUID は 36 文字。それ未満なら前方一致
+      query = query.ilike('id::text', `${sanitizedOrderId}%`);
     } else {
-      query = query.eq('id', orderId);
+      query = query.eq('id', sanitizedOrderId);
     }
 
     const { data: orders, error } = await query.limit(5);

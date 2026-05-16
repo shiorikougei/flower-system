@@ -12,11 +12,16 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { incrementUsage } from '@/utils/aiUsage';
+import { requireOwner } from '@/utils/adminAuth';
 
 export const runtime = 'nodejs';
 
 export async function POST(request) {
   try {
+    // ★ NocoLde スーパー管理者のみ実行可（OpenAI課金踏み台防止）
+    const auth = await requireOwner(request);
+    if (!auth.ok) return auth.response;
+
     const { samples, tenantName, tenantId } = await request.json();
     if (!Array.isArray(samples) || samples.length === 0) {
       return NextResponse.json({ error: 'samples (string配列) が必要です' }, { status: 400 });
