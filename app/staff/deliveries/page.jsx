@@ -185,13 +185,11 @@ export default function DeliveriesPage() {
     const newCount = all.filter(o => (o.order_data?.status || 'new') === 'new').length;
     const doneCount = all.filter(o => o.order_data?.status === '完了').length;
     const pickupNeedCount = all.filter(o => Number(o.order_data?.pickupFee || 0) > 0).length;
-    const absenceCount = all.filter(o => o.order_data?.absenceAction === '置き配').length;
     return {
       total: all.length,
       newCount,
       doneCount,
       pickupNeedCount,
-      absenceCount
     };
   }, [deliveryOrders]);
 
@@ -207,7 +205,6 @@ export default function DeliveriesPage() {
       `電話番号: ${targetInfo?.phone || '未設定'}`,
       `住所: 〒${targetInfo?.zip || ''} ${targetInfo?.address1 || ''} ${targetInfo?.address2 || ''}`.trim(),
       `商品: ${d.flowerType || '未設定'} (${d.flowerPurpose || '-'})`,
-      d.absenceAction === '置き配' ? `置き配: ${d.absenceNote || '指定あり'}` : '不在時: 持ち戻り',
       Number(d.pickupFee || 0) > 0 ? '備考: 後日、器の回収あり' : '',
       d.note ? `備考: ${d.note}` : ''
     ].filter(Boolean).join('\n');
@@ -316,10 +313,6 @@ export default function DeliveriesPage() {
             <div className="bg-white border border-[#E5E7EB] rounded-2xl px-4 py-3">
               <div className="text-[11px] text-[#6B7280] font-bold">未対応</div>
               <div className="text-[24px] font-bold text-[#B45309]">{summary.newCount}</div>
-            </div>
-            <div className="bg-white border border-[#E5E7EB] rounded-2xl px-4 py-3">
-              <div className="text-[11px] text-[#6B7280] font-bold">置き配あり</div>
-              <div className="text-[24px] font-bold text-[#DC2626]">{summary.absenceCount}</div>
             </div>
             <div className="bg-white border border-[#E5E7EB] rounded-2xl px-4 py-3">
               <div className="text-[11px] text-[#6B7280] font-bold">器回収あり</div>
@@ -431,20 +424,8 @@ export default function DeliveriesPage() {
                               </div>
                             </div>
 
-                            {(d.absenceAction === '置き配' || d.note || Number(d.pickupFee || 0) > 0 || d.isRecipientDifferent) && (
+                            {(d.note || Number(d.pickupFee || 0) > 0 || d.isRecipientDifferent) && (
                               <div className="space-y-2">
-                                {d.absenceAction === '置き配' && (
-                                  <div className="flex items-start gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2.5">
-                                    <AlertCircle size={15} className="text-orange-600 shrink-0 mt-0.5" />
-                                    <div>
-                                      <div className="text-[11px] font-bold text-orange-800">置き配指定</div>
-                                      <div className="text-[12px] font-bold text-orange-900 leading-relaxed">
-                                        {d.absenceNote || '指定あり'}
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-
                                 {Number(d.pickupFee || 0) > 0 && (
                                   <div className="flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5">
                                     <RotateCcw size={15} className="text-blue-600 shrink-0 mt-0.5" />

@@ -48,7 +48,12 @@ export default function SettingsPage() {
     bankName: '', branchName: '', accountType: '普通', accountNumber: '', accountName: ''
   });
 
-  const [statusConfig, setStatusConfig] = useState({ type: 'template', customLabels: ['受注', '制作', '配達', '片付', '請求'] });
+  const [statusConfig, setStatusConfig] = useState({
+    type: 'template',
+    customLabels: ['受注', '制作', '配達', '片付', '請求'],
+    ecLabels: ['受注', '発送準備中', '発送済み', '完了'],   // ★ EC共通ステータス
+    orderTypeLabels: {},  // ★ 花の種類ごと: { '花束': [...], 'アレンジ': [...] }
+  });
 
   const [designOptions, setDesignOptions] = useState({
     purposes: ['誕生日', '開店', 'お供え', '就任・昇進祝い', '移転祝い'],
@@ -467,25 +472,126 @@ export default function SettingsPage() {
     </div>
   );
 
-  const renderStatusTab = () => (
-    <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-6 animate-in fade-in">
-      <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><ListChecks size={20}/> 受注ステータス管理</h2>
-      <div className="flex gap-2 p-1 bg-[#F7F7F7] rounded-xl mb-4">
-        {['template', 'custom'].map(t => (
-          <button key={t} onClick={() => setStatusConfig({...statusConfig, type: t})} className={`flex-1 py-3 rounded-lg font-bold text-[12px] ${statusConfig.type === t ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}>{t === 'template' ? '標準' : 'カスタム'}</button>
-        ))}
-      </div>
-      <div className="space-y-3">
-        {(statusConfig.type === 'template' ? ['受注', '制作', '配達', '片付', '請求'] : statusConfig.customLabels).map((l, i) => (
-          <div key={i} className="flex gap-2">
-            <input type="text" value={l} readOnly={statusConfig.type==='template'} onChange={(e) => { if(statusConfig.type==='custom'){ const n = [...statusConfig.customLabels]; n[i] = e.target.value; setStatusConfig({...statusConfig, customLabels: n}); } }} className={`flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none ${statusConfig.type==='template'?'text-[#999999] cursor-not-allowed':'focus:border-[#2D4B3E]'}`} />
-            {statusConfig.type === 'custom' && <button onClick={() => setStatusConfig({...statusConfig, customLabels: statusConfig.customLabels.filter((_, idx) => idx !== i)})} className="text-red-300 p-2 hover:text-red-500"><Trash2 size={18}/></button>}
+  const renderStatusTab = () => {
+    // 花の種類リスト（flowerItems から取得 + 未登録対応）
+    const flowerTypes = (flowerItems || []).map(i => typeof i === 'string' ? i : i.name).filter(Boolean);
+
+    return (
+      <div className="space-y-6 animate-in fade-in">
+        {/* ① オーダー商品共通ステータス（既存） */}
+        <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-4">
+          <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><ListChecks size={20}/> オーダー商品 共通ステータス</h2>
+          <p className="text-[11px] text-[#999]">花の種類別に個別設定がない場合、こちらが適用されます。</p>
+          <div className="flex gap-2 p-1 bg-[#F7F7F7] rounded-xl mb-4">
+            {['template', 'custom'].map(t => (
+              <button key={t} onClick={() => setStatusConfig({...statusConfig, type: t})} className={`flex-1 py-3 rounded-lg font-bold text-[12px] ${statusConfig.type === t ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}>{t === 'template' ? '標準' : 'カスタム'}</button>
+            ))}
           </div>
-        ))}
-        {statusConfig.type === 'custom' && <button onClick={() => setStatusConfig({...statusConfig, customLabels: [...statusConfig.customLabels, '新状態']})} className="w-full py-3 border-2 border-dashed border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ 項目を追加</button>}
+          <div className="space-y-3">
+            {(statusConfig.type === 'template' ? ['受注', '制作', '配達', '片付', '請求'] : statusConfig.customLabels).map((l, i) => (
+              <div key={i} className="flex gap-2">
+                <input type="text" value={l} readOnly={statusConfig.type==='template'} onChange={(e) => { if(statusConfig.type==='custom'){ const n = [...statusConfig.customLabels]; n[i] = e.target.value; setStatusConfig({...statusConfig, customLabels: n}); } }} className={`flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none ${statusConfig.type==='template'?'text-[#999999] cursor-not-allowed':'focus:border-[#2D4B3E]'}`} />
+                {statusConfig.type === 'custom' && <button onClick={() => setStatusConfig({...statusConfig, customLabels: statusConfig.customLabels.filter((_, idx) => idx !== i)})} className="text-red-300 p-2 hover:text-red-500"><Trash2 size={18}/></button>}
+              </div>
+            ))}
+            {statusConfig.type === 'custom' && <button onClick={() => setStatusConfig({...statusConfig, customLabels: [...statusConfig.customLabels, '新状態']})} className="w-full py-3 border-2 border-dashed border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ 項目を追加</button>}
+          </div>
+        </div>
+
+        {/* ② 花の種類別 個別ステータス */}
+        <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-4">
+          <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2">🌷 花の種類別 個別ステータス</h2>
+          <p className="text-[11px] text-[#999] leading-relaxed">
+            花の種類ごとに専用ステータスを定義できます。<br/>
+            設定しない種類は共通ステータスが使われます。
+          </p>
+          {flowerTypes.length === 0 ? (
+            <p className="text-[12px] text-[#999] italic bg-[#FBFAF9] p-4 rounded-xl">商品・納期タブで花の種類を登録すると、ここに表示されます。</p>
+          ) : (
+            <div className="space-y-4">
+              {flowerTypes.map((ft) => {
+                const labels = statusConfig.orderTypeLabels?.[ft] || [];
+                const isEnabled = labels.length > 0;
+                return (
+                  <div key={ft} className="border border-[#EAEAEA] rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-[13px] font-bold text-[#111]">{ft}</h3>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isEnabled}
+                          onChange={(e) => {
+                            const next = { ...(statusConfig.orderTypeLabels || {}) };
+                            if (e.target.checked) {
+                              next[ft] = ['受注', '制作中', '完了'];
+                            } else {
+                              delete next[ft];
+                            }
+                            setStatusConfig({...statusConfig, orderTypeLabels: next});
+                          }}
+                          className="w-4 h-4 accent-[#2D4B3E]"
+                        />
+                        <span className="text-[11px] font-bold text-[#555]">個別設定を使う</span>
+                      </label>
+                    </div>
+                    {isEnabled && (
+                      <div className="space-y-2">
+                        {labels.map((l, i) => (
+                          <div key={i} className="flex gap-2">
+                            <input
+                              type="text"
+                              value={l}
+                              onChange={(e) => {
+                                const newLabels = [...labels];
+                                newLabels[i] = e.target.value;
+                                setStatusConfig({...statusConfig, orderTypeLabels: {...statusConfig.orderTypeLabels, [ft]: newLabels}});
+                              }}
+                              className="flex-1 h-10 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg px-3 text-[12px] font-bold outline-none focus:border-[#2D4B3E]"
+                            />
+                            <button onClick={() => {
+                              const newLabels = labels.filter((_, idx) => idx !== i);
+                              setStatusConfig({...statusConfig, orderTypeLabels: {...statusConfig.orderTypeLabels, [ft]: newLabels}});
+                            }} className="text-red-300 p-2 hover:text-red-500"><Trash2 size={14}/></button>
+                          </div>
+                        ))}
+                        <button onClick={() => {
+                          setStatusConfig({...statusConfig, orderTypeLabels: {...statusConfig.orderTypeLabels, [ft]: [...labels, '新状態']}});
+                        }} className="w-full py-2 border border-dashed border-[#EAEAEA] rounded-lg text-[11px] font-bold text-[#999] hover:text-[#2D4B3E]">+ 項目を追加</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* ③ EC共通ステータス */}
+        <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-4">
+          <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2">🛒 EC商品 共通ステータス</h2>
+          <p className="text-[11px] text-[#999]">EC（完成品販売）のステータス。EC商品はすべてこの共通ステータスが適用されます。</p>
+          <div className="space-y-2">
+            {(statusConfig.ecLabels || []).map((l, i) => (
+              <div key={i} className="flex gap-2">
+                <input
+                  type="text"
+                  value={l}
+                  onChange={(e) => {
+                    const next = [...statusConfig.ecLabels];
+                    next[i] = e.target.value;
+                    setStatusConfig({...statusConfig, ecLabels: next});
+                  }}
+                  className="flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"
+                />
+                <button onClick={() => setStatusConfig({...statusConfig, ecLabels: statusConfig.ecLabels.filter((_, idx) => idx !== i)})} className="text-red-300 p-2 hover:text-red-500"><Trash2 size={18}/></button>
+              </div>
+            ))}
+            <button onClick={() => setStatusConfig({...statusConfig, ecLabels: [...(statusConfig.ecLabels || []), '新状態']})} className="w-full py-3 border-2 border-dashed border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ EC項目を追加</button>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderDesignTab = () => (
     <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-8 animate-in fade-in">

@@ -112,6 +112,17 @@ export default function OrderDetailModal({
 
   const getStatusOptions = () => {
     const config = appSettings?.statusConfig;
+    // ★ EC注文 → ecLabels を優先
+    if (modalData?.isEc || modalData?.cartItems?.length > 0) {
+      if (config?.ecLabels?.length > 0) return config.ecLabels;
+      return ['受注', '発送準備中', '発送済み', '完了'];
+    }
+    // ★ 花の種類別ステータス（オーダー商品）
+    const ft = modalData?.flowerType;
+    if (ft && config?.orderTypeLabels?.[ft]?.length > 0) {
+      return config.orderTypeLabels[ft];
+    }
+    // ★ オーダー共通
     if (config?.type === 'custom' && config?.customLabels?.length > 0) return config.customLabels;
     return ['受注', '制作', '配達', '片付', '請求'];
   };
@@ -814,18 +825,12 @@ export default function OrderDetailModal({
                 <option value="完了">完了</option>
                 <option value="キャンセル">キャンセル</option>
               </select>
-              <select 
-                value={updateForm.staff}
-                onChange={(e) => setUpdateForm({...updateForm, staff: e.target.value})}
-                className="h-10 bg-white border border-[#EAEAEA] rounded-xl px-3 text-[12px] font-bold outline-none shadow-sm cursor-pointer"
-              >
-                <option value="">担当スタッフ</option>
-                {(appSettings?.staffList || []).map(s => {
-                  const staffName = typeof s === 'string' ? s : s.name;
-                  return <option key={staffName} value={staffName}>{staffName}</option>;
-                })}
-              </select>
-              <button onClick={() => onUpdateStatus(order.id, updateForm.status, updateForm.staff)} className="h-10 px-4 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-xl hover:bg-[#1f352b] transition-all shadow-sm">
+              {/* 担当者選択は廃止：現在ログイン中のスタッフを自動使用 */}
+              <button onClick={() => {
+                const currentStaff = (typeof window !== 'undefined') ? JSON.parse(localStorage.getItem('florix_currentStaff') || 'null') : null;
+                const autoStaff = currentStaff?.name || '';
+                onUpdateStatus(order.id, updateForm.status, autoStaff);
+              }} className="h-10 px-4 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-xl hover:bg-[#1f352b] transition-all shadow-sm">
                 更新
               </button>
             </div>
@@ -904,14 +909,7 @@ export default function OrderDetailModal({
             </div>
           </div>
 
-          {isDelivery && (
-            <div className="bg-orange-50 p-6 rounded-[24px] border border-orange-200 shadow-sm space-y-2">
-              <h3 className="text-[12px] font-bold text-orange-800 flex items-center gap-2"><AlertCircle size={16}/> ご不在時の対応</h3>
-              <p className="text-[15px] font-black text-orange-900">
-                {modalData.absenceAction === '置き配' ? `置き配希望: ${modalData.absenceNote}` : '持ち戻り (再配達)'}
-              </p>
-            </div>
-          )}
+          {/* 置き配ご案内セクションは廃止（持ち戻りのみ運用） */}
 
           <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
             <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><Tag size={18}/> オーダー内容</h3>

@@ -26,10 +26,10 @@ export default function TatefudaPreview({ tatePattern, layout, isOsonae, input1,
   };
 
   // ★ 立札の色ルール:
-  //   - 名前（宛名）以外はすべて赤字
-  //   - 宛名（input2）のみ黒字
-  const nameColor = 'text-gray-900';  // 名前用の色（黒）
-  const redColor = 'text-red-600';     // それ以外（赤）
+  //   - 祝/御供/供 + 内容(ご開店・御生誕等) = 赤
+  //   - お相手様の名前・贈り主の名前・会社名・役職 = 黒
+  const nameColor = 'text-gray-900';  // 名前・会社名（黒）
+  const redColor = 'text-red-600';    // 祝の文字・お祝い内容（赤）
 
   return (
     <>
@@ -45,25 +45,25 @@ export default function TatefudaPreview({ tatePattern, layout, isOsonae, input1,
 
           {tatePattern?.includes('p6') || tatePattern?.includes('p8') ? (
             <>
-              {/* 宛名（名前）→ 黒 */}
+              {/* お相手様の宛名 → 黒 */}
               <div className={`tracking-widest ${nameColor}`} style={getTextStyle(input2 || '宛名', 18)}>{input2 || '宛名'}様</div>
-              {/* 内容 → 赤 */}
+              {/* お祝い内容（ご開店・御生誕等） → 赤 */}
               {!isOsonae && <div className={`tracking-widest ${redColor}`} style={getTextStyle(input1 || '内容', 18)}>{input1 || '内容'}</div>}
-              {/* 贈り主 → 赤 */}
-              <div className={`tracking-widest ${redColor}`} style={getTextStyle(input3 || '贈り主', 18)}>{input3 || '贈り主'}</div>
+              {/* 贈り主名 → 黒 */}
+              <div className={`tracking-widest ${nameColor}`} style={getTextStyle(input3 || '贈り主', 18)}>{input3 || '贈り主'}</div>
             </>
           ) : tatePattern?.includes('p4') ? (
             <>
-              {/* 会社名・役職氏名 → 赤 */}
-              <div className={`tracking-[0.3em] ${redColor}`} style={getTextStyle(input3a || '会社名', 18)}>{input3a || '会社名'}</div>
-              <div className={`tracking-[0.3em] font-normal mt-4 text-[14px] ${redColor}`} style={getTextStyle(input3b || '役職・氏名', 14)}>{input3b || '役職・氏名'}</div>
+              {/* 会社名・役職氏名 → 黒 */}
+              <div className={`tracking-[0.3em] ${nameColor}`} style={getTextStyle(input3a || '会社名', 18)}>{input3a || '会社名'}</div>
+              <div className={`tracking-[0.3em] font-normal mt-4 text-[14px] ${nameColor}`} style={getTextStyle(input3b || '役職・氏名', 14)}>{input3b || '役職・氏名'}</div>
             </>
           ) : (
             <>
-              {/* 内容 → 赤 */}
+              {/* お祝い内容（ご開店・御生誕等） → 赤 */}
               {!isOsonae && <div className={`tracking-widest ${redColor}`} style={getTextStyle(input1 || '内容', 18)}>{input1 || '内容'}</div>}
-              {/* 贈り主 → 赤 */}
-              <div className={`tracking-widest ${redColor}`} style={getTextStyle(input3 || '贈り主', 18)}>{input3 || '贈り主'}</div>
+              {/* 贈り主名 → 黒 */}
+              <div className={`tracking-widest ${nameColor}`} style={getTextStyle(input3 || '贈り主', 18)}>{input3 || '贈り主'}</div>
             </>
           )}
 
