@@ -260,11 +260,15 @@ export default function OwnerDashboard() {
       setInvoices(data?.settings_data?.invoices || []);
     } catch {}
   };
+  const authHeaders = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` };
+  };
   const markInvoicePaid = async (id, paid) => {
     try {
       await fetch('/api/admin/invoice-record', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({ id, status: paid ? 'paid' : 'unpaid' }),
       });
       await reloadInvoices();
@@ -273,7 +277,11 @@ export default function OwnerDashboard() {
   const deleteInvoice = async (id) => {
     if (!confirm('この請求記録を削除しますか？')) return;
     try {
-      await fetch(`/api/admin/invoice-record?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const { data: { session } } = await supabase.auth.getSession();
+      await fetch(`/api/admin/invoice-record?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+      });
       await reloadInvoices();
     } catch (e) { alert('削除失敗: ' + e.message); }
   };
@@ -282,7 +290,7 @@ export default function OwnerDashboard() {
       const month = (() => { const d = new Date(); d.setMonth(d.getMonth()+1); return `${d.getFullYear()}年${d.getMonth()+1}月`; })();
       await fetch('/api/admin/invoice-record', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({
           tenantId: tenant.id, tenantName: tenant.name, month,
           subscriptionTotal: fee.total,
@@ -703,9 +711,13 @@ export default function OwnerDashboard() {
       const toEmail = billing.billingEmail || prompt('送付先メールアドレスを入力してください（請求先メール未設定）');
       if (!toEmail || !toEmail.includes('@')) { alert('メアドが未設定/不正のため送信スキップ。新パスワード: ' + newPassword); return; }
       // (4) メール送信
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/setup/send-credentials', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
         body: JSON.stringify({ email: toEmail, shopName: tenantName, tenantId, systemPassword: newPassword, isReissue: true }),
       });
       const result = await res.json();

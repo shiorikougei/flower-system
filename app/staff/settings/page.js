@@ -946,31 +946,35 @@ export default function SettingsPage() {
           </label>
         </div>
 
-        {/* ★ EC専用 箱サイズ別 箱代マスター */}
+        {/* ★ EC専用 箱サイズ別 箱代マスター（業者配送のサイズマスタと連動） */}
         <div className="bg-orange-50 p-5 rounded-xl border-2 border-orange-200 space-y-3">
           <h3 className="text-[13px] font-bold text-orange-900 flex items-center gap-2">🛒 EC専用 箱サイズ別 箱代</h3>
           <p className="text-[10px] text-orange-800 leading-relaxed">
             EC商品の梱包代。商品登録時に選んだ箱サイズに応じて加算されます（カート内の最大サイズで計算）。<br/>
-            <strong>配送料はオーダー用の配送設定（自社配達エリア・業者配送サイズマスタ）を流用します。</strong>
+            <strong>業者配送のサイズマスタ（下の「業者配送 サイズ・地域マスタ」のサイズ）と連動します</strong>。サイズを追加・削除すると自動で反映されます。
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {['S', 'M', 'L', 'XL'].map(size => (
-              <div key={size} className="bg-white border border-orange-200 rounded-lg p-3">
-                <label className="text-[10px] font-bold text-orange-900">{size} サイズ</label>
-                <div className="flex items-center gap-1 mt-1">
-                  <span className="text-[12px] text-orange-700">¥</span>
-                  <input
-                    type="number"
-                    value={boxFeeConfig.ecBoxFees?.[size] ?? 0}
-                    onChange={e => setBoxFeeConfig({
-                      ...boxFeeConfig,
-                      ecBoxFees: { ...(boxFeeConfig.ecBoxFees || {}), [size]: Number(e.target.value) }
-                    })}
-                    className="flex-1 h-9 px-2 bg-orange-50 border border-orange-200 rounded text-[13px] font-bold text-right outline-none focus:border-orange-500"
-                  />
+            {shippingSizes.length === 0 ? (
+              <p className="col-span-full text-[11px] text-orange-700 italic">下の「業者配送 サイズ・地域マスタ」でサイズを登録してください。</p>
+            ) : (
+              shippingSizes.map(size => (
+                <div key={size} className="bg-white border border-orange-200 rounded-lg p-3">
+                  <label className="text-[10px] font-bold text-orange-900">{size} サイズ</label>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-[12px] text-orange-700">¥</span>
+                    <input
+                      type="number"
+                      value={boxFeeConfig.ecBoxFees?.[size] ?? 0}
+                      onChange={e => setBoxFeeConfig({
+                        ...boxFeeConfig,
+                        ecBoxFees: { ...(boxFeeConfig.ecBoxFees || {}), [size]: Number(e.target.value) }
+                      })}
+                      className="flex-1 h-9 px-2 bg-orange-50 border border-orange-200 rounded text-[13px] font-bold text-right outline-none focus:border-orange-500"
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 

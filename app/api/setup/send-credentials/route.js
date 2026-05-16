@@ -7,6 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import { sendEmail, noReplyFooter } from '@/utils/email';
+import { requireOwner } from '@/utils/adminAuth';
 
 export const runtime = 'nodejs';
 
@@ -15,6 +16,18 @@ export async function POST(request) {
     const { email, shopName, tenantId, systemPassword, isReissue = false } = await request.json();
     if (!email || !systemPassword) {
       return NextResponse.json({ error: 'email/systemPassword必須' }, { status: 400 });
+    }
+
+    // ★ 再発行は NocoLde スーパー管理者のみ、初回setupは setup-token 経由なので一定許容
+    if (isReissue) {
+      const auth = await requireOwner(request);
+      if (!auth.ok) return auth.response;
+    } else {
+      // 初回 setup: setupToken を検証（無いと拒否）
+      const setupToken = request.headers.get('x-setup-token') || '';
+      if (!setupToken || setupToken.length < 6) {
+        return NextResponse.json({ error: 'setupToken が必要です' }, { status: 401 });
+      }
     }
 
     const title = isReissue ? '設定画面ロック解除パスワード（再発行）' : 'NocoLde ご利用開始のご案内';

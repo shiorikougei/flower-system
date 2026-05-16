@@ -13,6 +13,7 @@
 
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { requireOwner } from '@/utils/adminAuth';
 
 export const runtime = 'nodejs';
 
@@ -22,6 +23,13 @@ const stripe = process.env.STRIPE_SECRET_KEY
 
 export async function POST(request) {
   try {
+    // ★ NocoLdeスーパー管理者のみ実行可（cronからの内部呼出はCRON_SECRETでバイパス）
+    const isCron = request.headers.get('x-cron-secret') === process.env.CRON_SECRET;
+    if (!isCron) {
+      const auth = await requireOwner(request);
+      if (!auth.ok) return auth.response;
+    }
+
     if (!stripe) {
       return NextResponse.json({ error: 'Stripe未設定（STRIPE_SECRET_KEY が必要）' }, { status: 500 });
     }

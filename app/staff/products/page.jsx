@@ -17,6 +17,7 @@ function StaffProductsPageInner() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState(null);
   const [pendingNotifyCounts, setPendingNotifyCounts] = useState({});  // 商品ID → 未通知件数
+  const [shippingSizes, setShippingSizes] = useState([]);  // ★ 業者配送サイズマスタを引き込み（箱代計算用）
 
   useEffect(() => {
     initData();
@@ -34,6 +35,11 @@ function StaffProductsPageInner() {
       const tId = profile?.tenant_id;
       if (!tId) throw new Error('tenant_id が取得できません');
       setTenantId(tId);
+
+      // ★ app_settings から shippingSizes を引き込み
+      const { data: settingsRow } = await supabase.from('app_settings').select('settings_data').eq('id', tId).single();
+      const sizes = settingsRow?.settings_data?.shippingSizes || ['80', '100', '120'];
+      setShippingSizes(sizes);
 
       const { data, error } = await supabase
         .from('products')
@@ -100,7 +106,7 @@ function StaffProductsPageInner() {
       category: '',
       is_active: true,
       restock_allowed: false,  // ★ 一点もの（ドライフラワー等）デフォルト
-      box_size: 'M',           // ★ 箱サイズ（EC箱代計算用）
+      box_size: shippingSizes[0] || '80',  // ★ 箱サイズ（業者配送マスタ連動）
       display_order: 0,
     });
   }
@@ -393,27 +399,31 @@ function StaffProductsPageInner() {
                 </label>
               </div>
 
-              {/* ★ 箱サイズ（EC箱代計算用） */}
+              {/* ★ 箱サイズ（業者配送マスタ連動） */}
               <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
-                <label className="text-[13px] font-bold text-orange-900 block mb-2">📦 箱サイズ（梱包代計算用）</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {['S', 'M', 'L', 'XL'].map(size => (
-                    <button
-                      key={size}
-                      type="button"
-                      onClick={() => setEditTarget({ ...editTarget, box_size: size })}
-                      className={`h-10 rounded-lg border-2 font-bold text-[12px] transition-all ${
-                        (editTarget.box_size || 'M') === size
-                          ? 'bg-orange-600 border-orange-600 text-white'
-                          : 'bg-white border-orange-200 text-orange-800 hover:border-orange-400'
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
+                <label className="text-[13px] font-bold text-orange-900 block mb-2">📦 箱サイズ（梱包代+送料計算用）</label>
+                {shippingSizes.length === 0 ? (
+                  <p className="text-[11px] text-orange-700 italic">設定 → 商品・配送 → 配送・時間枠 → 業者配送 サイズ・地域マスタ でサイズを登録してください。</p>
+                ) : (
+                  <div className="grid grid-cols-4 gap-2">
+                    {shippingSizes.map(size => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => setEditTarget({ ...editTarget, box_size: size })}
+                        className={`h-10 rounded-lg border-2 font-bold text-[12px] transition-all ${
+                          (editTarget.box_size || shippingSizes[0]) === size
+                            ? 'bg-orange-600 border-orange-600 text-white'
+                            : 'bg-white border-orange-200 text-orange-800 hover:border-orange-400'
+                        }`}
+                      >
+                        {size}サイズ
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <p className="text-[10px] text-orange-700 mt-2 leading-relaxed">
-                  カート内の<strong>最大サイズの箱代</strong>がご注文時に加算されます。料金は設定 → 商品・配送 → 配送・時間枠 → EC専用箱代 で変更可能。
+                  カート内の<strong>最大サイズの箱代</strong>がご注文時に加算されます（業者配送の送料計算もこのサイズを使用）。料金は設定 → 商品・配送 → 配送・時間枠 で変更可能。
                 </p>
               </div>
             </div>

@@ -102,7 +102,10 @@ export async function GET(request) {
           try {
             const stripeRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/admin/stripe-invoice`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                'x-cron-secret': process.env.CRON_SECRET || '',
+              },
               body: JSON.stringify({
                 tenantId: t.id,
                 tenantName: t.name,

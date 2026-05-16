@@ -73,7 +73,7 @@ function SetupContent() {
       try {
         await fetch('/api/setup/send-credentials', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-setup-token': token },
           body: JSON.stringify({ email, shopName, tenantId: normalizedTenantId, systemPassword }),
         });
       } catch (e) { console.warn('credentials email failed', e); }

@@ -4,7 +4,7 @@ import { supabase } from '@/utils/supabase';
 import {
   Wand2, Copy, ExternalLink, CheckCircle, Trash2,
   Plus, Link as LinkIcon, Image as ImageIcon, Loader2, Sparkles, LayoutGrid,
-  Camera, ArrowRight // ★ アイコン追加
+  Camera, ArrowRight, Search,
 } from 'lucide-react';
 import FeatureGate from '@/components/FeatureGate';
 import HelpTooltip from '@/components/HelpTooltip';

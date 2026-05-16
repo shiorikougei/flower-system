@@ -5,22 +5,22 @@
 // ⚠️ 店舗設定 (app_settings) は一切触らない。テーブル単位のデータのみ削除。
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { requireOwner } from '@/utils/adminAuth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
   try {
+    // ★ NocoLdeスーパー管理者のみ実行可
+    const auth = await requireOwner(request);
+    if (!auth.ok) return auth.response;
+    const supabaseAdmin = auth.supabaseAdmin;
+
     const { targets } = await request.json();
     if (!Array.isArray(targets) || targets.length === 0) {
       return NextResponse.json({ error: 'targets配列が必要です' }, { status: 400 });
     }
-
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
 
     // 削除対象テーブル定義
     const groups = {

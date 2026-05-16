@@ -7,12 +7,20 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireOwner } from '@/utils/adminAuth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 function admin() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+// ★ cron 経由の内部呼出か、Owner Bearer 必須
+async function gateOwnerOrCron(request) {
+  const isCron = request.headers.get('x-cron-secret') === process.env.CRON_SECRET;
+  if (isCron) return { ok: true };
+  return await requireOwner(request);
 }
 
 async function loadOwnerData() {
@@ -28,6 +36,9 @@ async function saveOwnerData(supabaseAdmin, ownerData) {
 // POST: 手動で請求履歴を追加
 export async function POST(request) {
   try {
+    const auth = await gateOwnerOrCron(request);
+    if (!auth.ok) return auth.response;
+
     const body = await request.json();
     const { tenantId, tenantName, month, subscriptionTotal = 0, aiTotal = 0, grandTotal, paymentMethod = 'bank_transfer', billingEmail = '', stripeInvoiceUrl = '' } = body;
     if (!tenantId || !month || grandTotal == null) {
@@ -59,6 +70,9 @@ export async function POST(request) {
 // PATCH: 入金記録 or ステータス変更
 export async function PATCH(request) {
   try {
+    const auth = await gateOwnerOrCron(request);
+    if (!auth.ok) return auth.response;
+
     const { id, status, paidAt, paidVia, memo } = await request.json();
     if (!id) return NextResponse.json({ error: 'id必要' }, { status: 400 });
     const { supabaseAdmin, data } = await loadOwnerData();
@@ -85,6 +99,9 @@ export async function PATCH(request) {
 // DELETE: 請求記録を削除
 export async function DELETE(request) {
   try {
+    const auth = await gateOwnerOrCron(request);
+    if (!auth.ok) return auth.response;
+
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id必要' }, { status: 400 });
