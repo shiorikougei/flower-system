@@ -107,8 +107,7 @@ export function buildOrderConfirmationEmail({ order, shopName, bankInfo }) {
       <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 12px; margin-top: 12px;">
         <p style="font-size: 12px; color: #c2410c; font-weight: bold; margin: 0 0 4px;">⚠️ お支払いについて</p>
         <p style="font-size: 11px; color: #9a3412; margin: 0; line-height: 1.6;">
-          お振込みのご確認が取れ次第、制作を開始させていただきます。<br/>
-          お届け希望日に間に合うよう、お早めのお振込みをお願いいたします。<br/>
+          お振込みのご確認が取れ次第、<strong>発送</strong>させていただきます。<br/>
           <strong>ご入金に関してのご相談・ご質問がある方はお電話にてお問い合わせください。</strong>
         </p>
       </div>

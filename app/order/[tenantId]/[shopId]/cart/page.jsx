@@ -22,6 +22,8 @@ export default function CartPage() {
   const [recipientInfo, setRecipientInfo] = useState({ name: '', phone: '', zip: '', address1: '', address2: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  // ★ 商品の box_size 引き当て用
+  const [productBoxSizes, setProductBoxSizes] = useState({}); // { productId: '80' }
 
   useEffect(() => {
     setCart(getCart(tenantId));
@@ -35,6 +37,15 @@ export default function CartPage() {
         setAppSettings(data.settings_data);
         const s = data.settings_data.stripe;
         setStripeEnabled(Boolean(s?.accountId && s?.chargesEnabled));
+      }
+      // ★ カート内商品の box_size を引き当て
+      const cartItems = getCart(tenantId);
+      if (cartItems.length > 0) {
+        const ids = cartItems.map(c => c.id);
+        const { data: prods } = await supabase.from('products').select('id, box_size').in('id', ids);
+        const sizeMap = {};
+        (prods || []).forEach(p => { sizeMap[p.id] = p.box_size || '80'; });
+        setProductBoxSizes(sizeMap);
       }
     } catch (e) {}
   }
@@ -80,8 +91,34 @@ export default function CartPage() {
   };
 
   const subTotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const tax = Math.floor(subTotal * 0.1);
-  const totalAmount = subTotal + tax;
+
+  // ★ 箱代計算: カート内の最大サイズの箱代
+  const ecBoxFees = appSettings?.boxFeeConfig?.ecBoxFees || {};
+  const cartSizes = cart.map(c => productBoxSizes[c.id]).filter(Boolean);
+  const maxSize = cartSizes.length > 0
+    ? cartSizes.reduce((a, b) => (Number(a) >= Number(b) ? a : b))
+    : null;
+  const boxFee = maxSize ? (Number(ecBoxFees[maxSize]) || 0) : 0;
+
+  // ★ 送料計算: お届け先住所(都道府県) + 最大サイズ から shippingRates 引き当て
+  const deliveryAddr = isRecipientDifferent ? recipientInfo.address1 : customerInfo.address1;
+  const shippingRates = appSettings?.shippingRates || [];
+  const shippingFee = (() => {
+    if (!deliveryAddr || !maxSize) return 0;
+    // 都道府県名を抜き出す
+    const prefMatch = deliveryAddr.match(/^(北海道|東京都|(?:京都|大阪)府|.{2,3}県)/);
+    if (!prefMatch) return 0;
+    const targetPref = prefMatch[1].replace(/(都|府|県)$/, '');
+    const searchPref = targetPref === '北海' ? '北海道' : targetPref;
+    const rateRow = shippingRates.find(r => r.region === searchPref || r.region?.includes(searchPref));
+    if (!rateRow) return 0;
+    // ★ 設定UI のキー名は `fee80`, `fee100`, `fee120` 形式
+    return Number(rateRow[`fee${maxSize}`]) || 0;
+  })();
+
+  const subTotalWithFees = subTotal + boxFee + shippingFee;
+  const tax = Math.floor(subTotalWithFees * 0.1);
+  const totalAmount = subTotalWithFees + tax;
 
   function validate() {
     if (cart.length === 0) return 'カートが空です';
@@ -105,11 +142,12 @@ export default function CartPage() {
         shopId,
         // EC注文であることを示すフラグ
         orderType: 'ec',
-        cartItems: cart.map(c => ({ productId: c.id, name: c.name, price: c.price, qty: c.qty, imageUrl: c.imageUrl })),
-        itemPrice: subTotal,            // 既存ロジックとの互換
-        calculatedFee: 0,
+        cartItems: cart.map(c => ({ productId: c.id, name: c.name, price: c.price, qty: c.qty, imageUrl: c.imageUrl, box_size: productBoxSizes[c.id] })),
+        itemPrice: subTotal,            // 商品代のみ
+        calculatedFee: shippingFee,     // ★ 業者配送送料
         pickupFee: 0,
-        feeBreakdown: { baseFee: 0, boxFee: 0, coolFee: 0 },
+        feeBreakdown: { baseFee: shippingFee, boxFee, coolFee: 0 },
+        maxBoxSize: maxSize,             // ★ 計算ベースサイズ
         customerInfo,
         isRecipientDifferent,
         recipientInfo: isRecipientDifferent ? recipientInfo : { name: '', phone: '', zip: '', address1: '', address2: '' },
@@ -194,9 +232,27 @@ export default function CartPage() {
               ))}
             </div>
 
-            {/* 小計 */}
+            {/* お見積もり内訳 */}
             <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-2">
+              <p className="text-[11px] font-bold text-[#2D4B3E] mb-2">お見積もり内訳</p>
               <div className="flex justify-between text-[13px] text-[#555555]"><span>商品代（税抜）</span><span>¥{subTotal.toLocaleString()}</span></div>
+              {boxFee > 0 && (
+                <div className="flex justify-between text-[12px] text-[#555555]">
+                  <span>梱包代 {maxSize ? `(${maxSize}サイズ)` : ''}</span>
+                  <span>¥{boxFee.toLocaleString()}</span>
+                </div>
+              )}
+              {shippingFee > 0 ? (
+                <div className="flex justify-between text-[12px] text-[#555555]">
+                  <span>配送料 {maxSize ? `(${maxSize}サイズ)` : ''}</span>
+                  <span>¥{shippingFee.toLocaleString()}</span>
+                </div>
+              ) : (
+                <div className="flex justify-between text-[11px] text-[#999]">
+                  <span>配送料</span>
+                  <span className="text-[10px]">{deliveryAddr ? '※住所からサイズ別に算出' : 'お届け先住所入力後に表示'}</span>
+                </div>
+              )}
               <div className="flex justify-between text-[12px] text-[#999999] pt-2 border-t border-[#F0F0F0]"><span>消費税（10%）</span><span>¥{tax.toLocaleString()}</span></div>
               <div className="flex justify-between items-baseline pt-3 border-t border-[#EAEAEA]">
                 <span className="text-[13px] font-bold text-[#111111]">合計（税込）</span>

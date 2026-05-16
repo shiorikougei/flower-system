@@ -150,8 +150,7 @@ function ThanksContent() {
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-3">
                   <p className="text-[11px] text-amber-900 font-bold mb-1">⚠️ ご注意</p>
                   <p className="text-[11px] text-amber-900 leading-relaxed">
-                    お振込みのご確認が取れ次第、制作を開始させていただきます。<br/>
-                    お届け希望日に間に合うよう、お早めのお振込みをお願いいたします。<br/>
+                    お振込みのご確認が取れ次第、<strong>発送</strong>させていただきます。<br/>
                     <strong>ご入金に関してのご相談・ご質問がある方はお電話ください。</strong>
                   </p>
                 </div>
