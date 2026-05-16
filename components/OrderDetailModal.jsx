@@ -141,33 +141,40 @@ export default function OrderDetailModal({
   const selectedTateOpt = allTateOptions.find(opt => opt.id === modalData.tatePattern);
 
   const handleUploadCompletionImage = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
     setIsUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `completion_${order.id}_${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`; 
+      const uploadedUrls = [];
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `completion_${order.id}_${Date.now()}_${Math.random().toString(36).slice(2,6)}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage.from('portfolio').upload(fileName, file);
+        if (uploadError) throw uploadError;
+        const { data: { publicUrl } } = supabase.storage.from('portfolio').getPublicUrl(fileName);
+        uploadedUrls.push(publicUrl);
+      }
 
-      const { error: uploadError } = await supabase.storage
-        .from('portfolio')
-        .upload(filePath, file);
+      // ★ 配列に追加（既存写真も保持）
+      const existing = Array.isArray(modalData.completionImages)
+        ? modalData.completionImages
+        : (modalData.completionImage ? [modalData.completionImage] : []);
+      const allImages = [...existing, ...uploadedUrls];
 
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('portfolio')
-        .getPublicUrl(filePath);
-
-      const updatedData = { ...modalData, completionImage: publicUrl };
+      const updatedData = {
+        ...modalData,
+        completionImages: allImages,
+        completionImage: allImages[0], // 後方互換: 1枚目を従来のフィールドにも入れる
+      };
       const { error: dbError } = await supabase.from('orders')
         .update({ order_data: updatedData })
         .eq('id', order.id);
 
       if (dbError) throw dbError;
 
-      order.order_data.completionImage = publicUrl;
+      order.order_data.completionImages = allImages;
+      order.order_data.completionImage = allImages[0];
 
       // ★ 完成写真メールを自動送信（お客様メアド + テンプレート設定がある場合のみ）
       let mailMessage = '';
@@ -920,29 +927,61 @@ export default function OrderDetailModal({
             <div className="flex flex-col sm:flex-row gap-6">
               
               <div className="flex flex-col gap-2 shrink-0">
-                {modalData.completionImage ? (
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-[#2D4B3E] bg-[#2D4B3E]/10 px-2 py-0.5 rounded inline-block">完成写真</span>
-                    <img src={modalData.completionImage} alt="完成写真" className="w-full sm:w-40 h-32 sm:h-40 object-cover rounded-2xl border border-[#EAEAEA] shadow-sm" />
-                  </div>
-                ) : modalData.referenceImage ? (
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-[#999999] bg-[#F7F7F7] px-2 py-0.5 rounded inline-block">お客様からの参考画像</span>
-                    <img src={modalData.referenceImage} alt="参考画像" className="w-full sm:w-40 h-32 sm:h-40 object-cover rounded-2xl border border-[#EAEAEA] shadow-sm" />
-                  </div>
-                ) : (
-                  <div className="w-full sm:w-40 h-32 sm:h-40 bg-[#FBFAF9] border border-[#EAEAEA] rounded-2xl flex flex-col items-center justify-center text-[#999999] text-[11px] font-bold gap-2">
-                    <ImageIcon size={24}/> 画像なし
-                  </div>
-                )}
-                
+                {(() => {
+                  const allImages = Array.isArray(modalData.completionImages)
+                    ? modalData.completionImages
+                    : (modalData.completionImage ? [modalData.completionImage] : []);
+                  if (allImages.length > 0) {
+                    return (
+                      <div className="space-y-2">
+                        <span className="text-[10px] font-bold text-[#2D4B3E] bg-[#2D4B3E]/10 px-2 py-0.5 rounded inline-block">完成写真 ({allImages.length}枚)</span>
+                        <div className="grid grid-cols-2 gap-2 w-full sm:w-40">
+                          {allImages.map((url, i) => (
+                            <div key={i} className="relative group">
+                              <img src={url} alt={`完成写真${i+1}`} className="w-full aspect-square object-cover rounded-lg border border-[#EAEAEA] shadow-sm"/>
+                              <button
+                                onClick={async () => {
+                                  if (!confirm('この写真を削除しますか？')) return;
+                                  const next = allImages.filter((_, idx) => idx !== i);
+                                  const updated = { ...modalData, completionImages: next, completionImage: next[0] || null };
+                                  await supabase.from('orders').update({ order_data: updated }).eq('id', order.id);
+                                  order.order_data.completionImages = next;
+                                  order.order_data.completionImage = next[0] || null;
+                                  // 表示更新のためモーダル閉じて再オープン推奨
+                                  window.location.reload();
+                                }}
+                                className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                                title="削除"
+                              >×</button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+                  if (modalData.referenceImage) {
+                    return (
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-[#999999] bg-[#F7F7F7] px-2 py-0.5 rounded inline-block">お客様からの参考画像</span>
+                        <img src={modalData.referenceImage} alt="参考画像" className="w-full sm:w-40 h-32 sm:h-40 object-cover rounded-2xl border border-[#EAEAEA] shadow-sm" />
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="w-full sm:w-40 h-32 sm:h-40 bg-[#FBFAF9] border border-[#EAEAEA] rounded-2xl flex flex-col items-center justify-center text-[#999999] text-[11px] font-bold gap-2">
+                      <ImageIcon size={24}/> 画像なし
+                    </div>
+                  );
+                })()}
+
                 <div className="relative mt-2">
-                  <input 
-                    type="file" 
+                  <input
+                    type="file"
                     accept="image/*"
+                    multiple
                     onChange={handleUploadCompletionImage}
                     disabled={isUploading}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed" 
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                   />
                   <div className={`flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl text-[11px] font-bold transition-all border ${isUploading ? 'bg-gray-100 text-gray-400 border-gray-200' : 'bg-white text-[#2D4B3E] border-[#2D4B3E]/30 hover:bg-[#2D4B3E]/5 shadow-sm'}`}>
                     <Upload size={14} />

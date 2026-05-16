@@ -95,6 +95,7 @@ export default function StaffLayout({ children }) {
         { name: 'ホーム', path: '/staff', icon: Home, perm: 'home' },
         { name: '店舗注文受付', path: '/staff/new-order', icon: PlusSquare, perm: 'newOrder' },
         { name: '受注一覧', path: '/staff/orders', icon: ClipboardList, perm: 'orders' },
+        { name: 'お見積もり依頼', path: '/staff/estimates', icon: ClipboardList, perm: 'orders' },
         { name: '受注カレンダー', path: '/staff/calendar', icon: CalendarDays, perm: 'calendar' },
         { name: '配達管理', path: '/staff/deliveries', icon: Truck, perm: 'deliveries' },
       ],

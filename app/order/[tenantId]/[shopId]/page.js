@@ -104,6 +104,27 @@ export default function OrderEntryPage() {
               <ChevronRight size={20} className="text-[#999999] group-hover:text-[#2D4B3E] transition-colors shrink-0"/>
             </div>
           </Link>
+
+          {/* 見積もり依頼 */}
+          <Link
+            href={`/order/${tenantId}/${shopId}/estimate`}
+            className="block p-6 md:p-7 bg-white border border-[#EAEAEA] rounded-3xl shadow-sm hover:border-[#117768] hover:shadow-md transition-all group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-[#117768]/10 text-[#117768] flex items-center justify-center shrink-0 group-hover:bg-[#117768] group-hover:text-white transition-all">
+                <ShoppingBag size={22}/>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold text-[#117768] tracking-widest mb-1">ESTIMATE</p>
+                <h2 className="text-[16px] md:text-[17px] font-bold text-[#111111] mb-1.5">お見積もり依頼</h2>
+                <p className="text-[11.5px] text-[#555555] leading-relaxed">
+                  バラの本数指定や複数同時のご注文など、<br className="hidden sm:inline"/>
+                  金額がわかりにくい場合はこちらから🌹
+                </p>
+              </div>
+              <ChevronRight size={20} className="text-[#999999] group-hover:text-[#117768] transition-colors shrink-0"/>
+            </div>
+          </Link>
         </div>
 
         {/* マイページ導線 */}
