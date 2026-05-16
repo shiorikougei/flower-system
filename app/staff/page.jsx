@@ -114,8 +114,13 @@ export default function DashboardPage() {
         if (!tId) throw new Error('tenant_id が取得できませんでした');
 
         const todayStr = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
-        // ★ tenant_id でフィルタ
-        const { data, error } = await supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false });
+        // ★ tenant_id でフィルタ + TOP表示には最新100件で十分（パフォーマンス改善）
+        const { data, error } = await supabase
+          .from('orders')
+          .select('id, tenant_id, created_at, payment_status, order_data')
+          .eq('tenant_id', tId)
+          .order('created_at', { ascending: false })
+          .limit(100);
         if (error) throw error;
 
         const fetchedOrders = data || [];

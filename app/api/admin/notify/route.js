@@ -24,9 +24,39 @@ const TYPE_LABELS = {
   feature_change: '機能変更依頼',
 };
 
+// ★ 簡易レート制限（IP/分単位、メモリ）— spam踏み台防止
+const rateLimitMap = new Map();
+function checkRate(ip) {
+  const now = Date.now();
+  const windowMs = 60 * 1000;
+  const max = 5; // 1分5件まで
+  const entry = rateLimitMap.get(ip) || { count: 0, resetAt: now + windowMs };
+  if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + windowMs; }
+  entry.count++;
+  rateLimitMap.set(ip, entry);
+  return entry.count <= max;
+}
+
 export async function POST(request) {
   try {
-    const { type, tenantId, tenantName, subject, body, metadata } = await request.json();
+    // ★ レート制限
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    if (!checkRate(ip)) {
+      return NextResponse.json({ error: 'リクエスト過多です。しばらくしてから再度お試しください。' }, { status: 429 });
+    }
+
+    const payload = await request.json();
+    const { type, tenantId, tenantName, subject, body, metadata, _hp } = payload;
+
+    // ★ honeypot: 隠しフィールド _hp に何か入っていれば bot 確定
+    if (_hp) {
+      return NextResponse.json({ ok: true }); // 攻撃者には成功を装う
+    }
+    // ★ 文字数制限（過剰な巨大ペイロード防御）
+    if ((subject || '').length > 200 || (body || '').length > 5000) {
+      return NextResponse.json({ error: '入力が長すぎます' }, { status: 400 });
+    }
+
     if (!type || !subject) return NextResponse.json({ error: 'type/subject必須' }, { status: 400 });
 
     const supabaseAdmin = createClient(
