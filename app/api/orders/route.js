@@ -45,6 +45,7 @@ export async function POST(request) {
     let lineItemsForStripe = [];
     const isEcOrder = orderData.orderType === 'ec' && Array.isArray(orderData.cartItems);
 
+    let ecBoxFee = 0; // ★ EC専用 箱代
     if (isEcOrder) {
       // 商品IDをDBで再検索して、価格と在庫を検証する
       const ids = orderData.cartItems.map(c => c.productId).filter(Boolean);
@@ -52,9 +53,14 @@ export async function POST(request) {
 
       const { data: dbProducts, error: prodErr } = await supabaseAdmin
         .from('products')
-        .select('id, name, price, stock, image_url, tenant_id, is_active')
+        .select('id, name, price, stock, image_url, tenant_id, is_active, box_size')
         .in('id', ids);
       if (prodErr) return NextResponse.json({ error: '商品データの取得に失敗' }, { status: 500 });
+
+      // ★ カート内の最大サイズを判定（S < M < L < XL）
+      const sizeRank = { S: 1, M: 2, L: 3, XL: 4 };
+      let maxSize = 'S';
+      let maxRank = 0;
 
       for (const c of orderData.cartItems) {
         const p = dbProducts.find(x => x.id === c.productId);
@@ -64,6 +70,8 @@ export async function POST(request) {
         const qty = Math.max(1, Math.floor(Number(c.qty) || 0));
         if (qty > p.stock) return NextResponse.json({ error: `「${p.name}」の在庫が不足しています（在庫: ${p.stock}）` }, { status: 400 });
         item += p.price * qty;
+        const r = sizeRank[p.box_size || 'M'] || 2;
+        if (r > maxRank) { maxRank = r; maxSize = p.box_size || 'M'; }
         lineItemsForStripe.push({
           price_data: {
             currency: 'jpy',
@@ -73,6 +81,22 @@ export async function POST(request) {
           quantity: qty,
         });
       }
+
+      // ★ 設定から EC箱代マスター取得 → 最大サイズの箱代を加算
+      const { data: settingsRow } = await supabaseAdmin
+        .from('app_settings').select('settings_data').eq('id', String(tenantId)).single();
+      const ecBoxFees = settingsRow?.settings_data?.boxFeeConfig?.ecBoxFees || { S: 300, M: 500, L: 800, XL: 1200 };
+      ecBoxFee = Number(ecBoxFees[maxSize]) || 0;
+      if (ecBoxFee > 0) {
+        lineItemsForStripe.push({
+          price_data: {
+            currency: 'jpy',
+            product_data: { name: `梱包代 (${maxSize}サイズ)` },
+            unit_amount: ecBoxFee,
+          },
+          quantity: 1,
+        });
+      }
     } else {
       // 既存のカスタム注文（単一）
       item = Number(orderData.itemPrice) || 0;
@@ -80,7 +104,7 @@ export async function POST(request) {
 
     const fee = Number(orderData.calculatedFee) || 0;
     const pickup = Number(orderData.pickupFee) || 0;
-    const subTotal = item + fee + pickup;
+    const subTotal = item + fee + pickup + ecBoxFee;
     const tax = Math.floor(subTotal * 0.1);
     const totalAmount = subTotal + tax;
 
@@ -124,6 +148,7 @@ export async function POST(request) {
         totalAmount,
         status: 'new',
         managementNo,  // ★ 管理番号
+        ecBoxFee,      // ★ EC箱代
       },
       payment_status: initialPaymentStatus,
     };

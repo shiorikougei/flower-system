@@ -100,6 +100,7 @@ function StaffProductsPageInner() {
       category: '',
       is_active: true,
       restock_allowed: false,  // ★ 一点もの（ドライフラワー等）デフォルト
+      box_size: 'M',           // ★ 箱サイズ（EC箱代計算用）
       display_order: 0,
     });
   }
@@ -139,6 +140,7 @@ function StaffProductsPageInner() {
         category: editTarget.category || '',
         is_active: Boolean(editTarget.is_active),
         restock_allowed: Boolean(editTarget.restock_allowed),  // ★ 再入荷可否
+        box_size: editTarget.box_size || 'M',                   // ★ 箱サイズ
         display_order: Number(editTarget.display_order) || 0,
       };
 
@@ -389,6 +391,30 @@ function StaffProductsPageInner() {
                     </p>
                   </div>
                 </label>
+              </div>
+
+              {/* ★ 箱サイズ（EC箱代計算用） */}
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+                <label className="text-[13px] font-bold text-orange-900 block mb-2">📦 箱サイズ（梱包代計算用）</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {['S', 'M', 'L', 'XL'].map(size => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => setEditTarget({ ...editTarget, box_size: size })}
+                      className={`h-10 rounded-lg border-2 font-bold text-[12px] transition-all ${
+                        (editTarget.box_size || 'M') === size
+                          ? 'bg-orange-600 border-orange-600 text-white'
+                          : 'bg-white border-orange-200 text-orange-800 hover:border-orange-400'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-orange-700 mt-2 leading-relaxed">
+                  カート内の<strong>最大サイズの箱代</strong>がご注文時に加算されます。料金は設定 → 商品・配送 → 配送・時間枠 → EC専用箱代 で変更可能。
+                </p>
               </div>
             </div>
 

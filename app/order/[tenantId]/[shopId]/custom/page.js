@@ -119,6 +119,14 @@ function OrderFormContent() {
   const [absenceNote, setAbsenceNote] = useState('');
   const [paymentScheduledDate, setPaymentScheduledDate] = useState(''); // ★ 銀行振込時の入金予定日
 
+  // ★ エリア外検出時に自社配達 → 業者配送へ自動切替
+  useEffect(() => {
+    if (areaError && areaError.includes('エリア外') && receiveMethod === 'delivery') {
+      setReceiveMethod('sagawa');
+      setPriorContactAgreed(false);
+    }
+  }, [areaError, receiveMethod]);
+
   const [cardType, setCardType] = useState('なし');
   const [cardMessage, setCardMessage] = useState('');
   const [tatePattern, setTatePattern] = useState('');
@@ -827,9 +835,21 @@ function OrderFormContent() {
                   </button>
                 ))
               ) : null}
-              <div className="grid grid-cols-2 gap-4 mt-8">
-                {selectedItemSettings.canDelivery !== false && (<button onClick={() => { setReceiveMethod('delivery'); setStep(3); }} className="p-6 rounded-2xl bg-[#FBFAF9] border border-[#EAEAEA] font-bold text-[14px] hover:bg-white hover:border-[#2D4B3E] transition-all text-[#555555] hover:text-[#2D4B3E]">自社配達</button>)}
-                {selectedItemSettings.canShipping !== false && (<button onClick={() => { setReceiveMethod('sagawa'); setStep(3); }} className="p-6 rounded-2xl bg-[#FBFAF9] border border-[#EAEAEA] font-bold text-[14px] hover:bg-white hover:border-[#2D4B3E] transition-all text-[#555555] hover:text-[#2D4B3E]">業者配送</button>)}
+              {/* ★ 配達・配送を統合ボタン化 */}
+              <div className="mt-8">
+                {(selectedItemSettings.canDelivery !== false || selectedItemSettings.canShipping !== false) && (
+                  <button
+                    onClick={() => {
+                      // 一旦sagawaをデフォにして、住所入力後に自動でdelivery/sagawa判定する
+                      setReceiveMethod('sagawa');
+                      setStep(3);
+                    }}
+                    className="w-full p-6 rounded-2xl bg-[#FBFAF9] border border-[#EAEAEA] font-bold text-[14px] hover:bg-white hover:border-[#2D4B3E] transition-all text-[#555555] hover:text-[#2D4B3E] text-left"
+                  >
+                    <div className="text-[15px] font-bold text-[#2D4B3E] mb-1">📦 配達・配送（お届け先を入力）</div>
+                    <div className="text-[11px] text-[#999]">住所入力後、自社配達エリアかどうかを判定します。エリア内なら自社配達 or 業者配送をお選びいただけます。</div>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -1029,39 +1049,101 @@ function OrderFormContent() {
                 </div>
               )}
 
-              {/* ★ 要件⑦: 自社配達 + お届け先が注文者と異なる場合の「事前連絡同意」 */}
-              {receiveMethod === 'delivery' && isRecipientDifferent && (
-                <div className="p-5 bg-[#FBFAF9] border border-[#EAEAEA] rounded-2xl space-y-4">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle size={16} className="text-[#2D4B3E] shrink-0 mt-0.5" />
-                    <p className="text-[12px] text-[#555555] leading-relaxed">
-                      自社配達では、お届け先のご都合確認のため、配達前にお届け先様へ直接ご連絡させていただく場合がございます。
-                      事前連絡へのご同意が必要です。同意いただけない場合は、業者配送（佐川急便）への切り替えをご検討ください。
-                    </p>
-                  </div>
-                  <label className="flex items-center gap-3 p-3 bg-white rounded-xl border border-[#EAEAEA] cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={priorContactAgreed}
-                      onChange={(e) => setPriorContactAgreed(e.target.checked)}
-                      className="w-5 h-5 accent-[#2D4B3E] rounded-md cursor-pointer"
-                    />
-                    <span className="text-[13px] font-bold text-[#111111]">お届け先様への事前連絡に同意します</span>
-                  </label>
-                  {!priorContactAgreed && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setReceiveMethod('sagawa');
-                        setPriorContactAgreed(false);
-                        setCalculatedFee(null);
-                      }}
-                      className="w-full h-12 bg-white border border-[#2D4B3E] text-[#2D4B3E] rounded-xl font-bold text-[13px] hover:bg-[#2D4B3E] hover:text-white transition-all flex items-center justify-center gap-2"
-                    >
-                      <Truck size={16} /> 業者配送（佐川急便）に切り替える
-                    </button>
-                  )}
-                </div>
+              {/* ★ 要件④: 住所入力後のエリア判定 + 配達方法切替 */}
+              {(receiveMethod === 'delivery' || receiveMethod === 'sagawa') && (
+                (() => {
+                  // 住所が入力されていてエリアエラーがない＝自社配達可能
+                  const addr = isRecipientDifferent ? (recipientInfo.address1 || '') : (customerInfo.address1 || '');
+                  const isInDeliveryArea = addr.trim() !== '' && !areaError && receiveMethod === 'delivery' && calculatedFee !== null;
+                  const addressEntered = addr.trim() !== '';
+
+                  return (
+                    <>
+                      {/* 住所入力済み・エリア内 → 自社配達/業者配送の切替 */}
+                      {addressEntered && !areaError && (
+                        <div className="p-5 bg-emerald-50 border-2 border-emerald-200 rounded-2xl space-y-3">
+                          <div className="flex items-start gap-2">
+                            <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                            <p className="text-[12px] text-emerald-800 leading-relaxed">
+                              ✅ <strong>自社配達対応エリア内です</strong>。下記からお届け方法をお選びください。<br/>
+                              <span className="text-[11px] text-emerald-700">※送料は次のページの「お見積もり」で確認できます</span>
+                            </p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setReceiveMethod('delivery')}
+                              className={`p-4 rounded-xl border-2 text-left transition-all ${
+                                receiveMethod === 'delivery'
+                                  ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white shadow-md'
+                                  : 'bg-white border-emerald-200 text-[#2D4B3E] hover:border-emerald-500'
+                              }`}
+                            >
+                              <div className="text-[13px] font-bold">🚚 自社配達</div>
+                              <div className={`text-[10px] mt-1 ${receiveMethod === 'delivery' ? 'text-white/80' : 'text-[#555]'}`}>
+                                直接お届け。事前に電話確認させていただく場合があります。
+                              </div>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setReceiveMethod('sagawa'); setPriorContactAgreed(false); }}
+                              className={`p-4 rounded-xl border-2 text-left transition-all ${
+                                receiveMethod === 'sagawa'
+                                  ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white shadow-md'
+                                  : 'bg-white border-emerald-200 text-[#2D4B3E] hover:border-emerald-500'
+                              }`}
+                            >
+                              <div className="text-[13px] font-bold">📦 業者配送 (佐川急便)</div>
+                              <div className={`text-[10px] mt-1 ${receiveMethod === 'sagawa' ? 'text-white/80' : 'text-[#555]'}`}>
+                                追跡可能。サプライズ配達には業者配送がおすすめ。
+                              </div>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 自社配達 + 事前連絡同意 */}
+                      {receiveMethod === 'delivery' && addressEntered && !areaError && (
+                        <div className="p-5 bg-amber-50 border-2 border-amber-200 rounded-2xl space-y-3">
+                          <div className="flex items-start gap-2">
+                            <AlertCircle size={16} className="text-amber-700 shrink-0 mt-0.5" />
+                            <div className="space-y-2">
+                              <p className="text-[12px] text-amber-900 leading-relaxed">
+                                自社配達では、お届け先のご都合確認のため、<strong>配達前にお届け先様へ直接お電話</strong>させていただく場合がございます。<br/>
+                                ご同意いただけない場合は、上記から<strong>業者配送（佐川急便）</strong>をお選びください。
+                              </p>
+                              <p className="text-[11px] text-amber-700 bg-amber-100 rounded-lg px-3 py-2">
+                                🎁 <strong>サプライズでお届けしたい場合</strong>は、必ず業者配送をお選びください。
+                              </p>
+                            </div>
+                          </div>
+                          <label className="flex items-center gap-3 p-3 bg-white rounded-xl border border-amber-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={priorContactAgreed}
+                              onChange={(e) => setPriorContactAgreed(e.target.checked)}
+                              className="w-5 h-5 accent-amber-600 rounded-md cursor-pointer"
+                            />
+                            <span className="text-[13px] font-bold text-amber-900">お届け先様への事前連絡に同意します</span>
+                          </label>
+                        </div>
+                      )}
+
+                      {/* エリア外 → 業者配送のみ */}
+                      {addressEntered && areaError && (
+                        <div className="p-5 bg-blue-50 border-2 border-blue-200 rounded-2xl">
+                          <div className="flex items-start gap-2">
+                            <Truck size={16} className="text-blue-600 shrink-0 mt-0.5" />
+                            <p className="text-[12px] text-blue-900 leading-relaxed">
+                              📦 <strong>このお届け先は自社配達エリア外のため、業者配送（佐川急便）でお届けします。</strong><br/>
+                              <span className="text-[11px] text-blue-700">送料は次のページのお見積もりで確認できます。</span>
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()
               )}
 
               <div className="mt-6 space-y-4">
