@@ -4,25 +4,16 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-
-// ★ 簡易レート制限（IP+1分間で5件まで）— spam踏み台防止
-const rateMap = new Map();
-function checkRate(ip) {
-  const now = Date.now();
-  const entry = rateMap.get(ip) || { count: 0, resetAt: now + 60000 };
-  if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + 60000; }
-  entry.count++;
-  rateMap.set(ip, entry);
-  return entry.count <= 5;
-}
+import { rateLimit, getClientIp } from '@/utils/rateLimit';
 
 const EMAIL_RE = /^[\w.+-]+@[\w-]+\.[\w.-]+$/;
 
 export async function POST(request) {
   try {
-    // ★ レート制限
-    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
-    if (!checkRate(ip)) {
+    // ★ レート制限（IP, 5件/分, Redis 永続化）
+    const ip = getClientIp(request);
+    const allowed = await rateLimit({ key: `stock-notify:${ip}`, max: 5, windowSec: 60 });
+    if (!allowed) {
       return NextResponse.json({ error: 'リクエスト過多です。しばらくお待ちください。' }, { status: 429 });
     }
 

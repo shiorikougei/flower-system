@@ -17,9 +17,18 @@ import { sendEmail } from '@/utils/email';
 import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatRecipientInfo, formatLineAddFriendBlock } from '@/utils/emailTemplates';
 import { sendLineParallelToEmail } from '@/utils/line';
 import { createMypageMagicUrl } from '@/utils/mypageLink';
+import { rateLimit, getClientIp } from '@/utils/rateLimit';
+import { validateOrderData } from '@/utils/orderValidator';
 
 export async function POST(request) {
   try {
+    // ★ レート制限（同一IPから10件/分まで）— DB圧迫攻撃防止
+    const ip = getClientIp(request);
+    const allowed = await rateLimit({ key: `orders:${ip}`, max: 10, windowSec: 60 });
+    if (!allowed) {
+      return NextResponse.json({ error: 'リクエスト過多です。しばらくしてから再度お試しください。' }, { status: 429 });
+    }
+
     const body = await request.json();
     const { tenantId, shopId, orderData, paymentMethod } = body;
 
@@ -28,6 +37,12 @@ export async function POST(request) {
     if (!orderData) return NextResponse.json({ error: 'orderData が必要' }, { status: 400 });
     if (!['card', 'bank_transfer'].includes(paymentMethod)) {
       return NextResponse.json({ error: 'paymentMethod が不正' }, { status: 400 });
+    }
+
+    // ---- 詳細バリデーション（DoS・XSS・不正入力防止）----
+    const validation = validateOrderData(orderData);
+    if (!validation.ok) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
     // Service Role で書き込み（RLSをバイパス）

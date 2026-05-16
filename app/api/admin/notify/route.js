@@ -24,24 +24,14 @@ const TYPE_LABELS = {
   feature_change: '機能変更依頼',
 };
 
-// ★ 簡易レート制限（IP/分単位、メモリ）— spam踏み台防止
-const rateLimitMap = new Map();
-function checkRate(ip) {
-  const now = Date.now();
-  const windowMs = 60 * 1000;
-  const max = 5; // 1分5件まで
-  const entry = rateLimitMap.get(ip) || { count: 0, resetAt: now + windowMs };
-  if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + windowMs; }
-  entry.count++;
-  rateLimitMap.set(ip, entry);
-  return entry.count <= max;
-}
+import { rateLimit, getClientIp } from '@/utils/rateLimit';
 
 export async function POST(request) {
   try {
-    // ★ レート制限
-    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
-    if (!checkRate(ip)) {
+    // ★ レート制限（IP, 5件/分, Redis 永続化）
+    const ip = getClientIp(request);
+    const allowed = await rateLimit({ key: `notify:${ip}`, max: 5, windowSec: 60 });
+    if (!allowed) {
       return NextResponse.json({ error: 'リクエスト過多です。しばらくしてから再度お試しください。' }, { status: 429 });
     }
 

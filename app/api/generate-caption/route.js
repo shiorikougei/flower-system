@@ -11,19 +11,9 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { incrementUsage, getMonthlyUsage, getAiPricing } from '@/utils/aiUsage';
 import { requireAuthedUser } from '@/utils/adminAuth';
+import { rateLimit } from '@/utils/rateLimit';
 
 export const runtime = 'nodejs';
-
-// ★ 簡易レート制限（テナント/分）— OpenAI 課金踏み台防止
-const rateMap = new Map();
-function checkRate(key, maxPerMin = 20) {
-  const now = Date.now();
-  const entry = rateMap.get(key) || { count: 0, resetAt: now + 60000 };
-  if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + 60000; }
-  entry.count++;
-  rateMap.set(key, entry);
-  return entry.count <= maxPerMin;
-}
 
 const DEFAULT_CAPTION_PROMPT = `あなたは {appName} の SNS担当です。お花の注文を受けて完成した作品をInstagramに投稿します。以下の条件でキャプションを作成してください。
 
@@ -62,9 +52,10 @@ export async function POST(request) {
     if (String(auth.tenant_id) !== String(tenantId)) {
       return NextResponse.json({ error: '他テナントでは呼び出せません' }, { status: 403 });
     }
-    // レート制限: 1テナント20回/分
-    if (!checkRate(`cap_${tenantId}`)) {
-      return NextResponse.json({ error: 'リクエスト過多です' }, { status: 429 });
+    // レート制限: 1テナント20回/分（Redis永続化）
+    const allowed = await rateLimit({ key: `caption:${tenantId}`, max: 20, windowSec: 60 });
+    if (!allowed) {
+      return NextResponse.json({ error: 'リクエスト過多です。しばらくしてから再度お試しください。' }, { status: 429 });
     }
 
     // 1. テナント設定から captionPrompt / showPriceInCaption を取得
