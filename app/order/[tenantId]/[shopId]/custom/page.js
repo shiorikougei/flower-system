@@ -111,6 +111,12 @@ function OrderFormContent() {
   const [flowerColor, setFlowerColor] = useState('');
   const [flowerVibe, setFlowerVibe] = useState('');
   const [otherPurpose, setOtherPurpose] = useState('');
+  const [purposeNote, setPurposeNote] = useState(''); // ★ 用途の備考欄
+  const [recipientPriorNoticeAgreed, setRecipientPriorNoticeAgreed] = useState(false); // ★ 自宅以外配達の事前連絡同意
+  // ★ お供え専用情報
+  const [osonaeInfo, setOsonaeInfo] = useState({
+    deceasedName: '', mournerName: '', sponsorNames: '', venueName: '', ceremonyTime: '',
+  });
   const [otherColor, setOtherColor] = useState('');
   const [otherVibe, setOtherVibe] = useState('');
   const [selectedImage, setSelectedImage] = useState(null); 
@@ -673,7 +679,9 @@ function OrderFormContent() {
         selectedDate, selectedTime, shippingDate,
         itemPrice, calculatedFee, pickupFee, feeBreakdown,
         absenceAction, absenceNote,
-        flowerPurpose, flowerColor, flowerVibe, otherPurpose, otherColor, otherVibe,
+        flowerPurpose, flowerColor, flowerVibe, otherPurpose, otherColor, otherVibe, purposeNote,
+        recipientPriorNoticeAgreed,
+        osonaeInfo: isOsonae ? osonaeInfo : null,
         cardType, cardMessage, tatePattern,
         tateInput1, tateInput2, tateInput3, tateInput3a, tateInput3b,
         customerInfo, isRecipientDifferent, recipientInfo, priorContactAgreed, note,
@@ -913,6 +921,59 @@ function OrderFormContent() {
                   <option value="その他">その他</option>
                 </select>
                 {flowerPurpose === 'その他' && <input type="text" placeholder="詳細を入力..." value={otherPurpose} onChange={(e) => setOtherPurpose(e.target.value)} className="w-full h-10 mt-2 bg-[#FBFAF9] px-4 rounded-lg outline-none text-sm border border-[#EAEAEA]" />}
+
+                {/* ★ お供え専用項目 */}
+                {isOsonae && (
+                  <div className="mt-3 bg-gray-50 border border-gray-300 rounded-xl p-4 space-y-3">
+                    <p className="text-[12px] font-bold text-gray-700">🙏 お供え花 詳細情報</p>
+                    <div className="grid grid-cols-1 gap-2">
+                      <input
+                        type="text"
+                        placeholder="故人さまのお名前"
+                        value={osonaeInfo.deceasedName}
+                        onChange={(e) => setOsonaeInfo({...osonaeInfo, deceasedName: e.target.value})}
+                        className="w-full h-10 bg-white border border-gray-300 rounded-lg px-3 text-[12px] outline-none focus:border-gray-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="喪主さまのお名前"
+                        value={osonaeInfo.mournerName}
+                        onChange={(e) => setOsonaeInfo({...osonaeInfo, mournerName: e.target.value})}
+                        className="w-full h-10 bg-white border border-gray-300 rounded-lg px-3 text-[12px] outline-none focus:border-gray-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="施主さまのお名前（複数の場合はカンマ区切り）"
+                        value={osonaeInfo.sponsorNames}
+                        onChange={(e) => setOsonaeInfo({...osonaeInfo, sponsorNames: e.target.value})}
+                        className="w-full h-10 bg-white border border-gray-300 rounded-lg px-3 text-[12px] outline-none focus:border-gray-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="斎場・会場名"
+                        value={osonaeInfo.venueName}
+                        onChange={(e) => setOsonaeInfo({...osonaeInfo, venueName: e.target.value})}
+                        className="w-full h-10 bg-white border border-gray-300 rounded-lg px-3 text-[12px] outline-none focus:border-gray-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="通夜・告別式の時刻 (例: 通夜18:00 / 告別10:00)"
+                        value={osonaeInfo.ceremonyTime}
+                        onChange={(e) => setOsonaeInfo({...osonaeInfo, ceremonyTime: e.target.value})}
+                        className="w-full h-10 bg-white border border-gray-300 rounded-lg px-3 text-[12px] outline-none focus:border-gray-500"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* ★ 自由記入の備考欄 */}
+                <textarea
+                  placeholder="📝 補足・備考があればお書きください（例: 撮影シーンは森の中で、リボンのみで自然な雰囲気にしてほしい等）"
+                  value={purposeNote || ''}
+                  onChange={(e) => setPurposeNote(e.target.value)}
+                  rows={2}
+                  className="w-full mt-2 bg-[#FBFAF9] px-4 py-2 rounded-lg outline-none text-[12px] border border-[#EAEAEA] focus:border-[#2D4B3E] resize-none leading-relaxed"
+                />
               </div>
               
               <div className="space-y-3">
@@ -1042,6 +1103,27 @@ function OrderFormContent() {
               {isRecipientDifferent && receiveMethod !== 'pickup' && (
                 <div className="space-y-4 bg-white p-8 rounded-2xl border border-[#2D4B3E]/20 shadow-sm animate-in fade-in zoom-in-95">
                   <label className="text-[11px] font-bold text-[#2D4B3E]">お届け先情報</label>
+
+                  {/* ★ 自宅以外配送の事前連絡チェック */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-2">
+                    <p className="text-[11px] text-blue-900 leading-relaxed">
+                      🏢 <strong>葬儀場・ホテル・会社・店舗</strong>等、ご自宅以外への配達の場合、<br/>
+                      <strong>お届け先様へ「お花が届く旨」の事前連絡をお願いいたします。</strong><br/>
+                      受取拒否・不在再配達を防ぐためのご協力をお願いします。
+                    </p>
+                    <label className="flex items-start gap-2 cursor-pointer pt-1 border-t border-blue-200">
+                      <input
+                        type="checkbox"
+                        checked={recipientPriorNoticeAgreed || false}
+                        onChange={(e) => setRecipientPriorNoticeAgreed(e.target.checked)}
+                        className="mt-0.5 w-4 h-4 accent-blue-600"
+                      />
+                      <span className="text-[11px] font-bold text-blue-900">
+                        お届け先へ事前にお花が届く旨を連絡することを了承します
+                      </span>
+                    </label>
+                  </div>
+
                   <input type="text" placeholder="お届け先 お名前" value={recipientInfo.name} onChange={(e) => setRecipientInfo({...recipientInfo, name: e.target.value})} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px] font-bold" />
                   <input type="tel" placeholder="お届け先 電話番号" value={recipientInfo.phone} onChange={(e) => setRecipientInfo({...recipientInfo, phone: e.target.value})} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]" />
                   <input type="text" placeholder="郵便番号 (7桁)" value={recipientInfo.zip} onChange={(e) => { setRecipientInfo({...recipientInfo, zip: e.target.value}); if(e.target.value.length === 7) fetchAddress(e.target.value, 'recipient'); }} className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]" />

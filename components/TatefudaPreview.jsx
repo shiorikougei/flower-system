@@ -35,8 +35,8 @@ export default function TatefudaPreview({ tatePattern, layout, isOsonae, input1,
     <>
       <div className={`relative mx-auto border border-[#EAEAEA] shadow-lg bg-white flex flex-col items-center font-serif ${layout === 'horizontal' ? 'aspect-[1.414/1] w-full justify-center p-6' : 'aspect-[1/1.414] h-[300px] pt-6 px-4'}`}>
 
-        {/* メインの冠文字（祝 / 御供 / 供）— 常に赤字 */}
-        <div className={`font-black ${redColor} ${layout === 'horizontal' ? 'text-[28px] mb-4' : 'text-[40px] mb-6 leading-none'}`}>
+        {/* メインの冠文字 — 祝=赤 / 供・御供=グレー */}
+        <div className={`font-black ${isOsonae ? 'text-gray-700' : redColor} ${layout === 'horizontal' ? 'text-[28px] mb-4' : 'text-[40px] mb-6 leading-none'}`}>
           {topPrefixText}
         </div>
 
