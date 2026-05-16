@@ -120,14 +120,6 @@ function OrderFormContent() {
   const [paymentScheduledDate, setPaymentScheduledDate] = useState(''); // ★ 銀行振込時の入金予定日
   const [lateScheduleAgreed, setLateScheduleAgreed] = useState(false); // ★ 納期遅延了承
 
-  // ★ エリア外検出時に自社配達 → 業者配送へ自動切替
-  useEffect(() => {
-    if (areaError && areaError.includes('エリア外') && receiveMethod === 'delivery') {
-      setReceiveMethod('sagawa');
-      setPriorContactAgreed(false);
-    }
-  }, [areaError, receiveMethod]);
-
   const [cardType, setCardType] = useState('なし');
   const [cardMessage, setCardMessage] = useState('');
   const [tatePattern, setTatePattern] = useState('');
@@ -151,6 +143,14 @@ function OrderFormContent() {
 
   const [areaError, setAreaError] = useState('');
   const [note, setNote] = useState('');
+
+  // ★ エリア外検出時に自社配達 → 業者配送へ自動切替（state 宣言後に配置）
+  useEffect(() => {
+    if (areaError && (areaError.includes('エリア外') || areaError.includes('該当する地域')) && receiveMethod === 'delivery') {
+      setReceiveMethod('sagawa');
+      setPriorContactAgreed(false);
+    }
+  }, [areaError, receiveMethod]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
