@@ -147,6 +147,14 @@ function ThanksContent() {
                   <pre className="text-[12px] font-bold text-[#555555] font-sans whitespace-pre-wrap leading-relaxed">{bankInfo}</pre>
                 </div>
                 <p className="text-[10px] text-[#999999] text-center">※お振込手数料はお客様負担となります。</p>
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-3">
+                  <p className="text-[11px] text-amber-900 font-bold mb-1">⚠️ ご注意</p>
+                  <p className="text-[11px] text-amber-900 leading-relaxed">
+                    お振込みのご確認が取れ次第、制作を開始させていただきます。<br/>
+                    お届け希望日に間に合うよう、お早めのお振込みをお願いいたします。<br/>
+                    <strong>ご入金に関してのご相談・ご質問がある方はお電話ください。</strong>
+                  </p>
+                </div>
               </div>
             </div>
           )}

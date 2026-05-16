@@ -724,7 +724,11 @@ export default function OrderDetailModal({
                 </span>
               )}
             </div>
-            <p className="text-[10px] md:text-[11px] text-[#999999] font-bold mt-1">受付: {safeFormatDate(order.created_at, true)} | ID: {order.id}</p>
+            <p className="text-[10px] md:text-[11px] text-[#999999] font-bold mt-1">
+              受付: {safeFormatDate(order.created_at, true)}
+              {modalData.managementNo && <span className="ml-2 px-2 py-0.5 bg-[#2D4B3E]/10 text-[#2D4B3E] rounded-full font-mono">管理番号: {modalData.managementNo}</span>}
+              <span className="ml-2 text-[#bbb]">ID: {order.id.slice(0, 8)}</span>
+            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 ml-auto">

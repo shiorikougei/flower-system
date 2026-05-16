@@ -446,6 +446,19 @@ export default function StaffNewOrderPage() {
         isStaffEntered: true
       };
 
+      // ★ 管理番号を自動採番 (YYYYMMDD-NNN)
+      const today = new Date();
+      const yyyymmdd = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()+1).toISOString();
+      const { count: todayCount } = await supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', currentTenantId)
+        .gte('created_at', startOfDay)
+        .lt('created_at', endOfDay);
+      orderPayload.managementNo = `${yyyymmdd}-${String((todayCount || 0) + 1).padStart(3, '0')}`;
+
       const { error } = await supabase.from('orders').insert([
         { tenant_id: currentTenantId, order_data: orderPayload }
       ]);

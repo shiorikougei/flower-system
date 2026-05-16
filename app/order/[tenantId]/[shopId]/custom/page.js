@@ -115,8 +115,9 @@ function OrderFormContent() {
   const [otherVibe, setOtherVibe] = useState('');
   const [selectedImage, setSelectedImage] = useState(null); 
 
-  const [absenceAction, setAbsenceAction] = useState('持ち戻り'); 
-  const [absenceNote, setAbsenceNote] = useState(''); 
+  const [absenceAction, setAbsenceAction] = useState('持ち戻り');
+  const [absenceNote, setAbsenceNote] = useState('');
+  const [paymentScheduledDate, setPaymentScheduledDate] = useState(''); // ★ 銀行振込時の入金予定日
 
   const [cardType, setCardType] = useState('なし');
   const [cardMessage, setCardMessage] = useState('');
@@ -668,6 +669,7 @@ function OrderFormContent() {
         tateInput1, tateInput2, tateInput3, tateInput3a, tateInput3b,
         customerInfo, isRecipientDifferent, recipientInfo, priorContactAgreed, note,
         referenceImage: selectedImage ? selectedImage.url : null,
+        paymentScheduledDate: paymentMethod === 'bank_transfer' ? paymentScheduledDate : null, // ★ 銀行振込の入金予定日
         status: 'new',
       };
 
@@ -1201,11 +1203,44 @@ function OrderFormContent() {
                     <div className="flex-1">
                       <p className="text-[13px] font-bold text-[#111111]">銀行振込</p>
                       <p className="text-[11px] text-[#555555] mt-1 leading-relaxed">
-                        ご注文確定後、振込先をメールでお送りします。お支払いの確認後、商品の準備を開始いたします。
+                        ご注文確定後、振込先をメールでお送りします。<strong className="text-[#D97D54]">お支払い確認後から制作を開始</strong>いたします。
                       </p>
                     </div>
                   </label>
                 </div>
+
+                {/* ★ 銀行振込選択時の納期注意＋入金予定日カレンダー */}
+                {paymentMethod === 'bank_transfer' && (
+                  <div className="mt-3 bg-amber-50 border-2 border-amber-300 rounded-xl p-4 space-y-3">
+                    <p className="text-[12px] font-bold text-amber-900">⚠️ 銀行振込のお客様へ</p>
+                    <p className="text-[11px] text-amber-900 leading-relaxed">
+                      ご入金確認後から制作を開始いたします。お届け希望日に間に合うよう、お早めのお振込みをお願いいたします。<br/>
+                      ご入金に関するご相談・ご質問は、お電話にて承っております。
+                    </p>
+                    <div className="bg-white rounded-lg p-3 space-y-2">
+                      <label className="text-[11px] font-bold text-amber-900">📅 ご入金予定日（任意）</label>
+                      <input
+                        type="date"
+                        value={paymentScheduledDate || ''}
+                        onChange={(e) => setPaymentScheduledDate(e.target.value)}
+                        min={new Date().toISOString().slice(0, 10)}
+                        className="w-full h-10 px-3 border border-amber-300 rounded-lg text-[13px] font-bold outline-none focus:border-amber-500"
+                      />
+                      {paymentScheduledDate && (() => {
+                        const pd = new Date(paymentScheduledDate);
+                        const start = new Date(pd);
+                        start.setDate(start.getDate() + 1); // 入金確認の翌日から制作開始想定
+                        return (
+                          <p className="text-[11px] text-amber-900 mt-2 leading-relaxed">
+                            ✅ <strong>{paymentScheduledDate}</strong> にご入金いただいた場合、<br/>
+                            <strong>{start.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</strong> 以降の制作開始となります。<br/>
+                            <span className="text-[10px] text-amber-700">※お届け希望日まで余裕を持ってお振込みください。</span>
+                          </p>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="p-6 bg-[#FBFAF9] rounded-2xl border border-[#EAEAEA] font-sans space-y-4 mt-6">

@@ -36,6 +36,9 @@ function PortfolioPageInner() {
 
   const [copiedId, setCopiedId] = useState(null);
 
+  // ★ 管理番号検索クエリ
+  const [searchQuery, setSearchQuery] = useState('');
+
   const defaultDesignOptions = {
     purposes: ['誕生日', '開店', 'お供え', '就任・昇進祝い', '移転祝い'],
     colors: ['おまかせ', '暖色系 (赤・ピンク・オレンジ)', '寒色系 (青・紫・白)', 'ホワイト・グリーン系'],
@@ -111,6 +114,7 @@ function PortfolioPageInner() {
       purpose: d.flowerPurpose || '',
       color: d.flowerColor || '',
       vibe: d.flowerVibe || '',
+      managementNo: d.managementNo || '', // ★ 管理番号を引き継ぐ
       uploadFile: 'from_order' // 注文からの引き継ぎであることを示すフラグ
     });
     setActiveTab('new'); // 新規登録タブに移動！
@@ -189,24 +193,25 @@ function PortfolioPageInner() {
         finalImageUrl = publicUrlData.publicUrl;
       }
       
-      const newItem = { 
-        id: `img_${Date.now()}`, 
+      const newItem = {
+        id: `img_${Date.now()}`,
         url: finalImageUrl,
         caption: newImage.caption,
         price: Number(newImage.price),
         flowerType: newImage.flowerType,
         purpose: newImage.purpose,
         color: newImage.color,
-        vibe: newImage.vibe
+        vibe: newImage.vibe,
+        managementNo: newImage.managementNo || '', // ★ 管理番号
       };
 
       const updatedImages = [newItem, ...images];
       const { error: dbError } = await supabase.from('app_settings').upsert({ id: `${currentTenantId}_gallery`, settings_data: { images: updatedImages } });
-      
+
       if (dbError) throw dbError;
-      
+
       setImages(updatedImages);
-      setNewImage({ id: '', url: '', caption: '', price: '', flowerType: '', purpose: '', color: '', vibe: '', uploadFile: null });
+      setNewImage({ id: '', url: '', caption: '', price: '', flowerType: '', purpose: '', color: '', vibe: '', managementNo: '', uploadFile: null });
       setActiveTab('list');
       alert('作品データを保存しました！');
 
@@ -273,16 +278,42 @@ function PortfolioPageInner() {
 
         {activeTab === 'list' && (
           <div className="animate-in fade-in duration-300">
-            <h2 className="text-[14px] font-bold text-[#111111] mb-6 border-l-4 border-[#2D4B3E] pl-3">
+            <h2 className="text-[14px] font-bold text-[#111111] mb-3 border-l-4 border-[#2D4B3E] pl-3">
               登録済みの作品 ＆ カタログURL
             </h2>
-            {images.length === 0 ? (
-              <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#EAEAEA] text-[#999999] text-[13px] font-bold">
-                作品が登録されていません。タブから新規追加してください。
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {images.map(img => (
+
+            {/* ★ 管理番号・キャプション検索 */}
+            <div className="bg-white border border-[#EAEAEA] rounded-2xl p-4 mb-6 flex items-center gap-3 shadow-sm">
+              <Search size={16} className="text-[#999]"/>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="管理番号で検索（例: 20260514-001）または キャプション・花の種類で絞り込み"
+                className="flex-1 h-10 bg-transparent text-[13px] outline-none"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="text-[11px] text-[#999] hover:text-[#2D4B3E] font-bold">クリア</button>
+              )}
+            </div>
+
+            {(() => {
+              const q = searchQuery.trim().toLowerCase();
+              const filtered = q
+                ? images.filter(img =>
+                    (img.managementNo || '').toLowerCase().includes(q) ||
+                    (img.caption || '').toLowerCase().includes(q) ||
+                    (img.flowerType || '').toLowerCase().includes(q) ||
+                    (img.purpose || '').toLowerCase().includes(q)
+                  )
+                : images;
+              return filtered.length === 0 ? (
+                <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#EAEAEA] text-[#999999] text-[13px] font-bold">
+                  {q ? `「${searchQuery}」に一致する作品がありません` : '作品が登録されていません。タブから新規追加してください。'}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filtered.map(img => (
                   <div key={img.id} className="bg-white rounded-2xl border border-[#EAEAEA] overflow-hidden shadow-sm hover:shadow-md transition-all group flex flex-col">
                     <div className="relative aspect-square bg-[#FBFAF9]">
                       <img src={img.url} alt="Portfolio" className="w-full h-full object-cover" />
@@ -291,6 +322,11 @@ function PortfolioPageInner() {
                       </div>
                     </div>
                     <div className="p-5 flex flex-col flex-1">
+                      {img.managementNo && (
+                        <p className="text-[10px] font-mono text-[#2D4B3E] bg-[#2D4B3E]/10 px-2 py-1 rounded mb-2 w-fit">
+                          📋 {img.managementNo}
+                        </p>
+                      )}
                       <div className="flex flex-wrap gap-1.5 mb-3">
                         {img.flowerType && <span className="px-2 py-1 bg-[#2D4B3E] border border-[#2D4B3E] rounded text-[10px] font-bold text-white shadow-sm">{img.flowerType}</span>}
                         <span className="px-2 py-1 bg-[#FBFAF9] border border-[#EAEAEA] rounded text-[10px] font-bold text-[#555555]">{img.purpose}</span>
@@ -320,9 +356,10 @@ function PortfolioPageInner() {
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -401,11 +438,19 @@ function PortfolioPageInner() {
                       <span className="text-[12px] font-bold block">クリックして選択</span>
                     </div>
                   )}
-                  {/* from_orderの時は再アップロードできないようにカバーするか、上書き許可する。ここでは上書き許可 */}
                   <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                  {/* ★ 差し替えバッジ（写真がある時のみ） */}
+                  {newImage.url && (
+                    <div className="absolute bottom-2 left-2 right-2 bg-white/95 backdrop-blur text-[10px] font-bold text-[#2D4B3E] text-center py-1.5 rounded-lg shadow-sm pointer-events-none">
+                      📷 クリックで写真を差し替え
+                    </div>
+                  )}
                 </div>
                 {newImage.uploadFile === 'from_order' && (
-                  <p className="text-[10px] font-bold text-[#999999] text-center">※完成写真がセットされています</p>
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-[10px] text-amber-900 leading-relaxed">
+                    💡 <strong>完成写真がセットされています。</strong><br/>
+                    メッセージカード等が写り込んでいる場合は、写真エリアをクリックして別の写真に差し替えできます。SNS掲載に不適切な要素が映ったままにならないようにご注意ください。
+                  </div>
                 )}
               </div>
               
@@ -470,12 +515,24 @@ function PortfolioPageInner() {
                       <Wand2 size={12} /> {isGenerating ? '生成中...' : 'APIで自動生成'}
                     </button>
                   </div>
-                  <textarea 
-                    value={newImage.caption} 
-                    onChange={e => setNewImage({ ...newImage, caption: e.target.value })} 
+                  <textarea
+                    value={newImage.caption}
+                    onChange={e => setNewImage({ ...newImage, caption: e.target.value })}
                     placeholder="AIボタンを押すか、直接入力してください。"
                     className="w-full h-32 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-4 text-[13px] resize-none focus:border-[#2D4B3E] outline-none"
                   ></textarea>
+                </div>
+
+                {/* ★ 管理番号 */}
+                <div>
+                  <label className="text-[11px] font-bold text-[#999999]">📋 管理番号 <span className="text-[10px] text-[#bbb]">(注文から自動引き継ぎ・手動編集可)</span></label>
+                  <input
+                    type="text"
+                    value={newImage.managementNo || ''}
+                    onChange={e => setNewImage({ ...newImage, managementNo: e.target.value })}
+                    placeholder="例: 20260514-001"
+                    className="w-full h-11 px-3 mt-1 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] font-mono outline-none focus:border-[#2D4B3E]"
+                  />
                 </div>
               </div>
             </div>

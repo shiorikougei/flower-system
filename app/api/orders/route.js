@@ -100,6 +100,20 @@ export async function POST(request) {
       return NextResponse.json({ error: '合計金額が不正です' }, { status: 400 });
     }
 
+    // ---- 管理番号採番 (YYYYMMDD-NNN) ----
+    const today = new Date();
+    const yyyymmdd = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()+1).toISOString();
+    const { count: todayCount } = await supabaseAdmin
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', String(tenantId))
+      .gte('created_at', startOfDay)
+      .lt('created_at', endOfDay);
+    const seq = String((todayCount || 0) + 1).padStart(3, '0');
+    const managementNo = `${yyyymmdd}-${seq}`;
+
     // ---- ordersにinsert ----
     const initialPaymentStatus = paymentMethod === 'card' ? 'processing' : 'unpaid';
     const orderRecord = {
@@ -109,6 +123,7 @@ export async function POST(request) {
         paymentMethod,
         totalAmount,
         status: 'new',
+        managementNo,  // ★ 管理番号
       },
       payment_status: initialPaymentStatus,
     };
