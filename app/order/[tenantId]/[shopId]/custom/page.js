@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/utils/supabase'; 
-import { Calendar, Package, ChevronRight, Store, Truck, AlertCircle, Phone, ShoppingBag, Search } from 'lucide-react';
+import { Calendar, Package, ChevronRight, Store, Truck, AlertCircle, Phone, ShoppingBag, Search, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 
 import TatefudaPreview from '@/components/TatefudaPreview';

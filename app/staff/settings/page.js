@@ -52,6 +52,7 @@ export default function SettingsPage() {
     type: 'template',
     customLabels: ['受注', '制作', '配達', '片付', '請求'],
     ecLabels: ['受注', '発送準備中', '発送済み', '完了'],   // ★ EC共通ステータス
+    deliveryLabels: ['未配達', '配達中', '配達完了', '不在'],  // ★ 配達管理ステータス
     orderTypeLabels: {},  // ★ 花の種類ごと: { '花束': [...], 'アレンジ': [...] }
   });
 
@@ -589,6 +590,30 @@ export default function SettingsPage() {
               </div>
             ))}
             <button onClick={() => setStatusConfig({...statusConfig, ecLabels: [...(statusConfig.ecLabels || []), '新状態']})} className="w-full py-3 border-2 border-dashed border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ EC項目を追加</button>
+          </div>
+        </div>
+
+        {/* ④ 配達管理ステータス */}
+        <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-4">
+          <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2">🚚 配達管理 ステータス</h2>
+          <p className="text-[11px] text-[#999]">配達画面で使用するステータス。配達中・配達完了・不在など、配達状況を管理する用です。</p>
+          <div className="space-y-2">
+            {(statusConfig.deliveryLabels || []).map((l, i) => (
+              <div key={i} className="flex gap-2">
+                <input
+                  type="text"
+                  value={l}
+                  onChange={(e) => {
+                    const next = [...statusConfig.deliveryLabels];
+                    next[i] = e.target.value;
+                    setStatusConfig({...statusConfig, deliveryLabels: next});
+                  }}
+                  className="flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"
+                />
+                <button onClick={() => setStatusConfig({...statusConfig, deliveryLabels: statusConfig.deliveryLabels.filter((_, idx) => idx !== i)})} className="text-red-300 p-2 hover:text-red-500"><Trash2 size={18}/></button>
+              </div>
+            ))}
+            <button onClick={() => setStatusConfig({...statusConfig, deliveryLabels: [...(statusConfig.deliveryLabels || []), '新状態']})} className="w-full py-3 border-2 border-dashed border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ 配達項目を追加</button>
           </div>
         </div>
       </div>

@@ -105,8 +105,12 @@ export default function DeliveriesPage() {
   };
 
   const getCustomLabels = () => {
+    // ★ 配達画面は専用ステータス（deliveryLabels）を優先
+    const deliveryLabels = appSettings?.statusConfig?.deliveryLabels;
+    if (Array.isArray(deliveryLabels) && deliveryLabels.length > 0) return deliveryLabels;
+    // フォールバック: 共通カスタムラベル
     const labels = appSettings?.statusConfig?.customLabels;
-    return Array.isArray(labels) ? labels : ['制作中', '制作完了', '配達中'];
+    return Array.isArray(labels) ? labels : ['未配達', '配達中', '配達完了', '不在'];
   };
 
   const getGoogleMapsUrl = (info) => {
