@@ -1645,12 +1645,24 @@ function OrderFormContent() {
                 </div>
               </div>
 
+              {/* ★ お届け先の選択は STEP 2.5 で済んでいるので STEP 4 では非表示 */}
               {receiveMethod !== 'pickup' && (
                 <div className="pt-2">
-                  <label className="flex items-center gap-3 p-4 bg-white rounded-xl border border-[#EAEAEA] cursor-pointer shadow-sm">
-                    <input type="checkbox" checked={isRecipientDifferent} onChange={(e) => setIsRecipientDifferent(e.target.checked)} className="w-5 h-5 accent-[#2D4B3E] rounded" />
-                    <span className="text-[13px] font-bold text-[#111111]">お届け先が注文者と異なる</span>
-                  </label>
+                  <div className="flex items-center justify-between p-4 bg-[#2D4B3E]/5 border border-[#2D4B3E]/20 rounded-xl">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 size={16} className="text-[#2D4B3E]"/>
+                      <span className="text-[12px] font-bold text-[#2D4B3E]">
+                        {isRecipientDifferent ? '🎁 ご贈答用（別の方へお届け）' : '🏠 ご自分用（注文者と同じ）'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setStep(2.5)}
+                      className="text-[10px] font-bold text-[#555] hover:text-[#2D4B3E] underline"
+                    >
+                      変更
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -1700,6 +1712,22 @@ function OrderFormContent() {
                     ? '直接お届け / 事前にお電話で確認させていただく場合があります'
                     : '追跡可能 / サプライズ配達にもおすすめ';
 
+                  // ★ 選択肢が実際に複数あるかを判定
+                  const canDelivery = selectedItemSettings.canDelivery !== false;
+                  const canShipping = selectedItemSettings.canShipping !== false;
+                  const deliveryAvailable = canDelivery && feeComparison?.delivery?.fee !== null && !feeComparison?.delivery?.error;
+                  const shippingAvailable = canShipping && feeComparison?.sagawa?.fee !== null && !feeComparison?.sagawa?.error;
+                  const hasChoice = deliveryAvailable && shippingAvailable; // 両方使える時のみ「変更する」を出す
+
+                  // 選択肢が1つしかない理由を案内文に
+                  let onlyOptionReason = '';
+                  if (!hasChoice) {
+                    if (!canDelivery) onlyOptionReason = 'この商品は業者配送のみ対応です';
+                    else if (!canShipping) onlyOptionReason = 'この商品は自社配達のみ対応です';
+                    else if (!deliveryAvailable) onlyOptionReason = 'お届け先が自社配達エリア外のため業者配送のみ対応';
+                    else if (!shippingAvailable) onlyOptionReason = '業者配送対応外のエリアのため自社配達のみ対応';
+                  }
+
                   return (
                     <>
                       {/* 配達方法の確認カード */}
@@ -1707,7 +1735,7 @@ function OrderFormContent() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1">
                             <p className={`text-[10px] font-bold mb-1 ${isDelivery ? 'text-emerald-700' : 'text-blue-700'}`}>
-                              選択中のお届け方法
+                              {hasChoice ? '選択中のお届け方法' : 'お届け方法'}
                             </p>
                             <p className={`text-[16px] font-bold ${isDelivery ? 'text-emerald-800' : 'text-blue-800'}`}>
                               {methodLabel}
@@ -1720,18 +1748,32 @@ function OrderFormContent() {
                             <p className={`text-[11px] mt-1 ${isDelivery ? 'text-emerald-700' : 'text-blue-700'}`}>
                               {methodDesc}
                             </p>
-                            {areaError && (
+                            {!hasChoice && onlyOptionReason && (
+                              <p className={`text-[10px] mt-2 italic ${isDelivery ? 'text-emerald-600' : 'text-blue-600'}`}>
+                                ℹ️ {onlyOptionReason}
+                              </p>
+                            )}
+                            {areaError && hasChoice && (
                               <p className="text-[11px] mt-2 text-red-600 font-bold">⚠️ {areaError}</p>
                             )}
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => setStep(2.5)}
-                            className="shrink-0 px-3 py-2 text-[11px] font-bold bg-white border border-[#EAEAEA] rounded-lg hover:bg-[#FBFAF9] hover:border-[#2D4B3E] text-[#555]"
-                          >
-                            ✏️ 変更する
-                          </button>
+                          {hasChoice && (
+                            <button
+                              type="button"
+                              onClick={() => setStep(2.5)}
+                              className="shrink-0 px-3 py-2 text-[11px] font-bold bg-white border border-[#EAEAEA] rounded-lg hover:bg-[#FBFAF9] hover:border-[#2D4B3E] text-[#555]"
+                            >
+                              ✏️ 変更する
+                            </button>
+                          )}
                         </div>
+                        {/* 住所変更したい場合のリンク (選択肢が1つでも住所変更は許可) */}
+                        {!hasChoice && (
+                          <p className="text-[10px] text-[#999] mt-3 pt-3 border-t border-[#EAEAEA] text-center">
+                            お届け先の住所を変更したい場合は
+                            <button onClick={() => setStep(2.5)} className="underline font-bold text-[#555] hover:text-[#2D4B3E] ml-1">こちら</button>
+                          </p>
+                        )}
                       </div>
 
                       {/* 自社配達 + 事前連絡同意（残す: 確定前の最終同意ポイント） */}
