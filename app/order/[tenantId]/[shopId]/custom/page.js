@@ -795,10 +795,12 @@ function OrderFormContent() {
       if (blockedDateMessage) missing.push('お届け希望日（休業日不可）');
       // ★ Phase 2: 決済方法の選択
       if (!paymentMethod) missing.push('お支払い方法');
+      // ★ 銀行振込の場合は入金予定日が必須
+      if (paymentMethod === 'bank_transfer' && !paymentScheduledDate) missing.push('ご入金予定日');
       if (!methodAgreed) missing.push('注文内容の同意');
     }
     return missing;
-  }, [step, flowerType, agreed, flowerPurpose, flowerColor, flowerVibe, itemPrice, cardType, cardMessage, tatePattern, customerInfo, isRecipientDifferent, recipientInfo, selectedDate, selectedTime, methodAgreed, areaError, receiveMethod, absenceAction, absenceNote, blockedDateMessage, priorContactAgreed, paymentMethod, selectedItemSettings]);
+  }, [step, flowerType, agreed, flowerPurpose, flowerColor, flowerVibe, itemPrice, cardType, cardMessage, tatePattern, customerInfo, isRecipientDifferent, recipientInfo, selectedDate, selectedTime, methodAgreed, areaError, receiveMethod, absenceAction, absenceNote, blockedDateMessage, priorContactAgreed, paymentMethod, paymentScheduledDate, selectedItemSettings]);
 
   const handleSubmitOrder = async () => {
     setIsSubmitting(true);
@@ -1807,8 +1809,6 @@ function OrderFormContent() {
 
                 {/* ★ 銀行振込選択時の納期注意＋入金予定日カレンダー */}
                 {paymentMethod === 'bank_transfer' && (() => {
-                  // 店舗電話番号を取得
-                  const shopPhone = appSettings?.generalConfig?.phone || appSettings?.shops?.[0]?.phone || '';
                   // 入金予定日から制作開始日を算出
                   let scheduleInfo = null;
                   if (paymentScheduledDate) {
@@ -1820,34 +1820,46 @@ function OrderFormContent() {
                     scheduleInfo = { start, isLate, wishDate };
                   }
                   return (
-                    <div className="mt-3 bg-amber-50 border-2 border-amber-300 rounded-xl p-4 space-y-3">
-                      <p className="text-[12px] font-bold text-amber-900">⚠️ 銀行振込のお客様へ</p>
-                      <p className="text-[11px] text-amber-900 leading-relaxed">
-                        ご入金確認後から制作を開始いたします。お届け希望日に間に合うよう、お早めのお振込みをお願いいたします。<br/>
-                        ご入金に関するご相談・ご質問は、お電話にて承っております。
-                        {shopPhone && (
-                          <span className="block mt-2 bg-white px-3 py-2 rounded-lg border border-amber-300">
-                            📞 <a href={`tel:${shopPhone}`} className="text-[14px] font-bold text-amber-900 underline">{shopPhone}</a>
-                          </span>
-                        )}
-                      </p>
-                      <div className="bg-white rounded-lg p-3 space-y-2">
-                        <label className="text-[11px] font-bold text-amber-900">📅 ご入金予定日（任意）</label>
+                    <div className="mt-3 space-y-3">
+                      {/* 制作開始タイミングを大きく強調 */}
+                      <div className="bg-[#D97D54] text-white rounded-xl p-5 shadow-md">
+                        <p className="text-[18px] font-bold mb-2 flex items-center gap-2">
+                          ⏱️ お支払い確認後から制作開始
+                        </p>
+                        <p className="text-[12px] leading-relaxed opacity-95">
+                          銀行振込の場合、<strong className="text-yellow-200 underline">ご入金確認後</strong>から
+                          お花の仕入れ・制作を開始いたします。<br/>
+                          お届け希望日に間に合うよう、<strong>お早めのお振込み</strong>をお願いいたします。
+                        </p>
+                      </div>
+
+                      {/* 入金予定日（必須）*/}
+                      <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[12px] font-bold text-amber-900">📅 ご入金予定日</label>
+                          <span className="text-[10px] bg-red-50 text-red-600 font-bold px-2 py-0.5 rounded">必須</span>
+                        </div>
                         <input
                           type="date"
                           value={paymentScheduledDate || ''}
                           onChange={(e) => setPaymentScheduledDate(e.target.value)}
                           min={new Date().toISOString().slice(0, 10)}
-                          className="w-full h-10 px-3 border border-amber-300 rounded-lg text-[13px] font-bold outline-none focus:border-amber-500"
+                          required
+                          className="w-full h-12 px-3 bg-white border-2 border-amber-300 rounded-lg text-[14px] font-bold outline-none focus:border-amber-500"
                         />
+                        <p className="text-[10px] text-amber-700">
+                          ※ お振込み予定の日付を選択してください
+                        </p>
                         {scheduleInfo && !scheduleInfo.isLate && (
-                          <p className="text-[11px] text-amber-900 mt-2 leading-relaxed">
-                            ✅ <strong>{paymentScheduledDate}</strong> にご入金いただいた場合、<br/>
-                            <strong>{scheduleInfo.start.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</strong> 以降の制作開始となります。
-                          </p>
+                          <div className="bg-white border border-amber-300 rounded-lg p-3 space-y-1">
+                            <p className="text-[11px] text-amber-900 leading-relaxed">
+                              ✅ <strong>{paymentScheduledDate}</strong> にご入金いただいた場合、<br/>
+                              <strong>{scheduleInfo.start.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</strong> 以降の制作開始となります。
+                            </p>
+                          </div>
                         )}
                         {scheduleInfo && scheduleInfo.isLate && (
-                          <div className="mt-2 bg-red-50 border-2 border-red-300 rounded-lg p-3 space-y-2">
+                          <div className="bg-red-50 border-2 border-red-300 rounded-lg p-3 space-y-2">
                             <p className="text-[12px] font-bold text-red-700">🚨 お届け希望日に間に合わない可能性があります</p>
                             <p className="text-[11px] text-red-900 leading-relaxed">
                               ご入金予定日（<strong>{paymentScheduledDate}</strong>）のご入金確認後、<strong>{scheduleInfo.start.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })}</strong>以降の制作開始となります。<br/>
@@ -1866,6 +1878,10 @@ function OrderFormContent() {
                             </label>
                           </div>
                         )}
+                        <p className="text-[10px] text-amber-700 bg-amber-100 rounded-lg px-3 py-2 leading-relaxed">
+                          💡 ご入金のタイミングに関するご相談がある場合は、<strong>ご注文確定後にお電話</strong>にてお問い合わせください。<br/>
+                          <span className="text-[#999]">（お電話番号は注文完了画面・確認メールでご案内します）</span>
+                        </p>
                       </div>
                     </div>
                   );

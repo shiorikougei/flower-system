@@ -72,6 +72,8 @@ function ThanksContent() {
   const shops = appSettings?.shops || [];
   const targetShop = shops.find(s => String(s.id) === String(shopId)) || shops[0] || { name: appName };
   const bankInfo = targetShop.bankInfo || '';
+  // ★ 店舗電話番号 (generalConfig.phone or shop.phone)
+  const shopPhone = generalConfig.phone || targetShop.phone || '';
 
   // クレジットカード決済成功フラグ
   const isCardPaid = paymentResult === 'success';
@@ -150,10 +152,23 @@ function ThanksContent() {
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-3">
                   <p className="text-[11px] text-amber-900 font-bold mb-1">⚠️ ご注意</p>
                   <p className="text-[11px] text-amber-900 leading-relaxed">
-                    お振込みのご確認が取れ次第、<strong>発送</strong>させていただきます。<br/>
-                    <strong>ご入金に関してのご相談・ご質問がある方はお電話ください。</strong>
+                    お振込みのご確認が取れ次第、<strong>制作・発送</strong>させていただきます。
                   </p>
                 </div>
+                {/* ★ 入金タイミング相談用の電話番号案内 */}
+                {shopPhone && (
+                  <div className="bg-[#2D4B3E]/5 border-2 border-[#2D4B3E]/20 rounded-xl p-4 mt-3 text-center space-y-2">
+                    <p className="text-[12px] font-bold text-[#2D4B3E]">📞 ご入金に関するご相談</p>
+                    <p className="text-[11px] text-[#555] leading-relaxed">
+                      ご入金のタイミングに関するご相談・ご質問は<br/>下記までお電話ください
+                    </p>
+                    <a href={`tel:${shopPhone}`}
+                      className="block bg-white px-4 py-3 rounded-xl border border-[#2D4B3E]/30 hover:bg-[#FBFAF9]">
+                      <span className="text-[18px] font-bold text-[#2D4B3E] underline">{shopPhone}</span>
+                    </a>
+                    <p className="text-[10px] text-[#999]">営業時間内のみ対応</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
