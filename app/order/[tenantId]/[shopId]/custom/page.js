@@ -150,15 +150,10 @@ function OrderFormContent() {
   const [areaError, setAreaError] = useState('');
   const [note, setNote] = useState('');
 
-  // ★ エリア外検出時に自社配達 → 業者配送へ自動切替（state 宣言後に配置）
-  // ※ 自社配達のみ商品 (canShipping === false) の場合は切替しない（エラー表示のまま）
-  useEffect(() => {
-    const canShipping = appSettings?.flowerItems?.find(i => i.name === flowerType)?.canShipping !== false;
-    if (areaError && (areaError.includes('エリア外') || areaError.includes('該当する地域')) && receiveMethod === 'delivery' && canShipping) {
-      setReceiveMethod('sagawa');
-      setPriorContactAgreed(false);
-    }
-  }, [areaError, receiveMethod, appSettings, flowerType]);
+  // ★ エリア外検出時の自社配達 → 業者配送 自動切替を廃止
+  //   (STEP 2.5 で feeComparison ベースで明示的に選ばせるため、副作用での切替は不要)
+  //   ただし利用可能なオプションが1つしかない場合は自動的にそれにセット
+  // (depends on feeComparison which is declared below; see below for actual effect)
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -597,6 +592,24 @@ function OrderFormContent() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerInfo.address1, customerInfo.address2, recipientInfo.address1, recipientInfo.address2, isRecipientDifferent, itemPrice, selectedImage, appSettings, selectedItemSettings, selectedDate, transitDays]);
+
+  // ★ STEP 2.5 で利用可能オプションが1つしかない場合は自動的に選択
+  useEffect(() => {
+    if (step !== 2.5 || !feeComparison) return;
+    const canDelivery = selectedItemSettings.canDelivery !== false;
+    const canShipping = selectedItemSettings.canShipping !== false;
+    const deliveryOk = canDelivery && feeComparison.delivery?.fee !== null && !feeComparison.delivery?.error;
+    const shippingOk = canShipping && feeComparison.sagawa?.fee !== null && !feeComparison.sagawa?.error;
+    // 自社配達のみ可 → delivery
+    if (deliveryOk && !shippingOk && receiveMethod !== 'delivery') {
+      setReceiveMethod('delivery');
+    }
+    // 業者配送のみ可 → sagawa (エリア外時はこちらに自動切替)
+    else if (!deliveryOk && shippingOk && receiveMethod !== 'sagawa') {
+      setReceiveMethod('sagawa');
+      setPriorContactAgreed(false);
+    }
+  }, [step, feeComparison, receiveMethod, selectedItemSettings]);
 
   useEffect(() => {
     if (!receiveMethod || receiveMethod === 'pickup' || !itemPrice) {
@@ -1107,12 +1120,42 @@ function OrderFormContent() {
               </p>
             </div>
 
-            {/* ★ エリア判定＋配達種別選択 */}
+            {/* ★ エリア判定＋配達種別選択 (feeComparison ベースで判定 - receiveMethod に依存しない) */}
             {target.address1 && (() => {
               const canDelivery = selectedItemSettings.canDelivery !== false;
               const canShipping = selectedItemSettings.canShipping !== false;
-              const isInArea = !areaError && receiveMethod === 'delivery' && calculatedFee !== null;
-              const isOutOfArea = !!areaError;
+              // ★ feeComparison から自社配達と業者配送が「実際に利用可能か」を判定
+              //   (computeFeeForMethod で fee !== null なら可能、error が入ってれば不可)
+              const deliveryAvailable = canDelivery
+                && feeComparison?.delivery?.fee !== null
+                && !feeComparison?.delivery?.error;
+              const shippingAvailable = canShipping
+                && feeComparison?.sagawa?.fee !== null
+                && !feeComparison?.sagawa?.error;
+              const isOutOfArea = !deliveryAvailable;
+
+              // ★ エリア外 (自社配達不可) かつ 業者配送も不可 (両方非対応 or shipping計算失敗) → 完全に対応不可
+              if (!deliveryAvailable && !shippingAvailable) {
+                return (
+                  <div className="p-5 bg-red-50 border-2 border-red-200 rounded-2xl space-y-3">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle size={18} className="text-red-600 shrink-0 mt-0.5"/>
+                      <div className="space-y-1">
+                        <p className="text-[13px] font-bold text-red-700">⚠️ 申し訳ございません</p>
+                        <p className="text-[12px] text-red-800 leading-relaxed">
+                          ご入力いただいたお届け先は<strong>配達対応エリア外</strong>です。<br/>
+                          配達・配送をお受けすることができません。
+                        </p>
+                        {selectedItemSettings.canPickup !== false && (
+                          <p className="text-[11px] text-red-700 mt-2">
+                            👉 <button onClick={() => { setStep(2); setAreaError(''); }} className="underline font-bold">ご来店受取に変更する</button>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
 
               // 自社配達のみ商品 + エリア外 → エラー
               if (!canShipping && isOutOfArea) {
@@ -1198,8 +1241,8 @@ function OrderFormContent() {
                 );
               }
 
-              // エリア外 + 業者配送対応商品 → 業者配送のみ
-              if (isOutOfArea && canShipping) {
+              // エリア外 + 業者配送利用可 → 業者配送のみ
+              if (!deliveryAvailable && shippingAvailable) {
                 return (
                   <div className="p-5 bg-blue-50 border-2 border-blue-200 rounded-2xl space-y-2">
                     <div className="flex items-start gap-2">
@@ -1233,7 +1276,38 @@ function OrderFormContent() {
                 );
               }
 
-              // エリア内 + 両対応 → 自社配達 / 業者配送 選択可能（料金比較表示）
+              // 自社配達利用可 + 業者配送利用不可 → 自社配達のみ表示
+              if (deliveryAvailable && !shippingAvailable) {
+                return (
+                  <div className="p-5 bg-emerald-50 border-2 border-emerald-200 rounded-2xl space-y-3">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5"/>
+                      <p className="text-[12px] text-emerald-800 leading-relaxed">
+                        ✅ <strong>自社配達対応エリア内です</strong>。
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setReceiveMethod('delivery')}
+                      className={`w-full p-4 rounded-xl border-2 text-left transition-all ${receiveMethod === 'delivery' ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white' : 'bg-white border-emerald-300 text-[#2D4B3E]'}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-[13px] font-bold">🚚 自社配達</div>
+                          <div className={`text-[10px] mt-1 ${receiveMethod === 'delivery' ? 'text-white/80' : 'text-[#555]'}`}>
+                            直接お届け / 事前電話確認あり
+                          </div>
+                        </div>
+                        <div className={`text-[20px] font-bold ${receiveMethod === 'delivery' ? 'text-white' : 'text-emerald-700'}`}>
+                          {feeComparison.delivery.fee === 0 ? '送料無料 🎉' : `¥${feeComparison.delivery.fee.toLocaleString()}`}
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                );
+              }
+
+              // 両方利用可 → 自社配達 / 業者配送 比較表示
               return (
                 <div className="p-5 bg-emerald-50 border-2 border-emerald-200 rounded-2xl space-y-3">
                   <div className="flex items-start gap-2">
