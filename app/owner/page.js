@@ -1759,11 +1759,22 @@ export default function OwnerDashboard() {
                 <div className="bg-[#1a1111] p-6 rounded-2xl border border-red-900/50 space-y-3">
                   <div className="flex items-center gap-2">
                     <span className="text-[24px]">⏰</span>
-                    <h4 className="text-white font-bold text-[13px]">勤怠・シフト・操作履歴</h4>
+                    <h4 className="text-white font-bold text-[13px]">勤怠・シフト</h4>
                   </div>
-                  <p className="text-[11px] text-gray-400 leading-relaxed">staff_attendance, shift_schedules, shift_holiday_requests, audit_log</p>
-                  <button onClick={() => handleClear('staff_attendance', '勤怠・シフト・操作履歴')} className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl font-bold text-[11px] transition-all shadow-md">
+                  <p className="text-[11px] text-gray-400 leading-relaxed">staff_attendance, shift_schedules, shift_holiday_requests</p>
+                  <button onClick={() => handleClear('staff_attendance', '勤怠・シフト')} className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl font-bold text-[11px] transition-all shadow-md">
                     <Trash2 size={12}/> 勤怠系を全削除
+                  </button>
+                </div>
+
+                <div className="bg-[#1a1111] p-6 rounded-2xl border border-red-900/50 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[24px]">📜</span>
+                    <h4 className="text-white font-bold text-[13px]">操作履歴のみ</h4>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">audit_log テーブル全件（テスト操作ログ）</p>
+                  <button onClick={() => handleClear('audit_log', '操作履歴')} className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl font-bold text-[11px] transition-all shadow-md">
+                    <Trash2 size={12}/> 操作履歴を全削除
                   </button>
                 </div>
               </div>

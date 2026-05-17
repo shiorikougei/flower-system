@@ -34,16 +34,16 @@ export async function POST(request) {
       ],
       products: ['stock_notifications', 'products'], // 子テーブル先
       staff_attendance: [
-        'audit_log',
         'staff_attendance',
         'shift_schedules',
         'shift_holiday_requests',
       ],
+      audit_log: ['audit_log'], // ★ 操作履歴のみ単独削除可能
     };
 
     let allTables = [];
     if (targets.includes('all')) {
-      allTables = [...groups.orders, ...groups.customers, ...groups.products, ...groups.staff_attendance];
+      allTables = [...groups.orders, ...groups.customers, ...groups.products, ...groups.staff_attendance, ...groups.audit_log];
     } else {
       for (const t of targets) {
         if (groups[t]) allTables = allTables.concat(groups[t]);
