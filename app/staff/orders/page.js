@@ -78,17 +78,14 @@ export default function OrdersPage() {
   }, []);
 
   const handleUpdateStatus = async (orderId, newStatus, staffName) => {
-    if (!staffName) {
-      alert('ステータスを更新する担当スタッフを選択してください。');
-      return;
-    }
+    // ★ 担当スタッフは任意化 (未選択でも更新可能)
     try {
       const targetOrder = orders.find(o => o.id === orderId);
       const currentHistory = targetOrder.order_data.statusHistory || [];
-      
+
       const newHistoryEntry = {
         status: newStatus,
-        staff: staffName,
+        staff: staffName || '-',
         date: new Date().toISOString()
       };
 

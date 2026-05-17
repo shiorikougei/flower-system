@@ -4,7 +4,7 @@ import { supabase } from '@/utils/supabase';
 import {
   Wand2, Copy, ExternalLink, CheckCircle, Trash2,
   Plus, Link as LinkIcon, Image as ImageIcon, Loader2, Sparkles, LayoutGrid,
-  Camera, ArrowRight, Search,
+  Camera, ArrowRight, Search, X,
 } from 'lucide-react';
 import FeatureGate from '@/components/FeatureGate';
 import HelpTooltip from '@/components/HelpTooltip';
@@ -38,6 +38,9 @@ function PortfolioPageInner() {
 
   // ★ 管理番号検索クエリ
   const [searchQuery, setSearchQuery] = useState('');
+
+  // ★ 詳細モーダル
+  const [detailImage, setDetailImage] = useState(null);
 
   // ★ URL一括取込関連 state
   const [bulkUrls, setBulkUrls] = useState('');
@@ -486,10 +489,15 @@ function PortfolioPageInner() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filtered.map(img => (
                   <div key={img.id} className="bg-white rounded-2xl border border-[#EAEAEA] overflow-hidden shadow-sm hover:shadow-md transition-all group flex flex-col">
-                    <div className="relative aspect-square bg-[#FBFAF9]">
-                      <img src={img.url} alt="Portfolio" className="w-full h-full object-cover" />
+                    <div className="relative aspect-square bg-[#FBFAF9] cursor-pointer" onClick={() => setDetailImage(img)}>
+                      <img src={img.url} alt="Portfolio" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
                       <div className="absolute top-3 right-3 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-[12px] font-bold text-[#2D4B3E] shadow-sm">
                         {img.priceHidden ? '金額: お問い合わせ' : `¥${Number(img.price).toLocaleString()}`}
+                      </div>
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all flex items-center justify-center">
+                        <span className="opacity-0 group-hover:opacity-100 bg-white/95 backdrop-blur px-4 py-2 rounded-full text-[11px] font-bold text-[#2D4B3E] shadow-md">
+                          🔍 詳細を見る
+                        </span>
                       </div>
                     </div>
                     <div className="p-5 flex flex-col flex-1">
@@ -919,7 +927,132 @@ function PortfolioPageInner() {
         )}
 
       </div>
-      
+
+      {/* ★ 作品詳細モーダル */}
+      {detailImage && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={() => setDetailImage(null)}>
+          <div className="bg-white max-w-3xl w-full max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+            {/* ヘッダー */}
+            <div className="sticky top-0 bg-white border-b border-[#EAEAEA] px-6 py-4 flex items-center justify-between rounded-t-3xl z-10">
+              <h2 className="text-[16px] font-bold text-[#2D4B3E]">作品詳細</h2>
+              <button onClick={() => setDetailImage(null)} className="p-2 hover:bg-[#FBFAF9] rounded-full">
+                <X size={20} className="text-[#555]"/>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+              {/* 画像エリア */}
+              <div className="relative bg-[#FBFAF9] aspect-square md:aspect-auto">
+                <img src={detailImage.url} alt="" className="w-full h-full object-cover" />
+                {detailImage.priceHidden ? (
+                  <div className="absolute top-4 right-4 bg-white/95 backdrop-blur px-4 py-2 rounded-full text-[14px] font-bold text-[#2D4B3E] shadow-md">
+                    💰 金額: お問い合わせ
+                  </div>
+                ) : (
+                  <div className="absolute top-4 right-4 bg-[#2D4B3E] text-white px-4 py-2 rounded-full text-[16px] font-bold shadow-md">
+                    ¥{Number(detailImage.price).toLocaleString()}
+                    <span className="text-[10px] ml-1 opacity-80">(税抜)</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 詳細エリア */}
+              <div className="p-6 space-y-4">
+                {detailImage.managementNo && (
+                  <div className="bg-[#2D4B3E]/10 px-3 py-2 rounded-lg">
+                    <p className="text-[10px] font-bold text-[#999]">📋 管理番号</p>
+                    <p className="text-[14px] font-mono font-bold text-[#2D4B3E]">{detailImage.managementNo}</p>
+                  </div>
+                )}
+
+                {/* 税込価格 */}
+                {!detailImage.priceHidden && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                    <p className="text-[10px] font-bold text-emerald-700">税込価格</p>
+                    <p className="text-[20px] font-bold text-emerald-700">
+                      ¥{Math.floor(Number(detailImage.price) * 1.1).toLocaleString()}
+                    </p>
+                    <p className="text-[10px] text-emerald-600">税抜 ¥{Number(detailImage.price).toLocaleString()} + 消費税 ¥{Math.floor(Number(detailImage.price) * 0.1).toLocaleString()}</p>
+                  </div>
+                )}
+
+                {/* タグ */}
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold text-[#999]">作品情報</p>
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    {detailImage.flowerType && (
+                      <div className="bg-[#2D4B3E] text-white px-3 py-2 rounded-lg">
+                        <span className="text-[9px] opacity-70 block">花の種類</span>
+                        <span className="font-bold">{detailImage.flowerType}</span>
+                      </div>
+                    )}
+                    {detailImage.purpose && (
+                      <div className="bg-[#FBFAF9] border border-[#EAEAEA] px-3 py-2 rounded-lg">
+                        <span className="text-[9px] text-[#999] block">用途</span>
+                        <span className="font-bold text-[#2D4B3E]">{detailImage.purpose}</span>
+                      </div>
+                    )}
+                    {detailImage.color && (
+                      <div className="bg-[#FBFAF9] border border-[#EAEAEA] px-3 py-2 rounded-lg">
+                        <span className="text-[9px] text-[#999] block">カラー</span>
+                        <span className="font-bold text-[#2D4B3E]">{detailImage.color}</span>
+                      </div>
+                    )}
+                    {detailImage.vibe && (
+                      <div className="bg-[#FBFAF9] border border-[#EAEAEA] px-3 py-2 rounded-lg">
+                        <span className="text-[9px] text-[#999] block">イメージ</span>
+                        <span className="font-bold text-[#2D4B3E]">{detailImage.vibe}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* キャプション */}
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold text-[#999]">📝 キャプション全文</p>
+                  <div className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg p-3 max-h-48 overflow-y-auto">
+                    <p className="text-[12px] text-[#222] whitespace-pre-wrap leading-relaxed">
+                      {detailImage.caption || '（キャプションなし）'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 元 Instagram URL */}
+                {detailImage.sourceInstagramUrl && (
+                  <a href={detailImage.sourceInstagramUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-[11px] text-[#2D4B3E] font-bold hover:underline bg-[#FBFAF9] px-3 py-2 rounded-lg">
+                    <ExternalLink size={12}/> Instagram 元投稿を見る
+                  </a>
+                )}
+
+                {/* アクションボタン */}
+                <div className="space-y-2 pt-3 border-t border-[#EAEAEA]">
+                  <button
+                    onClick={() => { handleCopyUrl(detailImage.id); }}
+                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[12px] transition-all border ${copiedId === detailImage.id ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-[#2D4B3E] border-[#2D4B3E] text-white hover:bg-[#1f352b]'}`}
+                  >
+                    {copiedId === detailImage.id ? <><CheckCircle size={14}/> コピーしました！</> : <><Copy size={14}/> カタログURLをコピー</>}
+                  </button>
+                  <a
+                    href={`/order/${currentTenantId}/${appSettings?.shops?.[0]?.id || 'default'}?img=${detailImage.id}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[12px] bg-white border border-[#EAEAEA] text-[#555] hover:border-[#2D4B3E] hover:text-[#2D4B3E]"
+                  >
+                    <ExternalLink size={14}/> お客様画面でプレビュー
+                  </a>
+                  <button
+                    onClick={() => { handleDelete(detailImage.id); setDetailImage(null); }}
+                    className="w-full py-2 text-[11px] font-bold text-red-500 hover:bg-red-50 rounded-lg"
+                  >
+                    🗑️ 作品を削除
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style jsx global>{`
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
