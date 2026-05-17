@@ -649,9 +649,11 @@ function OrderFormContent() {
     }
     // ★ 新STEP 2.5: 配達先住所＋配達種別選択
     if (step === 2.5) {
-      if (!recipientInfo.zip || recipientInfo.zip.length !== 7) missing.push('郵便番号 (7桁)');
-      if (!recipientInfo.address1) missing.push('住所');
-      if (!recipientInfo.address2) missing.push('番地・建物名');
+      // isRecipientDifferent に応じて customerInfo or recipientInfo を見る
+      const target = isRecipientDifferent ? recipientInfo : customerInfo;
+      if (!target.zip || target.zip.length !== 7) missing.push('郵便番号 (7桁)');
+      if (!target.address1) missing.push('住所');
+      if (!target.address2) missing.push('番地・建物名');
       // 自社配達のみ商品 (canShipping !== true) でエリア外の場合はブロック
       const canShipping = selectedItemSettings.canShipping !== false;
       if (!canShipping && areaError) missing.push('対応エリア外（業者配送非対応商品）');
@@ -860,13 +862,13 @@ function OrderFormContent() {
                   </button>
                 ))
               ) : null}
-              {/* ★ 配達・配送を統合ボタン化 → STEP 2.5 で住所入力＋配達種別選択 */}
+              {/* ★ 配達・配送を統合ボタン化 → STEP 2.5 でお届け先選択＋住所入力＋配達種別選択 */}
               <div className="mt-8">
                 {(selectedItemSettings.canDelivery !== false || selectedItemSettings.canShipping !== false) && (
                   <button
                     onClick={() => {
-                      // 配達先住所を別途入力するため、isRecipientDifferent=true で開始
-                      setIsRecipientDifferent(true);
+                      // お届け先の選択は STEP 2.5 で行う（デフォルトは未選択）
+                      setIsRecipientDifferent(false);
                       // 仮にdeliveryに設定（住所入力後にエリア判定して再選択）
                       setReceiveMethod('delivery');
                       setStep(2.5);
@@ -886,23 +888,86 @@ function OrderFormContent() {
           </div>
         )}
 
-        {/* --- STEP 2.5: お届け先住所＋配達種別選択（配達・配送選択時のみ） --- */}
-        {step === 2.5 && (
+        {/* --- STEP 2.5: お届け先選択＋住所入力＋配達種別選択（配達・配送選択時のみ） --- */}
+        {step === 2.5 && (() => {
+          // ★ どちらの住所入力先 (customerInfo or recipientInfo) を使うかを isRecipientDifferent で分岐
+          const target = isRecipientDifferent ? recipientInfo : customerInfo;
+          const setTarget = isRecipientDifferent
+            ? (v) => setRecipientInfo(v)
+            : (v) => setCustomerInfo(v);
+          const targetKey = isRecipientDifferent ? 'recipient' : 'customer';
+          // 「ご自分用 / ご贈答用」のどちらかが選ばれているか
+          // (デフォルトは false=ご自分用 でセットされるが、ユーザーが明示的に選択するためのフラグ)
+          const recipientChoiceMade = customerInfo.address1 || recipientInfo.address1 || target.zip;
+
+          return (
           <div className="space-y-6 animate-in fade-in duration-200">
             <div>
               <h1 className="text-[20px] font-bold mb-2 text-[#2D4B3E]">お届け先のご住所</h1>
               <p className="text-[12px] text-[#555555]">先にお届け先を入力して、配達方法をお選びください。</p>
             </div>
 
+            {/* ★ ① ご自分用 / ご贈答用 の選択 */}
+            <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-3">
+              <label className="text-[11px] font-bold text-[#999999]">📦 お届け先は？</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    // 「ご自分用」に切り替えると、もし recipientInfo に入力してたら customerInfo にコピー
+                    if (isRecipientDifferent && (recipientInfo.zip || recipientInfo.address1)) {
+                      setCustomerInfo({
+                        ...customerInfo,
+                        zip: recipientInfo.zip,
+                        address1: recipientInfo.address1,
+                        address2: recipientInfo.address2,
+                      });
+                    }
+                    setIsRecipientDifferent(false);
+                  }}
+                  className={`p-4 rounded-xl border-2 text-left transition-all ${!isRecipientDifferent ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white shadow-md' : 'bg-white border-[#EAEAEA] text-[#555] hover:border-[#2D4B3E]'}`}
+                >
+                  <div className="text-[13px] font-bold">🏠 ご自分用（注文者と同じ）</div>
+                  <div className={`text-[10px] mt-1 ${!isRecipientDifferent ? 'text-white/80' : 'text-[#999]'}`}>
+                    ご自宅・自分宛のお届け
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // 「ご贈答用」に切り替えると、もし customerInfo に住所が入ってたら recipientInfo にコピー
+                    if (!isRecipientDifferent && (customerInfo.zip || customerInfo.address1)) {
+                      setRecipientInfo({
+                        ...recipientInfo,
+                        zip: customerInfo.zip,
+                        address1: customerInfo.address1,
+                        address2: customerInfo.address2,
+                      });
+                    }
+                    setIsRecipientDifferent(true);
+                  }}
+                  className={`p-4 rounded-xl border-2 text-left transition-all ${isRecipientDifferent ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white shadow-md' : 'bg-white border-[#EAEAEA] text-[#555] hover:border-[#2D4B3E]'}`}
+                >
+                  <div className="text-[13px] font-bold">🎁 ご贈答用（別の方へ）</div>
+                  <div className={`text-[10px] mt-1 ${isRecipientDifferent ? 'text-white/80' : 'text-[#999]'}`}>
+                    プレゼント・お祝い等
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* ★ ② 住所入力 (選択中の対象に書き込み) */}
             <div className="bg-white p-6 md:p-8 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-4">
-              <label className="text-[11px] font-bold text-[#999999]">📍 お届け先 住所</label>
+              <label className="text-[11px] font-bold text-[#999999]">
+                📍 {isRecipientDifferent ? 'お届け先' : 'ご自分'} の住所
+              </label>
               <input
                 type="text"
                 placeholder="郵便番号 (7桁・ハイフンなし)"
-                value={recipientInfo.zip}
+                value={target.zip}
                 onChange={(e) => {
-                  setRecipientInfo({...recipientInfo, zip: e.target.value});
-                  if (e.target.value.length === 7) fetchAddress(e.target.value, 'recipient');
+                  setTarget({...target, zip: e.target.value});
+                  if (e.target.value.length === 7) fetchAddress(e.target.value, targetKey);
                 }}
                 inputMode="numeric"
                 maxLength={7}
@@ -911,24 +976,24 @@ function OrderFormContent() {
               <input
                 type="text"
                 placeholder="都道府県・市区町村 (自動入力)"
-                value={recipientInfo.address1}
+                value={target.address1}
                 readOnly
                 className="w-full h-14 px-5 bg-[#EAEAEA]/30 rounded-xl outline-none text-[#555] text-[14px]"
               />
               <input
                 type="text"
                 placeholder="番地・建物名・部屋番号"
-                value={recipientInfo.address2}
-                onChange={(e) => setRecipientInfo({...recipientInfo, address2: e.target.value})}
+                value={target.address2}
+                onChange={(e) => setTarget({...target, address2: e.target.value})}
                 className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]"
               />
               <p className="text-[10px] text-[#999] leading-relaxed">
-                💡 お届け先のお名前・電話番号は次の画面で入力します
+                💡 {isRecipientDifferent ? 'お届け先の' : ''}お名前・電話番号は次の画面で入力します
               </p>
             </div>
 
             {/* ★ エリア判定＋配達種別選択 */}
-            {recipientInfo.address1 && (() => {
+            {target.address1 && (() => {
               const canDelivery = selectedItemSettings.canDelivery !== false;
               const canShipping = selectedItemSettings.canShipping !== false;
               const isInArea = !areaError && receiveMethod === 'delivery' && calculatedFee !== null;
@@ -1062,13 +1127,14 @@ function OrderFormContent() {
               );
             })()}
 
-            {!recipientInfo.address1 && (
+            {!target.address1 && (
               <div className="p-5 bg-[#FBFAF9] border border-dashed border-[#EAEAEA] rounded-2xl text-center text-[12px] text-[#999] font-bold">
                 ↑ 郵便番号を入力すると配達方法をご案内します
               </div>
             )}
           </div>
-        )}
+          );
+        })()}
 
         {/* --- STEP 3: デザイン詳細と画像提案 --- */}
         {step === 3 && (
