@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
-import { ChevronLeft, Send, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, Send, CheckCircle2, ImagePlus, X, Loader2 } from 'lucide-react';
 
 // ★ ヒアリング選択肢
 const PURPOSE_OPTIONS = [
@@ -60,14 +60,75 @@ export default function EstimatePage() {
     flowerType: '', colorPreference: '', countSpec: '',
     budget: '',
     cardType: 'none', cardContent: '',
-    // 参考URL
-    referenceUrls: '',
+    // 参考画像 (URLの配列)
+    referenceImages: [],
     // その他自由記入
     otherNotes: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
+  // ★ 画像アップロード関連
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 });
+
+  // ★ 参考画像のアップロード処理 (複数枚)
+  async function handleImageUpload(e) {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    // 既存枚数 + 新規 で最大10枚まで
+    const remaining = 10 - form.referenceImages.length;
+    if (remaining <= 0) {
+      alert('参考画像は最大10枚までアップロードできます');
+      return;
+    }
+    const filesToUpload = files.slice(0, remaining);
+    if (files.length > remaining) {
+      alert(`最大10枚までです。最初の${remaining}枚のみアップロードします。`);
+    }
+    // 各ファイルのサイズチェック (各5MB以下)
+    for (const f of filesToUpload) {
+      if (f.size > 5 * 1024 * 1024) {
+        alert(`「${f.name}」は5MBを超えています。5MB以下の画像を選択してください。`);
+        return;
+      }
+    }
+
+    setUploadingImages(true);
+    setUploadProgress({ done: 0, total: filesToUpload.length });
+    const newUrls = [];
+    try {
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const file = filesToUpload[i];
+        const fileExt = file.name.split('.').pop() || 'jpg';
+        const fileName = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
+        const filePath = `${tenantId}/estimates/${fileName}`;
+        const { error: upErr } = await supabase.storage.from('portfolio').upload(filePath, file, {
+          contentType: file.type,
+          upsert: false,
+        });
+        if (upErr) {
+          console.error(upErr);
+          continue;
+        }
+        const { data: pub } = supabase.storage.from('portfolio').getPublicUrl(filePath);
+        if (pub?.publicUrl) newUrls.push(pub.publicUrl);
+        setUploadProgress({ done: i + 1, total: filesToUpload.length });
+      }
+      setForm(f => ({ ...f, referenceImages: [...f.referenceImages, ...newUrls] }));
+    } catch (err) {
+      console.error(err);
+      alert('画像のアップロードに失敗しました: ' + err.message);
+    } finally {
+      setUploadingImages(false);
+      // ファイル input をリセット (同じファイル選択しても発火するように)
+      if (e.target) e.target.value = '';
+    }
+  }
+
+  function removeReferenceImage(idx) {
+    setForm(f => ({ ...f, referenceImages: f.referenceImages.filter((_, i) => i !== idx) }));
+  }
 
   useEffect(() => {
     (async () => {
@@ -99,7 +160,9 @@ export default function EstimatePage() {
       const ct = CARD_OPTIONS.find(c => c.value === form.cardType);
       lines.push(`【${ct?.label}】${form.cardContent || '（内容は後日相談）'}`);
     }
-    if (form.referenceUrls) lines.push(`【参考URL・写真】\n${form.referenceUrls}`);
+    if (form.referenceImages && form.referenceImages.length > 0) {
+      lines.push(`【参考画像 (${form.referenceImages.length}枚)】\n${form.referenceImages.join('\n')}`);
+    }
     if (form.otherNotes) lines.push(`【その他特記事項】\n${form.otherNotes}`);
     return lines.join('\n');
   }
@@ -132,6 +195,7 @@ export default function EstimatePage() {
           customerPhone: form.customerPhone,
           requestContent: buildRequestContent(),
           requestData: form, // 構造化データも保存（後で見やすく表示するため）
+          referenceImages: form.referenceImages, // 参考画像URL配列
         }),
       });
       const data = await res.json();
@@ -345,17 +409,73 @@ export default function EstimatePage() {
           )}
         </div>
 
-        {/* ⑥ 参考URL・画像 */}
+        {/* ⑥ 参考画像アップロード */}
         <div className={sectionCls}>
-          <p className="text-[12px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">⑥ 参考画像・URL <span className="text-[10px] text-[#999]">（任意）</span></p>
+          <p className="text-[12px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">⑥ 参考画像 <span className="text-[10px] text-[#999]">（任意・最大10枚）</span></p>
           <p className="text-[11px] text-[#555] leading-relaxed">
-            イメージに近い画像があれば、Instagram投稿のURLや画像URLを1行に1つずつ貼り付けてください。<br/>
-            <span className="text-[10px] text-[#999]">※ Instagram の場合は公開投稿のみ対応</span>
+            イメージに近いお写真があれば、お手元のスマホ画像・スクショをアップロードしてください。<br/>
+            <span className="text-[10px] text-[#999]">※ 1枚あたり最大5MB / JPG・PNG・HEIC等の画像形式</span>
           </p>
-          <textarea rows={3}
-            placeholder={'https://www.instagram.com/p/XXXXXXX/\nhttps://example.com/image.jpg'}
-            value={form.referenceUrls} onChange={e => setForm({...form, referenceUrls: e.target.value})}
-            className="w-full px-4 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] font-mono outline-none focus:border-[#117768] resize-none leading-relaxed"/>
+
+          {/* アップロード済みプレビュー */}
+          {form.referenceImages.length > 0 && (
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {form.referenceImages.map((url, idx) => (
+                <div key={idx} className="relative aspect-square bg-[#FBFAF9] rounded-lg overflow-hidden border border-[#EAEAEA] group">
+                  <img src={url} alt={`参考画像${idx + 1}`} className="w-full h-full object-cover"/>
+                  <button
+                    type="button"
+                    onClick={() => removeReferenceImage(idx)}
+                    className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] shadow-md hover:bg-red-600 transition-all"
+                    aria-label="削除"
+                  >
+                    <X size={14}/>
+                  </button>
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] text-center py-0.5">
+                    {idx + 1}枚目
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* アップロードボタン (10枚未満時のみ) */}
+          {form.referenceImages.length < 10 && (
+            <label className={`flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed rounded-xl cursor-pointer transition-all ${uploadingImages ? 'border-[#117768] bg-[#117768]/5' : 'border-[#EAEAEA] hover:border-[#117768] hover:bg-[#FBFAF9]'}`}>
+              {uploadingImages ? (
+                <>
+                  <Loader2 className="animate-spin text-[#117768]" size={32}/>
+                  <span className="text-[12px] font-bold text-[#117768]">
+                    アップロード中... ({uploadProgress.done}/{uploadProgress.total})
+                  </span>
+                </>
+              ) : (
+                <>
+                  <ImagePlus size={32} className="text-[#117768]"/>
+                  <span className="text-[12px] font-bold text-[#117768]">
+                    タップして画像を選択
+                  </span>
+                  <span className="text-[10px] text-[#999]">
+                    残り {10 - form.referenceImages.length} 枚まで追加可能
+                  </span>
+                </>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageUpload}
+                disabled={uploadingImages}
+                className="hidden"
+              />
+            </label>
+          )}
+
+          {form.referenceImages.length === 10 && (
+            <p className="text-[10px] text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">
+              ⚠️ 最大枚数 (10枚) に達しました。追加するには既存画像を削除してください。
+            </p>
+          )}
         </div>
 
         {/* ⑦ その他特記事項 */}

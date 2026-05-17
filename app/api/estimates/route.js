@@ -42,7 +42,7 @@ export async function POST(request) {
       customer_phone: customerPhone ? String(customerPhone).slice(0, 30) : null,
       request_content: String(requestContent).slice(0, 2000),
       request_data: requestData || null,
-      reference_images: Array.isArray(referenceImages) ? referenceImages.slice(0, 5) : null,
+      reference_images: Array.isArray(referenceImages) ? referenceImages.slice(0, 10) : null,
       status: 'pending',
     }]).select('id').single();
 
@@ -74,8 +74,13 @@ export async function POST(request) {
         if (rd.countSpec) rows.push(['本数・サイズ指定', escHtml(rd.countSpec)]);
         if (rd.budget) rows.push(['ご予算', escHtml(rd.budget)]);
         if (rd.cardType && rd.cardType !== 'none') rows.push([cardMap[rd.cardType] || 'カード', escHtml(rd.cardContent || '（内容は後日相談）')]);
-        if (rd.referenceUrls) rows.push(['参考URL', escHtml(rd.referenceUrls)]);
         if (rd.otherNotes) rows.push(['その他特記事項', escHtml(rd.otherNotes)]);
+        // 参考画像のサムネイル
+        const refImgs = Array.isArray(referenceImages) ? referenceImages : [];
+        if (refImgs.length > 0) {
+          const imgsHtml = refImgs.map(u => `<a href="${u}" target="_blank" style="display:inline-block;margin:4px;"><img src="${u}" alt="参考画像" style="max-width:120px;max-height:120px;border-radius:8px;border:1px solid #eaeaea;object-fit:cover;"/></a>`).join('');
+          rows.push([`参考画像 (${refImgs.length}枚)`, imgsHtml]);
+        }
 
         const tableHtml = rows.length > 0
           ? `<table style="width:100%;border-collapse:collapse;margin:10px 0;">

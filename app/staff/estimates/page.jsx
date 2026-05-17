@@ -160,6 +160,23 @@ export default function EstimatesPage() {
                     )}
                   </div>
 
+                  {/* ★ 参考画像のサムネイル表示 */}
+                  {Array.isArray(est.reference_images) && est.reference_images.length > 0 && (
+                    <div className="bg-[#FBFAF9] p-3 rounded-lg">
+                      <p className="text-[10px] font-bold text-[#999] mb-2">📷 参考画像 ({est.reference_images.length}枚)</p>
+                      <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                        {est.reference_images.map((url, idx) => (
+                          <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="relative aspect-square bg-white rounded-lg overflow-hidden border border-[#EAEAEA] hover:shadow-md transition-all group">
+                            <img src={url} alt={`参考画像${idx + 1}`} className="w-full h-full object-cover"/>
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
+                              <span className="opacity-0 group-hover:opacity-100 text-white text-[10px] font-bold">🔍 拡大</span>
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {est.reply_message && (
                     <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-lg">
                       <p className="text-[10px] font-bold text-emerald-700 mb-1">店舗回答 (¥{Number(est.proposed_price).toLocaleString()} 税抜)</p>
