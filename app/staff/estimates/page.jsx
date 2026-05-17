@@ -125,8 +125,39 @@ export default function EstimatesPage() {
                   </div>
 
                   <div className="bg-[#FBFAF9] p-3 rounded-lg">
-                    <p className="text-[10px] font-bold text-[#999] mb-1">ご依頼内容</p>
-                    <pre className="text-[12px] text-[#222] whitespace-pre-wrap font-sans leading-relaxed">{est.request_content}</pre>
+                    <p className="text-[10px] font-bold text-[#999] mb-2">ご依頼内容</p>
+                    {/* ★ 構造化データがあればテーブル表示、なければプレーンテキスト */}
+                    {est.request_data && typeof est.request_data === 'object' ? (
+                      <div className="space-y-1">
+                        {(() => {
+                          const rd = est.request_data;
+                          const dmMap = { pickup: '店頭で受取', delivery: '自社配達', shipping: '宅配便配送', undecided: '未定・相談' };
+                          const cardMap = { none: '不要', message: 'メッセージカード', tatefuda: '立札' };
+                          const purposeLabel = rd.purpose === 'その他' ? `その他: ${rd.purposeOther || ''}` : rd.purpose;
+                          const fields = [];
+                          if (rd.purpose) fields.push(['ご用途', purposeLabel]);
+                          if (rd.deliveryMethod) fields.push(['受取方法', dmMap[rd.deliveryMethod] || rd.deliveryMethod]);
+                          if (rd.desiredDate) fields.push(['ご希望日', rd.desiredDate + (rd.desiredTime ? ` / ${rd.desiredTime}` : '')]);
+                          if (rd.deliveryAddress) fields.push(['お届け先住所', rd.deliveryAddress]);
+                          if (rd.recipientName) fields.push(['お届け先お名前', `${rd.recipientName} 様`]);
+                          if (rd.flowerType) fields.push(['花の種類', rd.flowerType]);
+                          if (rd.colorPreference) fields.push(['色・イメージ', rd.colorPreference]);
+                          if (rd.countSpec) fields.push(['本数・サイズ', rd.countSpec]);
+                          if (rd.budget) fields.push(['ご予算', rd.budget]);
+                          if (rd.cardType && rd.cardType !== 'none') fields.push([cardMap[rd.cardType] || 'カード', rd.cardContent || '（後日相談）']);
+                          if (rd.referenceUrls) fields.push(['参考URL', rd.referenceUrls]);
+                          if (rd.otherNotes) fields.push(['その他', rd.otherNotes]);
+                          return fields.map(([k, v], i) => (
+                            <div key={i} className="grid grid-cols-[110px_1fr] gap-2 text-[12px] py-1 border-b border-[#EAEAEA] last:border-b-0">
+                              <span className="font-bold text-[#117768] text-[11px]">{k}</span>
+                              <span className="text-[#222] whitespace-pre-wrap break-words">{v}</span>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    ) : (
+                      <pre className="text-[12px] text-[#222] whitespace-pre-wrap font-sans leading-relaxed">{est.request_content}</pre>
+                    )}
                   </div>
 
                   {est.reply_message && (

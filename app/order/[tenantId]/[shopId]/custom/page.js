@@ -151,12 +151,14 @@ function OrderFormContent() {
   const [note, setNote] = useState('');
 
   // ★ エリア外検出時に自社配達 → 業者配送へ自動切替（state 宣言後に配置）
+  // ※ 自社配達のみ商品 (canShipping === false) の場合は切替しない（エラー表示のまま）
   useEffect(() => {
-    if (areaError && (areaError.includes('エリア外') || areaError.includes('該当する地域')) && receiveMethod === 'delivery') {
+    const canShipping = appSettings?.flowerItems?.find(i => i.name === flowerType)?.canShipping !== false;
+    if (areaError && (areaError.includes('エリア外') || areaError.includes('該当する地域')) && receiveMethod === 'delivery' && canShipping) {
       setReceiveMethod('sagawa');
       setPriorContactAgreed(false);
     }
-  }, [areaError, receiveMethod]);
+  }, [areaError, receiveMethod, appSettings, flowerType]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -645,6 +647,18 @@ function OrderFormContent() {
       if (!flowerType) missing.push('商品');
       if (flowerType && !agreed) missing.push('注意事項の同意');
     }
+    // ★ 新STEP 2.5: 配達先住所＋配達種別選択
+    if (step === 2.5) {
+      if (!recipientInfo.zip || recipientInfo.zip.length !== 7) missing.push('郵便番号 (7桁)');
+      if (!recipientInfo.address1) missing.push('住所');
+      if (!recipientInfo.address2) missing.push('番地・建物名');
+      // 自社配達のみ商品 (canShipping !== true) でエリア外の場合はブロック
+      const canShipping = selectedItemSettings.canShipping !== false;
+      if (!canShipping && areaError) missing.push('対応エリア外（業者配送非対応商品）');
+      if (!receiveMethod || (receiveMethod !== 'delivery' && receiveMethod !== 'sagawa')) {
+        missing.push('配達方法');
+      }
+    }
     if (step === 3) {
       if (!flowerPurpose) missing.push('ご用途');
       if (!flowerColor) missing.push('カラー');
@@ -669,7 +683,7 @@ function OrderFormContent() {
       if (!methodAgreed) missing.push('注文内容の同意');
     }
     return missing;
-  }, [step, flowerType, agreed, flowerPurpose, flowerColor, flowerVibe, itemPrice, cardType, cardMessage, tatePattern, customerInfo, isRecipientDifferent, recipientInfo, selectedDate, selectedTime, methodAgreed, areaError, receiveMethod, absenceAction, absenceNote, blockedDateMessage, priorContactAgreed, paymentMethod]);
+  }, [step, flowerType, agreed, flowerPurpose, flowerColor, flowerVibe, itemPrice, cardType, cardMessage, tatePattern, customerInfo, isRecipientDifferent, recipientInfo, selectedDate, selectedTime, methodAgreed, areaError, receiveMethod, absenceAction, absenceNote, blockedDateMessage, priorContactAgreed, paymentMethod, selectedItemSettings]);
 
   const handleSubmitOrder = async () => {
     setIsSubmitting(true);
@@ -741,11 +755,13 @@ function OrderFormContent() {
             <Link href={`/order/${tenantId}/${shopId}/history`} className="hidden sm:flex items-center gap-1 text-[11px] font-bold text-[#555555] hover:text-[#2D4B3E] px-2 py-1">
               <Search size={12}/> 注文確認
             </Link>
-            <div className="text-[10px] font-bold text-[#999999]">ステップ {step} / 4</div>
+            <div className="text-[10px] font-bold text-[#999999]">
+              ステップ {step === 2.5 ? '2-住所' : `${step}`} / 4
+            </div>
           </div>
         </div>
         <div className="h-0.5 w-full bg-[#FBFAF9]">
-          <div className="h-full transition-all duration-500 ease-out bg-[#2D4B3E]" style={{ width: `${(step / 4) * 100}%` }}></div>
+          <div className="h-full transition-all duration-500 ease-out bg-[#2D4B3E]" style={{ width: `${(Math.min(step, 4) / 4) * 100}%` }}></div>
         </div>
       </header>
 
@@ -844,23 +860,213 @@ function OrderFormContent() {
                   </button>
                 ))
               ) : null}
-              {/* ★ 配達・配送を統合ボタン化 */}
+              {/* ★ 配達・配送を統合ボタン化 → STEP 2.5 で住所入力＋配達種別選択 */}
               <div className="mt-8">
                 {(selectedItemSettings.canDelivery !== false || selectedItemSettings.canShipping !== false) && (
                   <button
                     onClick={() => {
-                      // 一旦sagawaをデフォにして、住所入力後に自動でdelivery/sagawa判定する
-                      setReceiveMethod('sagawa');
-                      setStep(3);
+                      // 配達先住所を別途入力するため、isRecipientDifferent=true で開始
+                      setIsRecipientDifferent(true);
+                      // 仮にdeliveryに設定（住所入力後にエリア判定して再選択）
+                      setReceiveMethod('delivery');
+                      setStep(2.5);
                     }}
                     className="w-full p-6 rounded-2xl bg-[#FBFAF9] border border-[#EAEAEA] font-bold text-[14px] hover:bg-white hover:border-[#2D4B3E] transition-all text-[#555555] hover:text-[#2D4B3E] text-left"
                   >
-                    <div className="text-[15px] font-bold text-[#2D4B3E] mb-1">📦 配達・配送（お届け先を入力）</div>
-                    <div className="text-[11px] text-[#999]">住所入力後、自社配達エリアかどうかを判定します。エリア内なら自社配達 or 業者配送をお選びいただけます。</div>
+                    <div className="text-[15px] font-bold text-[#2D4B3E] mb-1">📦 配達・配送（次にお届け先を入力）</div>
+                    <div className="text-[11px] text-[#999]">
+                      {selectedItemSettings.canShipping === false
+                        ? '※この商品は自社配達のみ対応。エリア外の場合はご来店をご利用ください。'
+                        : '住所入力後、自社配達エリアかどうかを判定します。エリア内なら自社配達 or 業者配送をお選びいただけます。'}
+                    </div>
                   </button>
                 )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* --- STEP 2.5: お届け先住所＋配達種別選択（配達・配送選択時のみ） --- */}
+        {step === 2.5 && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <div>
+              <h1 className="text-[20px] font-bold mb-2 text-[#2D4B3E]">お届け先のご住所</h1>
+              <p className="text-[12px] text-[#555555]">先にお届け先を入力して、配達方法をお選びください。</p>
+            </div>
+
+            <div className="bg-white p-6 md:p-8 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-4">
+              <label className="text-[11px] font-bold text-[#999999]">📍 お届け先 住所</label>
+              <input
+                type="text"
+                placeholder="郵便番号 (7桁・ハイフンなし)"
+                value={recipientInfo.zip}
+                onChange={(e) => {
+                  setRecipientInfo({...recipientInfo, zip: e.target.value});
+                  if (e.target.value.length === 7) fetchAddress(e.target.value, 'recipient');
+                }}
+                inputMode="numeric"
+                maxLength={7}
+                className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px] font-bold"
+              />
+              <input
+                type="text"
+                placeholder="都道府県・市区町村 (自動入力)"
+                value={recipientInfo.address1}
+                readOnly
+                className="w-full h-14 px-5 bg-[#EAEAEA]/30 rounded-xl outline-none text-[#555] text-[14px]"
+              />
+              <input
+                type="text"
+                placeholder="番地・建物名・部屋番号"
+                value={recipientInfo.address2}
+                onChange={(e) => setRecipientInfo({...recipientInfo, address2: e.target.value})}
+                className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]"
+              />
+              <p className="text-[10px] text-[#999] leading-relaxed">
+                💡 お届け先のお名前・電話番号は次の画面で入力します
+              </p>
+            </div>
+
+            {/* ★ エリア判定＋配達種別選択 */}
+            {recipientInfo.address1 && (() => {
+              const canDelivery = selectedItemSettings.canDelivery !== false;
+              const canShipping = selectedItemSettings.canShipping !== false;
+              const isInArea = !areaError && receiveMethod === 'delivery' && calculatedFee !== null;
+              const isOutOfArea = !!areaError;
+
+              // 自社配達のみ商品 + エリア外 → エラー
+              if (!canShipping && isOutOfArea) {
+                return (
+                  <div className="p-5 bg-red-50 border-2 border-red-200 rounded-2xl space-y-3">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle size={18} className="text-red-600 shrink-0 mt-0.5"/>
+                      <div className="space-y-1">
+                        <p className="text-[13px] font-bold text-red-700">⚠️ 申し訳ございません</p>
+                        <p className="text-[12px] text-red-800 leading-relaxed">
+                          ご入力いただいたお届け先は<strong>自社配達エリア外</strong>です。<br/>
+                          こちらの商品は<strong>自社配達のみ対応</strong>のため、配達をお受けすることができません。
+                        </p>
+                        {selectedItemSettings.canPickup !== false && (
+                          <p className="text-[11px] text-red-700 mt-2">
+                            👉 <button onClick={() => { setStep(2); setAreaError(''); }} className="underline font-bold">ご来店受取に変更する</button>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // 業者配送のみ商品 (自社配達不可)
+              if (!canDelivery) {
+                return (
+                  <div className="p-5 bg-blue-50 border-2 border-blue-200 rounded-2xl space-y-2">
+                    <div className="flex items-start gap-2">
+                      <Truck size={16} className="text-blue-600 shrink-0 mt-0.5"/>
+                      <p className="text-[12px] text-blue-900 leading-relaxed">
+                        📦 <strong>この商品は業者配送（佐川急便）でお届けします。</strong><br/>
+                        <span className="text-[11px] text-blue-700">送料は次の画面のお見積もりで確認できます。</span>
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setReceiveMethod('sagawa'); setPriorContactAgreed(false); }}
+                      className={`w-full p-4 rounded-xl border-2 text-left transition-all mt-2 ${receiveMethod === 'sagawa' ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white' : 'bg-white border-blue-300 text-[#2D4B3E]'}`}
+                    >
+                      <div className="text-[13px] font-bold">📦 業者配送 (佐川急便)</div>
+                    </button>
+                  </div>
+                );
+              }
+
+              // 自社配達のみ商品 + エリア内
+              if (!canShipping && !isOutOfArea) {
+                return (
+                  <div className="p-5 bg-emerald-50 border-2 border-emerald-200 rounded-2xl space-y-3">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5"/>
+                      <p className="text-[12px] text-emerald-800 leading-relaxed">
+                        ✅ <strong>自社配達対応エリア内です</strong>。<br/>
+                        <span className="text-[11px] text-emerald-700">この商品は自社配達のみ対応です。送料は次の画面のお見積もりで確認できます。</span>
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setReceiveMethod('delivery')}
+                      className={`w-full p-4 rounded-xl border-2 text-left transition-all ${receiveMethod === 'delivery' ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white' : 'bg-white border-emerald-300 text-[#2D4B3E]'}`}
+                    >
+                      <div className="text-[13px] font-bold">🚚 自社配達</div>
+                      <div className={`text-[10px] mt-1 ${receiveMethod === 'delivery' ? 'text-white/80' : 'text-[#555]'}`}>
+                        直接お届け。事前に電話確認させていただく場合があります。
+                      </div>
+                    </button>
+                  </div>
+                );
+              }
+
+              // エリア外 + 業者配送対応商品 → 業者配送のみ
+              if (isOutOfArea && canShipping) {
+                return (
+                  <div className="p-5 bg-blue-50 border-2 border-blue-200 rounded-2xl space-y-2">
+                    <div className="flex items-start gap-2">
+                      <Truck size={16} className="text-blue-600 shrink-0 mt-0.5"/>
+                      <p className="text-[12px] text-blue-900 leading-relaxed">
+                        📦 <strong>このお届け先は自社配達エリア外のため、業者配送（佐川急便）でお届けします。</strong><br/>
+                        <span className="text-[11px] text-blue-700">送料は次の画面のお見積もりで確認できます。</span>
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setReceiveMethod('sagawa'); setPriorContactAgreed(false); }}
+                      className={`w-full p-4 rounded-xl border-2 text-left transition-all mt-2 ${receiveMethod === 'sagawa' ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white' : 'bg-white border-blue-300 text-[#2D4B3E]'}`}
+                    >
+                      <div className="text-[13px] font-bold">📦 業者配送 (佐川急便)</div>
+                    </button>
+                  </div>
+                );
+              }
+
+              // エリア内 + 両対応 → 自社配達 / 業者配送 選択可能
+              return (
+                <div className="p-5 bg-emerald-50 border-2 border-emerald-200 rounded-2xl space-y-3">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5"/>
+                    <p className="text-[12px] text-emerald-800 leading-relaxed">
+                      ✅ <strong>自社配達対応エリア内です</strong>。下記からお届け方法をお選びください。<br/>
+                      <span className="text-[11px] text-emerald-700">※送料は次の画面の「お見積もり」で確認できます</span>
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setReceiveMethod('delivery')}
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${receiveMethod === 'delivery' ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white shadow-md' : 'bg-white border-emerald-200 text-[#2D4B3E] hover:border-emerald-500'}`}
+                    >
+                      <div className="text-[13px] font-bold">🚚 自社配達</div>
+                      <div className={`text-[10px] mt-1 ${receiveMethod === 'delivery' ? 'text-white/80' : 'text-[#555]'}`}>
+                        直接お届け。事前に電話確認させていただく場合があります。
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setReceiveMethod('sagawa'); setPriorContactAgreed(false); }}
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${receiveMethod === 'sagawa' ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white shadow-md' : 'bg-white border-emerald-200 text-[#2D4B3E] hover:border-emerald-500'}`}
+                    >
+                      <div className="text-[13px] font-bold">📦 業者配送 (佐川急便)</div>
+                      <div className={`text-[10px] mt-1 ${receiveMethod === 'sagawa' ? 'text-white/80' : 'text-[#555]'}`}>
+                        追跡可能。サプライズ配達には業者配送がおすすめ。
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {!recipientInfo.address1 && (
+              <div className="p-5 bg-[#FBFAF9] border border-dashed border-[#EAEAEA] rounded-2xl text-center text-[12px] text-[#999] font-bold">
+                ↑ 郵便番号を入力すると配達方法をご案内します
+              </div>
+            )}
           </div>
         )}
 
@@ -966,16 +1172,8 @@ function OrderFormContent() {
                   </div>
                 )}
 
-                {/* ★ 自由記入の備考欄 */}
-                <textarea
-                  placeholder="📝 補足・備考があればお書きください（例: 撮影シーンは森の中で、リボンのみで自然な雰囲気にしてほしい等）"
-                  value={purposeNote || ''}
-                  onChange={(e) => setPurposeNote(e.target.value)}
-                  rows={2}
-                  className="w-full mt-2 bg-[#FBFAF9] px-4 py-2 rounded-lg outline-none text-[12px] border border-[#EAEAEA] focus:border-[#2D4B3E] resize-none leading-relaxed"
-                />
               </div>
-              
+
               <div className="space-y-3">
                 <label className="text-[11px] font-bold text-[#999999]">メインカラー</label>
                 <select value={flowerColor} onChange={(e) => setFlowerColor(e.target.value)} className={`w-full h-12 border-b bg-transparent outline-none font-bold transition-all ${selectedImage && flowerColor ? 'border-[#2D4B3E] text-[#2D4B3E]' : 'border-[#EAEAEA] focus:border-[#2D4B3E]'}`}>
@@ -994,6 +1192,18 @@ function OrderFormContent() {
                   <option value="その他">その他</option>
                 </select>
                 {flowerVibe === 'その他' && <input type="text" placeholder="イメージの詳細をご入力ください" value={otherVibe} onChange={(e) => setOtherVibe(e.target.value)} className="w-full h-10 mt-2 bg-[#FBFAF9] px-4 rounded-lg outline-none text-sm border border-[#EAEAEA]" />}
+              </div>
+
+              {/* ★ 自由記入の備考欄（イメージの下に配置） */}
+              <div className="space-y-3">
+                <label className="text-[11px] font-bold text-[#999999]">補足・備考</label>
+                <textarea
+                  placeholder="📝 補足・備考があればお書きください（例: 撮影シーンは森の中で、リボンのみで自然な雰囲気にしてほしい等）"
+                  value={purposeNote || ''}
+                  onChange={(e) => setPurposeNote(e.target.value)}
+                  rows={3}
+                  className="w-full bg-[#FBFAF9] px-4 py-2 rounded-lg outline-none text-[12px] border border-[#EAEAEA] focus:border-[#2D4B3E] resize-none leading-relaxed"
+                />
               </div>
 
               <div className="space-y-3 pt-4">
@@ -1486,11 +1696,26 @@ function OrderFormContent() {
             
             <div className="flex gap-4">
               {step > 1 && (
-                <button onClick={() => setStep(step - 1)} className="px-6 h-14 shrink-0 rounded-xl bg-white border border-[#EAEAEA] text-[#555555] font-bold text-[14px] hover:bg-[#F7F7F7] transition-all">戻る</button>
+                <button
+                  onClick={() => {
+                    // ★ step 2.5 を考慮した戻る処理
+                    if (step === 2.5) setStep(2);
+                    else if (step === 3 && (receiveMethod === 'delivery' || receiveMethod === 'sagawa')) setStep(2.5);
+                    else if (step === 4) setStep(3);
+                    else setStep(step - 1);
+                  }}
+                  className="px-6 h-14 shrink-0 rounded-xl bg-white border border-[#EAEAEA] text-[#555555] font-bold text-[14px] hover:bg-[#F7F7F7] transition-all"
+                >戻る</button>
               )}
-              <button 
-                disabled={missingFields.length > 0 || isSubmitting} 
-                onClick={() => step < 4 ? setStep(step + 1) : handleSubmitOrder()} 
+              <button
+                disabled={missingFields.length > 0 || isSubmitting}
+                onClick={() => {
+                  // ★ step 2.5 を考慮した進む処理
+                  if (step === 2.5) setStep(3);
+                  else if (step === 3) setStep(4);
+                  else if (step === 4) handleSubmitOrder();
+                  else setStep(step + 1);
+                }}
                 className={`flex-1 h-14 rounded-xl bg-[#2D4B3E] text-white font-bold text-[15px] shadow-md transition-all active:scale-[0.98] disabled:opacity-40 disabled:active:scale-100 hover:bg-[#1f352b]`}
               >
                 {step === 4 ? (isSubmitting ? '送信中...' : '注文を確定する') : '次へ進む'}
