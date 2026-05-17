@@ -223,7 +223,9 @@ export async function POST(request) {
           orderTotal: totalAmount.toLocaleString(),
           orderItems: formatOrderItems(orderRecord.order_data),
           paymentMethod: paymentLabelMap[paymentMethod] || paymentMethod,
-          bankInfo: paymentMethod === 'bank_transfer' && bankInfo ? `【お振込先】\n${bankInfo}\n※お振込手数料はお客様ご負担となります。` : '',
+          bankInfo: paymentMethod === 'bank_transfer' && bankInfo
+            ? `【お振込先】\n${bankInfo}\n※お振込手数料はお客様ご負担となります。\n\n⏱️ お振込み確認後から制作を開始いたします。${orderData.paymentScheduledDate ? `\n📅 ご入金予定日: ${orderData.paymentScheduledDate}` : ''}\n\n📞 ご入金のタイミングに関するご相談・ご質問は、お電話にてお問い合わせください。\n${shopPhone ? `   TEL: ${shopPhone}` : ''}`
+            : '',
           deliveryDate: orderData.selectedDate ? `${orderData.selectedDate} ${orderData.selectedTime || ''}`.trim() : '',
           shopPhone,
           recipientInfo: formatRecipientInfo(orderRecord.order_data),
