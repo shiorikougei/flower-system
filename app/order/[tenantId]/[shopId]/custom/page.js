@@ -1491,30 +1491,58 @@ function OrderFormContent() {
               </div>
 
               <div className="space-y-3">
-                <label className="text-[11px] font-bold text-[#999999]">メインカラー</label>
-                <select value={flowerColor} onChange={(e) => setFlowerColor(e.target.value)} className={`w-full h-12 border-b bg-transparent outline-none font-bold transition-all ${selectedImage && flowerColor ? 'border-[#2D4B3E] text-[#2D4B3E]' : 'border-[#EAEAEA] focus:border-[#2D4B3E]'}`}>
-                  <option value="">選択...</option>
-                  {designOptions.colors.map(c => <option key={c} value={c}>{c}</option>)}
-                  <option value="その他">その他</option>
-                </select>
-                {flowerColor === 'その他' && <input type="text" placeholder="ご希望のカラーをご入力ください" value={otherColor} onChange={(e) => setOtherColor(e.target.value)} className="w-full h-10 mt-2 bg-[#FBFAF9] px-4 rounded-lg outline-none text-sm border border-[#EAEAEA]" />}
+                <label className="text-[11px] font-bold text-[#999999] flex items-center justify-between">
+                  メインカラー
+                  {selectedImage && <span className="bg-[#2D4B3E] text-white px-2 py-0.5 rounded text-[9px]">画像から自動反映</span>}
+                </label>
+                {selectedImage ? (
+                  <div className="w-full h-12 border-b border-[#2D4B3E] bg-[#2D4B3E]/5 flex items-center px-3 font-bold text-[#2D4B3E] text-[14px]">
+                    {flowerColor === 'その他' ? `その他: ${otherColor}` : flowerColor || '（未設定）'}
+                  </div>
+                ) : (
+                  <>
+                    <select value={flowerColor} onChange={(e) => setFlowerColor(e.target.value)} className="w-full h-12 border-b border-[#EAEAEA] bg-transparent outline-none font-bold focus:border-[#2D4B3E] transition-all">
+                      <option value="">選択...</option>
+                      {designOptions.colors.map(c => <option key={c} value={c}>{c}</option>)}
+                      <option value="その他">その他</option>
+                    </select>
+                    {flowerColor === 'その他' && <input type="text" placeholder="ご希望のカラーをご入力ください" value={otherColor} onChange={(e) => setOtherColor(e.target.value)} className="w-full h-10 mt-2 bg-[#FBFAF9] px-4 rounded-lg outline-none text-sm border border-[#EAEAEA]" />}
+                  </>
+                )}
               </div>
 
               <div className="space-y-3">
-                <label className="text-[11px] font-bold text-[#999999]">イメージ</label>
-                <select value={flowerVibe} onChange={(e) => setFlowerVibe(e.target.value)} className={`w-full h-12 border-b bg-transparent outline-none font-bold transition-all ${selectedImage && flowerVibe ? 'border-[#2D4B3E] text-[#2D4B3E]' : 'border-[#EAEAEA] focus:border-[#2D4B3E]'}`}>
-                  <option value="">選択...</option>
-                  {designOptions.vibes.map(v => <option key={v} value={v}>{v}</option>)}
-                  <option value="その他">その他</option>
-                </select>
-                {flowerVibe === 'その他' && <input type="text" placeholder="イメージの詳細をご入力ください" value={otherVibe} onChange={(e) => setOtherVibe(e.target.value)} className="w-full h-10 mt-2 bg-[#FBFAF9] px-4 rounded-lg outline-none text-sm border border-[#EAEAEA]" />}
+                <label className="text-[11px] font-bold text-[#999999] flex items-center justify-between">
+                  イメージ
+                  {selectedImage && <span className="bg-[#2D4B3E] text-white px-2 py-0.5 rounded text-[9px]">画像から自動反映</span>}
+                </label>
+                {selectedImage ? (
+                  <div className="w-full h-12 border-b border-[#2D4B3E] bg-[#2D4B3E]/5 flex items-center px-3 font-bold text-[#2D4B3E] text-[14px]">
+                    {flowerVibe === 'その他' ? `その他: ${otherVibe}` : flowerVibe || '（未設定）'}
+                  </div>
+                ) : (
+                  <>
+                    <select value={flowerVibe} onChange={(e) => setFlowerVibe(e.target.value)} className="w-full h-12 border-b border-[#EAEAEA] bg-transparent outline-none font-bold focus:border-[#2D4B3E] transition-all">
+                      <option value="">選択...</option>
+                      {designOptions.vibes.map(v => <option key={v} value={v}>{v}</option>)}
+                      <option value="その他">その他</option>
+                    </select>
+                    {flowerVibe === 'その他' && <input type="text" placeholder="イメージの詳細をご入力ください" value={otherVibe} onChange={(e) => setOtherVibe(e.target.value)} className="w-full h-10 mt-2 bg-[#FBFAF9] px-4 rounded-lg outline-none text-sm border border-[#EAEAEA]" />}
+                  </>
+                )}
               </div>
+
+              {selectedImage && (
+                <p className="text-[10px] text-[#999] -mt-2 leading-relaxed">
+                  💡 メインカラー・イメージを変更したい場合は、上の参考画像で <strong>「選択を解除」</strong> を押してください
+                </p>
+              )}
 
               {/* ★ 自由記入の備考欄（イメージの下に配置） */}
               <div className="space-y-3">
                 <label className="text-[11px] font-bold text-[#999999]">補足・備考</label>
                 <textarea
-                  placeholder="📝 補足・備考があればお書きください（例: 撮影シーンは森の中で、リボンのみで自然な雰囲気にしてほしい等）"
+                  placeholder="📝 ご希望やご要望があればお書きください（例: 苦手なお花がある／〇〇の花を入れたい／プレゼントの相手が好きな色など）"
                   value={purposeNote || ''}
                   onChange={(e) => setPurposeNote(e.target.value)}
                   rows={3}
