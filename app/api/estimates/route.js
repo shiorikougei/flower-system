@@ -74,6 +74,15 @@ export async function POST(request) {
         if (rd.countSpec) rows.push(['本数・サイズ指定', escHtml(rd.countSpec)]);
         if (rd.budget) rows.push(['ご予算', escHtml(rd.budget)]);
         if (rd.cardType && rd.cardType !== 'none') rows.push([cardMap[rd.cardType] || 'カード', escHtml(rd.cardContent || '（内容は後日相談）')]);
+        if (rd.instagramManagementNos) rows.push(['Instagram管理番号', escHtml(rd.instagramManagementNos)]);
+        if (rd.instagramUrls) {
+          // URL を改行で分割してそれぞれリンク化
+          const urls = String(rd.instagramUrls).split(/[\n\s]+/).filter(u => /^https?:\/\//.test(u.trim()));
+          const urlsHtml = urls.length > 0
+            ? urls.map(u => `<a href="${escHtml(u)}" target="_blank" style="color:#117768;text-decoration:underline;">${escHtml(u)}</a>`).join('<br/>')
+            : escHtml(rd.instagramUrls);
+          rows.push(['Instagram URL', urlsHtml]);
+        }
         if (rd.otherNotes) rows.push(['その他特記事項', escHtml(rd.otherNotes)]);
         // 参考画像のサムネイル
         const refImgs = Array.isArray(referenceImages) ? referenceImages : [];

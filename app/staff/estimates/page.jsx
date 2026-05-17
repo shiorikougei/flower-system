@@ -145,7 +145,8 @@ export default function EstimatesPage() {
                           if (rd.countSpec) fields.push(['本数・サイズ', rd.countSpec]);
                           if (rd.budget) fields.push(['ご予算', rd.budget]);
                           if (rd.cardType && rd.cardType !== 'none') fields.push([cardMap[rd.cardType] || 'カード', rd.cardContent || '（後日相談）']);
-                          if (rd.referenceUrls) fields.push(['参考URL', rd.referenceUrls]);
+                          if (rd.instagramManagementNos) fields.push(['Instagram管理番号', rd.instagramManagementNos]);
+                          if (rd.instagramUrls) fields.push(['Instagram URL', rd.instagramUrls]);
                           if (rd.otherNotes) fields.push(['その他', rd.otherNotes]);
                           return fields.map(([k, v], i) => (
                             <div key={i} className="grid grid-cols-[110px_1fr] gap-2 text-[12px] py-1 border-b border-[#EAEAEA] last:border-b-0">

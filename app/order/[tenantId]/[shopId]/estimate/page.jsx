@@ -62,6 +62,9 @@ export default function EstimatePage() {
     cardType: 'none', cardContent: '',
     // 参考画像 (URLの配列)
     referenceImages: [],
+    // ★ Instagram参考: 管理番号 + URL (改行区切りで複数可)
+    instagramManagementNos: '',
+    instagramUrls: '',
     // その他自由記入
     otherNotes: '',
   });
@@ -162,6 +165,12 @@ export default function EstimatePage() {
     }
     if (form.referenceImages && form.referenceImages.length > 0) {
       lines.push(`【参考画像 (${form.referenceImages.length}枚)】\n${form.referenceImages.join('\n')}`);
+    }
+    if (form.instagramManagementNos && form.instagramManagementNos.trim()) {
+      lines.push(`【Instagram管理番号】\n${form.instagramManagementNos.trim()}`);
+    }
+    if (form.instagramUrls && form.instagramUrls.trim()) {
+      lines.push(`【Instagram URL】\n${form.instagramUrls.trim()}`);
     }
     if (form.otherNotes) lines.push(`【その他特記事項】\n${form.otherNotes}`);
     return lines.join('\n');
@@ -478,9 +487,70 @@ export default function EstimatePage() {
           )}
         </div>
 
-        {/* ⑦ その他特記事項 */}
+        {/* ⑦ Instagram投稿を参考にする */}
         <div className={sectionCls}>
-          <p className="text-[12px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">⑦ その他特記事項 <span className="text-[10px] text-[#999]">（任意）</span></p>
+          <p className="text-[12px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">⑦ 当店Instagramの投稿を参考にする <span className="text-[10px] text-[#999]">（任意）</span></p>
+          <p className="text-[11px] text-[#555] leading-relaxed">
+            当店のInstagram投稿でイメージに近いものがあれば、<strong>管理番号</strong>または<strong>投稿URL</strong>をお知らせください。
+          </p>
+
+          {/* 管理番号 */}
+          <div className="space-y-2">
+            <label className={labelCls}>📋 管理番号 <span className="text-[10px] text-[#999]">（複数の場合は改行で区切り）</span></label>
+            <textarea
+              rows={2}
+              placeholder={'例:\n20260514-001\n20260520-003'}
+              value={form.instagramManagementNos}
+              onChange={e => setForm({...form, instagramManagementNos: e.target.value})}
+              className="w-full px-4 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] font-mono outline-none focus:border-[#117768] resize-none leading-relaxed"
+            />
+            <p className="text-[10px] text-[#999]">
+              💡 管理番号は当店のInstagram投稿のキャプション冒頭に <code className="bg-[#FBFAF9] px-1 rounded">📋 ◯◯◯◯◯◯◯◯-◯◯◯</code> の形式で記載されています
+            </p>
+          </div>
+
+          {/* URL */}
+          <div className="space-y-2">
+            <label className={labelCls}>🔗 投稿URL <span className="text-[10px] text-[#999]">（管理番号がない場合・複数の場合は改行で区切り）</span></label>
+            <textarea
+              rows={2}
+              placeholder={'例:\nhttps://www.instagram.com/p/XXXXXXX/'}
+              value={form.instagramUrls}
+              onChange={e => setForm({...form, instagramUrls: e.target.value})}
+              className="w-full px-4 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] font-mono outline-none focus:border-[#117768] resize-none leading-relaxed"
+            />
+          </div>
+
+          {/* URL 取得方法のヒント */}
+          <details className="bg-blue-50 border border-blue-200 rounded-xl p-3 group">
+            <summary className="cursor-pointer text-[11px] font-bold text-blue-900 list-none flex items-center justify-between">
+              <span>📱 Instagram投稿URLの取得方法</span>
+              <span className="text-[10px] text-blue-600 group-open:rotate-180 transition-transform">▼</span>
+            </summary>
+            <div className="mt-3 space-y-2 text-[11px] text-blue-900 leading-relaxed">
+              <p><strong>【スマホ・タブレット（Instagramアプリ）】</strong></p>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>Instagramアプリで参考にしたい投稿を開く</li>
+                <li>投稿右上の <strong>「⋯」</strong>（三点メニュー）をタップ</li>
+                <li><strong>「リンクをコピー」</strong>をタップ</li>
+                <li>↑の入力欄に貼り付け</li>
+              </ol>
+              <p className="pt-2 border-t border-blue-200"><strong>【PC（ブラウザ）】</strong></p>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>Instagramの投稿ページを開く</li>
+                <li>ブラウザ上部のアドレスバーのURLをコピー</li>
+                <li>↑の入力欄に貼り付け</li>
+              </ol>
+              <p className="text-[10px] text-blue-700 bg-blue-100 rounded px-2 py-1.5 mt-2">
+                💡 URL例: <code className="bg-white px-1 rounded">https://www.instagram.com/p/XXXXXXX/</code> の形式（公開投稿のみ）
+              </p>
+            </div>
+          </details>
+        </div>
+
+        {/* ⑧ その他特記事項 */}
+        <div className={sectionCls}>
+          <p className="text-[12px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">⑧ その他特記事項 <span className="text-[10px] text-[#999]">（任意）</span></p>
           <textarea rows={4}
             placeholder="例: アレルギーで百合は避けてほしい / 母が喜ぶ色合いで / サプライズなので連絡不要 など"
             value={form.otherNotes} onChange={e => setForm({...form, otherNotes: e.target.value})}
