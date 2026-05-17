@@ -1314,10 +1314,16 @@ function OrderFormContent() {
             <div className="space-y-8 bg-white p-8 rounded-2xl border border-[#EAEAEA] shadow-sm transition-all duration-500">
               
               {matchingImages.length > 0 && (
-                <div className="bg-[#2D4B3E]/5 -mx-8 -mt-8 p-6 pb-8 mb-4 rounded-t-[28px] border-b border-[#EAEAEA] space-y-4">
-                   <p className="text-[11px] font-bold text-[#2D4B3E] flex items-center gap-2">
-                      ✨ こんな感じはいかがですか？（過去のお作り例）
-                   </p>
+                <div className="bg-[#2D4B3E]/5 -mx-8 -mt-8 p-6 pb-8 mb-4 rounded-t-[28px] border-b border-[#EAEAEA] space-y-3">
+                   <div className="space-y-1.5">
+                     <p className="text-[12px] font-bold text-[#2D4B3E] flex items-center gap-2">
+                        🌸 雰囲気・ボリューム感の参考
+                     </p>
+                     <p className="text-[10.5px] text-[#555] leading-relaxed bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                       ⚠️ <strong>お花は季節によって種類が変わります。</strong>下記は同価格帯で過去にお作りした「雰囲気・サイズ感・ボリューム」の参考例です。<br/>
+                       <span className="text-[#999]">写真と全く同じ花材での再現はできかねますが、選択していただくと近い雰囲気でお作りいたします。</span>
+                     </p>
+                   </div>
                    <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar">
                      {matchingImages.map(img => (
                        <div key={img.id} className="shrink-0 w-[140px] space-y-2 snap-center">
@@ -1328,7 +1334,7 @@ function OrderFormContent() {
                            <img src={img.url} alt="style" className="w-full h-full object-cover" />
                            {selectedImage?.id === img.id && (
                              <div className="absolute inset-0 bg-[#2D4B3E]/30 flex items-center justify-center backdrop-blur-[1px]">
-                               <span className="bg-[#2D4B3E] text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-sm">選択中</span>
+                               <span className="bg-[#2D4B3E] text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-sm">この雰囲気で</span>
                              </div>
                            )}
                            {/* マッチ理由バッジ */}
@@ -1341,9 +1347,10 @@ function OrderFormContent() {
                            )}
                          </div>
                          <div className="text-center">
-                           <p className="text-[11px] font-bold text-[#2D4B3E]">¥{img.price.toLocaleString()}</p>
-                           <button onClick={() => handleSelectImage(img)} className="text-[9px] font-bold text-[#999999] hover:text-[#2D4B3E] mt-1 border border-[#EAEAEA] bg-white px-3 py-1 rounded-full">
-                             {selectedImage?.id === img.id ? '選択解除' : 'このイメージで作る'}
+                           <p className="text-[11px] font-bold text-[#2D4B3E]">{img.priceHidden ? 'お問い合わせ' : `¥${img.price.toLocaleString()}〜`}</p>
+                           <p className="text-[8.5px] text-[#999] mt-0.5">同価格帯の参考</p>
+                           <button onClick={() => handleSelectImage(img)} className={`text-[9px] font-bold mt-1.5 border px-3 py-1 rounded-full transition-all ${selectedImage?.id === img.id ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white' : 'bg-white border-[#EAEAEA] text-[#999999] hover:text-[#2D4B3E] hover:border-[#2D4B3E]'}`}>
+                             {selectedImage?.id === img.id ? '選択を解除' : 'この雰囲気で作る'}
                            </button>
                          </div>
                        </div>
