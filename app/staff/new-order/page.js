@@ -268,15 +268,126 @@ export default function StaffNewOrderPage() {
     return res;
   };
 
-  useEffect(() => {
-    if (!receiveMethod || receiveMethod === 'pickup' || !itemPrice) { 
-      setCalculatedFee(null); setPickupFee(0); setAreaError(''); setShippingDate(''); return; 
+  // ★ 料金計算の純粋関数化 (両方の料金比較表示用)
+  function computeFeeForMethod(method, rawAddress, itemPriceArg) {
+    const result = { fee: null, baseFee: 0, boxFee: 0, coolFee: 0, pickupFee: 0, shippingDate: '', error: '' };
+    if (!rawAddress || !itemPriceArg) return result;
+
+    if (method === 'delivery') {
+      const normalizedAddress = normalizeAddressText(rawAddress);
+      const northPatterns = ["23","24","25","26","27"]; const westPatterns = ["3","4","5"];
+      let isFreeArea = false;
+      for (const n of northPatterns) { for (const w of westPatterns) { if (normalizedAddress.includes(`北${n}条西${w}`)) { isFreeArea = true; break; } } if (isFreeArea) break; }
+
+      let matchedFee = null;
+      if (isFreeArea) matchedFee = 0;
+      else if (appSettings?.deliveryAreas?.length > 0) {
+        for (const area of appSettings.deliveryAreas) {
+          const keywords = (area.name || '').split(',').map(k => k.trim()).filter(k => k);
+          if (keywords.some(k => rawAddress.includes(k) || normalizedAddress.includes(k))) { matchedFee = Number(area.fee); break; }
+        }
+      }
+      if (matchedFee === null) {
+        if (normalizedAddress.includes("厚別区") || normalizedAddress.includes("清田区") || normalizedAddress.includes("南区")) matchedFee = 1000;
+        else if (normalizedAddress.includes("白石区") || normalizedAddress.includes("豊平区") || normalizedAddress.includes("手稲区") || normalizedAddress.includes("石狩市")) matchedFee = 800;
+        else if (normalizedAddress.includes("北区") || normalizedAddress.includes("中央区") || normalizedAddress.includes("東区") || normalizedAddress.includes("西区")) matchedFee = 500;
+      }
+
+      if (matchedFee !== null) {
+        result.baseFee = matchedFee;
+        if (selectedItemSettings?.hasReturn) {
+          const returnType = appSettings?.boxFeeConfig?.returnFeeType || 'flat';
+          const returnVal = Number(appSettings?.boxFeeConfig?.returnFeeValue) || 0;
+          if (returnType === 'flat') result.pickupFee = returnVal;
+          else if (returnType === 'percent') result.pickupFee = Math.floor(matchedFee * (returnVal / 100));
+        }
+        let boxFee = 0;
+        if (appSettings?.boxFeeConfig?.applyToDelivery) {
+          if (appSettings.boxFeeConfig.type === 'flat') boxFee = Number(appSettings.boxFeeConfig.flatFee) || 0;
+          else if (appSettings.boxFeeConfig.type === 'price_based') {
+            const tiers = appSettings.boxFeeConfig.priceTiers || [];
+            const sorted = [...tiers].sort((a,b) => b.minPrice - a.minPrice);
+            const matchedTier = sorted.find(t => Number(itemPriceArg) >= Number(t.minPrice));
+            boxFee = matchedTier ? Number(matchedTier.fee) : 0;
+          }
+        }
+        result.boxFee = boxFee;
+        result.fee = matchedFee + boxFee;
+      } else {
+        result.error = '自社配達エリア外です。配送をご利用ください。';
+      }
+    } else if (method === 'sagawa') {
+      const prefMatch = rawAddress.match(/^(北海道|東京都|(?:京都|大阪)府|.{2,3}県)/);
+      if (!prefMatch) { result.error = '都道府県が判別できません。'; return result; }
+      const targetPref = prefMatch[1].replace(/(都|府|県)$/, '');
+      const searchPref = targetPref === '北海' ? '北海道' : targetPref;
+      let rateData = appSettings?.shippingRates?.find(r => r.prefs && r.prefs.includes(searchPref));
+      if (!rateData) rateData = appSettings?.shippingRates?.find(r => r.region && r.region.includes(searchPref));
+
+      if (rateData) {
+        if (selectedDate) {
+          const dDate = new Date(selectedDate);
+          dDate.setDate(dDate.getDate() - transitDays);
+          result.shippingDate = dDate.toISOString().split('T')[0];
+        }
+        let size = selectedItemSettings?.defaultBoxSize;
+        let boxFee = 0;
+        if (!size) {
+          size = appSettings?.shippingSizes?.[0] || '80';
+          if (appSettings?.boxFeeConfig?.type === 'flat') boxFee = Number(appSettings.boxFeeConfig.flatFee) || 0;
+          else if (appSettings?.boxFeeConfig?.type === 'price_based') {
+            const tiers = appSettings.boxFeeConfig.priceTiers || [];
+            const sortedTiers = [...tiers].sort((a,b) => b.minPrice - a.minPrice);
+            const matchedTier = sortedTiers.find(t => Number(itemPriceArg) >= t.minPrice);
+            boxFee = matchedTier ? Number(matchedTier.fee) : 0;
+          }
+        }
+        let baseFee = Number(rateData['fee' + size]) || 0;
+        if (appSettings?.boxFeeConfig?.freeShippingThresholdEnabled && Number(itemPriceArg) >= (appSettings.boxFeeConfig.freeShippingThreshold || 15000)) {
+          baseFee = 0;
+        }
+        let coolFee = 0;
+        if (!selectedItemSettings?.excludeCoolBin && appSettings?.boxFeeConfig?.coolBinEnabled && selectedDate) {
+          const dateObj = new Date(selectedDate);
+          const mmdd = String(dateObj.getMonth()+1).padStart(2,'0') + '-' + String(dateObj.getDate()).padStart(2,'0');
+          const periods = appSettings.boxFeeConfig.coolBinPeriods || [];
+          const isCool = periods.some(p => mmdd >= p.start && mmdd <= p.end);
+          if (isCool) coolFee = Number(rateData['cool' + size]) || 0;
+        }
+        result.baseFee = baseFee;
+        result.boxFee = boxFee;
+        result.coolFee = coolFee;
+        result.fee = baseFee + boxFee + coolFee;
+      } else {
+        result.error = '該当する地域の送料設定が見つかりません。';
+      }
     }
-    
+    return result;
+  }
+
+  // ★ 両方の料金を計算 (比較表示用)
+  const feeComparison = useMemo(() => {
     const targetInfo = isRecipientDifferent ? recipientInfo : customerInfo;
     const rawAddress = ((targetInfo.address1 || '') + (targetInfo.address2 || '')).replace(/[\s　]+/g, '');
-    if (!rawAddress) { 
-      setCalculatedFee(null); setPickupFee(0); setAreaError(''); setShippingDate(''); return; 
+    if (!rawAddress) return null;
+    const priceForCalc = itemPrice || (selectedImage?.price) || 5000;
+    return {
+      delivery: computeFeeForMethod('delivery', rawAddress, priceForCalc),
+      sagawa: computeFeeForMethod('sagawa', rawAddress, priceForCalc),
+      isEstimate: !itemPrice,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerInfo.address1, customerInfo.address2, recipientInfo.address1, recipientInfo.address2, isRecipientDifferent, itemPrice, selectedImage, appSettings, selectedItemSettings, selectedDate, transitDays]);
+
+  useEffect(() => {
+    if (!receiveMethod || receiveMethod === 'pickup' || !itemPrice) {
+      setCalculatedFee(null); setPickupFee(0); setAreaError(''); setShippingDate(''); return;
+    }
+
+    const targetInfo = isRecipientDifferent ? recipientInfo : customerInfo;
+    const rawAddress = ((targetInfo.address1 || '') + (targetInfo.address2 || '')).replace(/[\s　]+/g, '');
+    if (!rawAddress) {
+      setCalculatedFee(null); setPickupFee(0); setAreaError(''); setShippingDate(''); return;
     }
 
     let baseFee = 0, boxFee = 0, coolFee = 0, pickupFeeAmt = 0;
@@ -556,6 +667,116 @@ export default function StaffNewOrderPage() {
                   </select>
                 </div>
               )}
+
+              {/* ★ 配達/配送選択時: お届け先住所を先頭で入力させてエリア判定＆料金比較 */}
+              {(receiveMethod === 'delivery' || receiveMethod === 'sagawa') && (() => {
+                const target = isRecipientDifferent ? recipientInfo : customerInfo;
+                const setTarget = isRecipientDifferent ? setRecipientInfo : setCustomerInfo;
+                const targetKey = isRecipientDifferent ? 'recipient' : 'customer';
+                return (
+                <div className="md:col-span-2 bg-emerald-50 border border-emerald-300 rounded-xl p-4 space-y-3 animate-in fade-in mt-2">
+                  <label className="text-[12px] font-bold text-emerald-900 flex items-center gap-1.5">
+                    📍 配達先住所（エリア＆料金確認用）
+                  </label>
+                  <p className="text-[10px] text-emerald-700">
+                    住所を入力すると、自社配達対応エリアか・送料がいくらかを自動判定します。<br/>
+                    お届け先が注文者と異なる場合は、後の「お届け先情報」欄でチェックを入れてからご入力ください。
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <input
+                      type="text"
+                      placeholder="郵便番号 (7桁)"
+                      value={target.zip || ''}
+                      onChange={(e) => {
+                        setTarget({...target, zip: e.target.value});
+                        if (e.target.value.length === 7) fetchAddress(e.target.value, targetKey);
+                      }}
+                      inputMode="numeric"
+                      maxLength={7}
+                      className="h-11 bg-white border border-emerald-200 rounded-lg px-3 text-[12px] font-bold focus:border-emerald-500 outline-none"
+                    />
+                    <input
+                      type="text"
+                      placeholder="都道府県・市区町村 (自動入力)"
+                      value={target.address1 || ''}
+                      readOnly
+                      className="h-11 bg-emerald-50 border border-emerald-200 rounded-lg px-3 text-[12px] text-[#555] outline-none"
+                    />
+                    <input
+                      type="text"
+                      placeholder="番地・建物名"
+                      value={target.address2 || ''}
+                      onChange={(e) => setTarget({...target, address2: e.target.value})}
+                      className="h-11 bg-white border border-emerald-200 rounded-lg px-3 text-[12px] focus:border-emerald-500 outline-none"
+                    />
+                  </div>
+
+                  {/* 料金比較カード */}
+                  {target.address1 && feeComparison && (
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-emerald-200">
+                      {/* 自社配達 */}
+                      <button
+                        type="button"
+                        onClick={() => { if (feeComparison.delivery.fee !== null) setReceiveMethod('delivery'); }}
+                        disabled={feeComparison.delivery.fee === null}
+                        className={`p-3 rounded-lg border-2 text-left transition-all ${
+                          feeComparison.delivery.fee === null
+                            ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
+                            : receiveMethod === 'delivery'
+                              ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white shadow-md'
+                              : 'bg-white border-emerald-200 text-emerald-800 hover:border-emerald-500'
+                        }`}
+                      >
+                        <div className="text-[11px] font-bold flex items-center gap-1">🚚 自社配達</div>
+                        {feeComparison.delivery.fee !== null ? (
+                          <div className={`text-[18px] font-bold mt-1 ${receiveMethod === 'delivery' ? 'text-white' : 'text-emerald-700'}`}>
+                            {feeComparison.delivery.fee === 0 ? '送料無料' : `¥${feeComparison.delivery.fee.toLocaleString()}`}
+                          </div>
+                        ) : (
+                          <div className="text-[10px] text-red-500 mt-1">エリア外</div>
+                        )}
+                      </button>
+                      {/* 業者配送 */}
+                      <button
+                        type="button"
+                        onClick={() => { if (feeComparison.sagawa.fee !== null) setReceiveMethod('sagawa'); }}
+                        disabled={feeComparison.sagawa.fee === null}
+                        className={`p-3 rounded-lg border-2 text-left transition-all ${
+                          feeComparison.sagawa.fee === null
+                            ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
+                            : receiveMethod === 'sagawa'
+                              ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white shadow-md'
+                              : 'bg-white border-emerald-200 text-emerald-800 hover:border-emerald-500'
+                        }`}
+                      >
+                        <div className="text-[11px] font-bold flex items-center gap-1">📦 業者配送 (佐川)</div>
+                        {feeComparison.sagawa.fee !== null ? (
+                          <div className={`text-[18px] font-bold mt-1 ${receiveMethod === 'sagawa' ? 'text-white' : 'text-blue-700'}`}>
+                            {feeComparison.sagawa.fee === 0 ? '送料無料' : `¥${feeComparison.sagawa.fee.toLocaleString()}`}
+                          </div>
+                        ) : (
+                          <div className="text-[10px] text-red-500 mt-1">対象外</div>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* 料金差額メモ */}
+                  {target.address1 && feeComparison && feeComparison.delivery.fee !== null && feeComparison.sagawa.fee !== null && (
+                    <div className="text-[10px] text-emerald-700 bg-white/60 rounded px-2 py-1.5">
+                      {feeComparison.delivery.fee < feeComparison.sagawa.fee ? (
+                        <>💡 自社配達のほうが ¥{(feeComparison.sagawa.fee - feeComparison.delivery.fee).toLocaleString()} お得</>
+                      ) : feeComparison.sagawa.fee < feeComparison.delivery.fee ? (
+                        <>💡 業者配送のほうが ¥{(feeComparison.delivery.fee - feeComparison.sagawa.fee).toLocaleString()} お得</>
+                      ) : (
+                        <>💡 どちらも同じ料金</>
+                      )}
+                      {feeComparison.isEstimate && <span className="ml-2 text-[#999]">※ 5,000円商品で試算</span>}
+                    </div>
+                  )}
+                </div>
+                );
+              })()}
             </div>
             
             <div className="flex items-center gap-4 pt-2">
