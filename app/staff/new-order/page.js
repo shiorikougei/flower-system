@@ -18,11 +18,15 @@ export default function StaffNewOrderPage() {
 
   const [currentTenantId, setCurrentTenantId] = useState(null);
 
-  const [receptionType, setReceptionType] = useState('phone'); 
-  const [staffName, setStaffName] = useState(''); 
+  const [receptionType, setReceptionType] = useState('phone');
+  const [staffName, setStaffName] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [sendAutoReply, setSendAutoReply] = useState(false);
+  const [sendLineNotification, setSendLineNotification] = useState(true); // ★ LINE併送
   const [isCustomPrice, setIsCustomPrice] = useState(false);
+  // ★ 過去顧客検索
+  const [lookupResult, setLookupResult] = useState(null); // { found, customer, lineLink, orderCount, orderHistory }
+  const [lookupLoading, setLookupLoading] = useState(false);
 
   const [shopId, setShopId] = useState(''); 
   const [flowerType, setFlowerType] = useState('');
@@ -547,6 +551,7 @@ export default function StaffNewOrderPage() {
         // ★ 業者配送+引き取り時支払いの確認
         sagawaPaymentLaterConfirmed: (paymentMethod === '引き取り時に支払い' && receiveMethod === 'sagawa') ? sagawaPaymentLaterConfirmed : null,
         sendAutoReply,
+        sendLineNotification, // ★ LINE併送ON/OFF (LINE連携済みの顧客のみ有効)
         // ★ 入金状況: 「前払い済み」→入金済扱い / 「引き取り時に支払い」→未入金扱い
         //    受注一覧の判定は paymentStatus に「未」が含まれているかで分岐
         paymentStatus: paymentMethod === '前払い済み'
@@ -847,6 +852,11 @@ export default function StaffNewOrderPage() {
                   <option value="その他">その他</option>
                 </select>
               </div>
+              {/* ★ 社内メモ/要望 をメインカラーの下に移動 (旧 section 5 から移設) */}
+              <div className="space-y-2 col-span-2">
+                <label className="text-[11px] font-bold text-[#999999]">📝 社内メモ / 要望</label>
+                <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="例：予算オーバーだけどサービスでバラ増量 / アレルギー：百合NG" className="w-full h-24 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-4 text-[13px] resize-none focus:border-[#2D4B3E] outline-none"></textarea>
+              </div>
             </div>
             
             <div className="space-y-2 pt-4 border-t border-[#FBFAF9]">
@@ -929,12 +939,108 @@ export default function StaffNewOrderPage() {
           <div className="bg-white p-8 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-6">
             <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3">4. スケジュール・情報</h2>
             
+            {/* ★ 通知送信オプション */}
+            <div className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-3 space-y-2">
+              <p className="text-[11px] font-bold text-[#555]">📤 ご注文確認の通知</p>
+              <div className="flex flex-wrap gap-3">
+                <label className="flex items-center gap-2 text-[12px] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={sendAutoReply}
+                    onChange={(e) => setSendAutoReply(e.target.checked)}
+                    className="w-4 h-4 accent-[#2D4B3E]"
+                  />
+                  <span>📧 メールで送る</span>
+                  <span className="text-[10px] text-[#999]">（メアド必要）</span>
+                </label>
+                <label className="flex items-center gap-2 text-[12px] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={sendLineNotification}
+                    onChange={(e) => setSendLineNotification(e.target.checked)}
+                    className="w-4 h-4 accent-[#06c755]"
+                  />
+                  <span>💬 LINEで送る</span>
+                  {lookupResult?.lineLink?.active ? (
+                    <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold">連携あり</span>
+                  ) : (
+                    <span className="text-[10px] text-[#999]">（連携あれば送信）</span>
+                  )}
+                </label>
+              </div>
+              <p className="text-[10px] text-[#999] leading-relaxed">
+                💡 電話受付でメアド不明でも、過去注文があれば LINE 経由で確認を送れます（要LINE連携）
+              </p>
+            </div>
+
             <div className="space-y-3 pb-4 border-b border-[#FBFAF9]">
               <label className="text-[11px] font-bold text-[#999999]">注文者情報</label>
               <input type="text" placeholder="お名前（必須）" value={customerInfo.name} onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none" />
-              <input type="tel" placeholder="電話番号" value={customerInfo.phone} onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
+              {/* ★ 電話番号 + 過去顧客検索 */}
+              <div className="flex gap-2">
+                <input
+                  type="tel"
+                  placeholder="電話番号"
+                  value={customerInfo.phone}
+                  onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
+                  className="flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!customerInfo.phone || !currentTenantId) return;
+                    setLookupLoading(true);
+                    setLookupResult(null);
+                    try {
+                      const res = await fetch(`/api/staff/lookup-customer?phone=${encodeURIComponent(customerInfo.phone)}&tenantId=${encodeURIComponent(currentTenantId)}`);
+                      const data = await res.json();
+                      setLookupResult(data);
+                      // 過去顧客があれば自動でフォームに入力
+                      if (data.found && data.customer) {
+                        const c = data.customer;
+                        setCustomerInfo(prev => ({
+                          ...prev,
+                          name: prev.name || c.name,
+                          email: prev.email || c.email,
+                          zip: prev.zip || c.zip,
+                          address1: prev.address1 || c.address1,
+                          address2: prev.address2 || c.address2,
+                        }));
+                      }
+                    } catch (e) {
+                      alert('検索に失敗: ' + e.message);
+                    } finally {
+                      setLookupLoading(false);
+                    }
+                  }}
+                  disabled={!customerInfo.phone || lookupLoading}
+                  className="h-12 px-4 bg-[#2D4B3E] text-white rounded-xl text-[11px] font-bold hover:bg-[#1f352b] disabled:opacity-50 whitespace-nowrap"
+                >
+                  {lookupLoading ? '検索中...' : '🔍 過去注文検索'}
+                </button>
+              </div>
+              {/* 検索結果バナー */}
+              {lookupResult && (
+                <div className={`p-3 rounded-xl text-[11px] leading-relaxed ${lookupResult.found ? 'bg-emerald-50 border border-emerald-200 text-emerald-900' : 'bg-amber-50 border border-amber-200 text-amber-900'}`}>
+                  {lookupResult.found ? (
+                    <>
+                      ✅ <strong>{lookupResult.customer.name} 様</strong> ({lookupResult.orderCount}回ご注文) の情報を自動入力しました。<br/>
+                      {lookupResult.customer.email && <>📧 {lookupResult.customer.email}<br/></>}
+                      {lookupResult.lineLink?.active ? (
+                        <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded inline-block mt-1">
+                          💬 LINE連携済み{lookupResult.lineLink.displayName ? ` (${lookupResult.lineLink.displayName})` : ''}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-amber-700">※ LINE未連携</span>
+                      )}
+                    </>
+                  ) : (
+                    <>⚠️ この電話番号での過去注文は見つかりませんでした。</>
+                  )}
+                </div>
+              )}
               <input type="email" placeholder="メールアドレス (任意)" value={customerInfo.email} onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
-              
+
               {receiveMethod !== 'pickup' && (
                 <>
                   <div className="flex gap-2">
@@ -1105,10 +1211,7 @@ export default function StaffNewOrderPage() {
                   </label>
                 </div>
               )}
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-[#999999]">社内メモ / 要望</label>
-                <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="例：予算オーバーだけどサービスでバラ増量" className="w-full h-24 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-4 text-[13px] resize-none focus:border-[#2D4B3E] outline-none"></textarea>
-              </div>
+              {/* ★ 社内メモは セクション2 (詳細と金額) に移動済み */}
             </div>
           </div>
 
