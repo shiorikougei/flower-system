@@ -199,6 +199,8 @@ export default function EstimatePage() {
   }, [tenantId]);
 
   const appName = appSettings?.generalConfig?.appName || 'FLORIX';
+  // ★ isDelivery を先に宣言 (areaJudgement で参照するため)
+  const isDelivery = form.deliveryMethod === 'delivery' || form.deliveryMethod === 'shipping';
 
   // ★ 郵便番号 → 住所自動取得
   async function fetchAddressByZip(zip) {
@@ -234,7 +236,6 @@ export default function EstimatePage() {
     return { area: 'out', label: '⚠️ 自社配達対応エリア外' };
   }
   const areaJudgement = isDelivery && form.deliveryAddress1 ? judgeDeliveryArea(form.deliveryAddress1 + form.deliveryAddress2) : null;
-  const isDelivery = form.deliveryMethod === 'delivery' || form.deliveryMethod === 'shipping';
 
   // 構造化データ → 読みやすいテキスト形式に変換（API送信用 + DB保存用）
   function buildRequestContent() {
