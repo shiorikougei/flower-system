@@ -35,7 +35,10 @@ export async function POST(request) {
     // ---- 入力バリデーション（最低限）----
     if (!tenantId) return NextResponse.json({ error: 'tenantId が必要' }, { status: 400 });
     if (!orderData) return NextResponse.json({ error: 'orderData が必要' }, { status: 400 });
-    if (!['card', 'bank_transfer'].includes(paymentMethod)) {
+
+    // ★ スタッフ代理入力の場合はpaymentMethod制限を緩める（前払い済み/引き取り時など）
+    const isStaffEntered = !!orderData.isStaffEntered;
+    if (!isStaffEntered && !['card', 'bank_transfer'].includes(paymentMethod)) {
       return NextResponse.json({ error: 'paymentMethod が不正' }, { status: 400 });
     }
 
@@ -154,7 +157,14 @@ export async function POST(request) {
     const managementNo = `${yyyymmdd}-${seq}`;
 
     // ---- ordersにinsert ----
-    const initialPaymentStatus = paymentMethod === 'card' ? 'processing' : 'unpaid';
+    // ★ スタッフ代理入力: 前払い済み→paid / それ以外→unpaid
+    let initialPaymentStatus;
+    if (isStaffEntered) {
+      const psLabel = String(orderData.paymentStatus || '');
+      initialPaymentStatus = psLabel.includes('前払い済み') ? 'paid' : 'unpaid';
+    } else {
+      initialPaymentStatus = paymentMethod === 'card' ? 'processing' : 'unpaid';
+    }
     const orderRecord = {
       tenant_id: String(tenantId),
       order_data: {
@@ -196,6 +206,10 @@ export async function POST(request) {
     //   テンプレートシステム経由（設定で編集可能、未設定ならプリセット使用）
     async function sendConfirmationEmail() {
       try {
+        // ★ スタッフ代理入力で「自動返信OFF」が選ばれている場合はメール/LINEともにスキップ
+        if (isStaffEntered && orderData.sendAutoReply === false) {
+          return;
+        }
         const customerEmail = orderData.customerInfo?.email;
         if (!customerEmail) return;
 
@@ -220,6 +234,10 @@ export async function POST(request) {
           card: 'クレジットカード決済（決済完了）',
           bank_transfer: '銀行振込',
         };
+        // ★ スタッフ代理入力: order_data.paymentStatusの日本語ラベルを優先
+        const paymentLabel = isStaffEntered && orderData.paymentStatus
+          ? String(orderData.paymentStatus)
+          : (paymentLabelMap[paymentMethod] || paymentMethod);
         // ★ マイページURL（Magic Link）発行
         const mypageUrl = await createMypageMagicUrl({
           supabaseAdmin,
@@ -235,8 +253,8 @@ export async function POST(request) {
           orderTotal: totalAmount.toLocaleString(),
           orderItems: formatOrderItems(orderRecord.order_data),
           orderBreakdown: formatOrderBreakdown(orderRecord.order_data),
-          paymentMethod: paymentLabelMap[paymentMethod] || paymentMethod,
-          bankInfo: paymentMethod === 'bank_transfer' && bankInfo
+          paymentMethod: paymentLabel,
+          bankInfo: !isStaffEntered && paymentMethod === 'bank_transfer' && bankInfo
             ? `【お振込先】\n${bankInfo}\n※お振込手数料はお客様ご負担となります。\n\n⏱️ お振込み確認後から制作を開始いたします。${orderData.paymentScheduledDate ? `\n📅 ご入金予定日: ${orderData.paymentScheduledDate}` : ''}\n\n📞 ご入金のタイミングに関するご相談・ご質問は、お電話にてお問い合わせください。\n${shopPhone ? `   TEL: ${shopPhone}` : ''}`
             : '',
           deliveryDate: orderData.selectedDate ? `${orderData.selectedDate} ${orderData.selectedTime || ''}`.trim() : '',
@@ -253,20 +271,23 @@ export async function POST(request) {
         await sendEmail({ to: customerEmail, subject, html, from });
 
         // ★ LINE併送（有効時のみ）
-        await sendLineParallelToEmail({
-          supabaseAdmin,
-          tenantSettings: settings,
-          tenantId,
-          customerEmail,
-          text: `${subject}\n\n${body}`,
-        });
+        //    スタッフ代理入力で「LINEで送る」OFFの場合は併送しない
+        if (!(isStaffEntered && orderData.sendLineNotification === false)) {
+          await sendLineParallelToEmail({
+            supabaseAdmin,
+            tenantSettings: settings,
+            tenantId,
+            customerEmail,
+            text: `${subject}\n\n${body}`,
+          });
+        }
       } catch (e) {
         console.warn('[orders] 注文確認メール送信失敗:', e.message);
       }
     }
 
-    // ---- カード以外はそのまま完了（EC注文なら在庫減算） ----
-    if (paymentMethod !== 'card') {
+    // ---- スタッフ代理入力 / カード以外はそのまま完了（EC注文なら在庫減算） ----
+    if (isStaffEntered || paymentMethod !== 'card') {
       // EC注文の銀行振込は、決済確認前に在庫を減らす（カードはwebhookで減らす）
       if (isEcOrder) {
         console.log('[orders] EC注文(銀行振込) 在庫減算開始:', orderData.cartItems.map(c => ({ id: c.productId, qty: c.qty })));

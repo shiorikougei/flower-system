@@ -568,27 +568,24 @@ export default function StaffNewOrderPage() {
         isStaffEntered: true
       };
 
-      // ★ 管理番号を自動採番 (YYYYMMDD-NNN)
-      const today = new Date();
-      const yyyymmdd = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
-      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
-      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()+1).toISOString();
-      const { count: todayCount } = await supabase
-        .from('orders')
-        .select('id', { count: 'exact', head: true })
-        .eq('tenant_id', currentTenantId)
-        .gte('created_at', startOfDay)
-        .lt('created_at', endOfDay);
-      orderPayload.managementNo = `${yyyymmdd}-${String((todayCount || 0) + 1).padStart(3, '0')}`;
+      // ★ /api/orders POST 経由で登録（メール・LINE自動送信のため）
+      //    managementNo は API 側で自動採番
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantId: currentTenantId,
+          shopId,
+          orderData: orderPayload,
+          // ★ 前払い済み→bank_transfer扱い（カードStripe決済はスタッフ代理ではしない）
+          paymentMethod: 'bank_transfer',
+        }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(result?.error || '注文登録に失敗しました');
 
-      const { error } = await supabase.from('orders').insert([
-        { tenant_id: currentTenantId, order_data: orderPayload }
-      ]);
-      
-      if (error) throw error;
-
-      alert('店舗注文を受付し、データを保存しました。');
-      router.push('/staff/orders'); 
+      alert('店舗注文を受付し、データを保存しました。\n（お客様メール・LINE通知も自動送信しました）');
+      router.push('/staff/orders');
       
     } catch (error) {
       console.error('注文エラー:', error.message);

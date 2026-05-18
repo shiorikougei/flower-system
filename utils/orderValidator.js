@@ -36,11 +36,23 @@ export function validateOrderData(orderData) {
   if (!ci.name || String(ci.name).length > 100) {
     return { ok: false, error: 'お名前は1〜100文字で入力してください' };
   }
-  if (!ci.email || !EMAIL_RE.test(String(ci.email)) || String(ci.email).length > 200) {
-    return { ok: false, error: 'メールアドレスの形式が正しくありません' };
-  }
-  if (!ci.phone || !PHONE_RE.test(String(ci.phone))) {
-    return { ok: false, error: '電話番号の形式が正しくありません' };
+  // ★ スタッフ代理入力の場合、email/phoneは任意 (電話受付の顧客等)
+  const isStaffEntered = !!orderData.isStaffEntered;
+  if (!isStaffEntered) {
+    if (!ci.email || !EMAIL_RE.test(String(ci.email)) || String(ci.email).length > 200) {
+      return { ok: false, error: 'メールアドレスの形式が正しくありません' };
+    }
+    if (!ci.phone || !PHONE_RE.test(String(ci.phone))) {
+      return { ok: false, error: '電話番号の形式が正しくありません' };
+    }
+  } else {
+    // スタッフ入力: 値が入っていたら形式だけチェック
+    if (ci.email && (!EMAIL_RE.test(String(ci.email)) || String(ci.email).length > 200)) {
+      return { ok: false, error: 'メールアドレスの形式が正しくありません' };
+    }
+    if (ci.phone && !PHONE_RE.test(String(ci.phone))) {
+      return { ok: false, error: '電話番号の形式が正しくありません' };
+    }
   }
   if (ci.zip && !ZIP_RE.test(String(ci.zip))) {
     return { ok: false, error: '郵便番号の形式が正しくありません' };
