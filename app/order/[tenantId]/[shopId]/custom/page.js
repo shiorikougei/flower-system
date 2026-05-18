@@ -119,7 +119,8 @@ function OrderFormContent() {
   });
   const [otherColor, setOtherColor] = useState('');
   const [otherVibe, setOtherVibe] = useState('');
-  const [selectedImage, setSelectedImage] = useState(null); 
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null); // ★ 拡大プレビューモーダル用
 
   const [absenceAction, setAbsenceAction] = useState('持ち戻り');
   const [absenceNote, setAbsenceNote] = useState('');
@@ -1403,24 +1404,37 @@ function OrderFormContent() {
                    <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar">
                      {matchingImages.map(img => (
                        <div key={img.id} className="shrink-0 w-[140px] space-y-2 snap-center">
-                         <div
-                           onClick={() => handleSelectImage(img)}
-                           className={`relative aspect-square rounded-2xl overflow-hidden border-4 transition-all cursor-pointer ${selectedImage?.id === img.id ? 'border-[#2D4B3E] shadow-lg scale-105' : 'border-transparent hover:scale-105'}`}
-                         >
-                           <img src={img.url} alt="style" className="w-full h-full object-cover" />
-                           {selectedImage?.id === img.id && (
-                             <div className="absolute inset-0 bg-[#2D4B3E]/30 flex items-center justify-center backdrop-blur-[1px]">
-                               <span className="bg-[#2D4B3E] text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-sm">この雰囲気で</span>
+                         <div className="relative">
+                           <div
+                             className={`relative aspect-square rounded-2xl overflow-hidden border-4 transition-all ${selectedImage?.id === img.id ? 'border-[#2D4B3E] shadow-lg scale-105' : 'border-transparent hover:scale-105'}`}
+                           >
+                             {/* タップで拡大プレビュー */}
+                             <button
+                               type="button"
+                               onClick={(e) => { e.stopPropagation(); setPreviewImage(img); }}
+                               aria-label="拡大表示"
+                               className="absolute inset-0 w-full h-full block cursor-zoom-in"
+                             >
+                               <img src={img.url} alt="style" className="w-full h-full object-cover" />
+                             </button>
+                             {selectedImage?.id === img.id && (
+                               <div className="absolute inset-0 bg-[#2D4B3E]/30 flex items-center justify-center backdrop-blur-[1px] pointer-events-none">
+                                 <span className="bg-[#2D4B3E] text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-sm">この雰囲気で</span>
+                               </div>
+                             )}
+                             {/* 拡大バッジ */}
+                             <div className="absolute bottom-1.5 right-1.5 bg-black/50 text-white text-[9px] font-bold px-2 py-0.5 rounded-full pointer-events-none">
+                               🔍 タップで拡大
                              </div>
-                           )}
-                           {/* マッチ理由バッジ */}
-                           {img._matched && img._matched.length > 0 && selectedImage?.id !== img.id && (
-                             <div className="absolute top-1.5 left-1.5 right-1.5 flex flex-wrap gap-1">
-                               {img._matched.map((m, i) => (
-                                 <span key={i} className="bg-[#2D4B3E]/90 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">{m}✓</span>
-                               ))}
-                             </div>
-                           )}
+                             {/* マッチ理由バッジ */}
+                             {img._matched && img._matched.length > 0 && selectedImage?.id !== img.id && (
+                               <div className="absolute top-1.5 left-1.5 right-1.5 flex flex-wrap gap-1 pointer-events-none">
+                                 {img._matched.map((m, i) => (
+                                   <span key={i} className="bg-[#2D4B3E]/90 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">{m}✓</span>
+                                 ))}
+                               </div>
+                             )}
+                           </div>
                          </div>
                          <div className="text-center">
                            <p className="text-[11px] font-bold text-[#2D4B3E]">{img.priceHidden ? 'お問い合わせ' : `¥${img.price.toLocaleString()}〜`}</p>
@@ -2106,6 +2120,57 @@ function OrderFormContent() {
         </div>
 
       </main>
+
+      {/* ★ 参考画像の拡大プレビューモーダル */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setPreviewImage(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setPreviewImage(null)}
+            aria-label="閉じる"
+            className="absolute top-4 right-4 w-11 h-11 bg-white/95 hover:bg-white rounded-full flex items-center justify-center text-[#111] shadow-lg text-[20px] font-bold"
+          >
+            ✕
+          </button>
+          <div
+            className="max-w-3xl w-full max-h-[90vh] flex flex-col items-center gap-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={previewImage.url}
+              alt="拡大表示"
+              className="max-w-full max-h-[78vh] object-contain rounded-2xl shadow-2xl"
+            />
+            <div className="bg-white/95 backdrop-blur rounded-xl px-5 py-3 shadow-lg text-center space-y-1 max-w-[500px]">
+              <p className="text-[14px] font-bold text-[#2D4B3E]">
+                {previewImage.priceHidden ? '金額: お問い合わせ' : `¥${Number(previewImage.price).toLocaleString()}〜 (同価格帯の参考)`}
+              </p>
+              <p className="text-[10px] text-[#999]">
+                💡 写真はあくまで雰囲気・サイズ感の参考です。お花は季節によって変わります。
+              </p>
+              {selectedImage?.id !== previewImage.id ? (
+                <button
+                  onClick={() => { handleSelectImage(previewImage); setPreviewImage(null); }}
+                  className="mt-2 px-5 py-2 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-full hover:bg-[#1f352b]"
+                >
+                  この雰囲気で作る
+                </button>
+              ) : (
+                <button
+                  onClick={() => { handleSelectImage(previewImage); setPreviewImage(null); }}
+                  className="mt-2 px-5 py-2 bg-white border border-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-full"
+                >
+                  選択を解除
+                </button>
+              )}
+            </div>
+            <p className="text-[10px] text-white/70">画面のどこかをタップで閉じる</p>
+          </div>
+        </div>
+      )}
 
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap');
