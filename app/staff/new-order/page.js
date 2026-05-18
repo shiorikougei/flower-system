@@ -570,9 +570,14 @@ export default function StaffNewOrderPage() {
 
       // ★ /api/orders POST 経由で登録（メール・LINE自動送信のため）
       //    managementNo は API 側で自動採番
+      //    Bearer Token を必ず送る（スタッフ認証→isStaffEntered フラグ有効化のため）
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({
           tenantId: currentTenantId,
           shopId,

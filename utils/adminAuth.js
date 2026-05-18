@@ -58,9 +58,9 @@ export async function requireOwner(request) {
   // ★ オーナーパスワード方式 (Supabaseログイン不要)
   const pwHeader = request.headers.get('x-owner-password') || '';
   if (pwHeader) {
-    // ★ ブルートフォース対策: IP単位で5回/分まで
+    // ★ ブルートフォース対策: IP単位で30回/分まで（通常操作には充分、攻撃は阻止）
     const ip = getClientIp(request);
-    const allowed = await rateLimit({ key: `owner_auth:${ip}`, max: 5, windowSec: 60 });
+    const allowed = await rateLimit({ key: `owner_auth:${ip}`, max: 30, windowSec: 60 });
     if (!allowed) {
       return { ok: false, response: NextResponse.json({ error: '試行回数が多すぎます。しばらくしてから再度お試しください。' }, { status: 429 }) };
     }
