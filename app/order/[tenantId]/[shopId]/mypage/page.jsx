@@ -337,7 +337,20 @@ function MyPageContent() {
       </body></html>`;
 
     const w = window.open('', '_blank');
-    if (w) { w.document.open(); w.document.write(html); w.document.close(); }
+    if (w) {
+      w.document.open(); w.document.write(html); w.document.close();
+    } else {
+      // ★ LINEブラウザ等で window.open() がブロックされた場合のフォールバック
+      //   ユーザーに外部ブラウザで開くよう案内
+      alert(
+        '⚠️ 領収書を発行できませんでした。\n\n' +
+        'LINEアプリ内ブラウザでは正しく表示できない場合があります。\n\n' +
+        '【対処方法】\n' +
+        '右上の「︙」メニューから\n' +
+        '「他のブラウザで開く」「Safari/Chromeで開く」\n' +
+        'を選択して、もう一度お試しください。'
+      );
+    }
   }
 
   // 前回注文と同じ内容で再注文（在庫チェック付き）
@@ -464,6 +477,79 @@ function MyPageContent() {
           </div>
         ) : data && (
           <>
+            {/* ★ 注文履歴 (一番上に配置) */}
+            <div>
+              <h2 className="text-[18px] font-bold text-[#2D4B3E] mb-4">ご注文履歴 ({data.orders.length}件)</h2>
+              {/* LINEブラウザでの領収書表示問題のヒント */}
+              {data.orders.some(o => paymentBadge(o).text === '入金済') && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 text-[11px] text-blue-900 leading-relaxed">
+                  💡 <strong>領収書がうまく開かない場合</strong><br/>
+                  LINE内ブラウザでは PDF表示できないことがあります。<br/>
+                  画面右上「︙」メニュー →「他のブラウザで開く」を選択してから領収書ボタンを押してください。
+                </div>
+              )}
+              {data.orders.length === 0 ? (
+                <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#EAEAEA]">
+                  <Package size={32} className="mx-auto text-[#CCC] mb-3"/>
+                  <p className="text-[13px] font-bold text-[#999999]">ご注文がまだありません</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {data.orders.map(o => {
+                    const d = o.order_data || {};
+                    const badge = paymentBadge(o);
+                    const isPaid = o.payment_status === 'paid' || (d.paymentStatus && !d.paymentStatus.includes('未'));
+                    return (
+                      <div key={o.id} className="bg-white p-5 rounded-2xl border border-[#EAEAEA] space-y-3">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <p className="text-[11px] text-[#999999]">注文番号: <code className="bg-[#FBFAF9] px-2 py-0.5 rounded">{String(o.id).slice(0, 8)}</code></p>
+                          <p className="text-[11px] text-[#999999]">{formatDate(o.created_at)}</p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${badge.cls}`}>{badge.label}</span>
+                          {d.orderType === 'ec' && <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">🛒 EC注文</span>}
+                          {d.status === 'completed' && <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-[#FBFAF9] text-[#555555] border border-[#EAEAEA]">手配完了</span>}
+                        </div>
+                        <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA] space-y-1 text-[12px]">
+                          {Array.isArray(d.cartItems) && d.cartItems.length > 0 ? (
+                            d.cartItems.map((c, i) => (
+                              <p key={i} className="text-[#555555]">• {c.name} × {c.qty}</p>
+                            ))
+                          ) : (
+                            <>
+                              {d.flowerType && <p className="text-[#555555]"><strong>{d.flowerType}</strong></p>}
+                              {d.flowerPurpose && <p className="text-[#999999] text-[11px]">用途: {d.flowerPurpose}</p>}
+                            </>
+                          )}
+                          {d.selectedDate && <p className="text-[#999999] text-[11px] pt-1 border-t border-[#F0F0F0] mt-2">納品希望日: {d.selectedDate}</p>}
+                        </div>
+                        <div className="flex justify-between items-baseline pt-2 border-t border-[#F0F0F0]">
+                          <span className="text-[12px] font-bold text-[#555555]">合計（税込）</span>
+                          <span className="text-[18px] font-bold text-[#2D4B3E]">¥{totalOf(o).toLocaleString()}</span>
+                        </div>
+                        <div className="flex gap-2 pt-2 border-t border-[#F0F0F0]">
+                          {isPaid && (
+                            <button
+                              onClick={() => printReceipt(o)}
+                              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold bg-[#FBFAF9] text-[#555] border border-[#EAEAEA] hover:bg-[#2D4B3E] hover:text-white hover:border-[#2D4B3E] transition-all"
+                            >
+                              <FileText size={12}/> 領収書を発行
+                            </button>
+                          )}
+                          <button
+                            onClick={() => reorder(o)}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold bg-[#D97D54]/10 text-[#D97D54] border border-[#D97D54]/30 hover:bg-[#D97D54] hover:text-white transition-all"
+                          >
+                            <RotateCcw size={12}/> 同じ内容で再注文
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             {/* お客様情報 */}
             <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA]">
               <div className="flex items-start justify-between gap-3">
@@ -756,72 +842,7 @@ function MyPageContent() {
               </div>
             </section>
 
-            {/* 注文履歴 */}
-            <div>
-              <h2 className="text-[18px] font-bold text-[#2D4B3E] mb-4">ご注文履歴 ({data.orders.length}件)</h2>
-              {data.orders.length === 0 ? (
-                <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#EAEAEA]">
-                  <Package size={32} className="mx-auto text-[#CCC] mb-3"/>
-                  <p className="text-[13px] font-bold text-[#999999]">ご注文がまだありません</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {data.orders.map(o => {
-                    const d = o.order_data || {};
-                    const badge = paymentBadge(o);
-                    const isPaid = o.payment_status === 'paid' || (d.paymentStatus && !d.paymentStatus.includes('未'));
-                    return (
-                      <div key={o.id} className="bg-white p-5 rounded-2xl border border-[#EAEAEA] space-y-3">
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                          <p className="text-[11px] text-[#999999]">注文番号: <code className="bg-[#FBFAF9] px-2 py-0.5 rounded">{String(o.id).slice(0, 8)}</code></p>
-                          <p className="text-[11px] text-[#999999]">{formatDate(o.created_at)}</p>
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${badge.cls}`}>{badge.label}</span>
-                          {d.orderType === 'ec' && <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">🛒 EC注文</span>}
-                          {d.status === 'completed' && <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-[#FBFAF9] text-[#555555] border border-[#EAEAEA]">手配完了</span>}
-                        </div>
-                        <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA] space-y-1 text-[12px]">
-                          {Array.isArray(d.cartItems) && d.cartItems.length > 0 ? (
-                            d.cartItems.map((c, i) => (
-                              <p key={i} className="text-[#555555]">• {c.name} × {c.qty}</p>
-                            ))
-                          ) : (
-                            <>
-                              {d.flowerType && <p className="text-[#555555]"><strong>{d.flowerType}</strong></p>}
-                              {d.flowerPurpose && <p className="text-[#999999] text-[11px]">用途: {d.flowerPurpose}</p>}
-                            </>
-                          )}
-                          {d.selectedDate && <p className="text-[#999999] text-[11px] pt-1 border-t border-[#F0F0F0] mt-2">納品希望日: {d.selectedDate}</p>}
-                        </div>
-                        <div className="flex justify-between items-baseline pt-2 border-t border-[#F0F0F0]">
-                          <span className="text-[12px] font-bold text-[#555555]">合計（税込）</span>
-                          <span className="text-[18px] font-bold text-[#2D4B3E]">¥{totalOf(o).toLocaleString()}</span>
-                        </div>
-
-                        {/* アクションボタン */}
-                        <div className="flex gap-2 pt-2 border-t border-[#F0F0F0]">
-                          {isPaid && (
-                            <button
-                              onClick={() => printReceipt(o)}
-                              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold bg-[#FBFAF9] text-[#555] border border-[#EAEAEA] hover:bg-[#2D4B3E] hover:text-white hover:border-[#2D4B3E] transition-all"
-                            >
-                              <FileText size={12}/> 領収書を発行
-                            </button>
-                          )}
-                          <button
-                            onClick={() => reorder(o)}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold bg-[#D97D54]/10 text-[#D97D54] border border-[#D97D54]/30 hover:bg-[#D97D54] hover:text-white transition-all"
-                          >
-                            <RotateCcw size={12}/> 同じ内容で再注文
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            {/* 注文履歴は一番上に移動済み */}
           </>
         )}
       </main>

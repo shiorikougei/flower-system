@@ -38,7 +38,7 @@ export const EMAIL_TRIGGERS = [
     label: '入金確認・納品日のお知らせ',
     description: '銀行振込のご入金確認後の通知（スタッフが入金済みに変更した時に自動送信）',
     auto: true,
-    variables: ['customerName', 'shopName', 'orderId', 'orderTotal', 'orderItems', 'deliveryDate', 'shopPhone'],
+    variables: ['customerName', 'shopName', 'orderId', 'orderTotal', 'orderItems', 'orderBreakdown', 'deliveryDate', 'shopPhone'],
   },
   {
     id: 'anniversary_reminder',
@@ -233,8 +233,8 @@ TEL: {shopPhone}
 【ご注文内容】
 {orderItems}
 
-【合計金額（税込）】
-¥{orderTotal}
+【金額の内訳】
+{orderBreakdown}
 
 【納品予定日】
 {deliveryDate}
@@ -423,4 +423,48 @@ export function formatOrderItems(orderData) {
   if (d.flowerColor) parts.push(`  色: ${d.flowerColor}`);
   if (d.flowerVibe) parts.push(`  イメージ: ${d.flowerVibe}`);
   return parts.join('\n') || '（商品情報なし）';
+}
+
+// ===============================================================
+// 金額内訳を文字列化（商品代/送料/箱代/クール代/税/合計）
+// payment_confirmed 等のメール本文で「合計とのつじつまが合わない」を防ぐ
+// ===============================================================
+export function formatOrderBreakdown(orderData) {
+  const d = orderData || {};
+  // EC注文 (cart) と カスタム注文 で itemPrice の計算が違うのでケアフル
+  let itemSubtotal = 0;
+  if (Array.isArray(d.cartItems) && d.cartItems.length > 0) {
+    itemSubtotal = d.cartItems.reduce((s, c) => s + Number(c.price || 0) * Number(c.qty || 1), 0);
+  } else {
+    itemSubtotal = Number(d.itemPrice) || 0;
+  }
+  const calcFee = Number(d.calculatedFee) || 0;
+  const pickupFee = Number(d.pickupFee) || 0;
+  const breakdown = d.feeBreakdown || {};
+  const baseFee = Number(breakdown.baseFee) || 0;
+  const boxFee = Number(breakdown.boxFee) || 0;
+  const coolFee = Number(breakdown.coolFee) || 0;
+
+  const subTotal = itemSubtotal + calcFee + pickupFee;
+  const tax = Math.floor(subTotal * 0.1);
+  const total = subTotal + tax;
+
+  const lines = [];
+  lines.push(`商品代 (税抜)：¥${itemSubtotal.toLocaleString()}`);
+  // 送料 (自社配達 or 業者配送): baseFee がある時のみ
+  if (baseFee > 0) {
+    const label = d.receiveMethod === 'delivery' ? '配達料' : (d.receiveMethod === 'sagawa' ? '送料 (佐川急便)' : '配送料');
+    lines.push(`${label}：¥${baseFee.toLocaleString()}`);
+  } else if (calcFee > 0 && baseFee === 0) {
+    // breakdown が壊れてる場合の互換: calcFee 一括表示
+    lines.push(`配送料：¥${calcFee.toLocaleString()}`);
+  }
+  if (boxFee > 0) lines.push(`箱代：¥${boxFee.toLocaleString()}`);
+  if (coolFee > 0) lines.push(`クール便代：¥${coolFee.toLocaleString()}`);
+  if (pickupFee > 0) lines.push(`器具回収費：¥${pickupFee.toLocaleString()}`);
+  lines.push(`消費税 (10%)：¥${tax.toLocaleString()}`);
+  lines.push('─────────────────────');
+  lines.push(`合計 (税込)：¥${total.toLocaleString()}`);
+
+  return lines.join('\n');
 }

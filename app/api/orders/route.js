@@ -14,7 +14,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe, APP_URL } from '@/utils/stripe';
 import { sendEmail } from '@/utils/email';
-import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatRecipientInfo, formatLineAddFriendBlock } from '@/utils/emailTemplates';
+import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatOrderBreakdown, formatRecipientInfo, formatLineAddFriendBlock } from '@/utils/emailTemplates';
 import { sendLineParallelToEmail } from '@/utils/line';
 import { createMypageMagicUrl } from '@/utils/mypageLink';
 import { rateLimit, getClientIp } from '@/utils/rateLimit';
@@ -222,6 +222,7 @@ export async function POST(request) {
           orderId: String(orderId).slice(0, 8),
           orderTotal: totalAmount.toLocaleString(),
           orderItems: formatOrderItems(orderRecord.order_data),
+          orderBreakdown: formatOrderBreakdown(orderRecord.order_data),
           paymentMethod: paymentLabelMap[paymentMethod] || paymentMethod,
           bankInfo: paymentMethod === 'bank_transfer' && bankInfo
             ? `【お振込先】\n${bankInfo}\n※お振込手数料はお客様ご負担となります。\n\n⏱️ お振込み確認後から制作を開始いたします。${orderData.paymentScheduledDate ? `\n📅 ご入金予定日: ${orderData.paymentScheduledDate}` : ''}\n\n📞 ご入金のタイミングに関するご相談・ご質問は、お電話にてお問い合わせください。\n${shopPhone ? `   TEL: ${shopPhone}` : ''}`

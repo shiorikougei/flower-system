@@ -11,7 +11,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from '@/utils/email';
-import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatRecipientInfo, formatLineAddFriendBlock } from '@/utils/emailTemplates';
+import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatOrderBreakdown, formatRecipientInfo, formatLineAddFriendBlock } from '@/utils/emailTemplates';
 import { sendLineParallelToEmail } from '@/utils/line';
 import { createMypageMagicUrl } from '@/utils/mypageLink';
 
@@ -90,6 +90,7 @@ export async function POST(request) {
       orderId: String(order.id).slice(0, 8),
       orderTotal: total.toLocaleString(),
       orderItems: formatOrderItems(od),
+      orderBreakdown: formatOrderBreakdown(od),
       paymentMethod: paymentLabelMap[od.paymentMethod] || od.paymentMethod || '',
       bankInfo: bankInfo ? `【お振込先】\n${bankInfo}` : '',
       deliveryDate: od.selectedDate ? `${od.selectedDate} ${od.selectedTime || ''}`.trim() : '',

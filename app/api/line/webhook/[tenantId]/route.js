@@ -231,6 +231,19 @@ export async function POST(request, { params }) {
             '例: example@gmail.com\n\n' +
             '（オンライン注文歴がなくても、お電話/店頭注文のお客様も登録可能です）'
           );
+        } else if (text === '停止' || text.toLowerCase() === 'stop') {
+          // ★ 通知停止 (完全一致のみ)
+          //   「停止しないでください」等の自然文には反応しない厳密マッチ
+          await supabaseAdmin
+            .from('customer_line_links')
+            .update({ is_active: false })
+            .eq('tenant_id', tenantId)
+            .eq('line_user_id', lineUserId);
+          await replyText(
+            ev.replyToken,
+            channelAccessToken,
+            'LINE通知を停止しました。\n再開したい場合はリッチメニュー「📧 LINE連携する」から再登録してください。'
+          );
         }
         // ★ それ以外の任意のテキスト → 自動応答なし
         //   通常のお問い合わせは店舗スタッフが手動で対応します
