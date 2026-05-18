@@ -12,7 +12,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from '@/utils/email';
 import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatOrderBreakdown, formatRecipientInfo, formatLineAddFriendBlock } from '@/utils/emailTemplates';
-import { sendLineParallelToEmail } from '@/utils/line';
+import { sendLineParallelToEmail, getNotificationPreference } from '@/utils/line';
 import { createMypageMagicUrl } from '@/utils/mypageLink';
 
 export async function POST(request) {
@@ -104,13 +104,20 @@ export async function POST(request) {
     const { subject, body } = renderTemplate(tpl, vars);
     const html = bodyToHtml(body, { shopName });
     const from = `${shopName} <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
-    const result = await sendEmail({ to: customerEmail, subject, html, from });
 
-    if (result.error) {
-      return NextResponse.json({ error: 'メール送信に失敗しました', detail: result.error }, { status: 500 });
+    // ★ お客様の通知設定を取得
+    const pref = await getNotificationPreference(supabaseAdmin, tenantId, customerEmail);
+    // 'line_only' なら メール送信スキップ (LINE側のみ送信)
+    let emailResult = { skipped: true, reason: 'preference_line_only' };
+    if (pref !== 'line_only') {
+      emailResult = await sendEmail({ to: customerEmail, subject, html, from });
+      if (emailResult.error) {
+        // メールエラーでもLINEは送る（最低限通知届くように）
+        console.warn('[send-template-email] mail error', emailResult.error);
+      }
     }
 
-    // ★ LINE連携が有効ならLINEにも送信（並列、失敗してもメール送信は成功扱い）
+    // ★ LINE連携が有効ならLINEにも送信（preference='email_only'時はsendLineParallelToEmail内でスキップ）
     const lineResult = await sendLineParallelToEmail({
       supabaseAdmin,
       tenantSettings: settings,
@@ -120,7 +127,7 @@ export async function POST(request) {
       imageUrl: triggerId === 'completion_photo' ? od.completionImage : null,
     });
 
-    return NextResponse.json({ sent: true, line: lineResult });
+    return NextResponse.json({ sent: true, email: emailResult, line: lineResult, preference: pref });
   } catch (err) {
     console.error('[send-template-email] error:', err);
     return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });

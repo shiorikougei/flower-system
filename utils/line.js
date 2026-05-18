@@ -138,6 +138,23 @@ export async function findLineUserId(supabaseAdmin, tenantId, email) {
 }
 
 /**
+ * お客様の通知設定を取得 (both / line_only / email_only)
+ *   デフォルト 'both'
+ */
+export async function getNotificationPreference(supabaseAdmin, tenantId, email) {
+  if (!tenantId || !email) return 'both';
+  const { data } = await supabaseAdmin
+    .from('customer_line_links')
+    .select('notification_preference')
+    .eq('tenant_id', tenantId)
+    .eq('customer_email', String(email).toLowerCase())
+    .eq('is_active', true)
+    .limit(1)
+    .maybeSingle();
+  return data?.notification_preference || 'both';
+}
+
+/**
  * メール送信と同時にLINEへも併送する高レベル関数
  *   - lineConfig.enabled でなければ何もしない
  *   - 紐付け user_id がなければ何もしない
@@ -155,6 +172,12 @@ export async function sendLineParallelToEmail({
 
   const lineUserId = await findLineUserId(supabaseAdmin, tenantId, customerEmail);
   if (!lineUserId) return { skipped: true, reason: 'not_linked' };
+
+  // ★ お客様の通知設定で「email_only」が選ばれている場合はLINEを送らない
+  const pref = await getNotificationPreference(supabaseAdmin, tenantId, customerEmail);
+  if (pref === 'email_only') {
+    return { skipped: true, reason: 'preference_email_only' };
+  }
 
   // テキスト送信
   const textResult = await sendLinePush({

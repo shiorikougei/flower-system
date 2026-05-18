@@ -35,12 +35,42 @@ export async function GET(request) {
 
     const { data } = await supabaseAdmin
       .from('customer_line_links')
-      .select('id, line_user_id, display_name, is_active, linked_at, last_message_at')
+      .select('id, line_user_id, display_name, is_active, linked_at, last_message_at, notification_preference')
       .eq('tenant_id', auth.session.tenant_id)
       .eq('customer_email', auth.session.email)
       .order('linked_at', { ascending: false });
 
     return NextResponse.json({ items: data || [] });
+  } catch (err) {
+    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+  }
+}
+
+// ★ 通知設定変更 (LINE のみ / メール のみ / 両方)
+export async function PATCH(request) {
+  try {
+    const { token, preference } = await request.json();
+    const validPrefs = ['both', 'line_only', 'email_only'];
+    if (!validPrefs.includes(preference)) {
+      return NextResponse.json({ error: 'preferenceが不正' }, { status: 400 });
+    }
+
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+    const auth = await authBy(token, supabaseAdmin);
+    if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
+    // 同じメアドに紐づく全LINEリンクのpreferenceを更新
+    const { error } = await supabaseAdmin
+      .from('customer_line_links')
+      .update({ notification_preference: preference })
+      .eq('tenant_id', auth.session.tenant_id)
+      .eq('customer_email', auth.session.email);
+    if (error) throw error;
+
+    return NextResponse.json({ ok: true, preference });
   } catch (err) {
     return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
   }

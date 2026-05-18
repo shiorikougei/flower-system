@@ -43,6 +43,9 @@ function MyPageContent() {
   // LINE連携状況
   const [lineLinks, setLineLinks] = useState([]);
   const [lineAddFriendUrl, setLineAddFriendUrl] = useState('');
+  // ★ 通知設定 (both / line_only / email_only)
+  const [notificationPref, setNotificationPref] = useState('both');
+  const [isSavingPref, setIsSavingPref] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -77,10 +80,17 @@ function MyPageContent() {
             .then(d => setHasPassword(Boolean(d.hasPassword)))
             .catch(() => {});
         }
-        // LINE連携一覧
+        // LINE連携一覧 + 通知設定
         fetch(`/api/mypage/line-links?token=${encodeURIComponent(token)}`)
           .then(r => r.json())
-          .then(d => setLineLinks(d.items || []))
+          .then(d => {
+            setLineLinks(d.items || []);
+            // 通知設定 (アクティブなレコードから取得)
+            const active = (d.items || []).find(l => l.is_active);
+            if (active?.notification_preference) {
+              setNotificationPref(active.notification_preference);
+            }
+          })
           .catch(() => {});
       })
       .catch(() => setError('読み込みに失敗しました'))
@@ -141,6 +151,25 @@ function MyPageContent() {
       alert(e.message);
     } finally {
       setIsSendingEmailChange(false);
+    }
+  }
+
+  // ★ 通知設定変更 (both / line_only / email_only)
+  async function saveNotificationPref(pref) {
+    setIsSavingPref(true);
+    try {
+      const res = await fetch('/api/mypage/line-links', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, preference: pref }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '保存失敗');
+      setNotificationPref(pref);
+    } catch (e) {
+      alert('保存失敗: ' + e.message);
+    } finally {
+      setIsSavingPref(false);
     }
   }
 
@@ -772,6 +801,39 @@ function MyPageContent() {
                 <div className="text-[10px] text-[#999] leading-relaxed bg-[#FBFAF9] p-2.5 rounded-lg mt-2">
                   💡 LINEを機種変更した場合は、新しいLINEで友達追加 → メールアドレス送信で、自動的に新アカウントに切り替わります。
                 </div>
+
+                {/* ★ 通知方法の選択 (LINE連携あり時のみ表示) */}
+                {lineLinks.filter(l => l.is_active).length > 0 && (
+                  <div className="border-t border-[#EAEAEA] pt-4 mt-2 space-y-2">
+                    <p className="text-[12px] font-bold text-[#2D4B3E]">📨 通知の受け取り方法</p>
+                    <p className="text-[10px] text-[#999]">ご注文進捗・完成写真などをどちらで受け取るかを選べます。</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {[
+                        { value: 'both', icon: '📧💬', label: 'メール + LINE', desc: 'どちらにも届く' },
+                        { value: 'line_only', icon: '💬', label: 'LINE のみ', desc: 'メール送信なし' },
+                        { value: 'email_only', icon: '📧', label: 'メールのみ', desc: 'LINE送信なし' },
+                      ].map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => saveNotificationPref(opt.value)}
+                          disabled={isSavingPref}
+                          className={`p-3 rounded-xl border-2 text-left transition-all ${
+                            notificationPref === opt.value
+                              ? 'bg-[#06C755] border-[#06C755] text-white shadow-sm'
+                              : 'bg-white border-[#EAEAEA] text-[#555] hover:border-[#06C755]'
+                          } disabled:opacity-50`}
+                        >
+                          <div className="text-[14px] mb-0.5">{opt.icon}</div>
+                          <div className="text-[12px] font-bold">{opt.label}</div>
+                          <div className={`text-[10px] mt-0.5 ${notificationPref === opt.value ? 'text-white/80' : 'text-[#999]'}`}>
+                            {opt.desc}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    {isSavingPref && <p className="text-[10px] text-[#999] animate-pulse">保存中...</p>}
+                  </div>
+                )}
               </div>
             </section>
 

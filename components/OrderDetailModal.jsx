@@ -867,12 +867,24 @@ export default function OrderDetailModal({
                 const autoStaff = currentStaff?.name || '';
 
                 // ★ 完了系ステータスの場合、メール送信を確認
-                const COMPLETION_STATUS_MAP = {
-                  '店頭お渡し完了': { trigger: 'status_pickup_done', label: '店頭お渡し完了' },
-                  '配達完了': { trigger: 'status_delivery_done', label: '配達完了' },
-                  '配送業者引き渡し完了': { trigger: 'status_shipping_done', label: '配送業者引き渡し完了' },
+                //   キーワードベースで判定（カスタムラベルにも対応）
+                const detectCompletionTrigger = (statusText) => {
+                  const s = String(statusText || '');
+                  // 店頭お渡し系
+                  if (/お渡し完了|店頭|引き取り完了/.test(s)) {
+                    return { trigger: 'status_pickup_done', label: '店頭お渡し完了' };
+                  }
+                  // 配達完了系（自社配達）
+                  if (/配達完了/.test(s)) {
+                    return { trigger: 'status_delivery_done', label: '配達完了' };
+                  }
+                  // 配送・発送系（業者配送）
+                  if (/発送済|発送完了|配送業者|引き渡し完了|発送$/.test(s)) {
+                    return { trigger: 'status_shipping_done', label: '発送完了' };
+                  }
+                  return null;
                 };
-                const completionInfo = COMPLETION_STATUS_MAP[updateForm.status];
+                const completionInfo = detectCompletionTrigger(updateForm.status);
                 const customerEmail = modalData.customerInfo?.email;
 
                 if (completionInfo && customerEmail) {
