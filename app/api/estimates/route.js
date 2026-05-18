@@ -92,7 +92,13 @@ export async function POST(request) {
         if (rd.purpose) rows.push(['ご用途', escHtml(purposeLabel)]);
         if (rd.deliveryMethod) rows.push(['受取方法', escHtml(dmMap[rd.deliveryMethod] || rd.deliveryMethod)]);
         if (rd.desiredDate) rows.push(['ご希望日', escHtml(rd.desiredDate) + (rd.desiredTime ? ` ${escHtml(rd.desiredTime)}` : '')]);
-        if (rd.deliveryAddress) rows.push(['お届け先住所', escHtml(rd.deliveryAddress)]);
+        // ★ 新フォーム: 郵便番号+住所1+住所2を組み合わせ。旧: deliveryAddress
+        const addrParts = [];
+        if (rd.deliveryZip) addrParts.push(`〒${rd.deliveryZip}`);
+        if (rd.deliveryAddress1) addrParts.push(rd.deliveryAddress1);
+        if (rd.deliveryAddress2) addrParts.push(rd.deliveryAddress2);
+        const addrCombined = addrParts.join(' ') || rd.deliveryAddress || '';
+        if (addrCombined) rows.push(['お届け先住所', escHtml(addrCombined)]);
         if (rd.recipientName) rows.push(['お届け先お名前', `${escHtml(rd.recipientName)} 様`]);
         if (rd.flowerType) rows.push(['花の種類', escHtml(rd.flowerType)]);
         if (rd.colorPreference) rows.push(['色・イメージ', escHtml(rd.colorPreference)]);

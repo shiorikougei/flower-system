@@ -138,7 +138,13 @@ export default function EstimatesPage() {
                           if (rd.purpose) fields.push(['ご用途', purposeLabel]);
                           if (rd.deliveryMethod) fields.push(['受取方法', dmMap[rd.deliveryMethod] || rd.deliveryMethod]);
                           if (rd.desiredDate) fields.push(['ご希望日', rd.desiredDate + (rd.desiredTime ? ` / ${rd.desiredTime}` : '')]);
-                          if (rd.deliveryAddress) fields.push(['お届け先住所', rd.deliveryAddress]);
+                          // ★ 新フォーム形式の住所結合 / 旧 deliveryAddress も互換
+                          const addrParts2 = [];
+                          if (rd.deliveryZip) addrParts2.push(`〒${rd.deliveryZip}`);
+                          if (rd.deliveryAddress1) addrParts2.push(rd.deliveryAddress1);
+                          if (rd.deliveryAddress2) addrParts2.push(rd.deliveryAddress2);
+                          const combinedAddr = addrParts2.join(' ') || rd.deliveryAddress;
+                          if (combinedAddr) fields.push(['お届け先住所', combinedAddr]);
                           if (rd.recipientName) fields.push(['お届け先お名前', `${rd.recipientName} 様`]);
                           if (rd.flowerType) fields.push(['花の種類', rd.flowerType]);
                           if (rd.colorPreference) fields.push(['色・イメージ', rd.colorPreference]);

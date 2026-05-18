@@ -54,7 +54,11 @@ export default function EstimatePage() {
     purpose: '', purposeOther: '',
     deliveryMethod: '',
     desiredDate: '', desiredTime: '',
-    deliveryAddress: '',
+    // ★ 配達先住所 (郵便番号+自動入力)
+    deliveryZip: '',
+    deliveryAddress1: '',  // 都道府県・市区町村（zip→自動入力）
+    deliveryAddress2: '',  // 番地・建物名
+    deliveryAddress: '',   // 互換用（フル住所）
     recipientName: '',
     // デザイン
     flowerType: '', colorPreference: '', countSpec: '',
@@ -195,6 +199,41 @@ export default function EstimatePage() {
   }, [tenantId]);
 
   const appName = appSettings?.generalConfig?.appName || 'FLORIX';
+
+  // ★ 郵便番号 → 住所自動取得
+  async function fetchAddressByZip(zip) {
+    if (!zip || zip.length !== 7) return;
+    try {
+      const res = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${zip}`);
+      const data = await res.json();
+      if (data.results && data.results[0]) {
+        const r = data.results[0];
+        const fullAddr = `${r.address1}${r.address2}${r.address3}`;
+        setForm(f => ({ ...f, deliveryAddress1: fullAddr }));
+      }
+    } catch (e) { console.warn('住所検索失敗:', e); }
+  }
+
+  // ★ 自社配達対応エリアの判定
+  function judgeDeliveryArea(address) {
+    if (!address) return null;
+    const raw = String(address).replace(/[\s　]+/g, '');
+    // 札幌北区フリーエリア
+    const free = ['23','24','25','26','27'].some(n => ['3','4','5'].some(w => raw.includes(`北${n}条西${w}`)));
+    if (free) return { area: 'free', label: '🎉 配送無料エリア' };
+    // 店舗設定のエリア
+    const areas = appSettings?.deliveryAreas || [];
+    for (const a of areas) {
+      const keys = (a.name||'').split(',').map(k => k.trim()).filter(k => k);
+      if (keys.some(k => raw.includes(k))) return { area: 'in', label: `🚚 配達対応エリア (¥${Number(a.fee).toLocaleString()})` };
+    }
+    // デフォルト判定
+    if (/厚別区|清田区|南区/.test(raw)) return { area: 'in', label: '🚚 配達対応エリア (¥1,000)' };
+    if (/白石区|豊平区|手稲区|石狩市/.test(raw)) return { area: 'in', label: '🚚 配達対応エリア (¥800)' };
+    if (/北区|中央区|東区|西区/.test(raw)) return { area: 'in', label: '🚚 配達対応エリア (¥500)' };
+    return { area: 'out', label: '⚠️ 自社配達対応エリア外' };
+  }
+  const areaJudgement = isDelivery && form.deliveryAddress1 ? judgeDeliveryArea(form.deliveryAddress1 + form.deliveryAddress2) : null;
   const isDelivery = form.deliveryMethod === 'delivery' || form.deliveryMethod === 'shipping';
 
   // 構造化データ → 読みやすいテキスト形式に変換（API送信用 + DB保存用）
@@ -205,7 +244,22 @@ export default function EstimatePage() {
     const dm = DELIVERY_OPTIONS.find(d => d.value === form.deliveryMethod);
     lines.push(`【受取方法】${dm?.label || ''}`);
     if (form.desiredDate) lines.push(`【ご希望日】${form.desiredDate}${form.desiredTime ? ` / 時刻: ${form.desiredTime}` : ''}`);
-    if (isDelivery && form.deliveryAddress) lines.push(`【お届け先住所】${form.deliveryAddress}`);
+    // ★ お届け先住所 (郵便番号 + 都道府県市区町村 + 番地)
+    if (isDelivery) {
+      const addrParts = [];
+      if (form.deliveryZip) addrParts.push(`〒${form.deliveryZip}`);
+      if (form.deliveryAddress1) addrParts.push(form.deliveryAddress1);
+      if (form.deliveryAddress2) addrParts.push(form.deliveryAddress2);
+      // 互換: 古い deliveryAddress も含める
+      const oldAddr = form.deliveryAddress && !addrParts.length ? form.deliveryAddress : '';
+      const addr = addrParts.join(' ') || oldAddr;
+      if (addr) lines.push(`【お届け先住所】${addr}`);
+      // 自社配達のエリア判定結果も明記
+      if (form.deliveryMethod === 'delivery' && form.deliveryAddress1) {
+        const j = judgeDeliveryArea(form.deliveryAddress1 + form.deliveryAddress2);
+        if (j) lines.push(`【自社配達エリア判定】${j.label}${j.area === 'out' ? ' (要相談)' : ''}`);
+      }
+    }
     if (isDelivery && form.recipientName) lines.push(`【お届け先お名前】${form.recipientName} 様`);
     if (form.flowerType) lines.push(`【花の種類】${form.flowerType}`);
     if (form.colorPreference) lines.push(`【色・イメージ】${form.colorPreference}`);
@@ -390,16 +444,62 @@ export default function EstimatePage() {
           {isDelivery && (
             <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 space-y-3">
               <p className="text-[11px] font-bold text-blue-900">📍 お届け先情報</p>
+
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-blue-900">お届け先住所</label>
-                <input type="text" placeholder="〇〇県〇〇市〇〇1-2-3 〇〇マンション101"
-                  value={form.deliveryAddress} onChange={e => setForm({...form, deliveryAddress: e.target.value})} className={inputCls}/>
+                <label className="text-[10px] font-bold text-blue-900">郵便番号 (7桁・ハイフンなし)</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={7}
+                  placeholder="例: 0010025"
+                  value={form.deliveryZip}
+                  onChange={e => {
+                    const v = e.target.value.replace(/[^\d]/g, '');
+                    setForm({...form, deliveryZip: v});
+                    if (v.length === 7) fetchAddressByZip(v);
+                  }}
+                  className={inputCls}
+                />
               </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-blue-900">都道府県・市区町村 (自動入力)</label>
+                <input type="text" placeholder="郵便番号入力で自動表示" readOnly
+                  value={form.deliveryAddress1}
+                  className={inputCls.replace('bg-[#FBFAF9]', 'bg-[#EAEAEA]/30')}/>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-blue-900">番地・建物名</label>
+                <input type="text" placeholder="例: 北二十五条西4-1-1 〇〇マンション101"
+                  value={form.deliveryAddress2} onChange={e => setForm({...form, deliveryAddress2: e.target.value})} className={inputCls}/>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-blue-900">お届け先お名前</label>
                 <input type="text" placeholder="〇〇 〇〇"
                   value={form.recipientName} onChange={e => setForm({...form, recipientName: e.target.value})} className={inputCls}/>
               </div>
+
+              {/* ★ 自社配達選択時のエリア判定メッセージ */}
+              {form.deliveryMethod === 'delivery' && areaJudgement && (
+                <div className={`p-3 rounded-lg text-[11px] leading-relaxed ${
+                  areaJudgement.area === 'out'
+                    ? 'bg-amber-50 border border-amber-300 text-amber-900'
+                    : 'bg-emerald-50 border border-emerald-300 text-emerald-900'
+                }`}>
+                  <p className="font-bold mb-1">{areaJudgement.label}</p>
+                  {areaJudgement.area === 'out' ? (
+                    <p>
+                      ご入力いただいたお届け先は<strong>自社配達対応エリア外</strong>となりますが、
+                      配達状況によってはお受けできる場合もございます🌸<br/>
+                      お見積もりと合わせて相談させていただきますので、このまま送信してください。
+                    </p>
+                  ) : (
+                    <p>こちらの住所は自社配達でお伺いできます。お見積もりにてご案内します。</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

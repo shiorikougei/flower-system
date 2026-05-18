@@ -2018,11 +2018,21 @@ function OrderFormContent() {
                         )}
                         {scheduleInfo && scheduleInfo.isLate && (
                           <div className="bg-red-50 border-2 border-red-300 rounded-lg p-3 space-y-2">
-                            <p className="text-[12px] font-bold text-red-700">🚨 お届け希望日に間に合わない可能性があります</p>
+                            <p className="text-[13px] font-bold text-red-700">🚨 お届け希望日に間に合いません</p>
                             <p className="text-[11px] text-red-900 leading-relaxed">
-                              ご入金予定日（<strong>{paymentScheduledDate}</strong>）のご入金確認後、<strong>{scheduleInfo.start.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })}</strong>以降の制作開始となります。<br/>
-                              一方、お届け希望日は <strong>{scheduleInfo.wishDate.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })}</strong> のため、お届け希望日より遅れる可能性があります。
+                              ご入金予定日（<strong>{paymentScheduledDate}</strong>）のご入金確認後、<br/>
+                              <strong>{scheduleInfo.start.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })}</strong>以降の制作開始となります。<br/>
+                              お届け希望日 <strong>{scheduleInfo.wishDate.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })}</strong> を超えてしまうため、ご希望日にお届けできません。
                             </p>
+                            <div className="bg-white border-2 border-red-400 rounded-lg p-3 mt-2">
+                              <p className="text-[12px] font-bold text-red-700">📞 ご注文確定後に必ずお電話ください</p>
+                              <p className="text-[11px] text-red-900 mt-1 leading-relaxed">
+                                納期の再調整が必要です。<br/>
+                                ・お振込みを前倒し or 受取日変更<br/>
+                                ・どうしても希望日に必要なら、別の支払方法をご案内する場合あり<br/><br/>
+                                <strong>※ お電話番号は注文完了画面・確認メールでご案内します</strong>
+                              </p>
+                            </div>
                             <label className="flex items-start gap-2 cursor-pointer pt-2 border-t border-red-200">
                               <input
                                 type="checkbox"
@@ -2031,7 +2041,7 @@ function OrderFormContent() {
                                 className="mt-0.5 w-4 h-4 accent-red-600"
                               />
                               <span className="text-[11px] font-bold text-red-900">
-                                納品が希望日より遅れる場合があることを了承します
+                                納期遅延の可能性と、注文確定後に電話で相談することを了承します
                               </span>
                             </label>
                           </div>
