@@ -119,7 +119,7 @@ export default function OrderEntryPage() {
                 <h2 className="text-[16px] md:text-[17px] font-bold text-[#111111] mb-1.5">お見積もり依頼</h2>
                 <p className="text-[11.5px] text-[#555555] leading-relaxed">
                   バラの本数指定や複数同時のご注文など、<br className="hidden sm:inline"/>
-                  金額がわかりにくい場合はこちらから🌹
+                  金額がわかりにくい場合はこちらから
                 </p>
               </div>
               <ChevronRight size={20} className="text-[#999999] group-hover:text-[#117768] transition-colors shrink-0"/>
