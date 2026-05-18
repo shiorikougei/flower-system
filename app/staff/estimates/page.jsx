@@ -78,9 +78,24 @@ export default function EstimatesPage() {
     return null; // エリア外
   }
 
-  // ★ 業者配送料の自動計算 (住所から都道府県を抜き出して shippingRates と照合)
+  // ★ 商品代から使用する箱サイズを決定 (送料ルックアップに必要)
+  function determineSize(productPrice) {
+    const bfc = appSettings?.boxFeeConfig;
+    if (bfc?.type === 'flat') {
+      return bfc.flatSize || appSettings?.shippingSizes?.[0] || '80';
+    }
+    if (bfc?.type === 'price_based') {
+      const tiers = bfc.priceTiers || [];
+      const sorted = [...tiers].sort((a,b) => b.minPrice - a.minPrice);
+      const matched = sorted.find(t => Number(productPrice) >= t.minPrice);
+      return matched?.size || appSettings?.shippingSizes?.[0] || '80';
+    }
+    return appSettings?.shippingSizes?.[0] || '80';
+  }
+
+  // ★ 業者配送料の自動計算 (住所+商品代から最適な箱サイズで料金照合)
   //   ※ 送料無料閾値はEC専用なので見積では適用しない
-  function calcSagawaFee(addr, boxSize = '80') {
+  function calcSagawaFee(addr, productPrice = 0) {
     if (!addr) return null;
     const raw = String(addr).replace(/[\s　]+/g, '');
     const prefMatch = raw.match(/^(北海道|東京都|(?:京都|大阪)府|.{2,3}県)/);
@@ -90,7 +105,8 @@ export default function EstimatesPage() {
     let rateData = appSettings?.shippingRates?.find(r => r.prefs && r.prefs.includes(searchPref));
     if (!rateData) rateData = appSettings?.shippingRates?.find(r => r.region && r.region.includes(searchPref));
     if (!rateData) return null;
-    return Number(rateData['fee' + boxSize]) || 0;
+    const size = determineSize(productPrice);
+    return Number(rateData['fee' + size]) || 0;
   }
 
   // ★ 箱代の自動計算
@@ -107,8 +123,8 @@ export default function EstimatesPage() {
     return 0;
   }
 
-  // ★ クール便代の自動計算
-  function calcCoolFee(addr, desiredDate, boxSize = '80') {
+  // ★ クール便代の自動計算 (商品代から箱サイズを決定して料金照合)
+  function calcCoolFee(addr, desiredDate, productPrice = 0) {
     if (!addr || !desiredDate) return 0;
     const cfg = appSettings?.boxFeeConfig;
     if (!cfg?.coolBinEnabled) return 0;
@@ -125,7 +141,9 @@ export default function EstimatesPage() {
     const searchPref = targetPref === '北海' ? '北海道' : targetPref;
     let rateData = appSettings?.shippingRates?.find(r => r.prefs && r.prefs.includes(searchPref));
     if (!rateData) rateData = appSettings?.shippingRates?.find(r => r.region && r.region.includes(searchPref));
-    return rateData ? (Number(rateData['cool'+boxSize]) || 0) : 0;
+    if (!rateData) return 0;
+    const size = determineSize(productPrice);
+    return Number(rateData['cool' + size]) || 0;
   }
 
   // ★ 見積編集開始時に料金を自動算出してフォームにセット
@@ -135,9 +153,9 @@ export default function EstimatesPage() {
     const addr = [rd.deliveryAddress1, rd.deliveryAddress2].filter(Boolean).join(' ') || rd.deliveryAddress || '';
     const productPriceGuess = 0; // 商品代は店舗判断
     const selfFee = calcSelfDeliveryFee(addr);
-    const sagawaFee = calcSagawaFee(addr, '80');
+    const sagawaFee = calcSagawaFee(addr, productPriceGuess);
     const boxFee = calcBoxFee(productPriceGuess);
-    const coolFee = calcCoolFee(addr, rd.desiredDate, '80');
+    const coolFee = calcCoolFee(addr, rd.desiredDate, productPriceGuess);
 
     setReplyForm({
       productPrice: '',
@@ -434,9 +452,9 @@ export default function EstimatesPage() {
                             setReplyForm(f => ({
                               ...f,
                               selfDeliveryFee: calcSelfDeliveryFee(addr) !== null ? String(calcSelfDeliveryFee(addr)) : f.selfDeliveryFee,
-                              sagawaFee: calcSagawaFee(addr, '80') !== null ? String(calcSagawaFee(addr, '80')) : f.sagawaFee,
+                              sagawaFee: calcSagawaFee(addr, pp) !== null ? String(calcSagawaFee(addr, pp)) : f.sagawaFee,
                               boxFee: String(calcBoxFee(pp) || ''),
-                              coolFee: String(calcCoolFee(addr, rd.desiredDate, '80') || ''),
+                              coolFee: String(calcCoolFee(addr, rd.desiredDate, pp) || ''),
                             }));
                           }}
                           className="text-[10px] bg-[#117768]/10 text-[#117768] px-3 py-1 rounded-full font-bold hover:bg-[#117768] hover:text-white"
