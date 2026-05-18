@@ -793,8 +793,208 @@ export default function StaffNewOrderPage() {
             </div>
           </div>
 
+          {/* ★ NEW section 2: スケジュール・情報 (旧 section 4 を section 1 直下に移動) */}
+          <div className="bg-white p-8 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-6">
+            <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3">2. スケジュール・情報</h2>
+
+            {/* ★ 通知送信オプション */}
+            <div className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-3 space-y-2">
+              <p className="text-[11px] font-bold text-[#555]">📤 ご注文確認の通知</p>
+              <div className="flex flex-wrap gap-3">
+                <label className="flex items-center gap-2 text-[12px] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={sendAutoReply}
+                    onChange={(e) => setSendAutoReply(e.target.checked)}
+                    className="w-4 h-4 accent-[#2D4B3E]"
+                  />
+                  <span>📧 メールで送る</span>
+                  <span className="text-[10px] text-[#999]">（メアド必要）</span>
+                </label>
+                <label className="flex items-center gap-2 text-[12px] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={sendLineNotification}
+                    onChange={(e) => setSendLineNotification(e.target.checked)}
+                    className="w-4 h-4 accent-[#06c755]"
+                  />
+                  <span>💬 LINEで送る</span>
+                  {lookupResult?.lineLink?.active ? (
+                    <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold">連携あり</span>
+                  ) : (
+                    <span className="text-[10px] text-[#999]">（連携あれば送信）</span>
+                  )}
+                </label>
+              </div>
+              <p className="text-[10px] text-[#999] leading-relaxed">
+                💡 電話受付でメアド不明でも、過去注文があれば LINE 経由で確認を送れます（要LINE連携）
+              </p>
+            </div>
+
+            <div className="space-y-3 pb-4 border-b border-[#FBFAF9]">
+              <label className="text-[11px] font-bold text-[#999999]">注文者情報</label>
+              <input type="text" placeholder="お名前（必須）" value={customerInfo.name} onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none" />
+              {/* ★ 電話番号 + 過去顧客検索 */}
+              <div className="flex gap-2">
+                <input
+                  type="tel"
+                  placeholder="電話番号"
+                  value={customerInfo.phone}
+                  onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
+                  className="flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!customerInfo.phone || !currentTenantId) return;
+                    setLookupLoading(true);
+                    setLookupResult(null);
+                    try {
+                      const res = await fetch(`/api/staff/lookup-customer?phone=${encodeURIComponent(customerInfo.phone)}&tenantId=${encodeURIComponent(currentTenantId)}`);
+                      const data = await res.json();
+                      setLookupResult(data);
+                      if (data.found && data.customer) {
+                        const c = data.customer;
+                        setCustomerInfo(prev => ({
+                          ...prev,
+                          name: prev.name || c.name,
+                          email: prev.email || c.email,
+                          zip: prev.zip || c.zip,
+                          address1: prev.address1 || c.address1,
+                          address2: prev.address2 || c.address2,
+                        }));
+                      }
+                    } catch (e) {
+                      alert('検索に失敗: ' + e.message);
+                    } finally {
+                      setLookupLoading(false);
+                    }
+                  }}
+                  disabled={!customerInfo.phone || lookupLoading}
+                  className="h-12 px-4 bg-[#2D4B3E] text-white rounded-xl text-[11px] font-bold hover:bg-[#1f352b] disabled:opacity-50 whitespace-nowrap"
+                >
+                  {lookupLoading ? '検索中...' : '🔍 過去注文検索'}
+                </button>
+              </div>
+              {lookupResult && (
+                <div className={`p-3 rounded-xl text-[11px] leading-relaxed ${lookupResult.found ? 'bg-emerald-50 border border-emerald-200 text-emerald-900' : 'bg-amber-50 border border-amber-200 text-amber-900'}`}>
+                  {lookupResult.found ? (
+                    <>
+                      ✅ <strong>{lookupResult.customer.name} 様</strong> ({lookupResult.orderCount}回ご注文) の情報を自動入力しました。<br/>
+                      {lookupResult.customer.email && <>📧 {lookupResult.customer.email}<br/></>}
+                      {lookupResult.lineLink?.active ? (
+                        <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded inline-block mt-1">
+                          💬 LINE連携済み{lookupResult.lineLink.displayName ? ` (${lookupResult.lineLink.displayName})` : ''}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-amber-700">※ LINE未連携</span>
+                      )}
+                    </>
+                  ) : (
+                    <>⚠️ この電話番号での過去注文は見つかりませんでした。</>
+                  )}
+                </div>
+              )}
+              <input type="email" placeholder="メールアドレス (任意)" value={customerInfo.email} onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
+
+              {receiveMethod !== 'pickup' && (
+                <>
+                  <div className="flex gap-2">
+                    <input type="text" placeholder="郵便番号 (7桁)" value={customerInfo.zip} onChange={(e) => { setCustomerInfo({...customerInfo, zip: e.target.value}); if(e.target.value.length === 7) fetchAddress(e.target.value, 'customer'); }} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
+                  </div>
+                  <input type="text" placeholder="都道府県・市区町村 (自動入力)" value={customerInfo.address1} className="w-full h-12 bg-[#EAEAEA]/30 border border-[#EAEAEA] rounded-xl px-4 text-[13px] text-[#555555] outline-none" readOnly />
+                  <input type="text" placeholder="番地・建物名" value={customerInfo.address2} onChange={(e) => setCustomerInfo({...customerInfo, address2: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
+                </>
+              )}
+            </div>
+
+            {receiveMethod !== 'pickup' && (
+              <div className="py-2">
+                <label className="flex items-center gap-3 cursor-pointer p-4 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA]">
+                  <input type="checkbox" checked={isRecipientDifferent} onChange={(e) => setIsRecipientDifferent(e.target.checked)} className="w-5 h-5 accent-[#2D4B3E] rounded" />
+                  <span className="text-[13px] font-bold text-[#111111]">お届け先が注文者と異なる</span>
+                </label>
+              </div>
+            )}
+
+            {isRecipientDifferent && receiveMethod !== 'pickup' && (
+              <div className="space-y-3 p-6 bg-white border border-[#EAEAEA] shadow-sm rounded-2xl animate-in fade-in zoom-in-95">
+                <label className="text-[11px] font-bold text-[#2D4B3E]">お届け先情報</label>
+                <input type="text" placeholder="お届け先 お名前" value={recipientInfo.name} onChange={(e) => setRecipientInfo({...recipientInfo, name: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none" />
+                <input type="tel" placeholder="お届け先 電話番号" value={recipientInfo.phone} onChange={(e) => setRecipientInfo({...recipientInfo, phone: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
+                <input type="text" placeholder="郵便番号 (7桁)" value={recipientInfo.zip} onChange={(e) => { setRecipientInfo({...recipientInfo, zip: e.target.value}); if(e.target.value.length === 7) fetchAddress(e.target.value, 'recipient'); }} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
+                <input type="text" placeholder="都道府県・市区町村 (自動入力)" value={recipientInfo.address1} className="w-full h-12 bg-[#EAEAEA]/30 border border-[#EAEAEA] rounded-xl px-4 text-[13px] text-[#555555] outline-none" readOnly />
+                <input type="text" placeholder="番地・建物名" value={recipientInfo.address2} onChange={(e) => setRecipientInfo({...recipientInfo, address2: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] focus:border-[#2D4B3E] outline-none" />
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4 mt-6">
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-[#999999]">納品希望日</label>
+                <input type="date" min={minDateLimit} value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none" />
+                {selectedDate && properMinDate && selectedDate < properMinDate && (
+                  <div className="bg-orange-50 text-orange-700 px-3 py-2.5 rounded-xl text-[11px] font-bold flex items-start gap-1.5 border border-orange-200 mt-2">
+                    <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                    <span className="leading-relaxed">注意：規定の最短納期（{new Date(properMinDate).toLocaleDateString('ja-JP')}）より早い日付が指定されています。対応可能か確認してください。</span>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-[#999999]">希望時間</label>
+                <select value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
+                  <option value="">選択...</option>
+                  {getTimeOptions().map(t => (<option key={t} value={t}>{t}</option>))}
+                </select>
+              </div>
+            </div>
+
+            {receiveMethod === 'sagawa' && selectedDate && shippingDate && (
+              <div className="mt-2 p-4 bg-green-50 border border-green-200 rounded-xl flex flex-col sm:flex-row sm:items-center gap-3 animate-in fade-in shadow-sm">
+                <div className="flex items-center gap-2 text-green-800 font-bold text-[12px]">
+                   <Calendar size={16}/> お届け指定: {selectedDate}
+                </div>
+                <ChevronRight size={14} className="hidden sm:block text-green-600"/>
+                <div className="flex items-center gap-2 text-green-900 font-bold text-[14px]">
+                   <Package size={18}/> 発送予定日: {shippingDate}
+                </div>
+              </div>
+            )}
+
+            {receiveMethod === 'delivery' && (
+              <div className="pt-6 border-t border-[#FBFAF9] space-y-4 animate-in fade-in">
+                <div className="space-y-2 p-4 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA]">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={priorContactAgreed}
+                      onChange={(e) => setPriorContactAgreed(e.target.checked)}
+                      className="w-5 h-5 accent-[#2D4B3E] rounded-md mt-0.5"
+                    />
+                    <div className="flex-1">
+                      <p className="text-[13px] font-bold text-[#111111]">お届け先様への事前連絡 了承</p>
+                      <p className="text-[10px] text-[#999999] mt-1 leading-relaxed">
+                        配達時にお届け先様へ電話で確認することを了承いただいています。<br/>
+                        ※お得意様など特別な指示がある場合のみOFFにしてください。
+                      </p>
+                    </div>
+                  </label>
+                  {!priorContactAgreed && (
+                    <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-lg flex items-start gap-2">
+                      <AlertCircle size={14} className="text-orange-600 shrink-0 mt-0.5" />
+                      <p className="text-[11px] font-bold text-orange-700 leading-relaxed">
+                        了承を得られない場合は、原則「業者配送」をご案内ください。<br/>
+                        お得意様などイレギュラー対応の場合のみこのまま進めてください。
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ★ NEW section 3: 詳細と金額 (旧 2.) */}
           <div className="bg-white p-8 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-6 overflow-hidden">
-            
+
             {matchingImages.length > 0 && (
               <div className="bg-[#2D4B3E]/5 -mx-8 -mt-8 p-6 pb-8 mb-6 border-b border-[#EAEAEA] space-y-4">
                  <p className="text-[11px] font-bold text-[#2D4B3E] flex items-center gap-2">制作例からオーダー内容を自動入力</p>
@@ -824,7 +1024,7 @@ export default function StaffNewOrderPage() {
               </div>
             )}
 
-            <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3">2. 詳細と金額</h2>
+            <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3">3. 詳細と金額</h2>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-[#999999]">用途</label>
@@ -888,7 +1088,7 @@ export default function StaffNewOrderPage() {
           </div>
 
           <div className="bg-white p-8 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-6">
-            <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3">3. メッセージ・立札</h2>
+            <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3">4. メッセージ・立札</h2>
             <div className="flex gap-2 p-1 bg-[#FBFAF9] rounded-2xl border border-[#EAEAEA]">
               {['なし', 'メッセージカード', '立札'].map(t => (
                 <button key={t} onClick={() => setCardType(t)} className={`flex-1 py-3 text-[12px] font-bold rounded-xl transition-all ${cardType === t ? 'bg-[#2D4B3E] text-white shadow-md' : 'text-[#555555]'}`}>{t}</button>
@@ -936,9 +1136,11 @@ export default function StaffNewOrderPage() {
             )}
           </div>
 
+          {/* ★ 旧 section 4 (スケジュール・情報) は section 1 直下に移動 → 新 section 2 として描画 */}
+          {false && (
           <div className="bg-white p-8 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-6">
             <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3">4. スケジュール・情報</h2>
-            
+
             {/* ★ 通知送信オプション */}
             <div className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-3 space-y-2">
               <p className="text-[11px] font-bold text-[#555]">📤 ご注文確認の通知</p>
@@ -1138,9 +1340,11 @@ export default function StaffNewOrderPage() {
               </div>
             )}
           </div>
+          )}
+          {/* /旧 section 4 ここまで (実体は section 1 直下に複製) */}
 
           <div className="bg-white p-8 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-6">
-            <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3">5. 入金状況・社内メモ</h2>
+            <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3">5. 入金状況</h2>
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-[#999999]">入金状況</label>
