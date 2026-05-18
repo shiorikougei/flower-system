@@ -119,15 +119,16 @@ export async function POST(request, { params }) {
       if (!lineUserId) continue;
 
       // 友達追加 (follow)
+      // ※ LINE公式マネージャー側で「あいさつメッセージ」を設定している場合と
+      //   重複しないよう、ここではシンプルな案内のみ送信
       if (ev.type === 'follow') {
-        const profile = await fetchProfile(channelAccessToken, lineUserId);
         await replyText(
           ev.replyToken,
           channelAccessToken,
-          `${profile?.displayName || ''}さん、友だち追加ありがとうございます🌸\n\n` +
-          'こちらでご注文の進捗をお届けするには、ご注文時にご登録いただいた\n' +
-          '【メールアドレス】を このトークに送信してください。\n\n' +
-          '例: example@gmail.com'
+          '📩 ご注文の進捗をこのトークで受け取るには、\n' +
+          'ご登録の【メールアドレス】を送信してください。\n\n' +
+          '例: example@gmail.com\n\n' +
+          '（オンライン注文歴がなくても、お電話/店頭注文のお客様も登録可能です）'
         );
         continue;
       }
@@ -150,25 +151,15 @@ export async function POST(request, { params }) {
           const email = m[0].toLowerCase();
           const profile = await fetchProfile(channelAccessToken, lineUserId);
 
-          // 過去注文があるか確認（簡易バリデーション）
+          // 過去注文があるか確認 (案内文分岐のため - 連携自体は過去注文なしでも実行)
           const { data: orders } = await supabaseAdmin
             .from('orders')
             .select('id, order_data')
             .eq('tenant_id', tenantId)
-            .limit(20);
+            .limit(50);
           const hasOrder = (orders || []).some(
             o => o.order_data?.customerInfo?.email?.toLowerCase() === email
           );
-
-          if (!hasOrder) {
-            await replyText(
-              ev.replyToken,
-              channelAccessToken,
-              `「${email}」でのご注文が見つかりません。\n` +
-              'ご注文時にお使いになったメールアドレスをご確認ください。'
-            );
-            continue;
-          }
 
           // ★ 同じemailで紐付いている他のline_user_id（旧LINE）を全て無効化
           //    LINEアカウント変更時、旧アカウントへの通知を止めるため
@@ -195,13 +186,19 @@ export async function POST(request, { params }) {
               { onConflict: 'tenant_id,line_user_id' }
             );
 
-          await replyText(
-            ev.replyToken,
-            channelAccessToken,
-            `${email} とLINEを連携しました 🎉\n\n` +
-            'これからご注文の進捗・完成写真などをこちらのトークにもお届けします💐\n' +
-            'いつでも「停止」と送信していただければ通知を停止できます。'
-          );
+          // ★ 過去注文の有無で案内文を変える
+          const replyMsg = hasOrder
+            ? `${email} とLINE連携しました 🎉\n\n` +
+              'これまでのご注文を確認しました。\n' +
+              'ご注文の進捗・完成写真などを今後こちらのトークにもお届けします💐\n\n' +
+              'いつでも「停止」と送信していただければ通知を停止できます。'
+            : `${email} を登録しました 🌸\n\n` +
+              'こちらのメールアドレスでのご注文履歴はまだありませんが、\n' +
+              '次回ご注文時から進捗をこのトークにお届けします。\n\n' +
+              'お電話・ご来店でご注文の際は、ご登録のメールアドレスを\n' +
+              'スタッフへお伝えください。\n\n' +
+              'いつでも「停止」と送信していただければ通知を停止できます。';
+          await replyText(ev.replyToken, channelAccessToken, replyMsg);
         } else if (text === '停止' || text.toLowerCase() === 'stop') {
           // 連携解除
           await supabaseAdmin
