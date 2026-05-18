@@ -220,10 +220,20 @@ export async function POST(request, { params }) {
               'スタッフへお伝えください。\n\n' +
               'いつでも「停止」と送信していただければ通知を停止できます。';
           await replyText(ev.replyToken, channelAccessToken, replyMsg);
+        } else if (text === '📧 LINE連携を希望します' || text === '📧 LINE通知を登録する') {
+          // ★ リッチメニュー「テキスト」アクション専用の固有文字列に完全一致した場合のみ
+          //   (LINE公式マネージャーUIにはポストバックが無いので、ユニーク文字列の完全一致で代替)
+          await replyText(
+            ev.replyToken,
+            channelAccessToken,
+            '📩 ご注文の進捗をこのトークで受け取るには、\n' +
+            'ご登録の【メールアドレス】を送信してください。\n\n' +
+            '例: example@gmail.com\n\n' +
+            '（オンライン注文歴がなくても、お電話/店頭注文のお客様も登録可能です）'
+          );
         }
-        // ★ それ以外の任意のテキスト（「停止」「連携」等を含むものも） → 自動応答なし
-        //   理由: 「停止しないでください」「登録方法を教えて」等の自然文と区別できないため
-        //   通知停止は Postback (action=unlink) or リッチメニュー / FLORIX マイページから操作
+        // ★ それ以外の任意のテキスト → 自動応答なし
+        //   通常のお問い合わせは店舗スタッフが手動で対応します
       }
     }
 
