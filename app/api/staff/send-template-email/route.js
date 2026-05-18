@@ -21,7 +21,7 @@ export async function POST(request) {
     const accessToken = authHeader.replace(/^Bearer\s+/i, '');
     if (!accessToken) return NextResponse.json({ error: '未認証' }, { status: 401 });
 
-    const { orderId, triggerId } = await request.json();
+    const { orderId, triggerId, extraVars } = await request.json();
     if (!orderId || !triggerId) {
       return NextResponse.json({ error: 'orderId/triggerIdが必要' }, { status: 400 });
     }
@@ -84,6 +84,16 @@ export async function POST(request) {
       bank_transfer: '銀行振込',
     };
 
+    // ★ 配送追跡情報: スタッフが入力した追跡番号 (extraVars.shippingTrackingNumber) があれば
+    //   佐川の追跡URLを生成
+    const trackingNo = String(extraVars?.shippingTrackingNumber || '').trim();
+    const trackingUrl = trackingNo
+      ? `https://k2k.sagawa-exp.co.jp/p/web/okurijoinput.do?okurijoNo=${encodeURIComponent(trackingNo)}`
+      : '';
+    const shippingInfoBlock = trackingNo
+      ? `\n【配送業者の追跡番号】\n佐川急便  お問い合わせ番号: ${trackingNo}\n追跡URL: ${trackingUrl}\n`
+      : '';
+
     const vars = {
       customerName: od.customerInfo?.name || 'お客',
       shopName,
@@ -94,6 +104,12 @@ export async function POST(request) {
       paymentMethod: paymentLabelMap[od.paymentMethod] || od.paymentMethod || '',
       bankInfo: bankInfo ? `【お振込先】\n${bankInfo}` : '',
       deliveryDate: od.selectedDate ? `${od.selectedDate} ${od.selectedTime || ''}`.trim() : '',
+      // ★ 発送日 (sagawa の場合は order_data.shippingDate, それ以外は今日の日付)
+      shippingDate: od.shippingDate || new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }),
+      // ★ 配送追跡情報
+      shippingTrackingNumber: trackingNo,
+      shippingTrackingUrl: trackingUrl,
+      shippingInfo: shippingInfoBlock,
       shopPhone,
       completionImageUrl: od.completionImage || '',
       recipientInfo: formatRecipientInfo(od),

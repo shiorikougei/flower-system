@@ -888,9 +888,28 @@ export default function OrderDetailModal({
                 const customerEmail = modalData.customerInfo?.email;
 
                 if (completionInfo && customerEmail) {
+                  // ★ 発送完了の場合は佐川追跡番号を入力できる
+                  let trackingNo = '';
+                  if (completionInfo.trigger === 'status_shipping_done') {
+                    trackingNo = window.prompt(
+                      `📦 佐川急便のお問い合わせ番号 (任意)\n\n` +
+                      `入力した場合、追跡URLが自動でメール本文に含まれます。\n` +
+                      `わからない・後で送る場合は空欄のままOKしてください。\n\n` +
+                      `お問い合わせ番号:`,
+                      ''
+                    );
+                    // promptキャンセル時は null → 送信中止
+                    if (trackingNo === null) return;
+                    trackingNo = String(trackingNo).trim();
+                  }
+
+                  const trackingInfoLine = trackingNo
+                    ? `\n📦 佐川追跡番号: ${trackingNo}（メール本文に追跡URLも自動挿入）`
+                    : '';
                   const sendMail = window.confirm(
                     `ステータスを「${completionInfo.label}」に更新します。\n\n` +
-                    `お客様（${customerEmail}）に「${completionInfo.label} のお知らせ」メールを自動送信しますか？\n\n` +
+                    `お客様（${customerEmail}）に「${completionInfo.label} のお知らせ」メールを自動送信しますか？` +
+                    trackingInfoLine + `\n\n` +
                     `[OK] 更新＋メール送信\n[キャンセル] 更新のみ（メール送信なし）`
                   );
 
@@ -908,11 +927,12 @@ export default function OrderDetailModal({
                         body: JSON.stringify({
                           orderId: order.id,
                           triggerId: completionInfo.trigger,
+                          extraVars: trackingNo ? { shippingTrackingNumber: trackingNo } : undefined,
                         }),
                       });
                       const result = await res.json();
                       if (res.ok) {
-                        alert(`📧 ${completionInfo.label}のお知らせメールを送信しました`);
+                        alert(`📧 ${completionInfo.label}のお知らせメールを送信しました${trackingNo ? '\n（佐川追跡番号も同送）' : ''}`);
                       } else {
                         alert('メール送信失敗: ' + (result.error || '不明なエラー'));
                       }

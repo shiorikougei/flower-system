@@ -71,9 +71,9 @@ export const EMAIL_TRIGGERS = [
   {
     id: 'status_shipping_done',
     label: '配送業者引き渡し完了 通知',
-    description: 'ステータスを「配送業者引き渡し完了」に更新した時に自動送信 (確認ダイアログあり)',
+    description: 'ステータスを「配送業者引き渡し完了」に更新した時に自動送信 (確認ダイアログあり / 佐川追跡番号も入力可)',
     auto: true,
-    variables: ['customerName', 'shopName', 'orderId', 'orderItems', 'recipientInfo', 'shippingDate', 'shopPhone'],
+    variables: ['customerName', 'shopName', 'orderId', 'orderItems', 'recipientInfo', 'shippingDate', 'shippingInfo', 'shippingTrackingNumber', 'shippingTrackingUrl', 'shopPhone'],
   },
   {
     id: 'custom',
@@ -372,12 +372,14 @@ TEL: {shopPhone}
 {recipientInfo}
 【発送日】
 {shippingDate}
-
+{shippingInfo}
 お花の鮮度保持のため、お受け取り後は早めに開梱して
 水替えをお願いいたします💐
 
 万一お届けに関する問題（配送遅延・破損等）がございましたら、
 直接配送業者へお問い合わせください。
+▼ 佐川急便 お問い合わせ
+https://www.sagawa-exp.co.jp/send/howto/inquiry.html
 
 ご不明な点がございましたら {shopName} までご連絡ください。
 TEL: {shopPhone}
