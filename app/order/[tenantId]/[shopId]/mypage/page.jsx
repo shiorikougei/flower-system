@@ -624,10 +624,16 @@ function MyPageContent() {
               <div className="p-5 space-y-3">
                 {lineLinks.filter(l => l.is_active).length === 0 ? (
                   <>
-                    <p className="text-[11px] text-[#999] leading-relaxed">
-                      LINE公式アカウントを友達追加 → トークでメールアドレスを送信すると、
-                      ご注文進捗・完成写真・入金確認をLINEでも受け取れます💬
-                    </p>
+                    <div className="bg-[#06C755]/5 border border-[#06C755]/30 rounded-xl p-3 space-y-2">
+                      <p className="text-[12px] font-bold text-[#2D4B3E]">📱 LINE通知の登録手順</p>
+                      <ol className="text-[11px] text-[#555] leading-relaxed space-y-1.5 list-decimal pl-4">
+                        <li>下のボタンから当店公式LINEを友達追加</li>
+                        <li>LINEのリッチメニューの <strong>「📧 LINE連携」</strong> ボタンをタップ</li>
+                        <li>FLORIXからメールアドレス送信のご案内が届きます</li>
+                        <li>このマイページにご登録の <strong>{data?.email || 'メールアドレス'}</strong> をLINEトークに送信</li>
+                        <li>連携完了🎉</li>
+                      </ol>
+                    </div>
                     {lineAddFriendUrl ? (
                       <a
                         href={lineAddFriendUrl}

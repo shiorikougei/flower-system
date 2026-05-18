@@ -118,18 +118,10 @@ export async function POST(request, { params }) {
       const lineUserId = ev.source?.userId;
       if (!lineUserId) continue;
 
-      // 友達追加 (follow)
-      // ※ LINE公式マネージャー側で「あいさつメッセージ」を設定している場合と
-      //   重複しないよう、ここではシンプルな案内のみ送信
+      // 友達追加 (follow) → 自動応答なし
+      //   ※ LINE公式マネージャー側のあいさつメッセージで店舗案内を行う
+      //   ※ お客様がリッチメニュー「連携」を押した場合のみメアド登録案内を流す
       if (ev.type === 'follow') {
-        await replyText(
-          ev.replyToken,
-          channelAccessToken,
-          '📩 ご注文の進捗をこのトークで受け取るには、\n' +
-          'ご登録の【メールアドレス】を送信してください。\n\n' +
-          '例: example@gmail.com\n\n' +
-          '（オンライン注文歴がなくても、お電話/店頭注文のお客様も登録可能です）'
-        );
         continue;
       }
 
@@ -143,7 +135,36 @@ export async function POST(request, { params }) {
         continue;
       }
 
-      // メッセージ受信 → メール検出
+      // ★ Postback イベント (リッチメニューのボタン等)
+      //   data=action=link_email の場合のみメアド登録案内を返信
+      //   ※ 通常のテキストメッセージとは別枠なので、自然文に巻き込まれる心配なし
+      if (ev.type === 'postback') {
+        const data = ev.postback?.data || '';
+        if (data === 'action=link_email' || data.includes('action=link')) {
+          await replyText(
+            ev.replyToken,
+            channelAccessToken,
+            '📩 ご注文の進捗をこのトークで受け取るには、\n' +
+            'ご登録の【メールアドレス】を送信してください。\n\n' +
+            '例: example@gmail.com\n\n' +
+            '（オンライン注文歴がなくても、お電話/店頭注文のお客様も登録可能です）'
+          );
+        } else if (data === 'action=unlink' || data.includes('action=stop')) {
+          await supabaseAdmin
+            .from('customer_line_links')
+            .update({ is_active: false })
+            .eq('tenant_id', tenantId)
+            .eq('line_user_id', lineUserId);
+          await replyText(
+            ev.replyToken,
+            channelAccessToken,
+            'LINE通知を停止しました。\n再開したい場合はリッチメニューの「LINE連携」ボタンをタップしてください。'
+          );
+        }
+        continue;
+      }
+
+      // メッセージ受信 → 内容で分岐
       if (ev.type === 'message' && ev.message?.type === 'text') {
         const text = String(ev.message.text || '').trim();
         const m = text.match(EMAIL_RE);
@@ -199,25 +220,10 @@ export async function POST(request, { params }) {
               'スタッフへお伝えください。\n\n' +
               'いつでも「停止」と送信していただければ通知を停止できます。';
           await replyText(ev.replyToken, channelAccessToken, replyMsg);
-        } else if (text === '停止' || text.toLowerCase() === 'stop') {
-          // 連携解除
-          await supabaseAdmin
-            .from('customer_line_links')
-            .update({ is_active: false })
-            .eq('tenant_id', tenantId)
-            .eq('line_user_id', lineUserId);
-          await replyText(
-            ev.replyToken,
-            channelAccessToken,
-            'LINE通知を停止しました。\n再開したい場合はもう一度メールアドレスを送信してください。'
-          );
-        } else {
-          await replyText(
-            ev.replyToken,
-            channelAccessToken,
-            'ご注文の進捗をお届けするには、ご注文時のメールアドレスを送信してください。\n例: example@gmail.com'
-          );
         }
+        // ★ それ以外の任意のテキスト（「停止」「連携」等を含むものも） → 自動応答なし
+        //   理由: 「停止しないでください」「登録方法を教えて」等の自然文と区別できないため
+        //   通知停止は Postback (action=unlink) or リッチメニュー / FLORIX マイページから操作
       }
     }
 
