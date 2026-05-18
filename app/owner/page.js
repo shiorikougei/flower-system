@@ -806,16 +806,16 @@ export default function OwnerDashboard() {
 
   if (!isAuth) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center font-sans">
-        <div className="bg-[#111111] p-10 rounded-2xl border border-[#333333] shadow-2xl w-96 space-y-6 text-center">
-          <h1 className="text-2xl font-black text-white tracking-widest font-serif italic">NocoLde</h1>
+      <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-sans">
+        <div className="bg-white p-10 rounded-2xl border border-[#D0D0D0] shadow-2xl w-96 space-y-6 text-center">
+          <h1 className="text-2xl font-black text-[#2D4B3E] tracking-widest font-serif italic">NocoLde</h1>
           <p className="text-[10px] text-[#2D4B3E] tracking-[0.3em]">SUPER ADMIN</p>
           <input 
             type="password" 
             value={password} 
             onChange={(e) => setPassword(e.target.value)} 
             onKeyDown={(e)=>e.key==='Enter'&&handleLogin()} 
-            className="w-full bg-black border border-[#333333] rounded-lg px-4 py-3 text-white text-center outline-none focus:border-[#2D4B3E]" 
+            className="w-full bg-[#FBFAF9] border border-[#D0D0D0] rounded-lg px-4 py-3 text-[#333] text-center outline-none focus:border-[#2D4B3E]" 
             placeholder="PASSWORD" 
           />
           <button onClick={handleLogin} className="w-full bg-[#2D4B3E] hover:bg-[#1f352b] text-white font-bold py-3 rounded-lg tracking-widest transition-all">LOGIN</button>
@@ -825,27 +825,27 @@ export default function OwnerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col md:flex-row text-gray-300 font-sans">
-      <aside className="w-full md:w-64 bg-[#111111] border-r border-[#222222] md:fixed h-full z-20">
-        <div className="p-8 flex flex-col gap-1 border-b border-[#222222]">
-          <span className="font-serif italic text-[24px] font-black tracking-tight text-white">NocoLde</span>
+    <div className="min-h-screen bg-[#FBFAF9] flex flex-col md:flex-row text-[#555] font-sans">
+      <aside className="w-full md:w-64 bg-white border-r border-[#EAEAEA] md:fixed h-full z-20">
+        <div className="p-8 flex flex-col gap-1 border-b border-[#EAEAEA]">
+          <span className="font-serif italic text-[24px] font-black tracking-tight text-[#2D4B3E]">NocoLde</span>
           <span className="text-[9px] font-bold tracking-[0.3em] uppercase text-[#2D4B3E] pt-1">Cloud Control</span>
         </div>
         <nav className="p-4 space-y-2">
-          <button onClick={() => setActiveTab('tenants')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'tenants' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><Building2 size={16}/> 店舗・機能管理</button>
-          <button onClick={() => setActiveTab('invites')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'invites' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><Mail size={16}/> アカウント発行</button>
-          <button onClick={() => setActiveTab('upgrades')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center justify-between ${activeTab === 'upgrades' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}>
+          <button onClick={() => setActiveTab('tenants')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'tenants' ? 'bg-[#2D4B3E] text-white' : 'text-[#777] hover:bg-[#F7F7F7]'}`}><Building2 size={16}/> 店舗・機能管理</button>
+          <button onClick={() => setActiveTab('invites')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'invites' ? 'bg-[#2D4B3E] text-white' : 'text-[#777] hover:bg-[#F7F7F7]'}`}><Mail size={16}/> アカウント発行</button>
+          <button onClick={() => setActiveTab('upgrades')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center justify-between ${activeTab === 'upgrades' ? 'bg-[#2D4B3E] text-white' : 'text-[#777] hover:bg-[#F7F7F7]'}`}>
             <div className="flex items-center gap-3"><ArrowUpCircle size={16}/> <span>アップグレード依頼</span></div>
             {pendingUpgradesCount > 0 && <span className="bg-red-600 text-white text-[9px] px-2 py-0.5 rounded-full">{pendingUpgradesCount}</span>}
           </button>
-          <button onClick={() => setActiveTab('feedbacks')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center justify-between ${activeTab === 'feedbacks' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}>
+          <button onClick={() => setActiveTab('feedbacks')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center justify-between ${activeTab === 'feedbacks' ? 'bg-[#2D4B3E] text-white' : 'text-[#777] hover:bg-[#F7F7F7]'}`}>
             <div className="flex items-center gap-3"><MessageSquare size={16}/> <span>要望・フィードバック</span></div>
             {newFeedbacksCount > 0 && <span className="bg-blue-600 text-white text-[9px] px-2 py-0.5 rounded-full">{newFeedbacksCount}</span>}
           </button>
-          <button onClick={() => setActiveTab('ai')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'ai' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><Bot size={16}/> AIプロンプト設定</button>
-          <button onClick={() => setActiveTab('usage')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'usage' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><Sparkles size={16}/> AI利用状況・請求</button>
-          <button onClick={() => setActiveTab('subscription')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'subscription' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}><CreditCard size={16}/> サブスク管理</button>
-          <button onClick={() => setActiveTab('billing')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center justify-between ${activeTab === 'billing' ? 'bg-[#2D4B3E] text-white' : 'text-gray-500 hover:bg-[#222222]'}`}>
+          <button onClick={() => setActiveTab('ai')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'ai' ? 'bg-[#2D4B3E] text-white' : 'text-[#777] hover:bg-[#F7F7F7]'}`}><Bot size={16}/> AIプロンプト設定</button>
+          <button onClick={() => setActiveTab('usage')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'usage' ? 'bg-[#2D4B3E] text-white' : 'text-[#777] hover:bg-[#F7F7F7]'}`}><Sparkles size={16}/> AI利用状況・請求</button>
+          <button onClick={() => setActiveTab('subscription')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'subscription' ? 'bg-[#2D4B3E] text-white' : 'text-[#777] hover:bg-[#F7F7F7]'}`}><CreditCard size={16}/> サブスク管理</button>
+          <button onClick={() => setActiveTab('billing')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center justify-between ${activeTab === 'billing' ? 'bg-[#2D4B3E] text-white' : 'text-[#777] hover:bg-[#F7F7F7]'}`}>
             <span className="flex items-center gap-3"><FileText size={16}/> 請求・入金管理</span>
             {invoices.filter(i => i.status === 'unpaid').length > 0 && (
               <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-orange-500 text-white">{invoices.filter(i => i.status === 'unpaid').length}</span>
@@ -853,14 +853,14 @@ export default function OwnerDashboard() {
           </button>
 
           <div className="pt-8 pb-4">
-            <button onClick={() => setActiveTab('danger')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'danger' ? 'bg-red-900/30 text-red-500 border border-red-900/50' : 'text-gray-500 hover:bg-red-900/10 hover:text-red-500'}`}><AlertTriangle size={16}/> 危険な操作・初期化</button>
+            <button onClick={() => setActiveTab('danger')} className={`w-full text-left px-6 py-4 rounded-lg transition-all text-[12px] font-bold tracking-widest flex items-center gap-3 ${activeTab === 'danger' ? 'bg-red-900/30 text-red-500 border border-red-900/50' : 'text-[#777] hover:bg-red-900/10 hover:text-red-500'}`}><AlertTriangle size={16}/> 危険な操作・初期化</button>
           </div>
         </nav>
       </aside>
 
       <main className="flex-1 md:ml-64 p-8 md:p-12">
-        <header className="flex justify-between items-center mb-10 border-b border-[#222222] pb-6">
-          <h2 className="text-xl font-bold text-white tracking-widest uppercase">
+        <header className="flex justify-between items-center mb-10 border-b border-[#EAEAEA] pb-6">
+          <h2 className="text-xl font-bold text-[#2D4B3E] tracking-widest uppercase">
             {activeTab === 'tenants' && 'TENANT MANAGEMENT'}
             {activeTab === 'invites' && 'ISSUE INVITATION'}
             {activeTab === 'upgrades' && 'UPGRADE REQUESTS'}
@@ -873,15 +873,15 @@ export default function OwnerDashboard() {
           </h2>
           <div className="flex items-center gap-4">
             {isSaving && <span className="text-[#2D4B3E] text-sm animate-pulse font-mono flex items-center gap-2"><RefreshCw size={14} className="animate-spin"/> Syncing...</span>}
-            <button onClick={loadOwnerData} className="p-2 hover:bg-[#222222] rounded-full transition-all text-gray-500"><RefreshCw size={18} className={isLoading ? 'animate-spin' : ''}/></button>
+            <button onClick={loadOwnerData} className="p-2 hover:bg-[#F7F7F7] rounded-full transition-all text-[#777]"><RefreshCw size={18} className={isLoading ? 'animate-spin' : ''}/></button>
           </div>
         </header>
 
         {activeTab === 'tenants' && (
           <div className="space-y-6 animate-in fade-in">
-            <div className="bg-[#111111] rounded-2xl border border-[#222222] overflow-x-auto shadow-2xl">
+            <div className="bg-white rounded-2xl border border-[#EAEAEA] overflow-x-auto shadow-2xl">
               <table className="w-full text-left min-w-[850px]">
-                <thead className="bg-[#1a1a1a] border-b border-[#333333] text-[10px] font-bold text-gray-400 tracking-widest uppercase">
+                <thead className="bg-[#F7F7F7] border-b border-[#D0D0D0] text-[10px] font-bold text-[#666] tracking-widest uppercase">
                   <tr>
                     <th className="px-6 py-4">店舗名 (ID)</th>
                     <th className="px-6 py-4">翌月請求額</th>
@@ -890,14 +890,14 @@ export default function OwnerDashboard() {
                     <th className="px-6 py-4 text-right">強制操作</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#222222] text-[13px]">
+                <tbody className="divide-y divide-[#EAEAEA] text-[13px]">
                   {tenants.map(t => {
                     const f = t.features || { b2b: false, deliveryOutsource: false };
                     return (
-                      <tr key={t.id} className="hover:bg-[#1a1a1a] transition-all">
+                      <tr key={t.id} className="hover:bg-[#F7F7F7] transition-all">
                         <td className="px-6 py-5">
-                          <div className="font-bold text-white text-[14px]">{t.name}</div>
-                          <div className="text-[10px] text-gray-500 font-mono mt-1">{t.id}</div>
+                          <div className="font-bold text-[#2D4B3E] text-[14px]">{t.name}</div>
+                          <div className="text-[10px] text-[#777] font-mono mt-1">{t.id}</div>
                         </td>
                         <td className="px-6 py-5">
                           {(() => {
@@ -912,7 +912,7 @@ export default function OwnerDashboard() {
                                 title="サブスク管理タブで編集"
                               >
                                 <div className="font-mono text-emerald-400 font-bold text-[14px]">¥{fee.total.toLocaleString()}</div>
-                                <div className="text-[9px] text-gray-500 mt-0.5">{isManual ? `手動 (¥${Number(m).toLocaleString()})` : '自動計算'} → 編集</div>
+                                <div className="text-[9px] text-[#777] mt-0.5">{isManual ? `手動 (¥${Number(m).toLocaleString()})` : '自動計算'} → 編集</div>
                               </button>
                             );
                           })()}
@@ -946,14 +946,14 @@ export default function OwnerDashboard() {
                             </button>
                             <button
                               onClick={() => reissueSystemPassword(t.id, t.name)}
-                              className="p-2 rounded-lg text-gray-500 hover:bg-amber-900/30 hover:text-amber-400 transition-all border border-transparent hover:border-amber-700/50"
+                              className="p-2 rounded-lg text-[#777] hover:bg-amber-900/30 hover:text-amber-400 transition-all border border-transparent hover:border-amber-700/50"
                               title="設定パスワード再発行（登録メアド宛に送付）"
                             >
                               🔑
                             </button>
                             <button
                               onClick={() => handleDeleteTenant(t.id)}
-                              className="p-2 rounded-lg text-gray-500 hover:bg-red-900/30 hover:text-red-500 transition-all border border-transparent hover:border-red-900/50"
+                              className="p-2 rounded-lg text-[#777] hover:bg-red-900/30 hover:text-red-500 transition-all border border-transparent hover:border-red-900/50"
                               title="テナントを削除"
                             >
                               <Trash2 size={16}/>
@@ -964,7 +964,7 @@ export default function OwnerDashboard() {
                     );
                   })}
                   {tenants.length === 0 && !isLoading && (
-                    <tr><td colSpan="5" className="px-6 py-12 text-center text-gray-600 italic font-mono">No tenants found in database.</td></tr>
+                    <tr><td colSpan="5" className="px-6 py-12 text-center text-[#999] italic font-mono">No tenants found in database.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -975,14 +975,14 @@ export default function OwnerDashboard() {
         {/* 2. 招待 */}
         {activeTab === 'invites' && (
           <div className="space-y-10 animate-in fade-in">
-            <div className="bg-[#111111] p-8 rounded-2xl border border-[#222222] shadow-2xl flex flex-col md:flex-row gap-6 items-end">
+            <div className="bg-white p-8 rounded-2xl border border-[#EAEAEA] shadow-2xl flex flex-col md:flex-row gap-6 items-end">
               <div className="flex-1 space-y-2 w-full">
-                <label className="text-[11px] font-bold text-gray-500 tracking-widest">クライアントのメールアドレス</label>
-                <input type="email" value={newInviteEmail} onChange={(e) => setNewInviteEmail(e.target.value)} placeholder="client@example.com" className="w-full bg-black border border-[#333333] rounded-xl px-4 py-3 text-white outline-none focus:border-[#2D4B3E]" />
+                <label className="text-[11px] font-bold text-[#777] tracking-widest">クライアントのメールアドレス</label>
+                <input type="email" value={newInviteEmail} onChange={(e) => setNewInviteEmail(e.target.value)} placeholder="client@example.com" className="w-full bg-[#FBFAF9] border border-[#D0D0D0] rounded-xl px-4 py-3 text-[#333] outline-none focus:border-[#2D4B3E]" />
               </div>
               <div className="w-full md:w-48 space-y-2">
-                <label className="text-[11px] font-bold text-gray-500 tracking-widest">初期の月額料金設定</label>
-                <select value={newInvitePlan} onChange={(e) => setNewInvitePlan(e.target.value)} className="w-full bg-black border border-[#333333] rounded-xl px-4 py-3 text-white outline-none focus:border-[#2D4B3E]">
+                <label className="text-[11px] font-bold text-[#777] tracking-widest">初期の月額料金設定</label>
+                <select value={newInvitePlan} onChange={(e) => setNewInvitePlan(e.target.value)} className="w-full bg-[#FBFAF9] border border-[#D0D0D0] rounded-xl px-4 py-3 text-[#333] outline-none focus:border-[#2D4B3E]">
                   <option value="0">無料デモ (¥0)</option>
                   <option value="10000">標準プラン (¥10,000)</option>
                   <option value="20000">プロプラン (¥20,000)</option>
@@ -993,18 +993,18 @@ export default function OwnerDashboard() {
               </button>
             </div>
             <div className="space-y-4">
-              <h3 className="text-sm font-bold text-gray-500 tracking-widest border-b border-[#222222] pb-2">発行済みのアカウントURL一覧</h3>
+              <h3 className="text-sm font-bold text-[#777] tracking-widest border-b border-[#EAEAEA] pb-2">発行済みのアカウントURL一覧</h3>
               <div className="grid gap-4">
                 {invitations.map(inv => (
-                  <div key={inv.id} className="bg-[#111111] p-6 rounded-xl border border-[#222222] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div key={inv.id} className="bg-white p-6 rounded-xl border border-[#EAEAEA] flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex-1">
-                      <p className="font-bold text-white text-[15px]">{inv.email}</p>
-                      <p className="text-[11px] text-gray-500 mt-1 font-mono">発行日: {inv.date} | 設定料金: ¥{Number(inv.price).toLocaleString()}</p>
+                      <p className="font-bold text-[#2D4B3E] text-[15px]">{inv.email}</p>
+                      <p className="text-[11px] text-[#777] mt-1 font-mono">発行日: {inv.date} | 設定料金: ¥{Number(inv.price).toLocaleString()}</p>
                       <div className="mt-3 flex items-center gap-2">
-                        <input type="text" value={inv.url} readOnly className="w-full max-w-md bg-black text-[#2D4B3E] border border-[#333333] text-[11px] p-2.5 rounded-lg outline-none font-mono" />
-                        <button onClick={() => {navigator.clipboard.writeText(inv.url); alert('URLをコピーしました！')}} className="text-xs bg-[#222222] hover:bg-[#333333] text-gray-300 px-3 py-2.5 rounded-lg transition-all whitespace-nowrap">コピー</button>
+                        <input type="text" value={inv.url} readOnly className="w-full max-w-md bg-[#FBFAF9] text-[#2D4B3E] border border-[#D0D0D0] text-[11px] p-2.5 rounded-lg outline-none font-mono" />
+                        <button onClick={() => {navigator.clipboard.writeText(inv.url); alert('URLをコピーしました！')}} className="text-xs bg-[#F7F7F7] hover:bg-[#EAEAEA] text-[#555] px-3 py-2.5 rounded-lg transition-all whitespace-nowrap">コピー</button>
                         {/* ★ ここに削除ボタンを追加！ */}
-                        <button onClick={() => handleDeleteInvite(inv.id)} className="text-red-400 hover:text-red-500 bg-[#222222] hover:bg-[#333333] px-3 py-2.5 rounded-lg transition-all" title="削除">
+                        <button onClick={() => handleDeleteInvite(inv.id)} className="text-red-400 hover:text-red-500 bg-[#F7F7F7] hover:bg-[#EAEAEA] px-3 py-2.5 rounded-lg transition-all" title="削除">
                           <Trash2 size={14}/>
                         </button>
                       </div>
@@ -1016,7 +1016,7 @@ export default function OwnerDashboard() {
                     </div>
                   </div>
                 ))}
-                {invitations.length === 0 && <p className="text-xs text-gray-600 italic">まだ招待したアカウントはありません。</p>}
+                {invitations.length === 0 && <p className="text-xs text-[#999] italic">まだ招待したアカウントはありません。</p>}
               </div>
             </div>
           </div>
@@ -1024,17 +1024,17 @@ export default function OwnerDashboard() {
 
         {activeTab === 'upgrades' && (
           <div className="space-y-6 animate-in fade-in">
-            {upgradeRequests.length === 0 ? <div className="text-center py-20 text-gray-600 font-mono tracking-widest border border-dashed border-[#333333] rounded-2xl">NO PENDING REQUESTS.</div> : (
+            {upgradeRequests.length === 0 ? <div className="text-center py-20 text-[#999] font-mono tracking-widest border border-dashed border-[#D0D0D0] rounded-2xl">NO PENDING REQUESTS.</div> : (
               upgradeRequests.map(req => (
-                <div key={req.id} className={`bg-[#111111] p-6 md:p-8 rounded-2xl border ${req.status === 'pending' ? 'border-[#2D4B3E] shadow-[0_0_15px_rgba(45,75,62,0.3)]' : 'border-[#222222] opacity-60'} flex flex-col md:flex-row justify-between items-start md:items-center gap-6 transition-all`}>
+                <div key={req.id} className={`bg-white p-6 md:p-8 rounded-2xl border ${req.status === 'pending' ? 'border-[#2D4B3E] shadow-[0_0_15px_rgba(45,75,62,0.3)]' : 'border-[#EAEAEA] opacity-60'} flex flex-col md:flex-row justify-between items-start md:items-center gap-6 transition-all`}>
                   <div className="space-y-2">
-                    <div className="flex items-center gap-3"><span className={`text-[9px] px-2 py-0.5 rounded font-bold tracking-widest ${req.status === 'pending' ? 'bg-[#2D4B3E] text-white' : req.status === 'approved' ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400'}`}>{req.status === 'pending' ? 'NEW REQUEST' : req.status === 'approved' ? 'APPROVED' : 'REJECTED'}</span><span className="text-[11px] text-gray-500 font-mono">{req.date}</span></div>
-                    <h4 className="font-bold text-white text-[18px]"><span className="text-emerald-400">{req.featureName}</span> の利用申請</h4>
-                    <p className="text-[13px] text-gray-400 flex items-center gap-2"><Building2 size={14}/> 申請元テナント: {req.tenantName}</p>
+                    <div className="flex items-center gap-3"><span className={`text-[9px] px-2 py-0.5 rounded font-bold tracking-widest ${req.status === 'pending' ? 'bg-[#2D4B3E] text-white' : req.status === 'approved' ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400'}`}>{req.status === 'pending' ? 'NEW REQUEST' : req.status === 'approved' ? 'APPROVED' : 'REJECTED'}</span><span className="text-[11px] text-[#777] font-mono">{req.date}</span></div>
+                    <h4 className="font-bold text-[#2D4B3E] text-[18px]"><span className="text-emerald-400">{req.featureName}</span> の利用申請</h4>
+                    <p className="text-[13px] text-[#666] flex items-center gap-2"><Building2 size={14}/> 申請元テナント: {req.tenantName}</p>
                   </div>
                   {req.status === 'pending' && (
                     <div className="flex gap-3 w-full md:w-auto">
-                      <button onClick={() => handleRejectUpgrade(req.id)} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 border border-[#333333] text-gray-400 text-[12px] font-bold rounded-xl hover:bg-[#222222] hover:text-white transition-all"><XCircle size={16}/> 却下する</button>
+                      <button onClick={() => handleRejectUpgrade(req.id)} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 border border-[#D0D0D0] text-[#666] text-[12px] font-bold rounded-xl hover:bg-[#F7F7F7] hover:text-[#2D4B3E] transition-all"><XCircle size={16}/> 却下する</button>
                       <button onClick={() => handleApproveUpgrade(req.id)} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-xl hover:bg-[#1f352b] transition-all shadow-lg shadow-[#2D4B3E]/20"><CheckCircle size={16}/> 承認・機能を解放</button>
                     </div>
                   )}
@@ -1046,12 +1046,12 @@ export default function OwnerDashboard() {
 
         {activeTab === 'feedbacks' && (
           <div className="space-y-4 animate-in fade-in">
-            {clientRequests.length === 0 ? <div className="text-center py-20 text-gray-600 font-mono tracking-widest border border-dashed border-[#333333] rounded-2xl">NO FEEDBACKS.</div> : (
+            {clientRequests.length === 0 ? <div className="text-center py-20 text-[#999] font-mono tracking-widest border border-dashed border-[#D0D0D0] rounded-2xl">NO FEEDBACKS.</div> : (
               clientRequests.map(fb => (
-                <div key={fb.id} className={`bg-[#111111] p-6 rounded-xl border ${fb.status === 'new' ? 'border-[#333333] border-l-4 border-l-[#2D4B3E]' : 'border-[#222222] opacity-60'} transition-all`}>
-                  <div className="flex justify-between items-start mb-3"><div className="flex items-center gap-2"><span className={`text-[10px] px-2 py-0.5 rounded font-bold tracking-widest ${fb.status === 'new' ? 'bg-blue-600 text-white' : 'border border-gray-600 text-gray-400'}`}>{fb.status === 'new' ? 'NEW' : '対応完了'}</span><span className="text-[10px] text-gray-400 font-bold bg-[#222222] px-2 py-0.5 rounded">{fb.type}</span></div><span className="text-[10px] text-gray-500 font-mono">{fb.date} | {fb.tenantName}</span></div>
-                  <p className="text-[13px] text-gray-300 whitespace-pre-wrap leading-relaxed">{fb.text}</p>
-                  {fb.status === 'new' && <div className="mt-4 flex gap-2"><button onClick={() => handleCompleteFeedback(fb.id)} className="text-[11px] font-bold border border-[#333333] text-white px-5 py-2 rounded-lg hover:bg-[#2D4B3E] hover:border-[#2D4B3E] transition-all">対応済みにする</button></div>}
+                <div key={fb.id} className={`bg-white p-6 rounded-xl border ${fb.status === 'new' ? 'border-[#D0D0D0] border-l-4 border-l-[#2D4B3E]' : 'border-[#EAEAEA] opacity-60'} transition-all`}>
+                  <div className="flex justify-between items-start mb-3"><div className="flex items-center gap-2"><span className={`text-[10px] px-2 py-0.5 rounded font-bold tracking-widest ${fb.status === 'new' ? 'bg-blue-600 text-white' : 'border border-gray-600 text-[#666]'}`}>{fb.status === 'new' ? 'NEW' : '対応完了'}</span><span className="text-[10px] text-[#666] font-bold bg-[#F0F0F0] px-2 py-0.5 rounded">{fb.type}</span></div><span className="text-[10px] text-[#777] font-mono">{fb.date} | {fb.tenantName}</span></div>
+                  <p className="text-[13px] text-[#555] whitespace-pre-wrap leading-relaxed">{fb.text}</p>
+                  {fb.status === 'new' && <div className="mt-4 flex gap-2"><button onClick={() => handleCompleteFeedback(fb.id)} className="text-[11px] font-bold border border-[#D0D0D0] text-[#2D4B3E] px-5 py-2 rounded-lg hover:bg-[#2D4B3E] hover:text-white hover:border-[#2D4B3E] transition-all">対応済みにする</button></div>}
                 </div>
               ))
             )}
@@ -1064,13 +1064,13 @@ export default function OwnerDashboard() {
             <section className="space-y-6">
               <header className="space-y-2">
                 <h3 className="text-[16px] font-bold text-amber-400 flex items-center gap-2"><Wand2 size={18}/> 店舗別 SNSキャプション生成プロンプト</h3>
-                <p className="text-[12px] text-gray-500 leading-relaxed">投稿用キャプション自動生成のAI指示文。過去キャプションを取り込むと、その店舗のトーンを真似した指示文を自動構築できます ✨</p>
+                <p className="text-[12px] text-[#777] leading-relaxed">投稿用キャプション自動生成のAI指示文。過去キャプションを取り込むと、その店舗のトーンを真似した指示文を自動構築できます ✨</p>
               </header>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {tenants.map(t => (
-                  <div key={`cap-${t.id}`} className="bg-[#111111] p-6 rounded-2xl border border-amber-900/30 shadow-xl flex flex-col">
+                  <div key={`cap-${t.id}`} className="bg-white p-6 rounded-2xl border border-amber-900/30 shadow-xl flex flex-col">
                     <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-white font-bold flex items-center gap-2"><Store size={16} className="text-amber-500" /> {t.name}</h4>
+                      <h4 className="text-[#2D4B3E] font-bold flex items-center gap-2"><Store size={16} className="text-amber-500" /> {t.name}</h4>
                       <button
                         onClick={() => { setSampleModalTenant(t); setSampleText(''); }}
                         className="flex items-center gap-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/40 px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-amber-500/20 transition-all"
@@ -1093,16 +1093,16 @@ export default function OwnerDashboard() {
                     <textarea
                       value={t.captionPrompt ?? DEFAULT_CAPTION_PROMPT}
                       onChange={(e) => updateTenantCaptionPrompt(t.id, e.target.value)}
-                      className="w-full h-56 bg-black border border-[#333333] rounded-xl p-4 text-[12px] text-amber-50 outline-none resize-none font-mono focus:border-amber-600 transition-colors flex-1"
+                      className="w-full h-56 bg-[#FBFAF9] border border-[#D0D0D0] rounded-xl p-4 text-[12px] text-amber-50 outline-none resize-none font-mono focus:border-amber-600 transition-colors flex-1"
                       placeholder="キャプション生成用のAI指示文..."
                     />
-                    <p className="text-[10px] text-gray-600 mt-2">利用可能な変数: {`{purpose} {color} {vibe} {price} {appName}`}</p>
+                    <p className="text-[10px] text-[#999] mt-2">利用可能な変数: {`{purpose} {color} {vibe} {price} {appName}`}</p>
                   </div>
                 ))}
               </div>
             </section>
 
-            <div className="flex justify-end pt-6 border-t border-[#222222]">
+            <div className="flex justify-end pt-6 border-t border-[#EAEAEA]">
               <button onClick={saveAllPrompts} disabled={isSaving} className="flex items-center justify-center w-full md:w-auto gap-2 bg-[#2D4B3E] text-white px-10 py-4 rounded-xl font-bold text-[13px] tracking-widest hover:bg-[#1f352b] transition-all disabled:opacity-50 shadow-lg shadow-[#2D4B3E]/20"><Save size={16}/> {isSaving ? 'SAVING...' : 'SAVE ALL PROMPTS'}</button>
             </div>
           </div>
@@ -1116,16 +1116,16 @@ export default function OwnerDashboard() {
             onClick={() => setFeatureModalTenant(null)}
           >
             <div
-              className="bg-[#0a0a0a] border border-[#222222] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+              className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="p-6 border-b border-[#222222] flex items-center justify-between">
+              <div className="p-6 border-b border-[#EAEAEA] flex items-center justify-between">
                 <div>
                   <h3 className="text-emerald-400 font-bold text-[16px] flex items-center gap-2"><Sparkles size={18}/> 機能ON/OFF</h3>
-                  <p className="text-[11px] text-gray-500 mt-1">対象: <span className="text-white font-bold">{featureModalTenant.name}</span></p>
+                  <p className="text-[11px] text-[#777] mt-1">対象: <span className="text-[#2D4B3E] font-bold">{featureModalTenant.name}</span></p>
                   <p className="text-[10px] text-emerald-400/70 mt-1">💡 トグル切替で自動保存されます</p>
                 </div>
-                <button onClick={() => setFeatureModalTenant(null)} className="text-gray-500 hover:text-white"><X size={20}/></button>
+                <button onClick={() => setFeatureModalTenant(null)} className="text-[#777] hover:text-[#2D4B3E]"><X size={20}/></button>
               </div>
               <div className="p-6 space-y-6">
                 {FEATURE_GROUPS.map(group => (
@@ -1150,22 +1150,22 @@ export default function OwnerDashboard() {
                               }));
                             }}
                             className={`flex items-start gap-3 p-3 rounded-xl border transition-all ${
-                              item.alwaysOn ? 'border-[#333333] bg-[#1a1a1a] cursor-not-allowed opacity-70' :
+                              item.alwaysOn ? 'border-[#D0D0D0] bg-[#F7F7F7] cursor-not-allowed opacity-70' :
                               item.comingSoon ? 'border-amber-900/40 bg-amber-950/10 cursor-not-allowed opacity-60' :
                               isOn ? 'border-emerald-700 bg-emerald-950/30 cursor-pointer hover:border-emerald-500' :
-                              'border-[#333333] bg-black cursor-pointer hover:border-[#555555]'
+                              'border-[#D0D0D0] bg-white cursor-pointer hover:border-[#555555]'
                             }`}
                           >
                             <div className={`mt-0.5 w-10 h-6 rounded-full transition-all flex items-center px-0.5 ${item.comingSoon ? 'bg-amber-900/40' : isOn ? 'bg-emerald-600' : 'bg-[#333333]'}`}>
                               <div className={`w-5 h-5 bg-white rounded-full transition-all ${isOn && !item.comingSoon ? 'translate-x-4' : ''}`}></div>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className={`text-[13px] font-bold flex items-center gap-2 ${isOn && !item.comingSoon ? 'text-white' : 'text-gray-400'}`}>
+                              <p className={`text-[13px] font-bold flex items-center gap-2 ${isOn && !item.comingSoon ? 'text-[#2D4B3E]' : 'text-[#666]'}`}>
                                 {item.label}
-                                {item.alwaysOn && <span className="text-[9px] text-gray-600">基本機能</span>}
+                                {item.alwaysOn && <span className="text-[9px] text-[#999]">基本機能</span>}
                                 {item.comingSoon && <span className="text-[9px] font-bold text-amber-500 bg-amber-950/40 border border-amber-700/40 px-2 py-0.5 rounded-full">準備中</span>}
                               </p>
-                              <p className="text-[10px] text-gray-500 mt-0.5">{item.description}</p>
+                              <p className="text-[10px] text-[#777] mt-0.5">{item.description}</p>
                             </div>
                           </div>
                         );
@@ -1174,7 +1174,7 @@ export default function OwnerDashboard() {
                   </div>
                 ))}
               </div>
-              <div className="p-4 border-t border-[#222222] sticky bottom-0 bg-[#0a0a0a]">
+              <div className="p-4 border-t border-[#EAEAEA] sticky bottom-0 bg-[#FBFAF9]">
                 <button
                   onClick={() => setFeatureModalTenant(null)}
                   className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 text-black font-bold rounded-xl text-[12px] tracking-widest flex items-center justify-center gap-2"
@@ -1192,17 +1192,17 @@ export default function OwnerDashboard() {
             onClick={() => !isGenerating && setSampleModalTenant(null)}
           >
             <div
-              className="bg-[#0a0a0a] border border-amber-900/40 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+              className="bg-[#FBFAF9] border border-amber-900/40 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 border-b border-amber-900/30 flex items-center justify-between">
                 <div>
                   <h3 className="text-amber-400 font-bold text-[16px] flex items-center gap-2"><Wand2 size={18}/> 過去キャプションから自動生成</h3>
-                  <p className="text-[11px] text-gray-500 mt-1">対象店舗: <span className="text-white font-bold">{sampleModalTenant.name}</span></p>
+                  <p className="text-[11px] text-[#777] mt-1">対象店舗: <span className="text-[#2D4B3E] font-bold">{sampleModalTenant.name}</span></p>
                 </div>
                 <button
                   onClick={() => !isGenerating && setSampleModalTenant(null)}
-                  className="text-gray-500 hover:text-white"
+                  className="text-[#777] hover:text-[#2D4B3E]"
                 >
                   <X size={20}/>
                 </button>
@@ -1210,20 +1210,20 @@ export default function OwnerDashboard() {
               <div className="p-6 space-y-4">
                 <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 text-[11px] text-amber-200 leading-relaxed">
                   💡 過去のInstagram投稿キャプションを5〜10件、下のテキストエリアに貼り付けてください。<br/>
-                  複数件は <code className="bg-black/40 px-1.5 rounded">空行3つ</code> または <code className="bg-black/40 px-1.5 rounded">---</code> で区切ってください。
+                  複数件は <code className="bg-gray-100 px-1.5 rounded">空行3つ</code> または <code className="bg-gray-100 px-1.5 rounded">---</code> で区切ってください。
                 </div>
                 <textarea
                   value={sampleText}
                   onChange={(e) => setSampleText(e.target.value)}
                   placeholder={`例:\n本日納品させていただいたスタンド花...\n#花のある暮らし #札幌花屋\n\n---\n\n今回はピンク系の華やかなアレンジを...\n#フラワーアレンジメント`}
-                  className="w-full h-80 bg-black border border-[#333333] rounded-xl p-4 text-[12px] text-emerald-50 outline-none resize-none font-mono focus:border-amber-600 transition-colors"
+                  className="w-full h-80 bg-[#FBFAF9] border border-[#D0D0D0] rounded-xl p-4 text-[12px] text-emerald-50 outline-none resize-none font-mono focus:border-amber-600 transition-colors"
                   disabled={isGenerating}
                 />
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => setSampleModalTenant(null)}
                     disabled={isGenerating}
-                    className="flex-1 h-11 rounded-xl border border-[#333333] text-gray-400 font-bold text-[12px] hover:bg-[#111] disabled:opacity-50"
+                    className="flex-1 h-11 rounded-xl border border-[#D0D0D0] text-[#666] font-bold text-[12px] hover:bg-[#F7F7F7] disabled:opacity-50"
                   >
                     キャンセル
                   </button>
@@ -1244,22 +1244,22 @@ export default function OwnerDashboard() {
           <div className="space-y-8 animate-in fade-in">
             <header className="space-y-2">
               <h3 className="text-[16px] font-bold text-cyan-400 flex items-center gap-2"><Sparkles size={18}/> AI 利用状況と請求</h3>
-              <p className="text-[12px] text-gray-500 leading-relaxed">各店舗の月別 AI 生成回数と、無料枠超過時の請求額を表示します。</p>
+              <p className="text-[12px] text-[#777] leading-relaxed">各店舗の月別 AI 生成回数と、無料枠超過時の請求額を表示します。</p>
             </header>
 
             {/* 料金プラン設定 */}
-            <div className="bg-[#111111] border border-[#222222] rounded-2xl p-6 shadow-xl">
-              <h4 className="text-white font-bold mb-4 text-[13px] tracking-widest">PRICING PLAN</h4>
+            <div className="bg-white border border-[#EAEAEA] rounded-2xl p-6 shadow-xl">
+              <h4 className="text-[#2D4B3E] font-bold mb-4 text-[13px] tracking-widest">PRICING PLAN</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                 <div>
-                  <label className="text-[10px] font-bold text-gray-500 tracking-widest">月の無料枠（回数）</label>
+                  <label className="text-[10px] font-bold text-[#777] tracking-widest">月の無料枠（回数）</label>
                   <input type="number" value={aiPricing.freeQuotaPerMonth} onChange={(e) => setAiPricing({ ...aiPricing, freeQuotaPerMonth: Number(e.target.value) })}
-                    className="w-full mt-1 bg-black border border-[#333333] rounded-xl p-3 text-[14px] text-white font-mono focus:border-cyan-600 outline-none"/>
+                    className="w-full mt-1 bg-[#FBFAF9] border border-[#D0D0D0] rounded-xl p-3 text-[14px] text-[#333] font-mono focus:border-cyan-600 outline-none"/>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-gray-500 tracking-widest">超過分の単価（円/回）</label>
+                  <label className="text-[10px] font-bold text-[#777] tracking-widest">超過分の単価（円/回）</label>
                   <input type="number" value={aiPricing.pricePerExtraJpy} onChange={(e) => setAiPricing({ ...aiPricing, pricePerExtraJpy: Number(e.target.value) })}
-                    className="w-full mt-1 bg-black border border-[#333333] rounded-xl p-3 text-[14px] text-white font-mono focus:border-cyan-600 outline-none"/>
+                    className="w-full mt-1 bg-[#FBFAF9] border border-[#D0D0D0] rounded-xl p-3 text-[14px] text-[#333] font-mono focus:border-cyan-600 outline-none"/>
                 </div>
                 <button onClick={saveAiPricing} className="h-12 bg-cyan-600 hover:bg-cyan-500 text-black font-bold rounded-xl text-[12px] tracking-widest flex items-center justify-center gap-2"><Save size={14}/> 料金プランを保存</button>
               </div>
@@ -1267,38 +1267,38 @@ export default function OwnerDashboard() {
 
             {/* 月選択 */}
             <div className="flex items-center gap-3">
-              <label className="text-[12px] text-gray-500 font-bold tracking-widest">対象月:</label>
+              <label className="text-[12px] text-[#777] font-bold tracking-widest">対象月:</label>
               <input type="month" value={usageMonth} onChange={(e) => setUsageMonth(e.target.value)}
-                className="bg-black border border-[#333333] rounded-xl p-2.5 text-[13px] text-white font-mono focus:border-cyan-600 outline-none"/>
-              <button onClick={() => loadUsage(usageMonth)} className="p-2.5 hover:bg-[#222222] rounded-full transition-all text-gray-500">
+                className="bg-[#FBFAF9] border border-[#D0D0D0] rounded-xl p-2.5 text-[13px] text-[#333] font-mono focus:border-cyan-600 outline-none"/>
+              <button onClick={() => loadUsage(usageMonth)} className="p-2.5 hover:bg-[#F7F7F7] rounded-full transition-all text-[#777]">
                 <RefreshCw size={16} className={isLoadingUsage ? 'animate-spin' : ''}/>
               </button>
             </div>
 
             {/* 利用状況テーブル */}
-            <div className="bg-[#111111] border border-[#222222] rounded-2xl shadow-xl overflow-hidden">
+            <div className="bg-white border border-[#EAEAEA] rounded-2xl shadow-xl overflow-hidden">
               <table className="w-full text-[12px]">
-                <thead className="bg-black/50 border-b border-[#222222]">
+                <thead className="bg-[#F7F7F7] border-b border-[#EAEAEA]">
                   <tr>
-                    <th className="px-6 py-3 text-left font-bold text-gray-500 tracking-widest">店舗</th>
-                    <th className="px-4 py-3 text-right font-bold text-gray-500 tracking-widest">キャプション</th>
-                    <th className="px-4 py-3 text-right font-bold text-gray-500 tracking-widest">プロンプト</th>
-                    <th className="px-4 py-3 text-right font-bold text-gray-500 tracking-widest">合計</th>
-                    <th className="px-4 py-3 text-right font-bold text-gray-500 tracking-widest">超過</th>
-                    <th className="px-4 py-3 text-right font-bold text-gray-500 tracking-widest">請求額</th>
-                    <th className="px-4 py-3 text-center font-bold text-gray-500 tracking-widest">請求書</th>
+                    <th className="px-6 py-3 text-left font-bold text-[#777] tracking-widest">店舗</th>
+                    <th className="px-4 py-3 text-right font-bold text-[#777] tracking-widest">キャプション</th>
+                    <th className="px-4 py-3 text-right font-bold text-[#777] tracking-widest">プロンプト</th>
+                    <th className="px-4 py-3 text-right font-bold text-[#777] tracking-widest">合計</th>
+                    <th className="px-4 py-3 text-right font-bold text-[#777] tracking-widest">超過</th>
+                    <th className="px-4 py-3 text-right font-bold text-[#777] tracking-widest">請求額</th>
+                    <th className="px-4 py-3 text-center font-bold text-[#777] tracking-widest">請求書</th>
                   </tr>
                 </thead>
                 <tbody>
                   {usageList.length === 0 && (
-                    <tr><td colSpan="7" className="px-6 py-12 text-center text-gray-600 italic font-mono">この月のデータはまだありません</td></tr>
+                    <tr><td colSpan="7" className="px-6 py-12 text-center text-[#999] italic font-mono">この月のデータはまだありません</td></tr>
                   )}
                   {usageList.map(u => (
-                    <tr key={u.tenantId} className="border-b border-[#222222]/50 hover:bg-black/30 transition-colors">
-                      <td className="px-6 py-4 text-white font-bold">{u.tenantName}<span className="text-gray-600 text-[10px] font-mono ml-2">({u.tenantId})</span></td>
-                      <td className="px-4 py-4 text-right text-gray-300 font-mono">{u.caption}</td>
-                      <td className="px-4 py-4 text-right text-gray-300 font-mono">{u.prompt}</td>
-                      <td className="px-4 py-4 text-right text-white font-bold font-mono">{u.total} / {aiPricing.freeQuotaPerMonth}</td>
+                    <tr key={u.tenantId} className="border-b border-[#EAEAEA]/50 hover:bg-[#F7F7F7] transition-colors">
+                      <td className="px-6 py-4 text-[#333] font-bold">{u.tenantName}<span className="text-[#999] text-[10px] font-mono ml-2">({u.tenantId})</span></td>
+                      <td className="px-4 py-4 text-right text-[#555] font-mono">{u.caption}</td>
+                      <td className="px-4 py-4 text-right text-[#555] font-mono">{u.prompt}</td>
+                      <td className="px-4 py-4 text-right text-[#333] font-bold font-mono">{u.total} / {aiPricing.freeQuotaPerMonth}</td>
                       <td className={`px-4 py-4 text-right font-mono ${u.overage > 0 ? 'text-amber-400 font-bold' : 'text-gray-700'}`}>
                         {u.overage > 0 ? `+${u.overage}` : '—'}
                       </td>
@@ -1320,9 +1320,9 @@ export default function OwnerDashboard() {
                   ))}
                 </tbody>
                 {usageList.some(u => u.overageJpy > 0) && (
-                  <tfoot className="bg-black/50 border-t border-cyan-900/40">
+                  <tfoot className="bg-[#F7F7F7] border-t border-cyan-900/40">
                     <tr>
-                      <td colSpan="5" className="px-6 py-3 text-right text-gray-400 font-bold tracking-widest">この月の請求総額</td>
+                      <td colSpan="5" className="px-6 py-3 text-right text-[#666] font-bold tracking-widest">この月の請求総額</td>
                       <td className="px-6 py-3 text-right text-cyan-400 font-bold font-mono text-[14px]">
                         ¥{usageList.reduce((s, u) => s + u.overageJpy, 0).toLocaleString()}
                       </td>
@@ -1345,42 +1345,42 @@ export default function OwnerDashboard() {
           <div className="space-y-8 animate-in fade-in">
             <header className="space-y-2">
               <h3 className="text-[16px] font-bold text-cyan-400 flex items-center gap-2"><CreditCard size={18}/> サブスク料金管理</h3>
-              <p className="text-[12px] text-gray-500 leading-relaxed">機能ON/OFF と料金マスターから自動計算 + モデル店舗向け手動オーバーライド対応</p>
+              <p className="text-[12px] text-[#777] leading-relaxed">機能ON/OFF と料金マスターから自動計算 + モデル店舗向け手動オーバーライド対応</p>
             </header>
 
             {/* 料金マスター */}
-            <div className="bg-[#111111] border border-[#222222] rounded-2xl p-6 shadow-xl space-y-4">
+            <div className="bg-white border border-[#EAEAEA] rounded-2xl p-6 shadow-xl space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-white font-bold text-[13px] tracking-widest">料金マスター</h4>
+                <h4 className="text-[#2D4B3E] font-bold text-[13px] tracking-widest">料金マスター</h4>
                 <button onClick={savePricingConfig} className="px-4 h-9 bg-cyan-600 hover:bg-cyan-500 text-black font-bold rounded-lg text-[11px] tracking-widest flex items-center gap-2"><Save size={12}/> 料金保存</button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                  <label className="text-[10px] font-bold text-gray-500 tracking-widest">基本料金 (税抜/月)</label>
+                  <label className="text-[10px] font-bold text-[#777] tracking-widest">基本料金 (税抜/月)</label>
                   <input type="number" value={pricingConfig.basePrice}
                     onChange={e => setPricingConfig({...pricingConfig, basePrice: Number(e.target.value)})}
-                    className="w-full mt-1 bg-black border border-[#333333] rounded-lg p-2 text-[13px] text-white font-mono outline-none"/>
+                    className="w-full mt-1 bg-[#FBFAF9] border border-[#D0D0D0] rounded-lg p-2 text-[13px] text-[#333] font-mono outline-none"/>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-gray-500 tracking-widest">消費税率 (例: 0.10)</label>
+                  <label className="text-[10px] font-bold text-[#777] tracking-widest">消費税率 (例: 0.10)</label>
                   <input type="number" step="0.01" value={pricingConfig.taxRate}
                     onChange={e => setPricingConfig({...pricingConfig, taxRate: Number(e.target.value)})}
-                    className="w-full mt-1 bg-black border border-[#333333] rounded-lg p-2 text-[13px] text-white font-mono outline-none"/>
+                    className="w-full mt-1 bg-[#FBFAF9] border border-[#D0D0D0] rounded-lg p-2 text-[13px] text-[#333] font-mono outline-none"/>
                 </div>
               </div>
 
               <div>
-                <p className="text-[10px] font-bold text-gray-500 tracking-widest mb-2">機能別 月額追加料金</p>
+                <p className="text-[10px] font-bold text-[#777] tracking-widest mb-2">機能別 月額追加料金</p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {Object.entries(pricingConfig.featurePrices || {}).map(([key, price]) => {
                     const item = FEATURE_GROUPS.flatMap(g => g.items).find(i => i.key === key);
                     return (
-                      <div key={key} className="flex items-center gap-2 bg-black border border-[#222] rounded p-2">
-                        <span className="text-[10px] text-gray-400 flex-1 truncate">{item?.label || key}</span>
-                        <span className="text-[10px] text-gray-500">¥</span>
+                      <div key={key} className="flex items-center gap-2 bg-[#F7F7F7] border border-[#EAEAEA] rounded p-2">
+                        <span className="text-[10px] text-[#666] flex-1 truncate">{item?.label || key}</span>
+                        <span className="text-[10px] text-[#777]">¥</span>
                         <input type="number" value={price}
                           onChange={e => setPricingConfig({...pricingConfig, featurePrices: {...pricingConfig.featurePrices, [key]: Number(e.target.value)}})}
-                          className="w-20 bg-transparent border-b border-[#333] text-[12px] text-white text-right font-mono outline-none"/>
+                          className="w-20 bg-transparent border-b border-[#D0D0D0] text-[12px] text-[#333] text-right font-mono outline-none"/>
                       </div>
                     );
                   })}
@@ -1389,22 +1389,22 @@ export default function OwnerDashboard() {
             </div>
 
             {/* テナント別月額一覧 */}
-            <div className="bg-[#111111] border border-[#222222] rounded-2xl shadow-xl overflow-hidden">
-              <div className="p-4 border-b border-[#222]">
-                <h4 className="text-white font-bold text-[13px] tracking-widest">テナント別 翌月請求額</h4>
-                <p className="text-[10px] text-gray-500 mt-1">機能ONから自動計算 / 手動入力で固定額にも変更可能</p>
+            <div className="bg-white border border-[#EAEAEA] rounded-2xl shadow-xl overflow-hidden">
+              <div className="p-4 border-b border-[#EAEAEA]">
+                <h4 className="text-[#2D4B3E] font-bold text-[13px] tracking-widest">テナント別 翌月請求額</h4>
+                <p className="text-[10px] text-[#777] mt-1">機能ONから自動計算 / 手動入力で固定額にも変更可能</p>
               </div>
               <table className="w-full text-[12px]">
-                <thead className="bg-black/50 border-b border-[#222]">
+                <thead className="bg-[#F7F7F7] border-b border-[#EAEAEA]">
                   <tr>
-                    <th className="px-4 py-3 text-left font-bold text-gray-500 tracking-widest">店舗</th>
-                    <th className="px-4 py-3 text-left font-bold text-gray-500 tracking-widest">機能数</th>
-                    <th className="px-4 py-3 text-right font-bold text-gray-500 tracking-widest">自動計算額</th>
-                    <th className="px-4 py-3 text-left font-bold text-gray-500 tracking-widest">手動オーバーライド</th>
-                    <th className="px-4 py-3 text-right font-bold text-gray-500 tracking-widest">請求額(税込)</th>
-                    <th className="px-4 py-3 text-left font-bold text-gray-500 tracking-widest">支払方法</th>
-                    <th className="px-4 py-3 text-left font-bold text-gray-500 tracking-widest">請求先メール</th>
-                    <th className="px-4 py-3 text-center font-bold text-gray-500 tracking-widest">アクション</th>
+                    <th className="px-4 py-3 text-left font-bold text-[#777] tracking-widest">店舗</th>
+                    <th className="px-4 py-3 text-left font-bold text-[#777] tracking-widest">機能数</th>
+                    <th className="px-4 py-3 text-right font-bold text-[#777] tracking-widest">自動計算額</th>
+                    <th className="px-4 py-3 text-left font-bold text-[#777] tracking-widest">手動オーバーライド</th>
+                    <th className="px-4 py-3 text-right font-bold text-[#777] tracking-widest">請求額(税込)</th>
+                    <th className="px-4 py-3 text-left font-bold text-[#777] tracking-widest">支払方法</th>
+                    <th className="px-4 py-3 text-left font-bold text-[#777] tracking-widest">請求先メール</th>
+                    <th className="px-4 py-3 text-center font-bold text-[#777] tracking-widest">アクション</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1414,19 +1414,19 @@ export default function OwnerDashboard() {
                     const fee = calcTenantFee(t);
                     const enabledCount = ALL_FEATURE_KEYS.filter(k => t.features?.[k]).length;
                     return (
-                      <tr key={t.id} className="border-b border-[#222]/50 hover:bg-black/30">
-                        <td className="px-4 py-3 text-white font-bold">{t.name}<div className="text-[9px] text-gray-600 font-mono">{t.id}</div></td>
-                        <td className="px-4 py-3 text-gray-300">{enabledCount}/{ALL_FEATURE_KEYS.length}</td>
-                        <td className="px-4 py-3 text-right text-gray-400 font-mono">¥{auto.total.toLocaleString()}</td>
+                      <tr key={t.id} className="border-b border-[#EAEAEA]/50 hover:bg-[#F7F7F7]">
+                        <td className="px-4 py-3 text-[#333] font-bold">{t.name}<div className="text-[9px] text-[#999] font-mono">{t.id}</div></td>
+                        <td className="px-4 py-3 text-[#555]">{enabledCount}/{ALL_FEATURE_KEYS.length}</td>
+                        <td className="px-4 py-3 text-right text-[#666] font-mono">¥{auto.total.toLocaleString()}</td>
                         <td className="px-4 py-3">
                           <input type="number" placeholder="自動計算"
                             value={billing.manualPriceJpy ?? ''}
                             onChange={e => saveTenantBilling(t.id, { manualPriceJpy: e.target.value === '' ? null : Number(e.target.value) })}
-                            className="w-24 h-8 px-2 bg-black border border-[#333] rounded text-[11px] text-white font-mono text-right outline-none"/>
+                            className="w-24 h-8 px-2 bg-[#FBFAF9] border border-[#D0D0D0] rounded text-[11px] text-[#333] font-mono text-right outline-none"/>
                           {billing.manualPriceJpy != null && billing.manualPriceJpy >= 0 && (
                             <input type="text" placeholder="理由(任意)" value={billing.manualReason || ''}
                               onChange={e => saveTenantBilling(t.id, { manualReason: e.target.value })}
-                              className="w-32 mt-1 h-7 px-2 bg-black border border-[#333] rounded text-[10px] text-gray-400 outline-none"/>
+                              className="w-32 mt-1 h-7 px-2 bg-[#FBFAF9] border border-[#D0D0D0] rounded text-[10px] text-[#666] outline-none"/>
                           )}
                           {/* ★ 機能別オーバーライド（常時表示） */}
                           {(() => {
@@ -1435,28 +1435,28 @@ export default function OwnerDashboard() {
                               + Object.keys(billing.featurePriceOverrides || {}).length;
                             return (
                               <details className="mt-1" open={overrideCount > 0 && !manualActive}>
-                                <summary className={`cursor-pointer text-[9px] ${overrideCount > 0 ? 'text-cyan-400 font-bold' : 'text-gray-500'} hover:text-cyan-300`}>
+                                <summary className={`cursor-pointer text-[9px] ${overrideCount > 0 ? 'text-cyan-400 font-bold' : 'text-[#777]'} hover:text-cyan-300`}>
                                   ⚙️ 機能別の単価調整 {overrideCount > 0 && `(${overrideCount}件設定中)`}
                                 </summary>
-                                <div className={`mt-2 p-2 bg-black border border-[#222] rounded space-y-1.5 w-64 ${manualActive ? 'opacity-40' : ''}`}>
+                                <div className={`mt-2 p-2 bg-[#F7F7F7] border border-[#EAEAEA] rounded space-y-1.5 w-64 ${manualActive ? 'opacity-40' : ''}`}>
                                   {manualActive && (
                                     <p className="text-[9px] text-amber-500 leading-snug">⚠️ 全体固定額が設定されているため、この値は無視されます。クリアすると有効になります。</p>
                                   )}
                                   <div className="flex items-center gap-1">
-                                    <span className="text-[9px] text-gray-400 flex-1">基本料金</span>
-                                    <span className="text-[9px] text-gray-600">¥</span>
+                                    <span className="text-[9px] text-[#666] flex-1">基本料金</span>
+                                    <span className="text-[9px] text-[#999]">¥</span>
                                     <input type="number" placeholder={`既定 ${pricingConfig.basePrice}`}
                                       value={billing.basePriceOverride ?? ''}
                                       onChange={e => saveTenantBilling(t.id, { basePriceOverride: e.target.value === '' ? null : Number(e.target.value) })}
-                                      className="w-16 h-6 px-1 bg-[#0a0a0a] border border-[#333] rounded text-[10px] text-white font-mono text-right outline-none"/>
+                                      className="w-16 h-6 px-1 bg-[#FBFAF9] border border-[#D0D0D0] rounded text-[10px] text-[#333] font-mono text-right outline-none"/>
                                   </div>
                                   {ALL_FEATURE_KEYS.filter(k => t.features?.[k]).map(k => {
                                     const featItem = FEATURE_GROUPS.flatMap(g => g.items).find(i => i.key === k);
                                     const ov = billing.featurePriceOverrides?.[k];
                                     return (
                                       <div key={k} className="flex items-center gap-1">
-                                        <span className="text-[9px] text-gray-400 flex-1 truncate">{featItem?.label || k}</span>
-                                        <span className="text-[9px] text-gray-600">¥</span>
+                                        <span className="text-[9px] text-[#666] flex-1 truncate">{featItem?.label || k}</span>
+                                        <span className="text-[9px] text-[#999]">¥</span>
                                         <input type="number" placeholder={`既定 ${pricingConfig.featurePrices?.[k] ?? 0}`}
                                           value={ov ?? ''}
                                           onChange={e => {
@@ -1464,14 +1464,14 @@ export default function OwnerDashboard() {
                                             if (e.target.value === '') delete next[k]; else next[k] = Number(e.target.value);
                                             saveTenantBilling(t.id, { featurePriceOverrides: next });
                                           }}
-                                          className="w-16 h-6 px-1 bg-[#0a0a0a] border border-[#333] rounded text-[10px] text-white font-mono text-right outline-none"/>
+                                          className="w-16 h-6 px-1 bg-[#FBFAF9] border border-[#D0D0D0] rounded text-[10px] text-[#333] font-mono text-right outline-none"/>
                                       </div>
                                     );
                                   })}
                                   {ALL_FEATURE_KEYS.filter(k => t.features?.[k]).length === 0 && (
-                                    <p className="text-[9px] text-gray-600">機能をONにすると個別単価設定欄が出ます</p>
+                                    <p className="text-[9px] text-[#999]">機能をONにすると個別単価設定欄が出ます</p>
                                   )}
-                                  <p className="text-[8px] text-gray-600 pt-1 border-t border-[#222]">空欄＝料金マスター適用 / 0＝無料</p>
+                                  <p className="text-[8px] text-[#999] pt-1 border-t border-[#EAEAEA]">空欄＝料金マスター適用 / 0＝無料</p>
                                 </div>
                               </details>
                             );
@@ -1484,7 +1484,7 @@ export default function OwnerDashboard() {
                         <td className="px-4 py-3">
                           <select value={billing.paymentMethod || 'bank_transfer'}
                             onChange={e => saveTenantBilling(t.id, { paymentMethod: e.target.value })}
-                            className="h-8 px-2 bg-black border border-[#333] rounded text-[11px] text-white outline-none">
+                            className="h-8 px-2 bg-[#FBFAF9] border border-[#D0D0D0] rounded text-[11px] text-[#333] outline-none">
                             <option value="bank_transfer">🏦 銀行振込</option>
                             <option value="card" disabled>💳 クレカ（準備中）</option>
                           </select>
@@ -1492,7 +1492,7 @@ export default function OwnerDashboard() {
                         <td className="px-4 py-3">
                           <input type="email" placeholder="email" value={billing.billingEmail || ''}
                             onChange={e => saveTenantBilling(t.id, { billingEmail: e.target.value })}
-                            className="w-44 h-8 px-2 bg-black border border-[#333] rounded text-[11px] text-white outline-none"/>
+                            className="w-44 h-8 px-2 bg-[#FBFAF9] border border-[#D0D0D0] rounded text-[11px] text-[#333] outline-none"/>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <button onClick={() => {
@@ -1509,9 +1509,9 @@ export default function OwnerDashboard() {
                     );
                   })}
                 </tbody>
-                <tfoot className="bg-black/50 border-t border-cyan-900/40">
+                <tfoot className="bg-[#F7F7F7] border-t border-cyan-900/40">
                   <tr>
-                    <td colSpan="4" className="px-4 py-3 text-right text-gray-400 font-bold tracking-widest">翌月請求総額</td>
+                    <td colSpan="4" className="px-4 py-3 text-right text-[#666] font-bold tracking-widest">翌月請求総額</td>
                     <td className="px-4 py-3 text-right text-cyan-400 font-bold font-mono text-[14px]">
                       ¥{tenants.reduce((s, t) => s + calcTenantFee(t).total, 0).toLocaleString()}
                     </td>
@@ -1550,52 +1550,52 @@ export default function OwnerDashboard() {
             <div className="space-y-6 animate-in fade-in">
               {/* サマリー */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-[#111111] border border-[#222222] rounded-2xl p-5">
-                  <div className="text-[10px] text-gray-500 tracking-widest mb-1">送付済み合計</div>
-                  <div className="text-[24px] font-mono font-bold text-white">{stats.total}</div>
-                  <div className="text-[10px] text-gray-500 mt-1">件</div>
+                <div className="bg-white border border-[#EAEAEA] rounded-2xl p-5">
+                  <div className="text-[10px] text-[#777] tracking-widest mb-1">送付済み合計</div>
+                  <div className="text-[24px] font-mono font-bold text-[#2D4B3E]">{stats.total}</div>
+                  <div className="text-[10px] text-[#777] mt-1">件</div>
                 </div>
-                <div className="bg-[#111111] border border-orange-500/30 rounded-2xl p-5">
+                <div className="bg-white border border-orange-500/30 rounded-2xl p-5">
                   <div className="text-[10px] text-orange-400 tracking-widest mb-1">未入金</div>
                   <div className="text-[24px] font-mono font-bold text-orange-400">{stats.unpaid}</div>
                   <div className="text-[10px] text-orange-300 mt-1">¥{stats.unpaidAmount.toLocaleString()}</div>
                 </div>
-                <div className="bg-[#111111] border border-emerald-500/30 rounded-2xl p-5">
+                <div className="bg-white border border-emerald-500/30 rounded-2xl p-5">
                   <div className="text-[10px] text-emerald-400 tracking-widest mb-1">入金済</div>
                   <div className="text-[24px] font-mono font-bold text-emerald-400">{stats.paid}</div>
                   <div className="text-[10px] text-emerald-300 mt-1">¥{stats.paidAmount.toLocaleString()}</div>
                 </div>
-                <div className="bg-[#111111] border border-[#222222] rounded-2xl p-5">
-                  <div className="text-[10px] text-gray-500 tracking-widest mb-1">入金率</div>
-                  <div className="text-[24px] font-mono font-bold text-white">
-                    {stats.total > 0 ? Math.round(stats.paid / stats.total * 100) : 0}<span className="text-[14px] text-gray-500">%</span>
+                <div className="bg-white border border-[#EAEAEA] rounded-2xl p-5">
+                  <div className="text-[10px] text-[#777] tracking-widest mb-1">入金率</div>
+                  <div className="text-[24px] font-mono font-bold text-[#2D4B3E]">
+                    {stats.total > 0 ? Math.round(stats.paid / stats.total * 100) : 0}<span className="text-[14px] text-[#777]">%</span>
                   </div>
                 </div>
               </div>
 
               {/* フィルター */}
-              <div className="bg-[#111111] border border-[#222222] rounded-2xl p-5 flex flex-wrap items-end gap-4">
+              <div className="bg-white border border-[#EAEAEA] rounded-2xl p-5 flex flex-wrap items-end gap-4">
                 <div>
-                  <label className="text-[10px] font-bold text-gray-500 tracking-widest block mb-1">状態</label>
+                  <label className="text-[10px] font-bold text-[#777] tracking-widest block mb-1">状態</label>
                   <select value={invoiceFilter.status} onChange={e => setInvoiceFilter({...invoiceFilter, status: e.target.value})}
-                    className="bg-black border border-[#333333] rounded px-3 py-2 text-white text-[12px] outline-none focus:border-[#2D4B3E]">
+                    className="bg-[#FBFAF9] border border-[#D0D0D0] rounded px-3 py-2 text-[#333] text-[12px] outline-none focus:border-[#2D4B3E]">
                     <option value="all">すべて</option>
                     <option value="unpaid">未入金のみ</option>
                     <option value="paid">入金済のみ</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-gray-500 tracking-widest block mb-1">月</label>
+                  <label className="text-[10px] font-bold text-[#777] tracking-widest block mb-1">月</label>
                   <select value={invoiceFilter.month} onChange={e => setInvoiceFilter({...invoiceFilter, month: e.target.value})}
-                    className="bg-black border border-[#333333] rounded px-3 py-2 text-white text-[12px] outline-none focus:border-[#2D4B3E]">
+                    className="bg-[#FBFAF9] border border-[#D0D0D0] rounded px-3 py-2 text-[#333] text-[12px] outline-none focus:border-[#2D4B3E]">
                     <option value="">すべて</option>
                     {months.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-gray-500 tracking-widest block mb-1">店舗</label>
+                  <label className="text-[10px] font-bold text-[#777] tracking-widest block mb-1">店舗</label>
                   <select value={invoiceFilter.tenantId} onChange={e => setInvoiceFilter({...invoiceFilter, tenantId: e.target.value})}
-                    className="bg-black border border-[#333333] rounded px-3 py-2 text-white text-[12px] outline-none focus:border-[#2D4B3E]">
+                    className="bg-[#FBFAF9] border border-[#D0D0D0] rounded px-3 py-2 text-[#333] text-[12px] outline-none focus:border-[#2D4B3E]">
                     <option value="">すべて</option>
                     {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
@@ -1606,9 +1606,9 @@ export default function OwnerDashboard() {
               </div>
 
               {/* 請求リスト */}
-              <div className="bg-[#111111] rounded-2xl border border-[#222222] overflow-x-auto shadow-2xl">
+              <div className="bg-white rounded-2xl border border-[#EAEAEA] overflow-x-auto shadow-2xl">
                 <table className="w-full text-left min-w-[1000px]">
-                  <thead className="bg-[#1a1a1a] border-b border-[#333333] text-[10px] font-bold text-gray-400 tracking-widest uppercase">
+                  <thead className="bg-[#F7F7F7] border-b border-[#D0D0D0] text-[10px] font-bold text-[#666] tracking-widest uppercase">
                     <tr>
                       <th className="px-4 py-3">送付日</th>
                       <th className="px-4 py-3">対象月</th>
@@ -1620,28 +1620,28 @@ export default function OwnerDashboard() {
                       <th className="px-4 py-3 text-right">操作</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#222222] text-[12px]">
+                  <tbody className="divide-y divide-[#EAEAEA] text-[12px]">
                     {filtered.map(inv => (
-                      <tr key={inv.id} className="hover:bg-[#1a1a1a] transition-all">
-                        <td className="px-4 py-3 font-mono text-gray-400 text-[11px]">
+                      <tr key={inv.id} className="hover:bg-[#F7F7F7] transition-all">
+                        <td className="px-4 py-3 font-mono text-[#666] text-[11px]">
                           {inv.sentAt ? new Date(inv.sentAt).toLocaleDateString('ja-JP') : '-'}
                         </td>
-                        <td className="px-4 py-3 text-white">{inv.month}</td>
+                        <td className="px-4 py-3 text-[#333]">{inv.month}</td>
                         <td className="px-4 py-3">
-                          <div className="text-white font-bold">{inv.tenantName}</div>
-                          <div className="text-[9px] text-gray-500 font-mono">{inv.tenantId}</div>
+                          <div className="text-[#333] font-bold">{inv.tenantName}</div>
+                          <div className="text-[9px] text-[#777] font-mono">{inv.tenantId}</div>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="font-mono text-emerald-400 font-bold">¥{(inv.grandTotal||0).toLocaleString()}</div>
                           {inv.aiTotal > 0 && (
-                            <div className="text-[9px] text-gray-500">うちAI ¥{inv.aiTotal.toLocaleString()}</div>
+                            <div className="text-[9px] text-[#777]">うちAI ¥{inv.aiTotal.toLocaleString()}</div>
                           )}
                         </td>
                         <td className="px-4 py-3">
                           {inv.paymentMethod === 'card' ? (
                             <span className="text-[10px] text-blue-400">💳 クレカ</span>
                           ) : (
-                            <span className="text-[10px] text-gray-400">🏦 銀行振込</span>
+                            <span className="text-[10px] text-[#666]">🏦 銀行振込</span>
                           )}
                           {inv.stripeInvoiceUrl && (
                             <a href={inv.stripeInvoiceUrl} target="_blank" rel="noopener noreferrer" className="block text-[9px] text-blue-400 underline mt-0.5">Stripe請求書</a>
@@ -1654,7 +1654,7 @@ export default function OwnerDashboard() {
                             <span className="px-2 py-1 rounded-full text-[10px] bg-orange-500/20 text-orange-400 border border-orange-500/40">未入金</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 font-mono text-gray-400 text-[11px]">
+                        <td className="px-4 py-3 font-mono text-[#666] text-[11px]">
                           {inv.paidAt ? new Date(inv.paidAt).toLocaleDateString('ja-JP') : '-'}
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -1666,12 +1666,12 @@ export default function OwnerDashboard() {
                               </button>
                             ) : (
                               <button onClick={() => markInvoicePaid(inv.id, false)}
-                                className="px-3 py-1.5 bg-gray-600/20 text-gray-400 border border-gray-500/40 text-[10px] font-bold rounded hover:bg-gray-600 hover:text-white">
+                                className="px-3 py-1.5 bg-gray-600/20 text-[#666] border border-gray-500/40 text-[10px] font-bold rounded hover:bg-gray-600 hover:text-white">
                                 未入金に戻す
                               </button>
                             )}
                             <button onClick={() => deleteInvoice(inv.id)}
-                              className="p-1.5 text-gray-500 hover:bg-red-900/30 hover:text-red-500 rounded border border-transparent hover:border-red-900/50">
+                              className="p-1.5 text-[#777] hover:bg-red-900/30 hover:text-red-500 rounded border border-transparent hover:border-red-900/50">
                               <Trash2 size={12}/>
                             </button>
                           </div>
@@ -1679,7 +1679,7 @@ export default function OwnerDashboard() {
                       </tr>
                     ))}
                     {filtered.length === 0 && (
-                      <tr><td colSpan="8" className="px-6 py-12 text-center text-gray-600 italic">請求記録なし</td></tr>
+                      <tr><td colSpan="8" className="px-6 py-12 text-center text-[#999] italic">請求記録なし</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -1720,64 +1720,64 @@ export default function OwnerDashboard() {
             <div className="space-y-6 animate-in fade-in">
               <header className="mb-6 space-y-2">
                 <h3 className="text-[16px] font-bold text-red-500 flex items-center gap-2"><AlertTriangle size={18}/> 危険な操作 (データ初期化)</h3>
-                <p className="text-[12px] text-gray-500 leading-relaxed">
+                <p className="text-[12px] text-[#777] leading-relaxed">
                   テストデータを一括で消去するメニュー。<br/>
-                  <strong className="text-emerald-400">店舗の各種設定（料金・スタッフ・店舗情報・機能ON/OFF）は保たれます。</strong><br/>
+                  <strong className="text-emerald-700">店舗の各種設定（料金・スタッフ・店舗情報・機能ON/OFF）は保たれます。</strong><br/>
                   テーブル単位のデータのみ削除されます。一度削除すると復元不可。
                 </p>
               </header>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-[#1a1111] p-6 rounded-2xl border border-red-900/50 space-y-3">
+                <div className="bg-red-50 p-6 rounded-2xl border border-red-900/50 space-y-3">
                   <div className="flex items-center gap-2">
                     <span className="text-[24px]">📋</span>
-                    <h4 className="text-white font-bold text-[13px]">注文データ</h4>
+                    <h4 className="text-[#2D4B3E] font-bold text-[13px]">注文データ</h4>
                   </div>
-                  <p className="text-[11px] text-gray-400 leading-relaxed">orders テーブル全件（履歴・伝票・進捗等）</p>
+                  <p className="text-[11px] text-[#666] leading-relaxed">orders テーブル全件（履歴・伝票・進捗等）</p>
                   <button onClick={() => handleClear('orders', '注文データ')} className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl font-bold text-[11px] transition-all shadow-md">
                     <Trash2 size={12}/> 注文データを全削除
                   </button>
                 </div>
 
-                <div className="bg-[#1a1111] p-6 rounded-2xl border border-red-900/50 space-y-3">
+                <div className="bg-red-50 p-6 rounded-2xl border border-red-900/50 space-y-3">
                   <div className="flex items-center gap-2">
                     <span className="text-[24px]">👥</span>
-                    <h4 className="text-white font-bold text-[13px]">顧客データ</h4>
+                    <h4 className="text-[#2D4B3E] font-bold text-[13px]">顧客データ</h4>
                   </div>
-                  <p className="text-[11px] text-gray-400 leading-relaxed">顧客カルテ・記念日・LINE連携・マイページPW・セッション・メアド変更履歴</p>
+                  <p className="text-[11px] text-[#666] leading-relaxed">顧客カルテ・記念日・LINE連携・マイページPW・セッション・メアド変更履歴</p>
                   <button onClick={() => handleClear('customers', '顧客データ')} className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl font-bold text-[11px] transition-all shadow-md">
                     <Trash2 size={12}/> 顧客データを全削除
                   </button>
                 </div>
 
-                <div className="bg-[#1a1111] p-6 rounded-2xl border border-red-900/50 space-y-3">
+                <div className="bg-red-50 p-6 rounded-2xl border border-red-900/50 space-y-3">
                   <div className="flex items-center gap-2">
                     <span className="text-[24px]">🛒</span>
-                    <h4 className="text-white font-bold text-[13px]">商品データ (EC)</h4>
+                    <h4 className="text-[#2D4B3E] font-bold text-[13px]">商品データ (EC)</h4>
                   </div>
-                  <p className="text-[11px] text-gray-400 leading-relaxed">products・stock_notifications</p>
+                  <p className="text-[11px] text-[#666] leading-relaxed">products・stock_notifications</p>
                   <button onClick={() => handleClear('products', '商品データ')} className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl font-bold text-[11px] transition-all shadow-md">
                     <Trash2 size={12}/> 商品データを全削除
                   </button>
                 </div>
 
-                <div className="bg-[#1a1111] p-6 rounded-2xl border border-red-900/50 space-y-3">
+                <div className="bg-red-50 p-6 rounded-2xl border border-red-900/50 space-y-3">
                   <div className="flex items-center gap-2">
                     <span className="text-[24px]">⏰</span>
-                    <h4 className="text-white font-bold text-[13px]">勤怠・シフト</h4>
+                    <h4 className="text-[#2D4B3E] font-bold text-[13px]">勤怠・シフト</h4>
                   </div>
-                  <p className="text-[11px] text-gray-400 leading-relaxed">staff_attendance, shift_schedules, shift_holiday_requests</p>
+                  <p className="text-[11px] text-[#666] leading-relaxed">staff_attendance, shift_schedules, shift_holiday_requests</p>
                   <button onClick={() => handleClear('staff_attendance', '勤怠・シフト')} className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl font-bold text-[11px] transition-all shadow-md">
                     <Trash2 size={12}/> 勤怠系を全削除
                   </button>
                 </div>
 
-                <div className="bg-[#1a1111] p-6 rounded-2xl border border-red-900/50 space-y-3">
+                <div className="bg-red-50 p-6 rounded-2xl border border-red-900/50 space-y-3">
                   <div className="flex items-center gap-2">
                     <span className="text-[24px]">📜</span>
-                    <h4 className="text-white font-bold text-[13px]">操作履歴のみ</h4>
+                    <h4 className="text-[#2D4B3E] font-bold text-[13px]">操作履歴のみ</h4>
                   </div>
-                  <p className="text-[11px] text-gray-400 leading-relaxed">audit_log テーブル全件（テスト操作ログ）</p>
+                  <p className="text-[11px] text-[#666] leading-relaxed">audit_log テーブル全件（テスト操作ログ）</p>
                   <button onClick={() => handleClear('audit_log', '操作履歴')} className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl font-bold text-[11px] transition-all shadow-md">
                     <Trash2 size={12}/> 操作履歴を全削除
                   </button>
@@ -1785,12 +1785,12 @@ export default function OwnerDashboard() {
               </div>
 
               {/* 一括削除 */}
-              <div className="bg-[#2a0e0e] p-6 rounded-2xl border-2 border-red-700 shadow-2xl">
-                <h4 className="text-red-300 font-bold text-[14px] flex items-center gap-2">
+              <div className="bg-red-50 p-6 rounded-2xl border-2 border-red-300 shadow-2xl">
+                <h4 className="text-red-700 font-bold text-[14px] flex items-center gap-2">
                   <AlertTriangle size={16}/> 全テストデータを一括削除
                 </h4>
-                <p className="text-[11px] text-red-200/80 mt-2 leading-relaxed">
-                  上記4カテゴリすべてを一度に削除します。<strong className="text-white">店舗設定は無傷</strong>です。<br/>
+                <p className="text-[11px] text-red-800 mt-2 leading-relaxed">
+                  上記4カテゴリすべてを一度に削除します。<strong className="text-red-900">店舗設定は無傷</strong>です。<br/>
                   ローンチ直前のクリーンアップに使用してください。
                 </p>
                 <button
@@ -1802,8 +1802,8 @@ export default function OwnerDashboard() {
               </div>
 
               {/* レガシーボタン: 旧 handleClearAllOrders */}
-              <details className="bg-[#111] border border-[#222] rounded-2xl p-4">
-                <summary className="cursor-pointer text-[11px] text-gray-500 hover:text-gray-300">レガシーメニュー</summary>
+              <details className="bg-white border border-[#EAEAEA] rounded-2xl p-4">
+                <summary className="cursor-pointer text-[11px] text-[#777] hover:text-[#555]">レガシーメニュー</summary>
                 <div className="mt-3 p-4 border border-red-900/40 rounded-xl">
                   <button onClick={handleClearAllOrders} disabled={isSaving} className="flex items-center justify-center gap-2 bg-red-900/40 text-red-300 px-6 py-2 rounded-xl text-[12px] font-bold hover:bg-red-900/60 disabled:opacity-50">
                     <Trash2 size={14}/> 旧: 注文データ全件削除
