@@ -189,7 +189,7 @@ export async function GET(request) {
 // PATCH: 店舗回答 or お客様承諾
 export async function PATCH(request) {
   try {
-    const { id, action, replyMessage, proposedPrice, customerToken } = await request.json();
+    const { id, action, replyMessage, proposedPrice, proposedData, customerToken } = await request.json();
     if (!id || !action) return NextResponse.json({ error: 'id/action必要' }, { status: 400 });
 
     const supabase = admin();
@@ -199,8 +199,9 @@ export async function PATCH(request) {
     if (action === 'reply') {
       // 店舗回答
       await supabase.from('estimates').update({
-        reply_message: String(replyMessage || '').slice(0, 2000),
+        reply_message: String(replyMessage || '').slice(0, 4000),
         proposed_price: Number(proposedPrice) || 0,
+        proposed_data: proposedData || null, // ★ 料金内訳を保存
         status: 'replied',
         replied_at: new Date().toISOString(),
       }).eq('id', id);

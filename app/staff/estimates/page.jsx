@@ -9,7 +9,18 @@ export default function EstimatesPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [editingId, setEditingId] = useState(null);
-  const [replyForm, setReplyForm] = useState({ message: '', price: '' });
+  // ★ 新・回答フォーム (料金内訳 + 自動メッセージ生成)
+  const [replyForm, setReplyForm] = useState({
+    productPrice: '',          // 商品代 (税抜)
+    selfDeliveryAccepted: '',  // '' | 'yes' | 'no' (自社配達対応可否)
+    selfDeliveryFee: '',       // 自社配達料
+    sagawaFee: '',             // 業者配送料
+    boxFee: '',                // 箱代
+    coolFee: '',               // クール便代
+    otherFee: '',              // その他料金
+    otherFeeNote: '',          // その他料金の内訳メモ
+    message: '',               // 回答メッセージ
+  });
 
   useEffect(() => {
     (async () => {
@@ -34,18 +45,91 @@ export default function EstimatesPage() {
     finally { setLoading(false); }
   }
 
+  // ★ 合計金額計算 (税抜)
+  function calcTotal() {
+    return [
+      replyForm.productPrice,
+      replyForm.selfDeliveryFee,
+      replyForm.sagawaFee,
+      replyForm.boxFee,
+      replyForm.coolFee,
+      replyForm.otherFee,
+    ].reduce((sum, v) => sum + (Number(v) || 0), 0);
+  }
+
+  // ★ メッセージを自動生成
+  function generateMessage(est) {
+    const rd = est.request_data || {};
+    const total = calcTotal();
+    const totalTax = Math.floor(total * 1.1);
+
+    let msg = `${est.customer_name} 様\n\n`;
+    msg += `ご依頼ありがとうございます🌸\n`;
+    msg += `下記の内容でお見積もりさせていただきます。\n\n`;
+
+    // 内容サマリー
+    if (rd.purpose) msg += `用途: ${rd.purpose === 'その他' ? `その他(${rd.purposeOther||''})` : rd.purpose}\n`;
+    if (rd.flowerType) msg += `お花の種類: ${rd.flowerType}\n`;
+    if (rd.colorPreference) msg += `色・イメージ: ${rd.colorPreference}\n`;
+    if (rd.desiredDate) msg += `ご希望日: ${rd.desiredDate}${rd.desiredTime ? ' '+rd.desiredTime : ''}\n`;
+    msg += `\n`;
+
+    // 料金内訳
+    msg += `【お見積り内訳】\n`;
+    if (replyForm.productPrice) msg += `商品代(税抜): ¥${Number(replyForm.productPrice).toLocaleString()}\n`;
+    if (replyForm.selfDeliveryAccepted === 'yes' && replyForm.selfDeliveryFee) {
+      msg += `自社配達料: ¥${Number(replyForm.selfDeliveryFee).toLocaleString()}\n`;
+    }
+    if (replyForm.sagawaFee) {
+      msg += `業者配送料(佐川): ¥${Number(replyForm.sagawaFee).toLocaleString()}\n`;
+    }
+    if (replyForm.boxFee) msg += `箱代: ¥${Number(replyForm.boxFee).toLocaleString()}\n`;
+    if (replyForm.coolFee) msg += `クール便代: ¥${Number(replyForm.coolFee).toLocaleString()}\n`;
+    if (replyForm.otherFee) msg += `${replyForm.otherFeeNote || 'その他'}: ¥${Number(replyForm.otherFee).toLocaleString()}\n`;
+    msg += `─────────────\n`;
+    msg += `合計(税抜): ¥${total.toLocaleString()}\n`;
+    msg += `合計(税込): ¥${totalTax.toLocaleString()}\n\n`;
+
+    // 自社配達対応不可の場合の注釈
+    if (replyForm.selfDeliveryAccepted === 'no' && rd.deliveryMethod === 'delivery') {
+      msg += `※ ご希望の自社配達ですが、配達状況により対応が難しいため、業者配送（佐川急便）でのご案内となります。何卒ご了承ください。\n\n`;
+    }
+
+    msg += `内容にご納得いただけましたら、メール記載のURLから正式注文へお進みください💐\n\n`;
+    msg += `ご質問・修正のご希望等ございましたら、お気軽にご返信ください🌷`;
+    return msg;
+  }
+
   async function handleReply(id) {
-    if (!replyForm.message || !replyForm.price) { alert('回答内容と価格を入力してください'); return; }
+    if (!replyForm.message) { alert('回答メッセージを入力してください'); return; }
+    if (calcTotal() <= 0) { alert('金額を入力してください'); return; }
     try {
       const res = await fetch('/api/estimates', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, action: 'reply', replyMessage: replyForm.message, proposedPrice: Number(replyForm.price) }),
+        body: JSON.stringify({
+          id, action: 'reply',
+          replyMessage: replyForm.message,
+          proposedPrice: calcTotal(),
+          proposedData: {
+            productPrice: Number(replyForm.productPrice) || 0,
+            selfDeliveryAccepted: replyForm.selfDeliveryAccepted,
+            selfDeliveryFee: Number(replyForm.selfDeliveryFee) || 0,
+            sagawaFee: Number(replyForm.sagawaFee) || 0,
+            boxFee: Number(replyForm.boxFee) || 0,
+            coolFee: Number(replyForm.coolFee) || 0,
+            otherFee: Number(replyForm.otherFee) || 0,
+            otherFeeNote: replyForm.otherFeeNote || '',
+          },
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setEditingId(null);
-      setReplyForm({ message: '', price: '' });
+      setReplyForm({
+        productPrice: '', selfDeliveryAccepted: '', selfDeliveryFee: '',
+        sagawaFee: '', boxFee: '', coolFee: '', otherFee: '', otherFeeNote: '', message: '',
+      });
       loadEstimates();
       alert('お客様にお見積もりメールを送信しました🎉');
     } catch (e) { alert('エラー: ' + e.message); }
@@ -193,7 +277,7 @@ export default function EstimatesPage() {
 
                   {est.status === 'pending' && !isEditing && (
                     <div className="flex gap-2 pt-2">
-                      <button onClick={() => { setEditingId(est.id); setReplyForm({ message: '', price: '' }); }}
+                      <button onClick={() => { setEditingId(est.id); setReplyForm({ productPrice: '', selfDeliveryAccepted: '', selfDeliveryFee: '', sagawaFee: '', boxFee: '', coolFee: '', otherFee: '', otherFeeNote: '', message: '' }); }}
                         className="flex-1 h-10 bg-[#117768] text-white text-[12px] font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-[#0d5e54]">
                         <Send size={12}/> 回答する
                       </button>
@@ -204,32 +288,149 @@ export default function EstimatesPage() {
                     </div>
                   )}
 
-                  {isEditing && (
-                    <div className="space-y-3 pt-2 border-t border-[#EAEAEA]">
+                  {isEditing && (() => {
+                    const total = calcTotal();
+                    const totalTax = Math.floor(total * 1.1);
+                    const rd = est.request_data || {};
+                    const wantsSelfDelivery = rd.deliveryMethod === 'delivery';
+
+                    return (
+                    <div className="space-y-4 pt-3 border-t border-[#EAEAEA] bg-[#FBFAF9] -mx-6 px-6 py-4 rounded-b-2xl">
+                      <p className="text-[12px] font-bold text-[#117768]">💰 お見積もり料金 内訳</p>
+
+                      {/* 商品代 */}
                       <div>
-                        <label className="text-[10px] font-bold text-[#555]">ご提案金額 (税抜)</label>
-                        <input type="number" value={replyForm.price} onChange={e => setReplyForm({...replyForm, price: e.target.value})}
-                          placeholder="例: 5000"
-                          className="w-full h-11 px-3 mt-1 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[14px] font-bold outline-none focus:border-[#117768]"/>
-                        {replyForm.price && (
-                          <p className="text-[10px] text-[#999] mt-1">税込: ¥{(Math.floor(Number(replyForm.price) * 1.1)).toLocaleString()}</p>
-                        )}
+                        <label className="text-[10px] font-bold text-[#555]">商品代 (税抜) *</label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="font-bold">¥</span>
+                          <input type="number" value={replyForm.productPrice}
+                            onChange={e => setReplyForm({...replyForm, productPrice: e.target.value})}
+                            placeholder="例: 5000"
+                            className="flex-1 h-11 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[14px] font-bold outline-none focus:border-[#117768]"/>
+                        </div>
                       </div>
+
+                      {/* 自社配達対応可否 (お客様が delivery希望時のみ表示) */}
+                      {wantsSelfDelivery && (
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 space-y-2">
+                          <p className="text-[11px] font-bold text-emerald-900">🚚 自社配達のご希望あり - 対応可否を選択</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button type="button"
+                              onClick={() => setReplyForm({...replyForm, selfDeliveryAccepted: 'yes', sagawaFee: ''})}
+                              className={`p-2.5 rounded-lg border-2 text-[11px] font-bold ${replyForm.selfDeliveryAccepted === 'yes' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-emerald-200 text-emerald-700'}`}>
+                              ✅ 対応可能
+                            </button>
+                            <button type="button"
+                              onClick={() => setReplyForm({...replyForm, selfDeliveryAccepted: 'no', selfDeliveryFee: ''})}
+                              className={`p-2.5 rounded-lg border-2 text-[11px] font-bold ${replyForm.selfDeliveryAccepted === 'no' ? 'bg-amber-600 border-amber-600 text-white' : 'bg-white border-amber-200 text-amber-700'}`}>
+                              ⚠️ 対応不可 (業者配送に切替)
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 自社配達料 */}
+                      {(replyForm.selfDeliveryAccepted === 'yes' || (!wantsSelfDelivery && rd.deliveryMethod !== 'pickup')) && (
+                        <div>
+                          <label className="text-[10px] font-bold text-[#555]">🚚 自社配達料 (税抜)</label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="font-bold">¥</span>
+                            <input type="number" value={replyForm.selfDeliveryFee}
+                              onChange={e => setReplyForm({...replyForm, selfDeliveryFee: e.target.value})}
+                              placeholder="例: 500"
+                              className="flex-1 h-11 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#117768]"/>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 業者配送料 */}
+                      {(replyForm.selfDeliveryAccepted === 'no' || rd.deliveryMethod === 'shipping' || (!wantsSelfDelivery && rd.deliveryMethod !== 'pickup')) && (
+                        <div>
+                          <label className="text-[10px] font-bold text-[#555]">📦 業者配送料 (税抜)</label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="font-bold">¥</span>
+                            <input type="number" value={replyForm.sagawaFee}
+                              onChange={e => setReplyForm({...replyForm, sagawaFee: e.target.value})}
+                              placeholder="例: 1450"
+                              className="flex-1 h-11 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#117768]"/>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 箱代 */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[10px] font-bold text-[#555]">📦 箱代 (任意)</label>
+                          <input type="number" value={replyForm.boxFee}
+                            onChange={e => setReplyForm({...replyForm, boxFee: e.target.value})}
+                            placeholder="例: 300"
+                            className="w-full h-11 px-3 mt-1 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#117768]"/>
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-[#555]">❄️ クール便代 (任意)</label>
+                          <input type="number" value={replyForm.coolFee}
+                            onChange={e => setReplyForm({...replyForm, coolFee: e.target.value})}
+                            placeholder="例: 220"
+                            className="w-full h-11 px-3 mt-1 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#117768]"/>
+                        </div>
+                      </div>
+
+                      {/* その他料金 */}
+                      <div className="grid grid-cols-[1fr_120px] gap-2">
+                        <div>
+                          <label className="text-[10px] font-bold text-[#555]">📝 その他料金の名称 (任意)</label>
+                          <input type="text" value={replyForm.otherFeeNote}
+                            onChange={e => setReplyForm({...replyForm, otherFeeNote: e.target.value})}
+                            placeholder="例: スタンド料・特別装飾代"
+                            className="w-full h-11 px-3 mt-1 bg-white border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#117768]"/>
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-[#555]">金額</label>
+                          <input type="number" value={replyForm.otherFee}
+                            onChange={e => setReplyForm({...replyForm, otherFee: e.target.value})}
+                            placeholder="例: 1000"
+                            className="w-full h-11 px-3 mt-1 bg-white border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#117768]"/>
+                        </div>
+                      </div>
+
+                      {/* 合計表示 */}
+                      <div className="bg-white border-2 border-[#117768] rounded-xl p-4 text-center space-y-1">
+                        <p className="text-[10px] text-[#999]">合計</p>
+                        <p className="text-[20px] font-bold text-[#117768]">
+                          ¥{totalTax.toLocaleString()} <span className="text-[11px] text-[#999]">(税込)</span>
+                        </p>
+                        <p className="text-[10px] text-[#555]">税抜: ¥{total.toLocaleString()} + 消費税 ¥{Math.floor(total * 0.1).toLocaleString()}</p>
+                      </div>
+
+                      {/* 自動生成ボタン + メッセージ */}
                       <div>
-                        <label className="text-[10px] font-bold text-[#555]">回答メッセージ</label>
-                        <textarea value={replyForm.message} onChange={e => setReplyForm({...replyForm, message: e.target.value})}
-                          rows={4}
-                          placeholder="例: ご依頼ありがとうございます。バラ21本+カスミソウで承ります。受取は6月15日17時で承っております。"
-                          className="w-full px-3 py-2 mt-1 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#117768] resize-none leading-relaxed"/>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] font-bold text-[#555]">💬 回答メッセージ</label>
+                          <button type="button"
+                            onClick={() => setReplyForm({...replyForm, message: generateMessage(est)})}
+                            disabled={total <= 0}
+                            className="text-[10px] bg-[#117768]/10 text-[#117768] px-3 py-1 rounded-full font-bold hover:bg-[#117768] hover:text-white disabled:opacity-50">
+                            ✨ 内容から自動生成
+                          </button>
+                        </div>
+                        <textarea value={replyForm.message}
+                          onChange={e => setReplyForm({...replyForm, message: e.target.value})}
+                          rows={10}
+                          placeholder="先に料金を入力して「✨ 内容から自動生成」を押すか、手入力してください。"
+                          className="w-full px-3 py-2 bg-white border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#117768] resize-none leading-relaxed"/>
                       </div>
+
                       <div className="flex gap-2">
                         <button onClick={() => setEditingId(null)} className="h-10 px-4 bg-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-lg">キャンセル</button>
-                        <button onClick={() => handleReply(est.id)} className="flex-1 h-10 bg-[#117768] text-white text-[12px] font-bold rounded-lg hover:bg-[#0d5e54] flex items-center justify-center gap-1">
+                        <button onClick={() => handleReply(est.id)}
+                          disabled={total <= 0 || !replyForm.message}
+                          className="flex-1 h-10 bg-[#117768] text-white text-[12px] font-bold rounded-lg hover:bg-[#0d5e54] flex items-center justify-center gap-1 disabled:opacity-50">
                           <Send size={12}/> 回答メールを送信
                         </button>
                       </div>
                     </div>
-                  )}
+                    );
+                  })()}
 
                   {est.status === 'converted' && est.order_id && (
                     <div className="bg-emerald-50 p-3 rounded-lg text-[11px] text-emerald-700">

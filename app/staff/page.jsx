@@ -16,6 +16,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({ todayOrders: 0, uncompletedOrders: 0 });
   const [recentOrders, setRecentOrders] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [pendingEstimates, setPendingEstimates] = useState([]); // ★ 未回答の見積依頼
   const [isLoading, setIsLoading] = useState(true);
 
   // ★ 勤怠
@@ -125,6 +126,15 @@ export default function DashboardPage() {
 
         const fetchedOrders = data || [];
         setOrders(fetchedOrders);
+
+        // ★ 未回答の見積依頼を取得 (失敗してもダッシュボード自体は表示)
+        try {
+          const estRes = await fetch(`/api/estimates?tenantId=${encodeURIComponent(tId)}&status=pending`);
+          if (estRes.ok) {
+            const estData = await estRes.json();
+            setPendingEstimates(estData.estimates || []);
+          }
+        } catch (e) { console.warn('見積依頼取得失敗:', e); }
 
         let todayCount = 0;
         let uncompletedCount = 0;
@@ -322,6 +332,38 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+
+        {/* ★ 未回答の見積依頼通知 */}
+        {pendingEstimates.length > 0 && (
+          <div onClick={() => router.push('/staff/estimates')} className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 cursor-pointer hover:bg-amber-100 transition-all animate-in slide-in-from-top-2">
+            <div className="flex items-start gap-3">
+              <div className="w-12 h-12 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0 animate-pulse text-[22px]">
+                💰
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[14px] font-bold text-amber-900">💰 未回答のお見積もり依頼 {pendingEstimates.length}件</p>
+                <p className="text-[11px] text-amber-700 mt-1">お客様が金額の見積もりを待っています。回答してください。</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {pendingEstimates.slice(0, 3).map(e => (
+                    <div key={e.id} className="bg-white px-3 py-1.5 rounded-lg border border-amber-200 text-[11px]">
+                      <span className="font-bold mr-1">📋</span>
+                      {e.customer_name || 'お客様'} - {(() => {
+                        const diff = Math.round((Date.now() - new Date(e.created_at)) / 60000);
+                        if (diff < 60) return `${diff}分前`;
+                        if (diff < 1440) return `${Math.round(diff/60)}時間前`;
+                        return `${Math.round(diff/1440)}日前`;
+                      })()}
+                    </div>
+                  ))}
+                  {pendingEstimates.length > 3 && (
+                    <div className="bg-amber-100 px-3 py-1.5 rounded-lg text-[11px] font-bold text-amber-700">+ {pendingEstimates.length - 3}件</div>
+                  )}
+                </div>
+              </div>
+              <ChevronRight size={20} className="text-amber-500 shrink-0"/>
+            </div>
+          </div>
+        )}
 
         {/* ★ 新規注文通知 */}
         {recentNewOrders.length > 0 && (
