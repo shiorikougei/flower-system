@@ -180,6 +180,18 @@ export async function POST(request) {
     }
     const orderId = inserted.id;
 
+    // ★ お見積もり経由の場合、estimates テーブルを converted に
+    if (orderData?.fromEstimate && orderData?.estimateId) {
+      try {
+        await supabaseAdmin
+          .from('estimates')
+          .update({ status: 'converted', order_id: orderId })
+          .eq('id', orderData.estimateId);
+      } catch (e) {
+        console.warn('[/api/orders] estimate mark converted失敗:', e?.message);
+      }
+    }
+
     // ---- お客様向け 注文確認メール送信 ----
     //   テンプレートシステム経由（設定で編集可能、未設定ならプリセット使用）
     async function sendConfirmationEmail() {
