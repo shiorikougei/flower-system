@@ -544,17 +544,21 @@ function OrderFormContent() {
           dDate.setDate(dDate.getDate() - transitDays);
           result.shippingDate = dDate.toISOString().split('T')[0];
         }
-        let size = selectedItemSettings?.defaultBoxSize;
-        let boxFee = 0;
-        if (!size) {
-          size = appSettings?.shippingSizes?.[0] || '80';
-          if (appSettings?.boxFeeConfig?.type === 'flat') boxFee = Number(appSettings.boxFeeConfig.flatFee) || 0;
-          else if (appSettings?.boxFeeConfig?.type === 'price_based') {
-            const tiers = appSettings.boxFeeConfig.priceTiers || [];
-            const sortedTiers = [...tiers].sort((a,b) => b.minPrice - a.minPrice);
-            const matchedTier = sortedTiers.find(t => Number(itemPriceArg) >= t.minPrice);
-            boxFee = matchedTier ? Number(matchedTier.fee) : 0;
-          }
+        // ★ 箱代と使用サイズを同時に決定 (新ロジック)
+        let size, boxFee = 0;
+        const bfc = appSettings?.boxFeeConfig;
+        if (bfc?.type === 'flat') {
+          boxFee = Number(bfc.flatFee) || 0;
+          size = bfc.flatSize || selectedItemSettings?.defaultBoxSize || appSettings?.shippingSizes?.[0] || '80';
+        } else if (bfc?.type === 'price_based') {
+          const tiers = bfc.priceTiers || [];
+          const sorted = [...tiers].sort((a,b) => b.minPrice - a.minPrice);
+          const matched = sorted.find(t => Number(itemPriceArg) >= t.minPrice);
+          boxFee = matched ? Number(matched.fee) : 0;
+          size = matched?.size || selectedItemSettings?.defaultBoxSize || appSettings?.shippingSizes?.[0] || '80';
+        } else {
+          // boxFeeConfigなし: flowerItemのdefaultBoxSizeのみ
+          size = selectedItemSettings?.defaultBoxSize || appSettings?.shippingSizes?.[0] || '80';
         }
         let baseFee = Number(rateData['fee' + size]) || 0;
         if (appSettings?.boxFeeConfig?.freeShippingThresholdEnabled && Number(itemPriceArg) >= (appSettings.boxFeeConfig.freeShippingThreshold || 15000)) {
@@ -680,7 +684,7 @@ function OrderFormContent() {
       let rateData = appSettings?.shippingRates?.find(r => r.prefs && r.prefs.includes(searchPref));
       if (!rateData) rateData = appSettings?.shippingRates?.find(r => r.region && r.region.includes(searchPref));
 
-      if (rateData) { 
+      if (rateData) {
         if (selectedDate) {
           const dDate = new Date(selectedDate);
           dDate.setDate(dDate.getDate() - transitDays);
@@ -689,23 +693,26 @@ function OrderFormContent() {
           setShippingDate('');
         }
 
-        let size = selectedItemSettings?.defaultBoxSize;
-        if (!size) {
-          size = appSettings?.shippingSizes?.[0] || '80';
-          if (appSettings?.boxFeeConfig?.type === 'flat') {
-            boxFee = Number(appSettings.boxFeeConfig.flatFee) || 0;
-          } else if (appSettings?.boxFeeConfig?.type === 'price_based') {
-            const tiers = appSettings.boxFeeConfig.priceTiers || [];
-            const sortedTiers = [...tiers].sort((a, b) => b.minPrice - a.minPrice);
-            const matchedTier = sortedTiers.find(t => Number(itemPrice) >= t.minPrice);
-            boxFee = matchedTier ? Number(matchedTier.fee) : 0;
-          }
+        // ★ 箱代と使用サイズを同時決定 (新ロジック)
+        let size;
+        const bfc = appSettings?.boxFeeConfig;
+        if (bfc?.type === 'flat') {
+          boxFee = Number(bfc.flatFee) || 0;
+          size = bfc.flatSize || selectedItemSettings?.defaultBoxSize || appSettings?.shippingSizes?.[0] || '80';
+        } else if (bfc?.type === 'price_based') {
+          const tiers = bfc.priceTiers || [];
+          const sorted = [...tiers].sort((a,b) => b.minPrice - a.minPrice);
+          const matched = sorted.find(t => Number(itemPrice) >= t.minPrice);
+          boxFee = matched ? Number(matched.fee) : 0;
+          size = matched?.size || selectedItemSettings?.defaultBoxSize || appSettings?.shippingSizes?.[0] || '80';
+        } else {
+          size = selectedItemSettings?.defaultBoxSize || appSettings?.shippingSizes?.[0] || '80';
         }
 
         baseFee = Number(rateData['fee' + size]) || 0;
 
         if (appSettings?.boxFeeConfig?.freeShippingThresholdEnabled && Number(itemPrice) >= (appSettings.boxFeeConfig.freeShippingThreshold || 15000)) {
-          baseFee = 0; 
+          baseFee = 0;
         }
 
         if (!selectedItemSettings?.excludeCoolBin && appSettings?.boxFeeConfig?.coolBinEnabled && selectedDate) {

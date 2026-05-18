@@ -1023,11 +1023,36 @@ export default function SettingsPage() {
         </div>
 
         {boxFeeConfig.type === 'flat' ? (
-          <div className="flex items-center gap-2 bg-[#FBFAF9] p-4 rounded-xl border w-fit"><span className="text-[12px] font-bold">一律加算:</span><input type="number" value={boxFeeConfig.flatFee} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, flatFee:Number(e.target.value)})} className="w-20 h-8 rounded border px-2 text-right font-bold focus:border-[#2D4B3E] outline-none"/>円</div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 bg-[#FBFAF9] p-4 rounded-xl border w-fit">
+              <span className="text-[12px] font-bold">一律加算:</span>
+              <input type="number" value={boxFeeConfig.flatFee} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, flatFee:Number(e.target.value)})} className="w-20 h-8 rounded border px-2 text-right font-bold focus:border-[#2D4B3E] outline-none"/>円
+              <span className="text-[10px] text-[#999] mx-2">対応サイズ:</span>
+              <select value={boxFeeConfig.flatSize || ''} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, flatSize: e.target.value})} className="h-8 bg-white border rounded px-2 text-[11px] font-bold outline-none focus:border-[#2D4B3E]">
+                <option value="">未指定</option>
+                {shippingSizes.map(s => <option key={s} value={s}>{s}サイズ</option>)}
+              </select>
+            </div>
+            <p className="text-[10px] text-[#999]">※ 業者配送料金はこの「対応サイズ」で計算されます。未指定の場合は先頭サイズ ({shippingSizes[0] || '80'}サイズ) で計算。</p>
+          </div>
         ) : (
           <div className="space-y-2 bg-[#FBFAF9] p-4 rounded-xl border">
-            {boxFeeConfig.priceTiers.map((tier, i) => (<div key={i} className="flex items-center gap-2 text-[12px] font-bold"><input type="number" value={tier.minPrice} onChange={(e)=>{const n=[...boxFeeConfig.priceTiers];n[i].minPrice=Number(e.target.value);setBoxFeeConfig({...boxFeeConfig,priceTiers:n})}} className="w-24 h-8 rounded border px-2 focus:border-[#2D4B3E] outline-none"/>円以上なら 箱代<input type="number" value={tier.fee} onChange={(e)=>{const n=[...boxFeeConfig.priceTiers];n[i].fee=Number(e.target.value);setBoxFeeConfig({...boxFeeConfig,priceTiers:n})}} className="w-20 h-8 rounded border px-2 text-right focus:border-[#2D4B3E] outline-none"/>円</div>))}
-            <button onClick={()=>setBoxFeeConfig({...boxFeeConfig, priceTiers:[...boxFeeConfig.priceTiers, {minPrice:0,fee:0}]})} className="text-[10px] text-[#2D4B3E] font-bold">+ 条件追加</button>
+            <p className="text-[10px] text-[#555]">商品代に応じた箱代＋使用サイズを設定。配送料金は「使用サイズ」で計算されます。</p>
+            {boxFeeConfig.priceTiers.map((tier, i) => (
+              <div key={i} className="flex items-center gap-2 text-[12px] font-bold flex-wrap">
+                <input type="number" value={tier.minPrice} onChange={(e)=>{const n=[...boxFeeConfig.priceTiers];n[i].minPrice=Number(e.target.value);setBoxFeeConfig({...boxFeeConfig,priceTiers:n})}} className="w-24 h-9 rounded border px-2 focus:border-[#2D4B3E] outline-none"/>
+                <span className="text-[#555]">円以上なら 箱代</span>
+                <input type="number" value={tier.fee} onChange={(e)=>{const n=[...boxFeeConfig.priceTiers];n[i].fee=Number(e.target.value);setBoxFeeConfig({...boxFeeConfig,priceTiers:n})}} className="w-20 h-9 rounded border px-2 text-right focus:border-[#2D4B3E] outline-none"/>
+                <span className="text-[#555]">円</span>
+                <span className="text-[10px] text-[#999] ml-2">使用サイズ:</span>
+                <select value={tier.size || ''} onChange={(e)=>{const n=[...boxFeeConfig.priceTiers];n[i].size=e.target.value;setBoxFeeConfig({...boxFeeConfig,priceTiers:n})}} className="h-9 bg-white border rounded px-2 text-[11px] font-bold outline-none focus:border-[#2D4B3E]">
+                  <option value="">未指定</option>
+                  {shippingSizes.map(s => <option key={s} value={s}>{s}サイズ</option>)}
+                </select>
+                <button onClick={()=>setBoxFeeConfig({...boxFeeConfig, priceTiers: boxFeeConfig.priceTiers.filter((_, idx) => idx !== i)})} className="text-red-300 hover:text-red-500 ml-1">✕</button>
+              </div>
+            ))}
+            <button onClick={()=>setBoxFeeConfig({...boxFeeConfig, priceTiers:[...boxFeeConfig.priceTiers, {minPrice:0,fee:0,size:''}]})} className="text-[10px] text-[#2D4B3E] font-bold mt-2">+ 条件追加</button>
           </div>
         )}
       </div>
