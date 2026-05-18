@@ -18,9 +18,9 @@ export default function EstimatesPage() {
     sagawaFee: '',             // 業者配送料
     boxFee: '',                // 箱代
     coolFee: '',               // クール便代
-    otherFee: '',              // その他料金
-    otherFeeNote: '',          // その他料金の内訳メモ
-    message: '',               // 回答メッセージ
+    otherFees: [],             // [{ name: '', amount: '' }] 複数追加可
+    staffComment: '',          // ★ 店舗からの追加コメント (自動生成と合体)
+    message: '',               // 回答メッセージ (自動生成 or 手入力)
   });
 
   useEffect(() => {
@@ -79,7 +79,8 @@ export default function EstimatesPage() {
   }
 
   // ★ 業者配送料の自動計算 (住所から都道府県を抜き出して shippingRates と照合)
-  function calcSagawaFee(addr, boxSize = '80', productPrice = 0) {
+  //   ※ 送料無料閾値はEC専用なので見積では適用しない
+  function calcSagawaFee(addr, boxSize = '80') {
     if (!addr) return null;
     const raw = String(addr).replace(/[\s　]+/g, '');
     const prefMatch = raw.match(/^(北海道|東京都|(?:京都|大阪)府|.{2,3}県)/);
@@ -89,12 +90,7 @@ export default function EstimatesPage() {
     let rateData = appSettings?.shippingRates?.find(r => r.prefs && r.prefs.includes(searchPref));
     if (!rateData) rateData = appSettings?.shippingRates?.find(r => r.region && r.region.includes(searchPref));
     if (!rateData) return null;
-    let baseFee = Number(rateData['fee' + boxSize]) || 0;
-    // 送料無料閾値
-    if (appSettings?.boxFeeConfig?.freeShippingThresholdEnabled && Number(productPrice) >= (appSettings.boxFeeConfig.freeShippingThreshold || 15000)) {
-      baseFee = 0;
-    }
-    return baseFee;
+    return Number(rateData['fee' + boxSize]) || 0;
   }
 
   // ★ 箱代の自動計算
@@ -139,7 +135,7 @@ export default function EstimatesPage() {
     const addr = [rd.deliveryAddress1, rd.deliveryAddress2].filter(Boolean).join(' ') || rd.deliveryAddress || '';
     const productPriceGuess = 0; // 商品代は店舗判断
     const selfFee = calcSelfDeliveryFee(addr);
-    const sagawaFee = calcSagawaFee(addr, '80', productPriceGuess);
+    const sagawaFee = calcSagawaFee(addr, '80'Guess);
     const boxFee = calcBoxFee(productPriceGuess);
     const coolFee = calcCoolFee(addr, rd.desiredDate, '80');
 
@@ -150,8 +146,8 @@ export default function EstimatesPage() {
       sagawaFee: sagawaFee !== null ? String(sagawaFee) : '',
       boxFee: boxFee ? String(boxFee) : '',
       coolFee: coolFee ? String(coolFee) : '',
-      otherFee: '',
-      otherFeeNote: '',
+      otherFees: [],
+      staffComment: '',
       message: '',
     });
   }
@@ -168,14 +164,14 @@ export default function EstimatesPage() {
 
   // ★ 合計金額計算 (税抜)
   function calcTotal() {
+    const otherTotal = (replyForm.otherFees || []).reduce((s, o) => s + (Number(o.amount) || 0), 0);
     return [
       replyForm.productPrice,
       replyForm.selfDeliveryFee,
       replyForm.sagawaFee,
       replyForm.boxFee,
       replyForm.coolFee,
-      replyForm.otherFee,
-    ].reduce((sum, v) => sum + (Number(v) || 0), 0);
+    ].reduce((sum, v) => sum + (Number(v) || 0), 0) + otherTotal;
   }
 
   // ★ メッセージを自動生成
@@ -206,7 +202,12 @@ export default function EstimatesPage() {
     }
     if (replyForm.boxFee) msg += `箱代: ¥${Number(replyForm.boxFee).toLocaleString()}\n`;
     if (replyForm.coolFee) msg += `クール便代: ¥${Number(replyForm.coolFee).toLocaleString()}\n`;
-    if (replyForm.otherFee) msg += `${replyForm.otherFeeNote || 'その他'}: ¥${Number(replyForm.otherFee).toLocaleString()}\n`;
+    // ★ 複数のその他料金
+    (replyForm.otherFees || []).forEach(o => {
+      if (Number(o.amount) > 0) {
+        msg += `${o.name || 'その他'}: ¥${Number(o.amount).toLocaleString()}\n`;
+      }
+    });
     msg += `─────────────\n`;
     msg += `合計(税抜): ¥${total.toLocaleString()}\n`;
     msg += `合計(税込): ¥${totalTax.toLocaleString()}\n\n`;
@@ -214,6 +215,11 @@ export default function EstimatesPage() {
     // 自社配達対応不可の場合の注釈
     if (replyForm.selfDeliveryAccepted === 'no' && rd.deliveryMethod === 'delivery') {
       msg += `※ ご希望の自社配達ですが、配達状況により対応が難しいため、業者配送（佐川急便）でのご案内となります。何卒ご了承ください。\n\n`;
+    }
+
+    // ★ 店舗からの追加コメントを末尾に
+    if (replyForm.staffComment && replyForm.staffComment.trim()) {
+      msg += `${replyForm.staffComment.trim()}\n\n`;
     }
 
     msg += `内容にご納得いただけましたら、メール記載のURLから正式注文へお進みください💐\n\n`;
@@ -239,8 +245,8 @@ export default function EstimatesPage() {
             sagawaFee: Number(replyForm.sagawaFee) || 0,
             boxFee: Number(replyForm.boxFee) || 0,
             coolFee: Number(replyForm.coolFee) || 0,
-            otherFee: Number(replyForm.otherFee) || 0,
-            otherFeeNote: replyForm.otherFeeNote || '',
+            otherFees: (replyForm.otherFees || []).filter(o => Number(o.amount) > 0).map(o => ({ name: o.name || 'その他', amount: Number(o.amount) })),
+            staffComment: replyForm.staffComment || '',
           },
         }),
       });
@@ -249,7 +255,7 @@ export default function EstimatesPage() {
       setEditingId(null);
       setReplyForm({
         productPrice: '', selfDeliveryAccepted: '', selfDeliveryFee: '',
-        sagawaFee: '', boxFee: '', coolFee: '', otherFee: '', otherFeeNote: '', message: '',
+        sagawaFee: '', boxFee: '', coolFee: '', otherFees: [], staffComment: '', message: '',
       });
       loadEstimates();
       alert('お客様にお見積もりメールを送信しました🎉');
@@ -428,7 +434,7 @@ export default function EstimatesPage() {
                             setReplyForm(f => ({
                               ...f,
                               selfDeliveryFee: calcSelfDeliveryFee(addr) !== null ? String(calcSelfDeliveryFee(addr)) : f.selfDeliveryFee,
-                              sagawaFee: calcSagawaFee(addr, '80', pp) !== null ? String(calcSagawaFee(addr, '80', pp)) : f.sagawaFee,
+                              sagawaFee: calcSagawaFee(addr, '80') !== null ? String(calcSagawaFee(addr, '80')) : f.sagawaFee,
                               boxFee: String(calcBoxFee(pp) || ''),
                               coolFee: String(calcCoolFee(addr, rd.desiredDate, '80') || ''),
                             }));
@@ -517,22 +523,50 @@ export default function EstimatesPage() {
                         </div>
                       </div>
 
-                      {/* その他料金 */}
-                      <div className="grid grid-cols-[1fr_120px] gap-2">
-                        <div>
-                          <label className="text-[10px] font-bold text-[#555]">📝 その他料金の名称 (任意)</label>
-                          <input type="text" value={replyForm.otherFeeNote}
-                            onChange={e => setReplyForm({...replyForm, otherFeeNote: e.target.value})}
-                            placeholder="例: スタンド料・特別装飾代"
-                            className="w-full h-11 px-3 mt-1 bg-white border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#117768]"/>
+                      {/* ★ その他料金 (複数追加可能) */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold text-[#555]">📝 その他料金 (任意・複数追加可)</label>
+                          <button
+                            type="button"
+                            onClick={() => setReplyForm({
+                              ...replyForm,
+                              otherFees: [...(replyForm.otherFees||[]), { name: '', amount: '' }],
+                            })}
+                            className="text-[10px] bg-[#117768]/10 text-[#117768] px-3 py-1 rounded-full font-bold hover:bg-[#117768] hover:text-white"
+                          >
+                            + 項目を追加
+                          </button>
                         </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-[#555]">金額</label>
-                          <input type="number" value={replyForm.otherFee}
-                            onChange={e => setReplyForm({...replyForm, otherFee: e.target.value})}
-                            placeholder="例: 1000"
-                            className="w-full h-11 px-3 mt-1 bg-white border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#117768]"/>
-                        </div>
+                        {(replyForm.otherFees || []).map((o, idx) => (
+                          <div key={idx} className="grid grid-cols-[1fr_110px_32px] gap-2">
+                            <input type="text" value={o.name}
+                              onChange={e => {
+                                const arr = [...replyForm.otherFees];
+                                arr[idx] = {...arr[idx], name: e.target.value};
+                                setReplyForm({...replyForm, otherFees: arr});
+                              }}
+                              placeholder="例: スタンド料"
+                              className="h-10 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#117768]"/>
+                            <input type="number" value={o.amount}
+                              onChange={e => {
+                                const arr = [...replyForm.otherFees];
+                                arr[idx] = {...arr[idx], amount: e.target.value};
+                                setReplyForm({...replyForm, otherFees: arr});
+                              }}
+                              placeholder="¥金額"
+                              className="h-10 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#117768]"/>
+                            <button type="button"
+                              onClick={() => setReplyForm({...replyForm, otherFees: replyForm.otherFees.filter((_, i) => i !== idx)})}
+                              className="h-10 text-red-500 hover:bg-red-50 rounded-lg"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                        {(!replyForm.otherFees || replyForm.otherFees.length === 0) && (
+                          <p className="text-[10px] text-[#999]">「+ 項目を追加」でスタンド料・特別装飾代などを追加</p>
+                        )}
                       </div>
 
                       {/* 合計表示 */}
@@ -544,21 +578,35 @@ export default function EstimatesPage() {
                         <p className="text-[10px] text-[#555]">税抜: ¥{total.toLocaleString()} + 消費税 ¥{Math.floor(total * 0.1).toLocaleString()}</p>
                       </div>
 
+                      {/* ★ 店舗からの追加コメント (自動生成と合体) */}
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
+                        <label className="text-[11px] font-bold text-amber-900">📝 店舗からの追加コメント (任意)</label>
+                        <p className="text-[10px] text-amber-700">
+                          お客様への質問・補足説明があればこちらに記入してください。<br/>
+                          下の「✨自動生成」ボタンを押すと、料金内訳と合わせてメッセージに反映されます。
+                        </p>
+                        <textarea value={replyForm.staffComment}
+                          onChange={e => setReplyForm({...replyForm, staffComment: e.target.value})}
+                          rows={3}
+                          placeholder="例: バラの代わりにダリアで仕上げる予定ですがよろしいでしょうか？／お届け先のご都合を再度ご確認ください 等"
+                          className="w-full px-3 py-2 bg-white border border-amber-200 rounded-lg text-[12px] outline-none focus:border-amber-500 resize-none leading-relaxed"/>
+                      </div>
+
                       {/* 自動生成ボタン + メッセージ */}
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <label className="text-[10px] font-bold text-[#555]">💬 回答メッセージ</label>
+                          <label className="text-[10px] font-bold text-[#555]">💬 回答メッセージ (お客様に送信される内容)</label>
                           <button type="button"
                             onClick={() => setReplyForm({...replyForm, message: generateMessage(est)})}
                             disabled={total <= 0}
                             className="text-[10px] bg-[#117768]/10 text-[#117768] px-3 py-1 rounded-full font-bold hover:bg-[#117768] hover:text-white disabled:opacity-50">
-                            ✨ 内容から自動生成
+                            ✨ 内容＋追加コメントから自動生成
                           </button>
                         </div>
                         <textarea value={replyForm.message}
                           onChange={e => setReplyForm({...replyForm, message: e.target.value})}
                           rows={10}
-                          placeholder="先に料金を入力して「✨ 内容から自動生成」を押すか、手入力してください。"
+                          placeholder="先に料金と追加コメントを入力して「✨ 自動生成」を押してください。"
                           className="w-full px-3 py-2 bg-white border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#117768] resize-none leading-relaxed"/>
                       </div>
 

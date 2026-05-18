@@ -128,9 +128,44 @@ export default function EstimateAcceptPage() {
       <main className="max-w-[700px] mx-auto px-6 py-10 space-y-6">
         <h1 className="text-[22px] font-bold text-[#2D4B3E]">お見積もりのご確認</h1>
 
-        <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-4">
+        {/* ★ ご依頼内容 (構造化されてればテーブル、そうでなければtext) */}
+        <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-3">
           <p className="text-[11px] font-bold text-[#555]">ご依頼内容</p>
-          <pre className="text-[12px] text-[#222] bg-[#FBFAF9] p-4 rounded-xl whitespace-pre-wrap font-sans leading-relaxed">{estimate.request_content}</pre>
+          {estimate.request_data && typeof estimate.request_data === 'object' ? (
+            <div className="space-y-1.5 text-[12px]">
+              {(() => {
+                const rd = estimate.request_data;
+                const dmMap = { pickup: '店頭で受取', delivery: '自社配達', shipping: '宅配便配送', undecided: '未定・相談' };
+                const cardMap = { none: '不要', message: 'メッセージカード', tatefuda: '立札' };
+                const purposeLabel = rd.purpose === 'その他' ? `その他: ${rd.purposeOther || ''}` : rd.purpose;
+                const fields = [];
+                if (rd.purpose) fields.push(['ご用途', purposeLabel]);
+                if (rd.deliveryMethod) fields.push(['受取方法', dmMap[rd.deliveryMethod] || rd.deliveryMethod]);
+                if (rd.desiredDate) fields.push(['ご希望日', rd.desiredDate + (rd.desiredTime ? ` / ${rd.desiredTime}` : '')]);
+                const addrParts = [];
+                if (rd.deliveryZip) addrParts.push(`〒${rd.deliveryZip}`);
+                if (rd.deliveryAddress1) addrParts.push(rd.deliveryAddress1);
+                if (rd.deliveryAddress2) addrParts.push(rd.deliveryAddress2);
+                const combinedAddr = addrParts.join(' ') || rd.deliveryAddress;
+                if (combinedAddr) fields.push(['お届け先住所', combinedAddr]);
+                if (rd.recipientName) fields.push(['お届け先お名前', `${rd.recipientName} 様`]);
+                if (rd.flowerType) fields.push(['花の種類', rd.flowerType]);
+                if (rd.colorPreference) fields.push(['色・イメージ', rd.colorPreference]);
+                if (rd.countSpec) fields.push(['本数・サイズ', rd.countSpec]);
+                if (rd.budget) fields.push(['ご予算 (希望)', rd.budget]);
+                if (rd.cardType && rd.cardType !== 'none') fields.push([cardMap[rd.cardType] || 'カード', rd.cardContent || '（後日相談）']);
+                if (rd.otherNotes) fields.push(['その他', rd.otherNotes]);
+                return fields.map(([k, v], i) => (
+                  <div key={i} className="grid grid-cols-[110px_1fr] gap-2 py-1 border-b border-[#F0F0F0] last:border-b-0">
+                    <span className="font-bold text-[#117768] text-[11px]">{k}</span>
+                    <span className="text-[#222] whitespace-pre-wrap break-words">{v}</span>
+                  </div>
+                ));
+              })()}
+            </div>
+          ) : (
+            <pre className="text-[12px] text-[#222] bg-[#FBFAF9] p-4 rounded-xl whitespace-pre-wrap font-sans leading-relaxed">{estimate.request_content}</pre>
+          )}
         </div>
 
         <div className="bg-white p-6 rounded-2xl border border-emerald-200 space-y-4">
@@ -138,6 +173,37 @@ export default function EstimateAcceptPage() {
           {estimate.reply_message && (
             <pre className="text-[12px] text-[#222] bg-emerald-50 p-4 rounded-xl whitespace-pre-wrap font-sans leading-relaxed">{estimate.reply_message}</pre>
           )}
+
+          {/* ★ 料金内訳 (proposed_data があれば表示) */}
+          {estimate.proposed_data && typeof estimate.proposed_data === 'object' && (() => {
+            const pd = estimate.proposed_data;
+            const rows = [];
+            if (pd.productPrice > 0) rows.push(['商品代 (税抜)', pd.productPrice]);
+            if (pd.selfDeliveryAccepted === 'yes' && pd.selfDeliveryFee > 0) rows.push(['自社配達料', pd.selfDeliveryFee]);
+            if (pd.sagawaFee > 0) rows.push(['業者配送料 (佐川)', pd.sagawaFee]);
+            if (pd.boxFee > 0) rows.push(['箱代', pd.boxFee]);
+            if (pd.coolFee > 0) rows.push(['クール便代', pd.coolFee]);
+            (pd.otherFees || []).forEach(o => {
+              if (Number(o.amount) > 0) rows.push([o.name || 'その他', Number(o.amount)]);
+            });
+            if (rows.length === 0) return null;
+            return (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-1.5">
+                <p className="text-[11px] font-bold text-emerald-700 mb-2">📋 料金内訳</p>
+                {rows.map(([label, amount], i) => (
+                  <div key={i} className="flex justify-between text-[12px] text-emerald-900">
+                    <span>{label}</span>
+                    <span className="font-bold">¥{Number(amount).toLocaleString()}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between text-[11px] text-emerald-700 pt-2 border-t border-emerald-300">
+                  <span>消費税 (10%)</span>
+                  <span>¥{tax.toLocaleString()}</span>
+                </div>
+              </div>
+            );
+          })()}
+
           <div className="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-5 text-center">
             <p className="text-[11px] text-emerald-700">ご提案価格 (税込)</p>
             <p className="text-[32px] font-bold text-emerald-700">¥{total.toLocaleString()}</p>

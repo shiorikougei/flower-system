@@ -242,18 +242,71 @@ export async function PATCH(request) {
       // 注文として登録
       const proposedSub = Number(cur.proposed_price) || 0;
       const tax = Math.floor(proposedSub * 0.1);
+      const rd = cur.request_data || {};
+      const pd = cur.proposed_data || {};
+
+      // 受取方法を推定 (見積回答内容から)
+      let receiveMethod = '';
+      if (rd.deliveryMethod === 'pickup') receiveMethod = 'pickup';
+      else if (rd.deliveryMethod === 'shipping' || pd.sagawaFee > 0) receiveMethod = 'sagawa';
+      else if (pd.selfDeliveryAccepted === 'yes' || pd.selfDeliveryFee > 0) receiveMethod = 'delivery';
+      else if (pd.sagawaFee > 0) receiveMethod = 'sagawa';
+
+      // 配達先住所の組み立て
+      const recipientInfo = rd.deliveryMethod && rd.deliveryMethod !== 'pickup' ? {
+        name: rd.recipientName || cur.customer_name,
+        phone: cur.customer_phone || '',
+        zip: rd.deliveryZip || '',
+        address1: rd.deliveryAddress1 || '',
+        address2: rd.deliveryAddress2 || '',
+      } : null;
+
       const orderRecord = {
         tenant_id: cur.tenant_id,
         order_data: {
           shopId: cur.shop_id,
           fromEstimate: true,
           estimateId: id,
-          customerInfo: { name: cur.customer_name, email: cur.customer_email, phone: cur.customer_phone },
-          itemPrice: proposedSub,
+          // ★ お客様情報 (見積依頼の情報を引継ぎ)
+          customerInfo: {
+            name: cur.customer_name,
+            email: cur.customer_email,
+            phone: cur.customer_phone,
+            zip: '',
+            address1: '',
+            address2: '',
+          },
+          // ★ お届け先 (異なる場合のみ)
+          isRecipientDifferent: !!recipientInfo,
+          recipientInfo: recipientInfo,
+          receiveMethod,
+          // ★ 商品情報 (見積依頼の構造化データを反映)
+          flowerType: rd.flowerType || '',
+          flowerPurpose: rd.purpose === 'その他' ? rd.purposeOther : (rd.purpose || ''),
+          flowerColor: rd.colorPreference || '',
+          flowerVibe: '',
+          purposeNote: rd.otherNotes || rd.countSpec || '',
+          // ★ 配達希望日時
+          selectedDate: rd.desiredDate || '',
+          selectedTime: rd.desiredTime || '',
+          // ★ メッセージカード・立札
+          cardType: rd.cardType === 'message' ? 'メッセージカード' : (rd.cardType === 'tatefuda' ? '立札' : 'なし'),
+          cardMessage: rd.cardType === 'message' ? (rd.cardContent || '') : '',
+          // ★ 金額情報
+          itemPrice: Number(pd.productPrice) || proposedSub,
+          calculatedFee: (Number(pd.selfDeliveryFee) || 0) + (Number(pd.sagawaFee) || 0),
+          feeBreakdown: {
+            baseFee: (Number(pd.selfDeliveryFee) || 0) + (Number(pd.sagawaFee) || 0),
+            boxFee: Number(pd.boxFee) || 0,
+            coolFee: Number(pd.coolFee) || 0,
+          },
+          pickupFee: 0,
           totalAmount: proposedSub + tax,
-          note: `お見積依頼から確定: ${cur.request_content}\n\n店舗回答: ${cur.reply_message || ''}`,
+          // ★ 見積データの参照
+          note: `お見積もり依頼から確定 (見積ID: ${String(id).slice(0,8)})\n\n${cur.reply_message || ''}`,
           status: 'new',
           paymentMethod: 'bank_transfer',
+          paymentStatus: '未入金',
         },
         payment_status: 'unpaid',
       };

@@ -728,6 +728,35 @@ export default function EstimatePage() {
           💡 通常 1〜2 営業日以内にメールでお見積もり結果をご連絡いたします。<br/>
           内容にご納得いただいてから正式注文への変換が可能です。
         </div>
+
+        {/* ★ LINE連携の案内 (LINE設定が有効な店舗のみ) */}
+        {appSettings?.lineConfig?.enabled && appSettings?.lineConfig?.addFriendUrl && (
+          <div className="bg-[#06C755]/5 border-2 border-[#06C755]/30 rounded-2xl p-5 space-y-3">
+            <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2">
+              💬 LINEでも受け取り可能です
+            </p>
+            <p className="text-[11px] text-[#555] leading-relaxed">
+              当店公式LINEを友達追加していただくと、お見積もり結果や注文後の進捗・完成写真を
+              <strong className="text-[#06C755]">LINEのトーク</strong>でもお届けできます🌸<br/>
+              メール受信より気付きやすいのでおすすめです！
+            </p>
+            <div className="bg-white rounded-lg p-3 space-y-2">
+              <p className="text-[11px] font-bold text-[#2D4B3E]">📱 登録手順</p>
+              <ol className="text-[11px] text-[#555] leading-relaxed pl-4 list-decimal space-y-1">
+                <li>下のボタンから公式LINEを友達追加</li>
+                <li>リッチメニュー「📧 LINE連携する」をタップ</li>
+                <li>このフォームでご入力のメアド <strong>{form.customerEmail || 'XXX@example.com'}</strong> を送信</li>
+                <li>連携完了🎉 以降のお知らせがLINEにも届きます</li>
+              </ol>
+            </div>
+            <a href={appSettings.lineConfig.addFriendUrl}
+              target="_blank" rel="noopener noreferrer"
+              className="block w-full h-12 leading-[48px] text-center bg-[#06C755] hover:bg-[#05a548] text-white rounded-xl font-bold text-[13px]"
+            >
+              💬 当店公式LINEを友達追加する
+            </a>
+          </div>
+        )}
       </main>
     </div>
   );
