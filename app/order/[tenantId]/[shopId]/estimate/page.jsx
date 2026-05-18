@@ -76,6 +76,51 @@ export default function EstimatePage() {
   const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 });
 
   // ★ 参考画像のアップロード処理 (複数枚)
+  // ★ 画像を自動圧縮 (iPhone等の大きい写真でもアップ可能に)
+  //   長辺2000pxまでリサイズ + JPEG quality 0.85
+  async function compressImage(file, maxDim = 2000, quality = 0.85) {
+    // HEIC/HEIF はブラウザでデコードできないのでそのまま (Storage 側で受け付ける)
+    if (/heic|heif/i.test(file.type) || /\.heic$/i.test(file.name) || /\.heif$/i.test(file.name)) {
+      return file;
+    }
+    // 1MB以下はすでに小さいので圧縮不要
+    if (file.size <= 1 * 1024 * 1024) return file;
+
+    return new Promise((resolve) => {
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > height && width > maxDim) {
+            height = Math.round(height * maxDim / width);
+            width = maxDim;
+          } else if (height > maxDim) {
+            width = Math.round(width * maxDim / height);
+            height = maxDim;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              resolve(file); // 圧縮失敗時は元ファイルで進める
+              return;
+            }
+            const newName = file.name.replace(/\.(png|jpe?g|gif|webp|bmp)$/i, '.jpg');
+            resolve(new File([blob], newName, { type: 'image/jpeg' }));
+          }, 'image/jpeg', quality);
+        };
+        img.onerror = () => resolve(file); // フォールバック
+        img.src = e.target.result;
+      };
+      reader.onerror = () => resolve(file);
+      reader.readAsDataURL(file);
+    });
+  }
+
   async function handleImageUpload(e) {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -89,10 +134,10 @@ export default function EstimatePage() {
     if (files.length > remaining) {
       alert(`最大10枚までです。最初の${remaining}枚のみアップロードします。`);
     }
-    // 各ファイルのサイズチェック (各5MB以下)
+    // ★ サイズ上限を 20MB に緩和 (自動圧縮するので)
     for (const f of filesToUpload) {
-      if (f.size > 5 * 1024 * 1024) {
-        alert(`「${f.name}」は5MBを超えています。5MB以下の画像を選択してください。`);
+      if (f.size > 20 * 1024 * 1024) {
+        alert(`「${f.name}」は20MBを超えています。\n動画ファイルや非常に大きな画像は選択できません。\n20MB以下の画像を選択してください。`);
         return;
       }
     }
@@ -102,12 +147,19 @@ export default function EstimatePage() {
     const newUrls = [];
     try {
       for (let i = 0; i < filesToUpload.length; i++) {
-        const file = filesToUpload[i];
-        const fileExt = file.name.split('.').pop() || 'jpg';
+        // ★ クライアントサイドで自動圧縮 (1MB超は2000pxにリサイズ + JPEG)
+        let file;
+        try {
+          file = await compressImage(filesToUpload[i]);
+        } catch (err) {
+          console.warn('画像圧縮失敗、元のままアップ:', err);
+          file = filesToUpload[i];
+        }
+        const fileExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
         const fileName = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
         const filePath = `${tenantId}/estimates/${fileName}`;
         const { error: upErr } = await supabase.storage.from('portfolio').upload(filePath, file, {
-          contentType: file.type,
+          contentType: file.type || 'image/jpeg',
           upsert: false,
         });
         if (upErr) {
@@ -423,7 +475,7 @@ export default function EstimatePage() {
           <p className="text-[12px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">⑥ 参考画像 <span className="text-[10px] text-[#999]">（任意・最大10枚）</span></p>
           <p className="text-[11px] text-[#555] leading-relaxed">
             イメージに近いお写真があれば、お手元のスマホ画像・スクショをアップロードしてください。<br/>
-            <span className="text-[10px] text-[#999]">※ 1枚あたり最大5MB / JPG・PNG・HEIC等の画像形式</span>
+            <span className="text-[10px] text-[#999]">※ JPG・PNG・HEIC等 / iPhone等の大きい写真も自動で圧縮されます</span>
           </p>
 
           {/* アップロード済みプレビュー */}
@@ -455,7 +507,7 @@ export default function EstimatePage() {
                 <>
                   <Loader2 className="animate-spin text-[#117768]" size={32}/>
                   <span className="text-[12px] font-bold text-[#117768]">
-                    アップロード中... ({uploadProgress.done}/{uploadProgress.total})
+                    圧縮＆アップロード中... ({uploadProgress.done}/{uploadProgress.total})
                   </span>
                 </>
               ) : (
