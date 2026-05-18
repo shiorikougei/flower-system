@@ -133,7 +133,7 @@ export async function POST(request) {
                 shopPhone,
                 recipientInfo: formatRecipientInfo(od),
                 mypageUrl,
-                lineAddFriendUrl: formatLineAddFriendBlock(settings.lineConfig),
+                lineAddFriendUrl: formatLineAddFriendBlock(settings.lineConfig, customerEmail),
               };
               const { subject, body } = renderTemplate(tpl, vars);
               const html = bodyToHtml(body, { shopName });

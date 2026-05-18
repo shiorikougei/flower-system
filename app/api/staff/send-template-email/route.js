@@ -97,7 +97,7 @@ export async function POST(request) {
       completionImageUrl: od.completionImage || '',
       recipientInfo: formatRecipientInfo(od),
       mypageUrl: await createMypageMagicUrl({ supabaseAdmin, tenantId, shopId: od.shopId, email: customerEmail }),
-      lineAddFriendUrl: formatLineAddFriendBlock(settings.lineConfig),
+      lineAddFriendUrl: formatLineAddFriendBlock(settings.lineConfig, customerEmail),
     };
 
     const { subject, body } = renderTemplate(tpl, vars);

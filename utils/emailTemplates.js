@@ -349,19 +349,42 @@ export function findTemplateFor(triggerId, autoReplyTemplates, { shopId } = {}) 
 // ===============================================================
 // LINE友達追加URLを案内文化（{lineAddFriendUrl} 変数の置換用）
 // 設定がなければ空文字を返す（メール本文がスッキリ）
+// ※ customerEmail を渡せば「○○を送信してください」と具体的に案内
 // ===============================================================
-export function formatLineAddFriendBlock(lineConfig) {
+export function formatLineAddFriendBlock(lineConfig, customerEmail) {
   const url = lineConfig?.addFriendUrl || '';
   if (!url || !lineConfig?.enabled) return '';
+  const emailLine = customerEmail
+    ? `   ご登録メールアドレス: ${customerEmail}`
+    : '   ご登録のメールアドレス';
   return `
-━━━━━━━━━━━━━━━━━━━━
-💬 LINEでも通知を受け取れます
-━━━━━━━━━━━━━━━━━━━━
-LINE公式アカウントを友達追加 → メールアドレスを送信していただくと、
-ご注文進捗・完成写真・入金確認をLINEでもお届けします。
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💬 LINEでも進捗を受け取れます
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ご注文進捗・完成写真・入金確認を LINE でもお届けします。
+下記の手順で、簡単に登録できます🌸
 
-▼ 友達追加はこちらから
-${url}
+────────── 登録手順 ──────────
+
+  STEP 1 ▸ 公式LINEを友達追加
+  ${url}
+
+  STEP 2 ▸ トーク画面下部のリッチメニュー
+        「📧 LINE連携する」ボタンをタップ
+
+  STEP 3 ▸ FLORIX からメッセージが届きます
+        「メールアドレスを送信してください」
+
+  STEP 4 ▸ 下記のメールアドレスをトークに送信
+${emailLine}
+
+  STEP 5 ▸ 連携完了 🎉
+        以降、ご注文進捗を LINE にもお届けします
+
+──────────────────────────────
+
+  ※ 連携停止: マイページから個別解除が可能です
+  ※ 機種変更時: 新しいLINEで同じメアドを送れば自動で切替
 
 `;
 }
