@@ -6,6 +6,7 @@ import { ChevronLeft, Send, CheckCircle, XCircle, RefreshCw, Mail, Phone } from 
 export default function EstimatesPage() {
   const [tenantId, setTenantId] = useState(null);
   const [estimates, setEstimates] = useState([]);
+  const [appSettings, setAppSettings] = useState(null); // ★ 料金計算用
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [editingId, setEditingId] = useState(null);
@@ -32,8 +33,128 @@ export default function EstimatesPage() {
   }, []);
 
   useEffect(() => {
-    if (tenantId) loadEstimates();
+    if (tenantId) {
+      loadEstimates();
+      // ★ 料金計算用に店舗設定を取得
+      supabase.from('app_settings').select('settings_data').eq('id', tenantId).single()
+        .then(({ data }) => setAppSettings(data?.settings_data || null));
+    }
   }, [tenantId]);
+
+  // ★ 漢数字 → 算用数字 (住所判定用)
+  const normalizeAddress = (text) => {
+    if (!text) return '';
+    let res = text.replace(/[0-9]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+    const kMap = {'一':'1','二':'2','三':'3','四':'4','五':'5','六':'6','七':'7','八':'8','九':'9'};
+    res = res.replace(/三十([一二三四五六七八九])/g, (m,p) => '3'+kMap[p]);
+    res = res.replace(/二十([一二三四五六七八九])/g, (m,p) => '2'+kMap[p]);
+    res = res.replace(/十([一二三四五六七八九])/g, (m,p) => '1'+kMap[p]);
+    res = res.replace(/三十/g, '30').replace(/二十/g, '20').replace(/十/g, '10');
+    res = res.replace(/[一二三四五六七八九〇]/g, m => ({...kMap, '〇':'0'})[m] || m);
+    return res;
+  };
+
+  // ★ 自社配達料の自動計算 (住所から)
+  function calcSelfDeliveryFee(addr) {
+    if (!addr || !appSettings) return null;
+    const raw = String(addr).replace(/[\s　]+/g, '');
+    const normalized = normalizeAddress(raw);
+    // 札幌北区フリーエリア (北23-27条西3-5)
+    const northPatterns = ["23","24","25","26","27"];
+    const westPatterns = ["3","4","5"];
+    for (const n of northPatterns) for (const w of westPatterns) {
+      if (normalized.includes(`北${n}条西${w}`)) return 0;
+    }
+    // 店舗設定のエリア
+    const areas = appSettings?.deliveryAreas || [];
+    for (const a of areas) {
+      const keys = (a.name || '').split(',').map(k => k.trim()).filter(k => k);
+      if (keys.some(k => raw.includes(k) || normalized.includes(k))) return Number(a.fee);
+    }
+    // デフォルト判定
+    if (normalized.match(/厚別区|清田区|南区/)) return 1000;
+    if (normalized.match(/白石区|豊平区|手稲区|石狩市/)) return 800;
+    if (normalized.match(/北区|中央区|東区|西区/)) return 500;
+    return null; // エリア外
+  }
+
+  // ★ 業者配送料の自動計算 (住所から都道府県を抜き出して shippingRates と照合)
+  function calcSagawaFee(addr, boxSize = '80', productPrice = 0) {
+    if (!addr) return null;
+    const raw = String(addr).replace(/[\s　]+/g, '');
+    const prefMatch = raw.match(/^(北海道|東京都|(?:京都|大阪)府|.{2,3}県)/);
+    if (!prefMatch) return null;
+    const targetPref = prefMatch[1].replace(/(都|府|県)$/, '');
+    const searchPref = targetPref === '北海' ? '北海道' : targetPref;
+    let rateData = appSettings?.shippingRates?.find(r => r.prefs && r.prefs.includes(searchPref));
+    if (!rateData) rateData = appSettings?.shippingRates?.find(r => r.region && r.region.includes(searchPref));
+    if (!rateData) return null;
+    let baseFee = Number(rateData['fee' + boxSize]) || 0;
+    // 送料無料閾値
+    if (appSettings?.boxFeeConfig?.freeShippingThresholdEnabled && Number(productPrice) >= (appSettings.boxFeeConfig.freeShippingThreshold || 15000)) {
+      baseFee = 0;
+    }
+    return baseFee;
+  }
+
+  // ★ 箱代の自動計算
+  function calcBoxFee(productPrice = 0) {
+    const cfg = appSettings?.boxFeeConfig;
+    if (!cfg) return 0;
+    if (cfg.type === 'flat') return Number(cfg.flatFee) || 0;
+    if (cfg.type === 'price_based') {
+      const tiers = cfg.priceTiers || [];
+      const sorted = [...tiers].sort((a,b) => b.minPrice - a.minPrice);
+      const matched = sorted.find(t => Number(productPrice) >= Number(t.minPrice));
+      return matched ? Number(matched.fee) : 0;
+    }
+    return 0;
+  }
+
+  // ★ クール便代の自動計算
+  function calcCoolFee(addr, desiredDate, boxSize = '80') {
+    if (!addr || !desiredDate) return 0;
+    const cfg = appSettings?.boxFeeConfig;
+    if (!cfg?.coolBinEnabled) return 0;
+    const dObj = new Date(desiredDate);
+    if (isNaN(dObj.getTime())) return 0;
+    const mmdd = String(dObj.getMonth()+1).padStart(2,'0') + '-' + String(dObj.getDate()).padStart(2,'0');
+    const periods = cfg.coolBinPeriods || [];
+    const isCool = periods.some(p => mmdd >= p.start && mmdd <= p.end);
+    if (!isCool) return 0;
+    const raw = String(addr).replace(/[\s　]+/g, '');
+    const prefMatch = raw.match(/^(北海道|東京都|(?:京都|大阪)府|.{2,3}県)/);
+    if (!prefMatch) return 0;
+    const targetPref = prefMatch[1].replace(/(都|府|県)$/, '');
+    const searchPref = targetPref === '北海' ? '北海道' : targetPref;
+    let rateData = appSettings?.shippingRates?.find(r => r.prefs && r.prefs.includes(searchPref));
+    if (!rateData) rateData = appSettings?.shippingRates?.find(r => r.region && r.region.includes(searchPref));
+    return rateData ? (Number(rateData['cool'+boxSize]) || 0) : 0;
+  }
+
+  // ★ 見積編集開始時に料金を自動算出してフォームにセット
+  function startEditing(est) {
+    setEditingId(est.id);
+    const rd = est.request_data || {};
+    const addr = [rd.deliveryAddress1, rd.deliveryAddress2].filter(Boolean).join(' ') || rd.deliveryAddress || '';
+    const productPriceGuess = 0; // 商品代は店舗判断
+    const selfFee = calcSelfDeliveryFee(addr);
+    const sagawaFee = calcSagawaFee(addr, '80', productPriceGuess);
+    const boxFee = calcBoxFee(productPriceGuess);
+    const coolFee = calcCoolFee(addr, rd.desiredDate, '80');
+
+    setReplyForm({
+      productPrice: '',
+      selfDeliveryAccepted: rd.deliveryMethod === 'delivery' ? (selfFee !== null ? 'yes' : 'no') : '',
+      selfDeliveryFee: selfFee !== null ? String(selfFee) : '',
+      sagawaFee: sagawaFee !== null ? String(sagawaFee) : '',
+      boxFee: boxFee ? String(boxFee) : '',
+      coolFee: coolFee ? String(coolFee) : '',
+      otherFee: '',
+      otherFeeNote: '',
+      message: '',
+    });
+  }
 
   async function loadEstimates() {
     setLoading(true);
@@ -277,7 +398,7 @@ export default function EstimatesPage() {
 
                   {est.status === 'pending' && !isEditing && (
                     <div className="flex gap-2 pt-2">
-                      <button onClick={() => { setEditingId(est.id); setReplyForm({ productPrice: '', selfDeliveryAccepted: '', selfDeliveryFee: '', sagawaFee: '', boxFee: '', coolFee: '', otherFee: '', otherFeeNote: '', message: '' }); }}
+                      <button onClick={() => startEditing(est)}
                         className="flex-1 h-10 bg-[#117768] text-white text-[12px] font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-[#0d5e54]">
                         <Send size={12}/> 回答する
                       </button>
@@ -296,7 +417,28 @@ export default function EstimatesPage() {
 
                     return (
                     <div className="space-y-4 pt-3 border-t border-[#EAEAEA] bg-[#FBFAF9] -mx-6 px-6 py-4 rounded-b-2xl">
-                      <p className="text-[12px] font-bold text-[#117768]">💰 お見積もり料金 内訳</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[12px] font-bold text-[#117768]">💰 お見積もり料金 内訳</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // ★ 商品代を含めて再計算
+                            const addr = [rd.deliveryAddress1, rd.deliveryAddress2].filter(Boolean).join(' ') || rd.deliveryAddress || '';
+                            const pp = Number(replyForm.productPrice) || 0;
+                            setReplyForm(f => ({
+                              ...f,
+                              selfDeliveryFee: calcSelfDeliveryFee(addr) !== null ? String(calcSelfDeliveryFee(addr)) : f.selfDeliveryFee,
+                              sagawaFee: calcSagawaFee(addr, '80', pp) !== null ? String(calcSagawaFee(addr, '80', pp)) : f.sagawaFee,
+                              boxFee: String(calcBoxFee(pp) || ''),
+                              coolFee: String(calcCoolFee(addr, rd.desiredDate, '80') || ''),
+                            }));
+                          }}
+                          className="text-[10px] bg-[#117768]/10 text-[#117768] px-3 py-1 rounded-full font-bold hover:bg-[#117768] hover:text-white"
+                        >
+                          🔄 商品代から再計算
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-[#999] -mt-2">※ 配送料・箱代・クール代は住所と希望日から自動算出済み。変更可能です。</p>
 
                       {/* 商品代 */}
                       <div>
