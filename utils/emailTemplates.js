@@ -49,10 +49,31 @@ export const EMAIL_TRIGGERS = [
   },
   {
     id: 'delivery_completion',
-    label: 'お渡し・配達完了',
-    description: '商品をお渡しまたは配達完了したお客様への完了通知（手動）',
+    label: 'お渡し・配達完了 (旧・手動送信用)',
+    description: '互換性のため残存。新規はステータス連動の3種類をご利用ください',
     auto: false,
     variables: ['customerName', 'shopName', 'orderId'],
+  },
+  {
+    id: 'status_pickup_done',
+    label: '店頭お渡し完了 通知',
+    description: 'ステータスを「店頭お渡し完了」に更新した時に自動送信 (確認ダイアログあり)',
+    auto: true,
+    variables: ['customerName', 'shopName', 'orderId', 'orderItems', 'shopPhone'],
+  },
+  {
+    id: 'status_delivery_done',
+    label: '配達完了 通知',
+    description: 'ステータスを「配達完了」に更新した時に自動送信 (確認ダイアログあり)',
+    auto: true,
+    variables: ['customerName', 'shopName', 'orderId', 'orderItems', 'recipientInfo', 'shopPhone'],
+  },
+  {
+    id: 'status_shipping_done',
+    label: '配送業者引き渡し完了 通知',
+    description: 'ステータスを「配送業者引き渡し完了」に更新した時に自動送信 (確認ダイアログあり)',
+    auto: true,
+    variables: ['customerName', 'shopName', 'orderId', 'orderItems', 'recipientInfo', 'shippingDate', 'shopPhone'],
   },
   {
     id: 'custom',
@@ -262,6 +283,106 @@ TEL: {shopPhone}
 お気軽にお問い合わせください。
 
 またのご利用を心よりお待ちしております。
+
+{shopName}`,
+    },
+    // ★ 店頭お渡し完了 (status: 店頭お渡し完了)
+    {
+      id: 'preset_status_pickup_done',
+      trigger: 'status_pickup_done',
+      targetShops: 'all',
+      enabled: true,
+      subject: '【{shopName}】お引き取りありがとうございました (注文番号: {orderId})',
+      body: `{customerName} 様
+
+本日はご来店ありがとうございました🌸
+
+下記のご注文のお品物を、確かにお渡しいたしました。
+
+━━━━━━━━━━━━━━━━━━━━
+ご注文番号: {orderId}
+━━━━━━━━━━━━━━━━━━━━
+
+【ご注文内容】
+{orderItems}
+
+お花のお手入れ・水替え方法などご不明な点がございましたら、
+お気軽にお問い合わせください。
+
+ご不明な点がございましたら {shopName} までご連絡ください。
+TEL: {shopPhone}
+
+またのご利用を心よりお待ちしております🌷
+
+{shopName}`,
+    },
+    // ★ 配達完了 (status: 配達完了)
+    {
+      id: 'preset_status_delivery_done',
+      trigger: 'status_delivery_done',
+      targetShops: 'all',
+      enabled: true,
+      subject: '【{shopName}】お花をお届けいたしました (注文番号: {orderId})',
+      body: `{customerName} 様
+
+いつもありがとうございます🌸
+
+下記のご注文のお花を、本日お届けいたしました。
+ご確認のほどよろしくお願いいたします。
+
+━━━━━━━━━━━━━━━━━━━━
+ご注文番号: {orderId}
+━━━━━━━━━━━━━━━━━━━━
+
+【ご注文内容】
+{orderItems}
+
+{recipientInfo}
+お花を末永くお楽しみいただけますよう、こまめな水替えを
+おすすめいたします💐
+
+ご不明な点がございましたら {shopName} までご連絡ください。
+TEL: {shopPhone}
+
+またのご利用を心よりお待ちしております🌷
+
+{shopName}`,
+    },
+    // ★ 配送業者引き渡し完了 (status: 配送業者引き渡し完了)
+    {
+      id: 'preset_status_shipping_done',
+      trigger: 'status_shipping_done',
+      targetShops: 'all',
+      enabled: true,
+      subject: '【{shopName}】お花を発送いたしました (注文番号: {orderId})',
+      body: `{customerName} 様
+
+いつもありがとうございます🌸
+
+下記のご注文のお花を、本日配送業者へお引き渡しいたしました。
+通常 翌日〜数日以内 にお届け予定です。
+
+━━━━━━━━━━━━━━━━━━━━
+ご注文番号: {orderId}
+━━━━━━━━━━━━━━━━━━━━
+
+【ご注文内容】
+{orderItems}
+
+{recipientInfo}
+【発送日】
+{shippingDate}
+
+お花の鮮度保持のため、お受け取り後は早めに開梱して
+水替えをお願いいたします💐
+
+万一お届けに関する問題（配送遅延・破損等）がございましたら、
+直接配送業者へお問い合わせください。
+
+ご不明な点がございましたら {shopName} までご連絡ください。
+TEL: {shopPhone}
+
+またのご利用を心よりお待ちしております🌷
 
 {shopName}`,
     },

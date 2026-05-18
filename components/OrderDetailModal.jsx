@@ -24,6 +24,9 @@ export default function OrderDetailModal({
   });
   
   const [isUploading, setIsUploading] = useState(false);
+  // ★ 完成写真メール送信前の確認モーダル用 state
+  const [completionMailPreview, setCompletionMailPreview] = useState(null); // { images, customerEmail } | null
+  const [isSendingMail, setIsSendingMail] = useState(false);
 
   // ★ 新規追加：メールテンプレート選択メニューの表示状態
   const [showMailTemplates, setShowMailTemplates] = useState(false);
@@ -190,42 +193,51 @@ export default function OrderDetailModal({
       order.order_data.completionImages = allImages;
       order.order_data.completionImage = allImages[0];
 
-      // ★ 完成写真メールを自動送信（お客様メアド + テンプレート設定がある場合のみ）
-      let mailMessage = '';
+      // ★ 完成写真メールは自動送信せず、確認モーダルでプレビュー → 送信
       const customerEmail = modalData.customerInfo?.email;
       if (customerEmail) {
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            const res = await fetch('/api/staff/send-template-email', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${session.access_token}`,
-              },
-              body: JSON.stringify({ orderId: order.id, triggerId: 'completion_photo' }),
-            });
-            const data = await res.json();
-            if (res.ok && data.sent) {
-              mailMessage = `\n📧 お客様（${customerEmail}）に完成写真メールを自動送信しました！`;
-            } else {
-              mailMessage = `\n⚠️ メール送信できませんでした: ${data.error || '原因不明'}`;
-            }
-          }
-        } catch (e) {
-          mailMessage = `\n⚠️ メール送信に失敗: ${e.message}`;
-        }
+        setCompletionMailPreview({ images: allImages, customerEmail });
       } else {
-        mailMessage = '\n（お客様のメアドが登録されてないため、メール送信スキップ）';
+        alert('完成写真をアップロードしました 🎉\n（お客様のメアドが登録されてないため、メール送信はスキップされます）');
       }
-
-      alert(`完成写真をアップロードしました 🎉${mailMessage}`);
 
     } catch (error) {
       console.error('Upload Error:', error);
       alert('画像のアップロードに失敗しました。');
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  // ★ 完成写真メール送信を実行 (確認モーダルから呼ばれる)
+  const sendCompletionPhotoMail = async () => {
+    if (!completionMailPreview) return;
+    setIsSendingMail(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('セッションが切れています。再ログインしてください。');
+        return;
+      }
+      const res = await fetch('/api/staff/send-template-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ orderId: order.id, triggerId: 'completion_photo' }),
+      });
+      const data = await res.json();
+      if (res.ok && data.sent) {
+        alert(`📧 お客様（${completionMailPreview.customerEmail}）に完成写真メールを送信しました🎉`);
+        setCompletionMailPreview(null);
+      } else {
+        alert(`⚠️ メール送信できませんでした: ${data.error || '原因不明'}`);
+      }
+    } catch (e) {
+      alert(`⚠️ メール送信に失敗: ${e.message}`);
+    } finally {
+      setIsSendingMail(false);
     }
   };
 
@@ -850,9 +862,54 @@ export default function OrderDetailModal({
                 <option value="キャンセル">キャンセル</option>
               </select>
               {/* 担当者選択は廃止：現在ログイン中のスタッフを自動使用 */}
-              <button onClick={() => {
+              <button onClick={async () => {
                 const currentStaff = (typeof window !== 'undefined') ? JSON.parse(localStorage.getItem('florix_currentStaff') || 'null') : null;
                 const autoStaff = currentStaff?.name || '';
+
+                // ★ 完了系ステータスの場合、メール送信を確認
+                const COMPLETION_STATUS_MAP = {
+                  '店頭お渡し完了': { trigger: 'status_pickup_done', label: '店頭お渡し完了' },
+                  '配達完了': { trigger: 'status_delivery_done', label: '配達完了' },
+                  '配送業者引き渡し完了': { trigger: 'status_shipping_done', label: '配送業者引き渡し完了' },
+                };
+                const completionInfo = COMPLETION_STATUS_MAP[updateForm.status];
+                const customerEmail = modalData.customerInfo?.email;
+
+                if (completionInfo && customerEmail) {
+                  const sendMail = window.confirm(
+                    `ステータスを「${completionInfo.label}」に更新します。\n\n` +
+                    `お客様（${customerEmail}）に「${completionInfo.label} のお知らせ」メールを自動送信しますか？\n\n` +
+                    `[OK] 更新＋メール送信\n[キャンセル] 更新のみ（メール送信なし）`
+                  );
+
+                  if (sendMail) {
+                    // メール送信API呼び出し
+                    try {
+                      const { supabase } = await import('@/utils/supabase');
+                      const { data: { session } } = await supabase.auth.getSession();
+                      const res = await fetch('/api/staff/send-template-email', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          Authorization: `Bearer ${session?.access_token || ''}`,
+                        },
+                        body: JSON.stringify({
+                          orderId: order.id,
+                          triggerId: completionInfo.trigger,
+                        }),
+                      });
+                      const result = await res.json();
+                      if (res.ok) {
+                        alert(`📧 ${completionInfo.label}のお知らせメールを送信しました`);
+                      } else {
+                        alert('メール送信失敗: ' + (result.error || '不明なエラー'));
+                      }
+                    } catch (e) {
+                      alert('メール送信エラー: ' + e.message);
+                    }
+                  }
+                }
+
                 onUpdateStatus(order.id, updateForm.status, autoStaff);
               }} className="h-10 px-4 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-xl hover:bg-[#1f352b] transition-all shadow-sm">
                 更新
@@ -1254,6 +1311,71 @@ export default function OrderDetailModal({
               >
                 {isProcessingPayment ? '送信中...' : <><CheckCircle2 size={15}/>確定 + メール送信</>}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ★ 完成写真メール送信前の確認モーダル */}
+      {completionMailPreview && (
+        <div className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl">
+            <div className="sticky top-0 bg-white border-b border-[#EAEAEA] px-6 py-4 flex items-center justify-between rounded-t-2xl">
+              <h3 className="text-[15px] font-bold text-[#2D4B3E]">📧 完成写真メールの送信確認</h3>
+              <button
+                onClick={() => setCompletionMailPreview(null)}
+                className="text-[#999] hover:text-[#111] text-[20px] font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-[12px] text-amber-900 leading-relaxed">
+                  ⚠️ 下記の内容で <strong>{completionMailPreview.customerEmail}</strong> 宛にメールを送信します。<br/>
+                  写真の内容に問題ないか、ご確認の上「送信する」を押してください。
+                </p>
+              </div>
+
+              {/* 写真プレビュー */}
+              <div>
+                <p className="text-[11px] font-bold text-[#999] mb-2">📷 送信される完成写真 ({completionMailPreview.images.length}枚)</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {completionMailPreview.images.map((url, idx) => (
+                    <div key={idx} className="relative aspect-square bg-[#FBFAF9] rounded-lg overflow-hidden border border-[#EAEAEA]">
+                      <img src={url} alt={`完成写真${idx+1}`} className="w-full h-full object-cover"/>
+                      <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] px-2 py-0.5 rounded-full">
+                        {idx+1}枚目
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* メール本文のサマリー */}
+              <div className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg p-3">
+                <p className="text-[10px] font-bold text-[#999] mb-1">📝 メール本文の概要</p>
+                <p className="text-[12px] text-[#222] leading-relaxed">
+                  「ご注文の商品が完成しました🌸」とご案内し、上の写真と注文情報・お届け予定日を記載します。<br/>
+                  <span className="text-[10px] text-[#999]">※本文の詳細はオーナーページ → 案内文管理 → 「完成写真のお知らせ」でカスタマイズできます</span>
+                </p>
+              </div>
+
+              <div className="flex gap-2 pt-3 border-t border-[#EAEAEA]">
+                <button
+                  onClick={() => setCompletionMailPreview(null)}
+                  className="flex-1 h-11 bg-white border border-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-xl hover:bg-[#FBFAF9]"
+                >
+                  キャンセル (送信しない)
+                </button>
+                <button
+                  onClick={sendCompletionPhotoMail}
+                  disabled={isSendingMail}
+                  className="flex-1 h-11 bg-[#117768] text-white text-[12px] font-bold rounded-xl hover:bg-[#0f6358] disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {isSendingMail ? '送信中...' : <>📧 この内容で送信</>}
+                </button>
+              </div>
             </div>
           </div>
         </div>
