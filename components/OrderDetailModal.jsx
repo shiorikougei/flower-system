@@ -112,19 +112,33 @@ export default function OrderDetailModal({
 
   const getStatusOptions = () => {
     const config = appSettings?.statusConfig;
+    let labels = [];
+
     // ★ EC注文 → ecLabels を優先
     if (modalData?.isEc || modalData?.cartItems?.length > 0) {
-      if (config?.ecLabels?.length > 0) return config.ecLabels;
-      return ['受注', '発送準備中', '発送済み', '完了'];
+      labels = (config?.ecLabels?.length > 0) ? [...config.ecLabels] : ['受注', '発送準備中', '発送済み'];
+    } else {
+      // ★ 花の種類別ステータス（オーダー商品）
+      const ft = modalData?.flowerType;
+      if (ft && config?.orderTypeLabels?.[ft]?.length > 0) {
+        labels = [...config.orderTypeLabels[ft]];
+      } else if (config?.type === 'custom' && config?.customLabels?.length > 0) {
+        labels = [...config.customLabels];
+      } else {
+        labels = ['受注', '制作', '配達', '片付'];
+      }
     }
-    // ★ 花の種類別ステータス（オーダー商品）
-    const ft = modalData?.flowerType;
-    if (ft && config?.orderTypeLabels?.[ft]?.length > 0) {
-      return config.orderTypeLabels[ft];
+
+    // ★ 受取方法に応じた完了ステータスを末尾に自動追加（共通システムステータス）
+    const rm = modalData?.receiveMethod;
+    const completionStatus = rm === 'pickup' ? '店頭お渡し完了'
+      : rm === 'delivery' ? '配達完了'
+      : rm === 'sagawa' ? '配送業者引き渡し完了'
+      : null;
+    if (completionStatus && !labels.includes(completionStatus)) {
+      labels.push(completionStatus);
     }
-    // ★ オーダー共通
-    if (config?.type === 'custom' && config?.customLabels?.length > 0) return config.customLabels;
-    return ['受注', '制作', '配達', '片付', '請求'];
+    return labels;
   };
 
   const isOsonae = modalData.flowerPurpose?.includes('供') || modalData.flowerPurpose?.includes('悔') || modalData.flowerPurpose?.includes('葬') || modalData.flowerPurpose?.includes('忌');
@@ -826,14 +840,13 @@ export default function OrderDetailModal({
             
             <div className="flex flex-wrap items-center gap-2 bg-[#FBFAF9] p-2 rounded-2xl border border-[#EAEAEA]">
               <span className="text-[11px] font-bold text-[#999999] px-2 flex items-center gap-1 hidden sm:flex"><ListChecks size={14}/> ステータス更新</span>
-              <select 
+              <select
                 value={updateForm.status}
                 onChange={(e) => setUpdateForm({...updateForm, status: e.target.value})}
                 className="h-10 bg-white border border-[#EAEAEA] rounded-xl px-3 text-[12px] font-bold outline-none shadow-sm cursor-pointer"
               >
                 <option value="new">未対応 (新規)</option>
                 {getStatusOptions().map(l => <option key={l} value={l}>{l}</option>)}
-                <option value="完了">完了</option>
                 <option value="キャンセル">キャンセル</option>
               </select>
               {/* 担当者選択は廃止：現在ログイン中のスタッフを自動使用 */}

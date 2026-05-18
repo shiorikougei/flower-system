@@ -481,10 +481,29 @@ export default function SettingsPage() {
 
     return (
       <div className="space-y-6 animate-in fade-in">
+        {/* ★ 共通システムステータスのご案内 */}
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 space-y-2">
+          <h3 className="text-[14px] font-bold text-emerald-900 flex items-center gap-2">
+            ℹ️ 完了ステータスは自動で追加されます
+          </h3>
+          <p className="text-[12px] text-emerald-800 leading-relaxed">
+            下記の完了ステータスは <strong>受取方法に応じて自動で末尾に追加</strong> されます。
+            カスタムステータス設定では設定不要です。
+          </p>
+          <ul className="text-[11px] text-emerald-700 space-y-1 pl-4">
+            <li>・店頭受取の注文 → <strong>「店頭お渡し完了」</strong> が自動で選択肢に表示</li>
+            <li>・自社配達の注文 → <strong>「配達完了」</strong> が自動で選択肢に表示</li>
+            <li>・業者配送の注文 → <strong>「配送業者引き渡し完了」</strong> が自動で選択肢に表示</li>
+          </ul>
+          <p className="text-[10px] text-emerald-600 pt-1 border-t border-emerald-200">
+            💡 注文詳細画面のステータス更新ドロップダウンに、受取方法に該当するもののみ表示されます。
+          </p>
+        </div>
+
         {/* ① オーダー商品共通ステータス（既存） */}
         <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-4">
           <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><ListChecks size={20}/> オーダー商品 共通ステータス</h2>
-          <p className="text-[11px] text-[#999]">花の種類別に個別設定がない場合、こちらが適用されます。</p>
+          <p className="text-[11px] text-[#999]">花の種類別に個別設定がない場合、こちらが適用されます。<span className="text-emerald-700 font-bold">完了系ステータスは自動追加されるので、制作・準備段階のステータスのみ設定してください。</span></p>
           <div className="flex gap-2 p-1 bg-[#F7F7F7] rounded-xl mb-4">
             {['template', 'custom'].map(t => (
               <button key={t} onClick={() => setStatusConfig({...statusConfig, type: t})} className={`flex-1 py-3 rounded-lg font-bold text-[12px] ${statusConfig.type === t ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}>{t === 'template' ? '標準' : 'カスタム'}</button>

@@ -150,6 +150,13 @@ function StaffProductsPageInner() {
         display_order: Number(editTarget.display_order) || 0,
       };
 
+      // ★ 在庫が 0→>0 に増えたかを判定するため、更新前の在庫を取得
+      let prevStock = null;
+      if (editTarget.id) {
+        const { data: prev } = await supabase.from('products').select('stock').eq('id', editTarget.id).single();
+        prevStock = prev?.stock ?? null;
+      }
+
       if (editTarget.id) {
         const { error } = await supabase.from('products').update(payload).eq('id', editTarget.id);
         if (error) throw error;
@@ -158,7 +165,34 @@ function StaffProductsPageInner() {
         if (error) throw error;
       }
 
-      setMessage({ type: 'success', text: editTarget.id ? '商品を更新しました' : '商品を追加しました' });
+      // ★ 在庫が 0 から +以上になった場合、入荷通知を自動送信
+      let autoNotifyMsg = '';
+      if (editTarget.id && (prevStock === 0 || prevStock === null) && Number(payload.stock) > 0) {
+        // 通知待ちがあるかチェック
+        const pendingCount = pendingNotifyCounts[editTarget.id] || 0;
+        if (pendingCount > 0) {
+          // 自動で dispatch APIを呼ぶ
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch('/api/stock-notify/dispatch', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session?.access_token || ''}`,
+              },
+              body: JSON.stringify({ productId: editTarget.id }),
+            });
+            const result = await res.json();
+            if (result.sent > 0) {
+              autoNotifyMsg = ` / 📧 入荷通知を自動送信しました (${result.sent}件)`;
+            }
+          } catch (e) {
+            console.warn('入荷通知自動送信失敗:', e);
+          }
+        }
+      }
+
+      setMessage({ type: 'success', text: (editTarget.id ? '商品を更新しました' : '商品を追加しました') + autoNotifyMsg });
       setEditTarget(null);
       await initData();
     } catch (err) {
