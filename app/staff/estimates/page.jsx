@@ -135,7 +135,7 @@ export default function EstimatesPage() {
     const addr = [rd.deliveryAddress1, rd.deliveryAddress2].filter(Boolean).join(' ') || rd.deliveryAddress || '';
     const productPriceGuess = 0; // 商品代は店舗判断
     const selfFee = calcSelfDeliveryFee(addr);
-    const sagawaFee = calcSagawaFee(addr, '80'Guess);
+    const sagawaFee = calcSagawaFee(addr, '80');
     const boxFee = calcBoxFee(productPriceGuess);
     const coolFee = calcCoolFee(addr, rd.desiredDate, '80');
 
