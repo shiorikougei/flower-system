@@ -261,8 +261,16 @@ export default function OwnerDashboard() {
     } catch {}
   };
   const authHeaders = async () => {
+    // ★ Supabaseセッションがあればトークン、無ければオーナーパスワードを送る
     const { data: { session } } = await supabase.auth.getSession();
-    return { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` };
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-owner-password': password || 'nocolde2026',
+    };
+    if (session?.access_token) {
+      headers.Authorization = `Bearer ${session.access_token}`;
+    }
+    return headers;
   };
   const markInvoicePaid = async (id, paid) => {
     try {
@@ -277,10 +285,9 @@ export default function OwnerDashboard() {
   const deleteInvoice = async (id) => {
     if (!confirm('この請求記録を削除しますか？')) return;
     try {
-      const { data: { session } } = await supabase.auth.getSession();
       await fetch(`/api/admin/invoice-record?id=${encodeURIComponent(id)}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+        headers: await authHeaders(),
       });
       await reloadInvoices();
     } catch (e) { alert('削除失敗: ' + e.message); }
@@ -1697,13 +1704,12 @@ export default function OwnerDashboard() {
           const handleClear = async (target, label) => {
             if (!confirm(`本当に「${label}」を全件削除しますか？\n（店舗設定や機能ON/OFFは保たれます）\nこの操作は取り消せません。`)) return;
             try {
-              // ★ 認証トークン取得 (super admin判定用)
-              const { data: { session } } = await supabase.auth.getSession();
+              // ★ オーナーパスワード方式で認証 (Supabaseログイン不要)
               const res = await fetch('/api/admin/danger-clear', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  Authorization: `Bearer ${session?.access_token || ''}`,
+                  'x-owner-password': password || 'nocolde2026',
                 },
                 body: JSON.stringify({ targets: [target] }),
               });

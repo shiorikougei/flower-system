@@ -15,6 +15,9 @@ const SUPER_ADMIN_EMAILS = [
   'shiorikougei@gmail.com',  // しーちゃん
 ];
 
+// NocoLde オーナー管理ページのパスワード（フロントの handleLogin と一致させる）
+const OWNER_PASSWORD = process.env.OWNER_PASSWORD || 'nocolde2026';
+
 /**
  * Bearer token で認証ユーザーを取得
  * @returns { ok: boolean, user?, tenant_id?, response?(NextResponse) }
@@ -47,8 +50,21 @@ export async function requireAuthedUser(request) {
 
 /**
  * NocoLde スーパー管理者のみ許可
+ *   - Bearer トークン (Supabase) でメアドが whitelist にあればOK
+ *   - もしくは x-owner-password ヘッダで OWNER_PASSWORD と一致すればOK
  */
 export async function requireOwner(request) {
+  // ★ オーナーパスワード方式 (Supabaseログイン不要)
+  const pwHeader = request.headers.get('x-owner-password') || '';
+  if (pwHeader && pwHeader === OWNER_PASSWORD) {
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+    return { ok: true, user: { email: 'owner@nocolde' }, supabaseAdmin, viaOwnerPassword: true };
+  }
+
+  // ★ Bearer トークン方式
   const auth = await requireAuthedUser(request);
   if (!auth.ok) return auth;
   const email = (auth.user.email || '').toLowerCase();
