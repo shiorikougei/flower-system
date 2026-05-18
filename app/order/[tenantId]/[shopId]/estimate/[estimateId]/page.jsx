@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
 import { CheckCircle2, AlertCircle, ChevronLeft, CreditCard, Banknote } from 'lucide-react';
+import TatefudaPreview from '@/components/TatefudaPreview';
 
 export default function EstimateAcceptPage() {
   const params = useParams();
@@ -81,14 +82,14 @@ export default function EstimateAcceptPage() {
   const isOsonae = rd.purpose?.includes('供') || rd.purpose?.includes('悔') || rd.purpose === 'お供え・お悔やみ';
   const needsTatefuda = rd.cardType === 'tatefuda';
   const tatePatterns = isOsonae ? [
-    { id: 'p1', label: '① 御供｜横型 (背景あり)', needs: ['3'] },
-    { id: 'p3', label: '② 御供｜縦型 (シンプル)', needs: ['3'] },
-    { id: 'p4', label: '③ 御供｜縦型 (会社名入)', needs: ['3a', '3b'] },
+    { id: 'p1', label: '① 御供｜横型 (背景あり)', needs: ['3'], layout: 'horizontal' },
+    { id: 'p3', label: '② 御供｜縦型 (シンプル)', needs: ['3'], layout: 'vertical' },
+    { id: 'p4', label: '③ 御供｜縦型 (会社名入)', needs: ['3a', '3b'], layout: 'vertical' },
   ] : [
-    { id: 'p5', label: '⑤ 祝｜横型 (スタンダード)', needs: ['1', '3'] },
-    { id: 'p6', label: '⑥ 祝｜横型 (様へ構成)', needs: ['1', '2', '3'] },
-    { id: 'p7', label: '⑦ 祝｜縦型 (二列構成)', needs: ['1', '3'] },
-    { id: 'p8', label: '⑧ 祝｜縦型 (三列完成版)', needs: ['1', '2', '3'] },
+    { id: 'p5', label: '⑤ 祝｜横型 (スタンダード)', needs: ['1', '3'], layout: 'horizontal' },
+    { id: 'p6', label: '⑥ 祝｜横型 (様へ構成)', needs: ['1', '2', '3'], layout: 'horizontal' },
+    { id: 'p7', label: '⑦ 祝｜縦型 (二列構成)', needs: ['1', '3'], layout: 'vertical' },
+    { id: 'p8', label: '⑧ 祝｜縦型 (三列完成版)', needs: ['1', '2', '3'], layout: 'vertical' },
   ];
   const selectedPattern = tatePatterns.find(p => p.id === orderForm.tatePattern);
 
@@ -406,6 +407,19 @@ export default function EstimateAcceptPage() {
                 {selectedPattern.needs.includes('3') && <input type="text" placeholder="③ 贈り主 (例: 株式会社〇〇)" value={orderForm.tateInput3} onChange={e => setOrderForm({...orderForm, tateInput3: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>}
                 {selectedPattern.needs.includes('3a') && <input type="text" placeholder="③-1 会社名" value={orderForm.tateInput3a} onChange={e => setOrderForm({...orderForm, tateInput3a: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>}
                 {selectedPattern.needs.includes('3b') && <input type="text" placeholder="③-2 役職・氏名" value={orderForm.tateInput3b} onChange={e => setOrderForm({...orderForm, tateInput3b: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>}
+
+                {/* ★ 仕上がりプレビュー */}
+                <p className="text-[10px] font-bold text-[#999] text-center pt-3 mb-1">仕上がりプレビュー</p>
+                <TatefudaPreview
+                  tatePattern={orderForm.tatePattern}
+                  layout={selectedPattern.layout}
+                  isOsonae={isOsonae}
+                  input1={orderForm.tateInput1}
+                  input2={orderForm.tateInput2}
+                  input3={orderForm.tateInput3}
+                  input3a={orderForm.tateInput3a}
+                  input3b={orderForm.tateInput3b}
+                />
               </div>
             )}
           </div>

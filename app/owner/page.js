@@ -1697,9 +1697,14 @@ export default function OwnerDashboard() {
           const handleClear = async (target, label) => {
             if (!confirm(`本当に「${label}」を全件削除しますか？\n（店舗設定や機能ON/OFFは保たれます）\nこの操作は取り消せません。`)) return;
             try {
+              // ★ 認証トークン取得 (super admin判定用)
+              const { data: { session } } = await supabase.auth.getSession();
               const res = await fetch('/api/admin/danger-clear', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${session?.access_token || ''}`,
+                },
                 body: JSON.stringify({ targets: [target] }),
               });
               const data = await res.json();

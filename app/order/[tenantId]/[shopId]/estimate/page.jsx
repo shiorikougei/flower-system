@@ -332,16 +332,46 @@ export default function EstimatePage() {
   if (done) {
     return (
       <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-white p-10 rounded-3xl border border-[#EAEAEA] text-center space-y-4 shadow-xl">
-          <div className="w-16 h-16 mx-auto bg-emerald-50 rounded-full flex items-center justify-center">
-            <CheckCircle2 size={32} className="text-emerald-600"/>
+        <div className="max-w-lg w-full bg-white p-8 rounded-3xl border border-[#EAEAEA] space-y-5 shadow-xl">
+          <div className="text-center space-y-3">
+            <div className="w-16 h-16 mx-auto bg-emerald-50 rounded-full flex items-center justify-center">
+              <CheckCircle2 size={32} className="text-emerald-600"/>
+            </div>
+            <h1 className="text-[18px] font-bold text-[#2D4B3E]">お見積もりのご依頼を受け付けました</h1>
+            <p className="text-[12px] text-[#555] leading-relaxed">
+              内容を確認の上、お見積もり結果をご登録のメールアドレス宛にお送りいたします。<br/>
+              通常 1〜2営業日以内にご連絡いたします🌸
+            </p>
           </div>
-          <h1 className="text-[18px] font-bold text-[#2D4B3E]">お見積もりのご依頼を受け付けました</h1>
-          <p className="text-[12px] text-[#555] leading-relaxed">
-            内容を確認の上、お見積もり結果をご登録のメールアドレス宛にお送りいたします。<br/>
-            通常 1〜2営業日以内にご連絡いたします🌸
-          </p>
-          <Link href={`/order/${tenantId}/${shopId}`} className="inline-block px-6 h-12 leading-[48px] bg-[#2D4B3E] text-white rounded-xl text-[13px] font-bold">
+
+          {/* ★ 送信後のLINE案内 (離脱率にならないようここに表示) */}
+          {appSettings?.lineConfig?.enabled && appSettings?.lineConfig?.addFriendUrl && (
+            <div className="bg-[#06C755]/5 border-2 border-[#06C755]/30 rounded-2xl p-5 space-y-3 mt-4">
+              <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2">
+                💬 LINEでも受け取り可能です
+              </p>
+              <p className="text-[11px] text-[#555] leading-relaxed">
+                公式LINEを友達追加していただくと、お見積もり結果や注文後の進捗・完成写真を
+                <strong className="text-[#06C755]">LINEのトーク</strong>でもお届けできます🌸<br/>
+                メール受信より気付きやすいのでおすすめです！
+              </p>
+              <div className="bg-white rounded-lg p-3 space-y-2">
+                <p className="text-[11px] font-bold text-[#2D4B3E]">📱 登録手順</p>
+                <ol className="text-[11px] text-[#555] leading-relaxed pl-4 list-decimal space-y-1">
+                  <li>下のボタンから公式LINEを友達追加</li>
+                  <li>リッチメニュー「📧 LINE連携する」をタップ</li>
+                  <li>ご入力のメアド <strong>{form.customerEmail}</strong> を送信</li>
+                  <li>連携完了🎉</li>
+                </ol>
+              </div>
+              <a href={appSettings.lineConfig.addFriendUrl} target="_blank" rel="noopener noreferrer"
+                className="block w-full h-12 leading-[48px] text-center bg-[#06C755] hover:bg-[#05a548] text-white rounded-xl font-bold text-[13px]">
+                💬 当店公式LINEを友達追加する
+              </a>
+            </div>
+          )}
+
+          <Link href={`/order/${tenantId}/${shopId}`} className="block text-center px-6 h-12 leading-[48px] bg-[#2D4B3E] text-white rounded-xl text-[13px] font-bold">
             トップに戻る
           </Link>
         </div>
@@ -729,27 +759,10 @@ export default function EstimatePage() {
           内容にご納得いただいてから正式注文への変換が可能です。
         </div>
 
-        {/* ★ LINE連携の案内 (LINE設定が有効な店舗のみ) */}
-        {appSettings?.lineConfig?.enabled && appSettings?.lineConfig?.addFriendUrl && (
+        {/* LINE案内は依頼完了後の画面に表示するので、ここでは非表示 */}
+        {false && (
           <div className="bg-[#06C755]/5 border-2 border-[#06C755]/30 rounded-2xl p-5 space-y-3">
-            <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2">
-              💬 LINEでも受け取り可能です
-            </p>
-            <p className="text-[11px] text-[#555] leading-relaxed">
-              当店公式LINEを友達追加していただくと、お見積もり結果や注文後の進捗・完成写真を
-              <strong className="text-[#06C755]">LINEのトーク</strong>でもお届けできます🌸<br/>
-              メール受信より気付きやすいのでおすすめです！
-            </p>
-            <div className="bg-white rounded-lg p-3 space-y-2">
-              <p className="text-[11px] font-bold text-[#2D4B3E]">📱 登録手順</p>
-              <ol className="text-[11px] text-[#555] leading-relaxed pl-4 list-decimal space-y-1">
-                <li>下のボタンから公式LINEを友達追加</li>
-                <li>リッチメニュー「📧 LINE連携する」をタップ</li>
-                <li>このフォームでご入力のメアド <strong>{form.customerEmail || 'XXX@example.com'}</strong> を送信</li>
-                <li>連携完了🎉 以降のお知らせがLINEにも届きます</li>
-              </ol>
-            </div>
-            <a href={appSettings.lineConfig.addFriendUrl}
+            <a href={appSettings?.lineConfig?.addFriendUrl}
               target="_blank" rel="noopener noreferrer"
               className="block w-full h-12 leading-[48px] text-center bg-[#06C755] hover:bg-[#05a548] text-white rounded-xl font-bold text-[13px]"
             >

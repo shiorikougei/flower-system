@@ -110,9 +110,12 @@ export default function EstimatesPage() {
   }
 
   // ★ 箱代の自動計算
-  function calcBoxFee(productPrice = 0) {
+  //   isSelfDelivery=true かつ applyToDelivery=false の場合は箱代0
+  function calcBoxFee(productPrice = 0, isSelfDelivery = false) {
     const cfg = appSettings?.boxFeeConfig;
     if (!cfg) return 0;
+    // 自社配達で applyToDelivery が無効 → 箱代0
+    if (isSelfDelivery && !cfg.applyToDelivery) return 0;
     if (cfg.type === 'flat') return Number(cfg.flatFee) || 0;
     if (cfg.type === 'price_based') {
       const tiers = cfg.priceTiers || [];
@@ -154,7 +157,9 @@ export default function EstimatesPage() {
     const productPriceGuess = 0; // 商品代は店舗判断
     const selfFee = calcSelfDeliveryFee(addr);
     const sagawaFee = calcSagawaFee(addr, productPriceGuess);
-    const boxFee = calcBoxFee(productPriceGuess);
+    // ★ 自社配達のみ受付 (sagawaなし) かつ applyToDelivery=false なら箱代0
+    const isSelfOnlyDelivery = rd.deliveryMethod === 'delivery' && selfFee !== null;
+    const boxFee = calcBoxFee(productPriceGuess, isSelfOnlyDelivery);
     const coolFee = calcCoolFee(addr, rd.desiredDate, productPriceGuess);
 
     setReplyForm({
@@ -453,7 +458,7 @@ export default function EstimatesPage() {
                               ...f,
                               selfDeliveryFee: calcSelfDeliveryFee(addr) !== null ? String(calcSelfDeliveryFee(addr)) : f.selfDeliveryFee,
                               sagawaFee: calcSagawaFee(addr, pp) !== null ? String(calcSagawaFee(addr, pp)) : f.sagawaFee,
-                              boxFee: String(calcBoxFee(pp) || ''),
+                              boxFee: String(calcBoxFee(pp, replyForm.selfDeliveryAccepted === 'yes' && !replyForm.sagawaFee) || ''),
                               coolFee: String(calcCoolFee(addr, rd.desiredDate, pp) || ''),
                             }));
                           }}
