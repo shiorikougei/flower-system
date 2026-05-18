@@ -8,6 +8,7 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { rateLimit, getClientIp } from '@/utils/rateLimit';
 
 // NocoLde スーパー管理者のメアド whitelist
 const SUPER_ADMIN_EMAILS = [
@@ -56,12 +57,21 @@ export async function requireAuthedUser(request) {
 export async function requireOwner(request) {
   // ★ オーナーパスワード方式 (Supabaseログイン不要)
   const pwHeader = request.headers.get('x-owner-password') || '';
-  if (pwHeader && pwHeader === OWNER_PASSWORD) {
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
-    return { ok: true, user: { email: 'owner@nocolde' }, supabaseAdmin, viaOwnerPassword: true };
+  if (pwHeader) {
+    // ★ ブルートフォース対策: IP単位で5回/分まで
+    const ip = getClientIp(request);
+    const allowed = await rateLimit({ key: `owner_auth:${ip}`, max: 5, windowSec: 60 });
+    if (!allowed) {
+      return { ok: false, response: NextResponse.json({ error: '試行回数が多すぎます。しばらくしてから再度お試しください。' }, { status: 429 }) };
+    }
+    if (pwHeader === OWNER_PASSWORD) {
+      const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+      );
+      return { ok: true, user: { email: 'owner@nocolde' }, supabaseAdmin, viaOwnerPassword: true };
+    }
+    // パスワード一致しないが、ブルートフォース防止のため即エラーは返さずBearer経路へ
   }
 
   // ★ Bearer トークン方式

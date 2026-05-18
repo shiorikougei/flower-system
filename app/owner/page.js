@@ -265,7 +265,7 @@ export default function OwnerDashboard() {
     const { data: { session } } = await supabase.auth.getSession();
     const headers = {
       'Content-Type': 'application/json',
-      'x-owner-password': password || 'nocolde2026',
+      'x-owner-password': password,
     };
     if (session?.access_token) {
       headers.Authorization = `Bearer ${session.access_token}`;
@@ -1709,7 +1709,7 @@ export default function OwnerDashboard() {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'x-owner-password': password || 'nocolde2026',
+                  'x-owner-password': password,
                 },
                 body: JSON.stringify({ targets: [target] }),
               });

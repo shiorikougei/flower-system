@@ -36,8 +36,49 @@ export async function POST(request) {
     if (!tenantId) return NextResponse.json({ error: 'tenantId が必要' }, { status: 400 });
     if (!orderData) return NextResponse.json({ error: 'orderData が必要' }, { status: 400 });
 
-    // ★ スタッフ代理入力の場合はpaymentMethod制限を緩める（前払い済み/引き取り時など）
-    const isStaffEntered = !!orderData.isStaffEntered;
+    // ★ スタッフ代理入力フラグ検証（クライアントから送られたフラグだけは信用しない）
+    //    Bearer トークンを検証し、認証ユーザーのtenant_idが一致する場合のみ true として扱う
+    let isStaffEntered = false;
+    if (orderData.isStaffEntered) {
+      const authHeader = request.headers.get('authorization') || '';
+      const accessToken = authHeader.replace(/^Bearer\s+/i, '');
+      if (!accessToken) {
+        // 認証なしならフラグを無効化（一般顧客フローとして扱う）
+        orderData.isStaffEntered = false;
+      } else {
+        try {
+          const supabaseUser = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+            { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
+          );
+          const { data: { user } } = await supabaseUser.auth.getUser();
+          if (!user) {
+            orderData.isStaffEntered = false;
+          } else {
+            const supabaseAdminTmp = createClient(
+              process.env.NEXT_PUBLIC_SUPABASE_URL,
+              process.env.SUPABASE_SERVICE_ROLE_KEY
+            );
+            const { data: profile } = await supabaseAdminTmp
+              .from('profiles')
+              .select('tenant_id')
+              .eq('id', user.id)
+              .single();
+            if (profile?.tenant_id && String(profile.tenant_id) === String(tenantId)) {
+              isStaffEntered = true; // 認証OK＋tenant一致でのみ承認
+            } else {
+              orderData.isStaffEntered = false;
+              return NextResponse.json({ error: '権限がありません（他テナントのデータは操作できません）' }, { status: 403 });
+            }
+          }
+        } catch (e) {
+          orderData.isStaffEntered = false;
+        }
+      }
+    }
+
+    // ★ paymentMethod 検証: スタッフ代理時のみ緩和
     if (!isStaffEntered && !['card', 'bank_transfer'].includes(paymentMethod)) {
       return NextResponse.json({ error: 'paymentMethod が不正' }, { status: 400 });
     }
