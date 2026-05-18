@@ -3,6 +3,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  color-scheme: light only; /* ★ ダークモード適応を無効化 (ブランドカラー固定運用) */
 }
 
 @theme inline {
@@ -12,10 +13,12 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* ★ ダークモード時も白背景・黒文字を維持
+   (お客様の端末ダークモード設定でフォームが見えなくなる問題対策) */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #ffffff;
+    --foreground: #171717;
   }
 }
 
@@ -23,4 +26,13 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ★ input/textarea/select もダークモードで色反転されないように明示 */
+input, textarea, select {
+  color: #171717;
+  background-color: inherit;
+}
+input::placeholder, textarea::placeholder {
+  color: #999999;
 }

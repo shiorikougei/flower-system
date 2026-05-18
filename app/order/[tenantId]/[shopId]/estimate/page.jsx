@@ -238,9 +238,9 @@ export default function EstimatePage() {
   }
 
   // ★ 共通スタイル
-  const inputCls = "w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#117768]";
+  const inputCls = "w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] text-[#111] outline-none focus:border-[#117768]";
   const labelCls = "text-[11px] font-bold text-[#555]";
-  const sectionCls = "bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-4";
+  const sectionCls = "bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-4 text-[#111]";
 
   return (
     <div className="min-h-screen bg-[#FBFAF9] font-sans pb-20">
@@ -414,7 +414,7 @@ export default function EstimatePage() {
             <textarea rows={3}
               placeholder={form.cardType === 'tatefuda' ? '例: 御祝 / 〇〇店御開店御祝 / 株式会社〇〇 代表 〇〇' : '例: お誕生日おめでとう！いつもありがとう。'}
               value={form.cardContent} onChange={e => setForm({...form, cardContent: e.target.value})}
-              className="w-full px-4 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#117768] resize-none leading-relaxed"/>
+              className="w-full px-4 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] text-[#111] outline-none focus:border-[#117768] resize-none leading-relaxed"/>
           )}
         </div>
 
@@ -502,7 +502,7 @@ export default function EstimatePage() {
               placeholder={'例:\n20260514-001\n20260520-003'}
               value={form.instagramManagementNos}
               onChange={e => setForm({...form, instagramManagementNos: e.target.value})}
-              className="w-full px-4 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] font-mono outline-none focus:border-[#117768] resize-none leading-relaxed"
+              className="w-full px-4 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] text-[#111] font-mono outline-none focus:border-[#117768] resize-none leading-relaxed"
             />
             <p className="text-[10px] text-[#999]">
               💡 管理番号は当店のInstagram投稿のキャプション冒頭に <code className="bg-[#FBFAF9] px-1 rounded">📋 ◯◯◯◯◯◯◯◯-◯◯◯</code> の形式で記載されています
@@ -517,7 +517,7 @@ export default function EstimatePage() {
               placeholder={'例:\nhttps://www.instagram.com/p/XXXXXXX/'}
               value={form.instagramUrls}
               onChange={e => setForm({...form, instagramUrls: e.target.value})}
-              className="w-full px-4 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] font-mono outline-none focus:border-[#117768] resize-none leading-relaxed"
+              className="w-full px-4 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] text-[#111] font-mono outline-none focus:border-[#117768] resize-none leading-relaxed"
             />
           </div>
 
@@ -554,7 +554,7 @@ export default function EstimatePage() {
           <textarea rows={4}
             placeholder="例: アレルギーで百合は避けてほしい / 母が喜ぶ色合いで / サプライズなので連絡不要 など"
             value={form.otherNotes} onChange={e => setForm({...form, otherNotes: e.target.value})}
-            className="w-full px-4 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#117768] resize-none leading-relaxed"/>
+            className="w-full px-4 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] text-[#111] outline-none focus:border-[#117768] resize-none leading-relaxed"/>
         </div>
 
         {/* 送信 */}
