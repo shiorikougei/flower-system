@@ -189,7 +189,7 @@ export async function GET(request) {
 // PATCH: 店舗回答 or お客様承諾
 export async function PATCH(request) {
   try {
-    const { id, action, replyMessage, proposedPrice, proposedData, customerToken } = await request.json();
+    const { id, action, replyMessage, proposedPrice, proposedData, customerToken, customerExtraData } = await request.json();
     if (!id || !action) return NextResponse.json({ error: 'id/action必要' }, { status: 400 });
 
     const supabase = admin();
@@ -301,21 +301,24 @@ export async function PATCH(request) {
         address2: rd.deliveryAddress2 || '',
       } : null;
 
+      const cxd = customerExtraData || {};
+
       const orderRecord = {
         tenant_id: cur.tenant_id,
         order_data: {
           shopId: cur.shop_id,
           fromEstimate: true,
           estimateId: id,
-          // ★ お客様情報 (見積依頼の情報を引継ぎ)
+          // ★ お客様情報 (見積依頼の情報＋確定時の追加情報)
           customerInfo: {
             name: cur.customer_name,
             email: cur.customer_email,
             phone: cur.customer_phone,
-            zip: '',
-            address1: '',
-            address2: '',
+            zip: cxd.zip || '',
+            address1: cxd.address1 || '',
+            address2: cxd.address2 || '',
           },
+          paymentScheduledDate: cxd.paymentScheduledDate || null,
           // ★ お届け先 (異なる場合のみ)
           isRecipientDifferent: !!recipientInfo,
           recipientInfo: recipientInfo,
@@ -332,13 +335,19 @@ export async function PATCH(request) {
           // ★ メッセージカード・立札
           cardType: rd.cardType === 'message' ? 'メッセージカード' : (rd.cardType === 'tatefuda' ? '立札' : 'なし'),
           cardMessage: rd.cardType === 'message' ? (rd.cardContent || '') : '',
-          // ★ 金額情報
+          // ★ 金額情報 - calculatedFee は配送料+箱代+クール代+その他全て含む
+          //   (OrderDetailModal の getTotals は item + calculatedFee + pickup で計算するため)
           itemPrice: Number(pd.productPrice) || proposedSub,
-          calculatedFee: (Number(pd.selfDeliveryFee) || 0) + (Number(pd.sagawaFee) || 0),
+          calculatedFee: (Number(pd.selfDeliveryFee) || 0)
+            + (Number(pd.sagawaFee) || 0)
+            + (Number(pd.boxFee) || 0)
+            + (Number(pd.coolFee) || 0)
+            + ((pd.otherFees || []).reduce((s, o) => s + (Number(o.amount) || 0), 0)),
           feeBreakdown: {
             baseFee: (Number(pd.selfDeliveryFee) || 0) + (Number(pd.sagawaFee) || 0),
             boxFee: Number(pd.boxFee) || 0,
             coolFee: Number(pd.coolFee) || 0,
+            otherFees: pd.otherFees || [],
           },
           pickupFee: 0,
           totalAmount: proposedSub + tax,
