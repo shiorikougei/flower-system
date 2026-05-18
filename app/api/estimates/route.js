@@ -18,37 +18,62 @@ function admin() {
 export async function POST(request) {
   try {
     const ip = getClientIp(request);
-    const allowed = await rateLimit({ key: `estimate:${ip}`, max: 5, windowSec: 300 });
+    const allowed = await rateLimit({ key: `estimate:${ip}`, max: 10, windowSec: 300 });
     if (!allowed) {
-      return NextResponse.json({ error: 'リクエスト過多です' }, { status: 429 });
+      return NextResponse.json({ error: 'リクエスト過多です。5分ほど待ってから再度お試しください。' }, { status: 429 });
     }
 
     const body = await request.json();
     const { tenantId, shopId, customerName, customerEmail, customerPhone, requestContent, requestData, referenceImages } = body;
 
-    if (!tenantId || !customerName || !customerEmail || !requestContent) {
-      return NextResponse.json({ error: '必須項目が不足しています' }, { status: 400 });
+    // ★ どの必須項目が欠けてるか明示
+    const missing = [];
+    if (!tenantId) missing.push('テナントID');
+    if (!customerName) missing.push('お名前');
+    if (!customerEmail) missing.push('メールアドレス');
+    if (!requestContent) missing.push('ご依頼内容');
+    if (missing.length > 0) {
+      return NextResponse.json({ error: `必須項目が不足しています: ${missing.join(', ')}` }, { status: 400 });
     }
-    if (String(requestContent).length > 2000) {
-      return NextResponse.json({ error: '内容が長すぎます (2000文字以内)' }, { status: 400 });
+    if (String(requestContent).length > 4000) {
+      return NextResponse.json({ error: `内容が長すぎます (${String(requestContent).length}文字 / 上限 4000文字)` }, { status: 400 });
     }
 
     const supabase = admin();
-    const { data, error } = await supabase.from('estimates').insert([{
+
+    // ★ 参考画像が text[] スキーマに合わない場合の互換性対応:
+    //    URL配列を text[] にキャスト
+    let refImgs = null;
+    if (Array.isArray(referenceImages) && referenceImages.length > 0) {
+      refImgs = referenceImages
+        .filter(u => typeof u === 'string' && u.length > 0)
+        .slice(0, 10);
+    }
+
+    const insertPayload = {
       tenant_id: String(tenantId).toLowerCase(),
       shop_id: shopId || null,
       customer_name: String(customerName).slice(0, 100),
       customer_email: String(customerEmail).toLowerCase().slice(0, 200),
       customer_phone: customerPhone ? String(customerPhone).slice(0, 30) : null,
-      request_content: String(requestContent).slice(0, 2000),
+      request_content: String(requestContent).slice(0, 4000),
       request_data: requestData || null,
-      reference_images: Array.isArray(referenceImages) ? referenceImages.slice(0, 10) : null,
+      reference_images: refImgs,
       status: 'pending',
-    }]).select('id').single();
+    };
+
+    const { data, error } = await supabase.from('estimates').insert([insertPayload]).select('id').single();
 
     if (error) {
-      console.error('[estimates POST]', error);
-      return NextResponse.json({ error: '見積依頼の登録に失敗しました' }, { status: 500 });
+      // ★ 詳細なエラー情報を返す（デバッグ用）
+      console.error('[estimates POST] insert error:', error);
+      console.error('[estimates POST] payload:', JSON.stringify(insertPayload).slice(0, 500));
+      return NextResponse.json({
+        error: '見積依頼の登録に失敗しました',
+        detail: error.message || String(error),
+        code: error.code,
+        hint: error.hint || null,
+      }, { status: 500 });
     }
 
     // 店舗へ通知メール（構造化データがあれば見やすくHTMLテーブル化）

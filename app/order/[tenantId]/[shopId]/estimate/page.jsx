@@ -260,7 +260,12 @@ export default function EstimatePage() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '送信に失敗しました');
+      if (!res.ok) {
+        // ★ 詳細エラー情報を表示
+        const detail = data.detail ? `\n\n詳細: ${data.detail}` : '';
+        const code = data.code ? `\n(コード: ${data.code})` : '';
+        throw new Error((data.error || '送信に失敗しました') + detail + code);
+      }
       setDone(true);
     } catch (e) {
       setError(e.message);
