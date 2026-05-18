@@ -11,14 +11,32 @@ const DEFAULT_FROM_NAME = process.env.EMAIL_FROM_NAME || 'Florix';
 /**
  * 送信専用フッター（共通）
  * このメールアドレスへの返信は確認されない旨をお客様に明示
- * @param {object} opts - { contactEmail?: string } 連絡先メールアドレス（デフォルトは管理者）
+ * @param {object} opts
+ * @param {string} [opts.shopName] - 店舗名
+ * @param {string} [opts.shopEmail] - 店舗連絡先メアド
+ * @param {string} [opts.shopPhone] - 店舗電話
+ * @param {string} [opts.lineAddFriendUrl] - LINE友達追加URL
+ * @param {string} [opts.contactEmail] - 後方互換用 (旧引数)
  */
-export function noReplyFooter({ contactEmail = 'marusyou.reishin@gmail.com' } = {}) {
+export function noReplyFooter({
+  shopName = '',
+  shopEmail = '',
+  shopPhone = '',
+  lineAddFriendUrl = '',
+  contactEmail = '', // 後方互換
+} = {}) {
+  // 連絡先メアドの決定 (shopEmail優先 / なければ contactEmail / それもなければ NocoLde の問い合わせ)
+  const email = shopEmail || contactEmail || 'marusyou.reishin@gmail.com';
+  const contactLines = [];
+  if (email) contactLines.push(`📧 <a href="mailto:${email}" style="color:#92722c;text-decoration:underline;">${email}</a>`);
+  if (shopPhone) contactLines.push(`📞 <a href="tel:${shopPhone}" style="color:#92722c;text-decoration:underline;">${shopPhone}</a>`);
+  if (lineAddFriendUrl) contactLines.push(`💬 公式LINE: <a href="${lineAddFriendUrl}" style="color:#06C755;text-decoration:underline;">友達追加して問い合わせ</a>`);
+
   return `
-    <div style="margin-top:32px;padding:14px;background:#f9f5ed;border:1pt solid #e5d9bd;border-radius:8px;font-size:11px;color:#92722c;line-height:1.6;">
+    <div style="margin-top:32px;padding:14px;background:#f9f5ed;border:1pt solid #e5d9bd;border-radius:8px;font-size:11px;color:#92722c;line-height:1.7;">
       ⚠️ <strong>このメールは送信専用アドレスから自動送信されています。</strong><br/>
-      ご返信いただいてもご対応できかねますので、お問い合わせは下記までご連絡ください。<br/>
-      📩 <a href="mailto:${contactEmail}" style="color:#92722c;text-decoration:underline;">${contactEmail}</a>
+      ご返信いただいてもご対応できかねますので、お問い合わせは下記${shopName ? `（${shopName}）` : ''}までご連絡ください。<br/>
+      ${contactLines.join('<br/>')}
     </div>
   `;
 }

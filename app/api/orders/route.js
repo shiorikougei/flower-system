@@ -234,7 +234,7 @@ export async function POST(request) {
           lineAddFriendUrl: formatLineAddFriendBlock(settings.lineConfig, customerEmail),
         };
         const { subject, body } = renderTemplate(tpl, vars);
-        const html = bodyToHtml(body, { shopName });
+        const html = bodyToHtml(body, { shopName, shopEmail: shop.email || settings.generalConfig?.email || '', shopPhone, lineAddFriendUrl: settings.lineConfig?.addFriendUrl || '' });
 
         // FROM名を店舗名で上書き
         const from = `${shopName} <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;

@@ -407,21 +407,31 @@ export function renderTemplate(template, vars) {
 
 // プレーンテキストの本文をHTMLメールに変換（シンプルなラッパー）
 // 画像URLが本文中にあれば <img> として埋め込み、それ以外のURLは普通のリンクに
-export function bodyToHtml(body, { shopName } = {}) {
+// ★ 各店舗の連絡先(shopEmail, shopPhone, lineAddFriendUrl)を渡すと送信専用フッターも表示
+export function bodyToHtml(body, { shopName, shopEmail, shopPhone, lineAddFriendUrl } = {}) {
   const lines = (body || '').split('\n');
   const htmlParts = lines.map(line => {
     const trimmed = line.trim();
-    // 画像URLっぽいもの (画像拡張子 or Supabase Storage)
     if (/^https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)(\?[^\s]*)?$/i.test(trimmed) ||
         /^https?:\/\/[^\s]+\/storage\/v1\/object\/[^\s]+$/i.test(trimmed)) {
       return `<img src="${trimmed}" alt="" style="max-width:100%; height:auto; border-radius:8px; margin:8px 0; display:block;">`;
     }
-    // URL → リンク
     const escaped = escapeHtml(line);
     const linked = escaped.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:#2D4B3E; word-break:break-all;">$1</a>');
     return linked;
   });
   const html = htmlParts.join('<br>');
+
+  // ★ 送信専用フッター (店舗連絡先付き)
+  const footer = (shopEmail || shopPhone || lineAddFriendUrl) ? `
+    <div style="margin-top:32px;padding:14px;background:#f9f5ed;border:1px solid #e5d9bd;border-radius:8px;font-size:11px;color:#92722c;line-height:1.7;">
+      ⚠️ <strong>このメールは送信専用アドレスから自動送信されています。</strong><br/>
+      ご返信いただいてもご対応できかねますので、お問い合わせは下記${shopName ? `（${escapeHtml(shopName)}）` : ''}までご連絡ください。<br/>
+      ${shopEmail ? `📧 <a href="mailto:${escapeHtml(shopEmail)}" style="color:#92722c;text-decoration:underline;">${escapeHtml(shopEmail)}</a><br/>` : ''}
+      ${shopPhone ? `📞 <a href="tel:${escapeHtml(shopPhone)}" style="color:#92722c;text-decoration:underline;">${escapeHtml(shopPhone)}</a><br/>` : ''}
+      ${lineAddFriendUrl ? `💬 公式LINE: <a href="${escapeHtml(lineAddFriendUrl)}" style="color:#06C755;text-decoration:underline;">友達追加してメッセージ</a>` : ''}
+    </div>
+  ` : '';
 
   return `<!DOCTYPE html>
 <html lang="ja">
@@ -430,6 +440,7 @@ export function bodyToHtml(body, { shopName } = {}) {
   <div style="max-width:600px; margin:0 auto; background:white; padding:40px 24px;">
     <div style="font-size:13px; word-break:break-word;">${html}</div>
     ${shopName ? `<p style="font-size:11px; color:#999; margin-top:32px; padding-top:16px; border-top:1px solid #EAEAEA; text-align:center;">— ${escapeHtml(shopName)} —</p>` : ''}
+    ${footer}
   </div>
 </body>
 </html>`;

@@ -206,31 +206,71 @@ export async function PATCH(request) {
         replied_at: new Date().toISOString(),
       }).eq('id', id);
 
-      // お客様にメール
+      // ★ 店舗情報を取得 (送信元・問合せ先のため)
+      const { data: tRow2 } = await supabase.from('app_settings').select('settings_data').eq('id', cur.tenant_id).single();
+      const settings2 = tRow2?.settings_data || {};
+      const shop2 = settings2.shops?.find(s => String(s.id) === String(cur.shop_id)) || settings2.shops?.[0] || {};
+      const shopName2 = shop2.name || settings2.generalConfig?.appName || 'お花屋さん';
+      const shopEmail2 = shop2.email || settings2.generalConfig?.email || '';
+      const shopPhone2 = shop2.phone || settings2.generalConfig?.phone || '';
+      const lineUrl2 = settings2.lineConfig?.addFriendUrl || '';
+
+      // ★ LINE preference を尊重: 'line_only' ならメール送信スキップ
+      let preference2 = 'both';
       try {
-        await sendEmail({
-          to: cur.customer_email,
-          subject: `【お見積もりのご回答】${cur.customer_name} 様`,
-          html: `<!DOCTYPE html><html><body style="font-family:'Hiragino Sans',sans-serif;padding:20px;">
-            <h2 style="color:#117768;">💐 お見積もりのご回答</h2>
-            <p>${cur.customer_name} 様</p>
-            <p>お問い合わせいただきありがとうございます。<br/>下記の内容でお見積もりさせていただきます。</p>
-            <div style="background:#f0fdf4;border:2px solid #117768;padding:20px;border-radius:12px;margin:20px 0;">
-              <p style="margin:0;font-size:11px;color:#666;">ご提案価格(税込)</p>
-              <p style="margin:5px 0;font-size:32px;font-weight:bold;color:#117768;">¥${(Math.floor(Number(proposedPrice) * 1.1)).toLocaleString()}</p>
-            </div>
-            <p style="background:white;padding:15px;border:1px solid #eaeaea;border-radius:8px;white-space:pre-wrap;">${replyMessage || ''}</p>
-            <p style="margin-top:20px;">
-              内容にご納得いただけましたら、下記から正式注文へお進みください👇
-            </p>
-            <a href="https://noodleflorix.com/order/${cur.tenant_id}/${cur.shop_id || 'default'}/estimate/${id}"
-               style="display:inline-block;background:#117768;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">
-              この内容で確定する →
-            </a>
-            ${noReplyFooter()}
-          </body></html>`,
+        const { data: link } = await supabase
+          .from('customer_line_links')
+          .select('notification_preference')
+          .eq('tenant_id', cur.tenant_id)
+          .eq('customer_email', cur.customer_email.toLowerCase())
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
+        if (link?.notification_preference) preference2 = link.notification_preference;
+      } catch {}
+
+      // お客様にメール (line_only なら送信スキップ)
+      if (preference2 !== 'line_only') {
+        try {
+          await sendEmail({
+            to: cur.customer_email,
+            from: `${shopName2} <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`,
+            subject: `【${shopName2}】お見積もりのご回答 - ${cur.customer_name} 様`,
+            html: `<!DOCTYPE html><html><body style="font-family:'Hiragino Sans',sans-serif;padding:20px;background:#FBFAF9;">
+              <div style="max-width:600px;margin:0 auto;background:white;padding:30px;border-radius:12px;">
+                <h2 style="color:#117768;">💐 お見積もりのご回答</h2>
+                <p>${cur.customer_name} 様</p>
+                <p>お問い合わせいただきありがとうございます。<br/>下記の内容でお見積もりさせていただきます。</p>
+                <div style="background:#f0fdf4;border:2px solid #117768;padding:20px;border-radius:12px;margin:20px 0;">
+                  <p style="margin:0;font-size:11px;color:#666;">ご提案価格(税込)</p>
+                  <p style="margin:5px 0;font-size:32px;font-weight:bold;color:#117768;">¥${(Math.floor(Number(proposedPrice) * 1.1)).toLocaleString()}</p>
+                </div>
+                <p style="background:white;padding:15px;border:1px solid #eaeaea;border-radius:8px;white-space:pre-wrap;">${replyMessage || ''}</p>
+                <p style="margin-top:20px;">
+                  内容にご納得いただけましたら、下記から正式注文へお進みください👇
+                </p>
+                <a href="https://noodleflorix.com/order/${cur.tenant_id}/${cur.shop_id || 'default'}/estimate/${id}"
+                   style="display:inline-block;background:#117768;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">
+                  この内容で確定する →
+                </a>
+                ${noReplyFooter({ shopName: shopName2, shopEmail: shopEmail2, shopPhone: shopPhone2, lineAddFriendUrl: lineUrl2 })}
+              </div>
+            </body></html>`,
+          });
+        } catch (e) { console.warn(e); }
+      }
+
+      // ★ LINE併送 (line_only or both で連携あり時のみ)
+      try {
+        const { sendLineParallelToEmail } = await import('@/utils/line');
+        await sendLineParallelToEmail({
+          supabaseAdmin: supabase,
+          tenantSettings: settings2,
+          tenantId: cur.tenant_id,
+          customerEmail: cur.customer_email,
+          text: `【${shopName2}】お見積もりのご回答\n\n${cur.customer_name} 様\n\nご提案価格(税込): ¥${(Math.floor(Number(proposedPrice) * 1.1)).toLocaleString()}\n\n${replyMessage || ''}\n\n▼ 内容にご納得いただけましたら、こちらから正式注文へ\nhttps://noodleflorix.com/order/${cur.tenant_id}/${cur.shop_id || 'default'}/estimate/${id}`,
         });
-      } catch (e) { console.warn(e); }
+      } catch (e) { console.warn('[estimate reply LINE]', e?.message); }
 
       return NextResponse.json({ ok: true });
     } else if (action === 'accept') {
