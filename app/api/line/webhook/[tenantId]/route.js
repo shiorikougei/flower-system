@@ -52,12 +52,32 @@ async function fetchProfile(channelAccessToken, lineUserId) {
 }
 
 export async function POST(request, { params }) {
+  // ★ LINE は webhook 検証時に約10秒以内の200応答を求める。
+  //   タイムアウト回避のため、検証用の空イベント・設定未完了時も 200 で返す
+  //   （本処理は events がある場合のみ実行）
   try {
     const { tenantId } = await params;
-    if (!tenantId) return NextResponse.json({ error: 'tenantId必要' }, { status: 400 });
+    if (!tenantId) {
+      console.warn('[line/webhook] no tenantId');
+      return NextResponse.json({ ok: true }); // 検証ボタン用に200返却
+    }
 
     const rawBody = await request.text();
     const signature = request.headers.get('x-line-signature') || '';
+
+    // ★ 早期判定: 空ボディ / events なし → LINE検証リクエスト等。即200を返す
+    let payload;
+    try {
+      payload = rawBody ? JSON.parse(rawBody) : { events: [] };
+    } catch {
+      payload = { events: [] };
+    }
+    const events = payload.events || [];
+
+    // 検証ボタンからのテストは events が空。即座に200返却
+    if (events.length === 0) {
+      return NextResponse.json({ ok: true });
+    }
 
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -71,11 +91,11 @@ export async function POST(request, { params }) {
       .eq('id', tenantId)
       .single();
 
-    // ★サブスクで LINE連携 が未契約のテナントは弾く
+    // ★サブスクで LINE連携 が未契約のテナント / 設定未完了でも 200を返す（再送ループ防止）
     const features = settingsRow?.settings_data?.features || {};
     if (!features.lineIntegration) {
       console.warn('[line/webhook] subscription feature lineIntegration disabled for', tenantId);
-      return NextResponse.json({ error: 'LINE連携サブスク未契約' }, { status: 403 });
+      return NextResponse.json({ ok: true, skipped: 'feature_disabled' });
     }
 
     const lineCfg = settingsRow?.settings_data?.lineConfig || {};
@@ -84,16 +104,15 @@ export async function POST(request, { params }) {
 
     if (!channelSecret || !channelAccessToken) {
       console.warn('[line/webhook] LINE config not set for tenant', tenantId);
-      return NextResponse.json({ error: 'LINE未設定' }, { status: 400 });
+      return NextResponse.json({ ok: true, skipped: 'config_missing' });
     }
 
     // 署名検証
     if (!verifyLineSignature(channelSecret, rawBody, signature)) {
-      return NextResponse.json({ error: '署名不正' }, { status: 401 });
+      // 署名不正は不正アクセスの可能性ありなのでログだけ、200は返す（LINE側の自動リトライ抑制）
+      console.warn('[line/webhook] signature mismatch for', tenantId);
+      return NextResponse.json({ ok: true, skipped: 'signature_invalid' });
     }
-
-    const payload = JSON.parse(rawBody);
-    const events = payload.events || [];
 
     for (const ev of events) {
       const lineUserId = ev.source?.userId;
@@ -207,7 +226,8 @@ export async function POST(request, { params }) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
+    // ★ 例外時も200を返してLINEの再送ループを防ぐ (本番のエラーログには記録)
     console.error('[line/webhook] error:', err);
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ ok: true, error: err.message || 'サーバーエラー' });
   }
 }
