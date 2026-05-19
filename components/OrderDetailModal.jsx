@@ -27,6 +27,9 @@ export default function OrderDetailModal({
   // ★ 完成写真メール送信前の確認モーダル用 state
   const [completionMailPreview, setCompletionMailPreview] = useState(null); // { images, customerEmail } | null
   const [isSendingMail, setIsSendingMail] = useState(false);
+  // ★ 完成写真送信時の納品日確認・編集
+  const [completionDeliveryDate, setCompletionDeliveryDate] = useState('');
+  const [completionDeliveryTime, setCompletionDeliveryTime] = useState('');
 
   // ★ 新規追加：メールテンプレート選択メニューの表示状態
   const [showMailTemplates, setShowMailTemplates] = useState(false);
@@ -203,6 +206,9 @@ export default function OrderDetailModal({
       // ★ 完成写真メールは自動送信せず、確認モーダルでプレビュー → 送信
       const customerEmail = modalData.customerInfo?.email;
       if (customerEmail) {
+        // ★ 納品日初期値をセット
+        setCompletionDeliveryDate(modalData.selectedDate || '');
+        setCompletionDeliveryTime(modalData.selectedTime || '');
         setCompletionMailPreview({ images: allImages, customerEmail });
       } else {
         alert('完成写真をアップロードしました 🎉\n（お客様のメアドが登録されてないため、メール送信はスキップされます）');
@@ -217,10 +223,33 @@ export default function OrderDetailModal({
   };
 
   // ★ 完成写真メール送信を実行 (確認モーダルから呼ばれる)
+  //    納品日・時間を更新してからメール送信（変更があれば反映）
   const sendCompletionPhotoMail = async () => {
     if (!completionMailPreview) return;
+    if (!completionDeliveryDate) {
+      alert('納品予定日を入力してください');
+      return;
+    }
     setIsSendingMail(true);
     try {
+      // 1. 納品日・時間を先にDB更新（メール本文に反映するため）
+      const updatedData = {
+        ...modalData,
+        selectedDate: completionDeliveryDate,
+        selectedTime: completionDeliveryTime || modalData.selectedTime || '',
+      };
+      const { error: updErr } = await supabase
+        .from('orders')
+        .update({ order_data: updatedData })
+        .eq('id', order.id);
+      if (updErr) throw updErr;
+
+      // 2. 親へ反映
+      if (onUpdatePayment) {
+        await onUpdatePayment(order.id, updatedData, { skipConfirm: true, alreadyUpdated: true });
+      }
+
+      // 3. メール送信
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         alert('セッションが切れています。再ログインしてください。');
@@ -1618,6 +1647,37 @@ export default function OrderDetailModal({
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* ★ 納品日確認・編集（入金確認モーダルと同じスキーム） */}
+              <div className="bg-[#FBFAF9] rounded-xl p-4 border border-[#EAEAEA] space-y-3">
+                <div className="flex items-center gap-2">
+                  <CalendarIcon size={16} className="text-[#2D4B3E]"/>
+                  <p className="text-[12px] font-bold text-[#2D4B3E]">📅 お届け予定日（メール本文に反映されます）</p>
+                </div>
+                <div className="text-[11px] text-[#777] bg-white p-2 rounded border border-[#EAEAEA]">
+                  現在の納品予定日: <span className="font-bold text-[#111]">{modalData.selectedDate || '未指定'} {modalData.selectedTime || ''}</span>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-[#555] mb-1.5 tracking-widest">新しい納品日 <span className="text-red-500">*</span></label>
+                  <input
+                    type="date"
+                    value={completionDeliveryDate}
+                    onChange={(e) => setCompletionDeliveryDate(e.target.value)}
+                    className="w-full h-11 px-3 bg-white border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-[#555] mb-1.5 tracking-widest">時間（任意）</label>
+                  <input
+                    type="text"
+                    value={completionDeliveryTime}
+                    onChange={(e) => setCompletionDeliveryTime(e.target.value)}
+                    placeholder="例: 14:00〜16:00"
+                    className="w-full h-11 px-3 bg-white border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"
+                  />
+                </div>
+                <p className="text-[10px] text-[#999]">※ 変更すると注文データの納品日も更新され、メール本文に反映されます。</p>
               </div>
 
               {/* メール本文のサマリー */}
