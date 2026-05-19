@@ -1624,7 +1624,8 @@ export default function OrderDetailModal({
               <div className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg p-3">
                 <p className="text-[10px] font-bold text-[#999] mb-1">📝 メール本文の概要</p>
                 <p className="text-[12px] text-[#222] leading-relaxed">
-                  「ご注文の商品が完成しました🌸」とご案内し、上の写真と注文情報・お届け予定日を記載します。<br/>
+                  完成のご案内 + 上の写真と注文情報を記載。<br/>
+                  <strong className="text-[#2D4B3E]">📅 お届け日程のご案内＋日程変更のご相談はお電話で</strong>もご案内します。<br/>
                   <span className="text-[10px] text-[#999]">※本文の詳細はオーナーページ → 案内文管理 → 「完成写真のお知らせ」でカスタマイズできます</span>
                 </p>
               </div>
