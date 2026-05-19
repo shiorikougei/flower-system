@@ -11,7 +11,8 @@ import HelpTooltip from '@/components/HelpTooltip';
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filterMode, setFilterMode] = useState('未完了'); 
+  const [filterMode, setFilterMode] = useState('未完了');
+  const [productFilter, setProductFilter] = useState('all'); // ★ 商品(お花の種類)別フィルタ
   const [selectedOrder, setSelectedOrder] = useState(null); 
   const [appSettings, setAppSettings] = useState(null);
   const [currentTenantId, setCurrentTenantId] = useState(null);
@@ -198,13 +199,41 @@ export default function OrdersPage() {
     }
   };
 
-  const filteredOrders = orders.filter(order => {
+  // ★ 完了/未完了でフィルタ → 次に商品フィルタ
+  const baseFilteredOrders = orders.filter(order => {
     const status = order?.order_data?.status || 'new';
     if (filterMode === '未完了') {
       return status !== 'completed' && status !== '完了' && status !== 'キャンセル';
     } else {
       return status === 'completed' || status === '完了' || status === 'キャンセル';
     }
+  });
+
+  // ★ 一覧に存在する商品(お花の種類)の一覧（件数付き）
+  const productOptions = (() => {
+    const map = new Map();
+    baseFilteredOrders.forEach(o => {
+      const d = o?.order_data || {};
+      let name = d.flowerType;
+      // EC注文の場合
+      if (d.orderType === 'ec' && Array.isArray(d.cartItems) && d.cartItems.length > 0) {
+        name = 'ECご注文';
+      }
+      if (!name) name = '未設定';
+      map.set(name, (map.get(name) || 0) + 1);
+    });
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]); // 件数が多い順
+  })();
+
+  const filteredOrders = baseFilteredOrders.filter(order => {
+    if (productFilter === 'all') return true;
+    const d = order?.order_data || {};
+    let name = d.flowerType;
+    if (d.orderType === 'ec' && Array.isArray(d.cartItems) && d.cartItems.length > 0) {
+      name = 'ECご注文';
+    }
+    if (!name) name = '未設定';
+    return name === productFilter;
   });
 
   const safeFormatDate = (dateString, withTime = false) => {
@@ -244,20 +273,42 @@ export default function OrdersPage() {
           <h1 className="text-[20px] font-bold text-[#2D4B3E] flex items-center gap-2">受注一覧 <HelpTooltip articleId="order_status"/> <HelpTooltip articleId="order_payment" size={14}/></h1>
           
           <div className="flex bg-[#F7F7F7] p-1 rounded-xl border border-[#EAEAEA] w-fit">
-            <button 
-              onClick={() => setFilterMode('未完了')} 
+            <button
+              onClick={() => setFilterMode('未完了')}
               className={`px-6 py-2 rounded-lg text-[12px] font-bold transition-all ${filterMode === '未完了' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}
             >
               未完了
             </button>
-            <button 
-              onClick={() => setFilterMode('アーカイブ')} 
+            <button
+              onClick={() => setFilterMode('アーカイブ')}
               className={`px-6 py-2 rounded-lg text-[12px] font-bold transition-all ${filterMode === 'アーカイブ' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}
             >
               アーカイブ
             </button>
           </div>
         </div>
+
+        {/* ★ 商品(お花の種類)別フィルタ */}
+        {productOptions.length > 0 && (
+          <div className="max-w-[1000px] mx-auto mt-3 flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] font-bold text-[#999] tracking-widest">商品で絞り込み:</span>
+            <button
+              onClick={() => setProductFilter('all')}
+              className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all ${productFilter === 'all' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-white text-[#555] border-[#EAEAEA] hover:border-[#2D4B3E]'}`}
+            >
+              すべて <span className="ml-1 opacity-70">({baseFilteredOrders.length})</span>
+            </button>
+            {productOptions.map(([name, count]) => (
+              <button
+                key={name}
+                onClick={() => setProductFilter(name)}
+                className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all ${productFilter === name ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-white text-[#555] border-[#EAEAEA] hover:border-[#2D4B3E]'}`}
+              >
+                {name} <span className="ml-1 opacity-70">({count})</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <main className="max-w-[1000px] mx-auto p-6 space-y-4 pt-8">
