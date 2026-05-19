@@ -186,6 +186,23 @@ export async function GET(request) {
   }
 }
 
+// DELETE: 見積依頼を削除（スタッフ）
+// クエリ: ?id=xxx
+export async function DELETE(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) return NextResponse.json({ error: 'id が必要' }, { status: 400 });
+
+    const supabase = admin();
+    const { error } = await supabase.from('estimates').delete().eq('id', id);
+    if (error) throw error;
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
 // PATCH: 店舗回答 or お客様承諾
 export async function PATCH(request) {
   try {

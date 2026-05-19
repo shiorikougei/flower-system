@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
-import { ChevronLeft, Send, CheckCircle, XCircle, RefreshCw, Mail, Phone } from 'lucide-react';
+import { ChevronLeft, Send, CheckCircle, XCircle, RefreshCw, Mail, Phone, Trash2 } from 'lucide-react';
 
 export default function EstimatesPage() {
   const [tenantId, setTenantId] = useState(null);
@@ -295,6 +295,24 @@ export default function EstimatesPage() {
       });
       loadEstimates();
     } catch (e) { alert(e.message); }
+  }
+
+  async function handleDelete(id, est) {
+    // 確定済み（注文に転送済み）の場合は警告強化
+    let confirmMsg = 'このお見積もり依頼を完全に削除しますか？\nこの操作は取り消せません。';
+    if (est?.status === 'converted' && est?.order_id) {
+      confirmMsg = `⚠️ この見積は正式注文に確定済みです（注文ID: ${String(est.order_id).slice(0,8)}）\n\n見積データのみ削除されます（注文データは残ります）。\n本当に削除しますか？`;
+    }
+    if (!confirm(confirmMsg)) return;
+    try {
+      const res = await fetch(`/api/estimates?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || '削除に失敗しました');
+      loadEstimates();
+      alert('見積依頼を削除しました');
+    } catch (e) { alert('エラー: ' + e.message); }
   }
 
   const filtered = filter === 'all' ? estimates : estimates.filter(e => e.status === filter);
@@ -650,6 +668,16 @@ export default function EstimatesPage() {
                       ✅ <strong>正式注文に確定済み</strong> (注文ID: {String(est.order_id).slice(0, 8)})
                     </div>
                   )}
+
+                  {/* ★ 削除ボタン（全ステータス対象） */}
+                  <div className="flex justify-end pt-2 border-t border-[#EAEAEA]">
+                    <button
+                      onClick={() => handleDelete(est.id, est)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 text-[11px] font-bold rounded-lg hover:bg-red-500 hover:text-white transition-all"
+                    >
+                      <Trash2 size={12}/> この見積を削除
+                    </button>
+                  </div>
                 </div>
               );
             })}
