@@ -445,12 +445,25 @@ export default function EstimateAcceptPage() {
         {/* お支払い方法 */}
         <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-4">
           <p className="text-[13px] font-bold text-[#2D4B3E]">💳 お支払い方法</p>
+
+          {/* ★ キャンセル・返金不可のご案内 */}
+          <div className="bg-red-50 border border-red-300 rounded-xl p-4">
+            <p className="text-[12px] font-bold text-red-700 flex items-center gap-1.5 mb-1.5">
+              ⚠️ ご入金後のキャンセル・返金について
+            </p>
+            <p className="text-[11px] text-red-900 leading-relaxed">
+              <strong>お客様都合でのご入金後のキャンセル・返金は承っておりません。</strong><br/>
+              銀行振込・クレジットカード決済いずれもご返金できかねます。<br/>
+              日程やお届け先の変更はお電話にて承りますので、ご注文確定後にお問い合わせください。
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button type="button"
               onClick={() => setOrderForm({...orderForm, paymentMethod: 'bank_transfer'})}
               className={`p-4 rounded-xl border-2 text-left transition-all ${orderForm.paymentMethod === 'bank_transfer' ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white shadow-md' : 'bg-white border-[#EAEAEA] text-[#555]'}`}>
               <div className="flex items-center gap-2 mb-1"><Banknote size={18}/><span className="text-[13px] font-bold">🏦 銀行振込</span></div>
-              <p className={`text-[10px] ${orderForm.paymentMethod === 'bank_transfer' ? 'text-white/80' : 'text-[#999]'}`}>確定後、振込先をメールでご案内</p>
+              <p className={`text-[10px] ${orderForm.paymentMethod === 'bank_transfer' ? 'text-white/80' : 'text-[#999]'}`}>ご注文確定後、振込先をメールでお送りします。<strong>お支払い確認後から制作を開始</strong>いたします。</p>
             </button>
             <button type="button"
               onClick={() => stripeEnabled && setOrderForm({...orderForm, paymentMethod: 'card'})}
@@ -460,19 +473,48 @@ export default function EstimateAcceptPage() {
               <p className={`text-[10px] ${orderForm.paymentMethod === 'card' ? 'text-white/80' : 'text-[#999]'}`}>{stripeEnabled ? 'Stripeで安全に決済' : '※この店舗では利用不可'}</p>
             </button>
           </div>
+
+          {/* ★ 銀行振込時：画像2と同じ「お支払い確認後から制作開始」案内＋入金予定日＋電話案内 */}
           {orderForm.paymentMethod === 'bank_transfer' && (
-            <div className="space-y-2 pt-2 border-t border-[#EAEAEA]">
-              <label className="text-[11px] font-bold text-[#555]">ご入金予定日 <span className="text-red-500">*</span></label>
-              <input type="date" value={orderForm.paymentScheduledDate}
-                onChange={e => setOrderForm({...orderForm, paymentScheduledDate: e.target.value})}
-                min={new Date().toISOString().slice(0, 10)}
-                className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/>
-              <p className="text-[10px] text-[#999]">ご入金確認後から商品の制作・準備を開始いたします</p>
+            <div className="space-y-3 pt-2">
+              {/* 制作開始タイミング強調 */}
+              <div className="bg-[#D97D54] text-white rounded-xl p-5 shadow-md">
+                <p className="text-[16px] font-bold mb-2 flex items-center gap-2">
+                  ⏱️ お支払い確認後から制作開始
+                </p>
+                <p className="text-[11px] leading-relaxed opacity-95">
+                  銀行振込の場合、<strong className="text-yellow-200 underline">ご入金確認後</strong>からお花の仕入れ・制作を開始いたします。<br/>
+                  お届け希望日に間に合うよう、<strong>お早めのお振込み</strong>をお願いいたします。
+                </p>
+              </div>
+
+              {/* 入金予定日（必須）＋電話案内 */}
+              <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-[12px] font-bold text-amber-900">📅 ご入金予定日</label>
+                  <span className="text-[10px] bg-red-50 text-red-600 font-bold px-2 py-0.5 rounded">必須</span>
+                </div>
+                <input
+                  type="date"
+                  value={orderForm.paymentScheduledDate || ''}
+                  onChange={e => setOrderForm({...orderForm, paymentScheduledDate: e.target.value})}
+                  min={new Date().toISOString().slice(0, 10)}
+                  required
+                  className="w-full h-12 px-3 bg-white border-2 border-amber-300 rounded-lg text-[13px] font-bold outline-none focus:border-amber-500"
+                />
+                <p className="text-[10px] text-amber-700">※ お振込み予定の日付を選択してください</p>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-[11px] text-yellow-900 leading-relaxed">
+                  💡 ご入金のタイミングに関するご相談がある場合は、<strong>ご注文確定後にお電話</strong>にてお問い合わせください。<br/>
+                  <span className="text-[10px] text-yellow-700">（お電話番号は注文完了画面・確認メールでご案内します）</span>
+                </div>
+              </div>
             </div>
           )}
+
           {orderForm.paymentMethod === 'card' && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-[11px] text-blue-900">
-              💡 「正式に注文する」を押すと、安全なStripe決済ページへ移動します。
+              💡 「決済へ進む」を押すと、安全なStripe決済ページへ移動します。
             </div>
           )}
         </div>

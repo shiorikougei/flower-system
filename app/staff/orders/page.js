@@ -330,8 +330,23 @@ export default function OrdersPage() {
                     <div className="text-[13px] font-bold text-[#D97D54] flex items-center gap-1.5">
                       <Calendar size={16} /> 納品日: {d.selectedDate || '未指定'} {d.selectedTime && `(${d.selectedTime})`}
                     </div>
+
+                    {/* ★ 社内メモを黄色の付箋風で表示（メモがあるときだけ） */}
+                    {d.note && (
+                      <div className="mt-2 bg-yellow-50 border border-yellow-300 border-l-4 border-l-yellow-500 rounded-md px-3 py-2 shadow-sm">
+                        <div className="flex items-start gap-1.5">
+                          <span className="text-[14px] leading-none mt-0.5">📝</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[10px] font-bold text-yellow-700 mb-0.5">社内メモ</div>
+                            <p className="text-[12px] font-bold text-yellow-900 whitespace-pre-wrap leading-snug line-clamp-3">
+                              {d.note}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  
+
                   <div className="flex flex-col md:items-end justify-between border-t md:border-t-0 md:border-l border-[#EAEAEA] pt-4 md:pt-0 md:pl-6">
                     <p className="text-[11px] text-[#999999] font-bold mb-1">合計金額(税込)</p>
                     <p className="text-[24px] font-bold text-[#2D4B3E]">¥{getTotals(d).total.toLocaleString()}</p>

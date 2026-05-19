@@ -1935,6 +1935,19 @@ function OrderFormContent() {
               {/* ★ Phase 2: お支払い方法選択 */}
               <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] mt-6">
                 <p className="text-[12px] font-bold text-[#555555] mb-4">お支払い方法</p>
+
+                {/* ★ キャンセル・返金不可のご案内 */}
+                <div className="mb-4 bg-red-50 border border-red-300 rounded-xl p-4">
+                  <p className="text-[12px] font-bold text-red-700 flex items-center gap-1.5 mb-1.5">
+                    ⚠️ ご入金後のキャンセル・返金について
+                  </p>
+                  <p className="text-[11px] text-red-900 leading-relaxed">
+                    <strong>お客様都合でのご入金後のキャンセル・返金は承っておりません。</strong><br/>
+                    銀行振込・クレジットカード決済いずれもご返金できかねます。<br/>
+                    日程やお届け先の変更はお電話にて承りますので、ご注文確定後にお問い合わせください。
+                  </p>
+                </div>
+
                 <div className="space-y-2">
                   {stripeEnabled && (
                     <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'card' ? 'border-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#EAEAEA] hover:border-[#2D4B3E]/50'}`}>

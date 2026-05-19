@@ -37,6 +37,11 @@ export default function OrderDetailModal({
   const [confirmDeliveryTime, setConfirmDeliveryTime] = useState('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
+  // ★ 編集モーダル（オーダー内容・日程の変更）
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState(null); // 編集用の作業データ
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
   useEffect(() => {
     setUpdateForm({
       status: order?.order_data?.currentStatus || order?.order_data?.status || 'new',
@@ -47,6 +52,8 @@ export default function OrderDetailModal({
     setConfirmDeliveryDate(order?.order_data?.selectedDate || '');
     setConfirmDeliveryTime(order?.order_data?.selectedTime || '');
     setShowPaymentConfirmModal(false);
+    setShowEditModal(false);
+    setEditForm(null);
   }, [order]);
 
   if (!order) return null;
@@ -698,6 +705,86 @@ export default function OrderDetailModal({
     }
   };
 
+  // ★ 編集モーダルを開く（現在の注文データを編集フォームにロード）
+  const openEditModal = () => {
+    setEditForm({
+      selectedDate: modalData.selectedDate || '',
+      selectedTime: modalData.selectedTime || '',
+      flowerType: modalData.flowerType || '',
+      flowerPurpose: modalData.flowerPurpose || '',
+      flowerColor: modalData.flowerColor || '',
+      flowerVibe: modalData.flowerVibe || '',
+      otherPurpose: modalData.otherPurpose || '',
+      otherVibe: modalData.otherVibe || '',
+      cardType: modalData.cardType || '',
+      cardMessage: modalData.cardMessage || '',
+      tatePattern: modalData.tatePattern || '',
+      tateInput1: modalData.tateInput1 || '',
+      tateInput2: modalData.tateInput2 || '',
+      tateInput3: modalData.tateInput3 || '',
+      receiveMethod: modalData.receiveMethod || '',
+      selectedShop: modalData.selectedShop || '',
+      isRecipientDifferent: !!modalData.isRecipientDifferent,
+      recipientInfo: { ...(modalData.recipientInfo || {}) },
+      customerInfo: { ...(modalData.customerInfo || {}) },
+      note: modalData.note || '',
+    });
+    setShowEditModal(true);
+  };
+
+  // ★ 編集内容を保存
+  const handleSaveEdit = async () => {
+    if (!editForm) return;
+    setIsSavingEdit(true);
+    try {
+      const updatedData = {
+        ...modalData,
+        selectedDate: editForm.selectedDate,
+        selectedTime: editForm.selectedTime,
+        flowerType: editForm.flowerType,
+        flowerPurpose: editForm.flowerPurpose,
+        flowerColor: editForm.flowerColor,
+        flowerVibe: editForm.flowerVibe,
+        otherPurpose: editForm.otherPurpose,
+        otherVibe: editForm.otherVibe,
+        cardType: editForm.cardType,
+        cardMessage: editForm.cardMessage,
+        tatePattern: editForm.tatePattern,
+        tateInput1: editForm.tateInput1,
+        tateInput2: editForm.tateInput2,
+        tateInput3: editForm.tateInput3,
+        receiveMethod: editForm.receiveMethod,
+        selectedShop: editForm.selectedShop,
+        isRecipientDifferent: editForm.isRecipientDifferent,
+        recipientInfo: editForm.recipientInfo,
+        customerInfo: editForm.customerInfo,
+        note: editForm.note,
+        // 編集履歴を残す
+        statusHistory: [
+          ...(Array.isArray(modalData.statusHistory) ? modalData.statusHistory : []),
+          { date: new Date().toISOString(), status: '内容を編集', staff: 'スタッフ' },
+        ],
+      };
+      const { error } = await supabase
+        .from('orders')
+        .update({ order_data: updatedData })
+        .eq('id', order.id);
+      if (error) throw error;
+
+      // 親へ反映
+      if (onUpdatePayment) {
+        await onUpdatePayment(order.id, updatedData, { skipConfirm: true, alreadyUpdated: true });
+      }
+      setShowEditModal(false);
+      alert('注文内容を更新しました ✅');
+    } catch (err) {
+      console.error(err);
+      alert(`更新に失敗しました: ${err.message}`);
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
   // ★ テンプレートメールをサーバー側から実際に送信（Resend経由）
   const handleSendTemplateEmail = async (template) => {
     try {
@@ -826,6 +913,11 @@ export default function OrderDetailModal({
             )}
             
             <div className="w-[1px] h-6 bg-[#EAEAEA] mx-1"></div>
+
+            {/* ★ 注文内容・日程の編集ボタン */}
+            <button onClick={openEditModal} className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-[10px] md:text-[11px] font-bold text-amber-700 hover:bg-amber-100 transition-all shadow-sm">
+              ✏️ <span className="hidden sm:inline">内容を編集</span>
+            </button>
 
             <button onClick={() => onArchive(order.id, modalData.status !== 'completed' && modalData.status !== '完了')} className={`flex items-center gap-1.5 px-3 py-2 text-[10px] md:text-[11px] font-bold rounded-xl transition-all shadow-sm ${modalData.status === 'completed' || modalData.status === '完了' ? 'bg-white border border-[#EAEAEA] text-[#555555]' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b]'}`}>
               {modalData.status === 'completed' || modalData.status === '完了' ? <RotateCcw size={14}/> : <Archive size={14}/>}
@@ -1342,6 +1434,150 @@ export default function OrderDetailModal({
                 className="flex-1 h-11 bg-[#117768] text-white text-[12px] font-bold rounded-xl hover:bg-[#0f6358] disabled:opacity-50 flex items-center justify-center gap-1.5"
               >
                 {isProcessingPayment ? '送信中...' : <><CheckCircle2 size={15}/>確定 + メール送信</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ★ 注文内容編集モーダル */}
+      {showEditModal && editForm && (
+        <div
+          className="fixed inset-0 z-[130] flex items-center justify-center bg-[#111]/70 backdrop-blur-sm p-3 md:p-4"
+          onClick={() => !isSavingEdit && setShowEditModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-white border-b border-[#EAEAEA] px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+              <h3 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2">✏️ 注文内容の編集</h3>
+              <button onClick={() => !isSavingEdit && setShowEditModal(false)} className="text-[#999] hover:text-[#111] text-[20px] font-bold">✕</button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[11px] text-blue-900">
+                💡 日程変更・内容変更は電話受付前提。変更内容は対応履歴に記録されます。
+              </div>
+
+              {/* 納品日・時間 */}
+              <div className="space-y-3">
+                <h4 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2">📅 納品日・時間</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-[#555] block mb-1">納品日</label>
+                    <input type="date" value={editForm.selectedDate} onChange={(e) => setEditForm({...editForm, selectedDate: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-[#555] block mb-1">時間（任意）</label>
+                    <input type="text" placeholder="例: 14:00〜16:00" value={editForm.selectedTime} onChange={(e) => setEditForm({...editForm, selectedTime: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                  </div>
+                </div>
+              </div>
+
+              {/* お花の種類・用途・色・イメージ */}
+              <div className="space-y-3">
+                <h4 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2">🌸 お花の種類・用途・色・イメージ</h4>
+                <div>
+                  <label className="text-[11px] font-bold text-[#555] block mb-1">お花の種類</label>
+                  <input type="text" value={editForm.flowerType} onChange={(e) => setEditForm({...editForm, flowerType: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-[#555] block mb-1">用途</label>
+                    <input type="text" value={editForm.flowerPurpose} onChange={(e) => setEditForm({...editForm, flowerPurpose: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-[#555] block mb-1">用途（その他）</label>
+                    <input type="text" value={editForm.otherPurpose} onChange={(e) => setEditForm({...editForm, otherPurpose: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-[#555] block mb-1">メインカラー</label>
+                    <input type="text" value={editForm.flowerColor} onChange={(e) => setEditForm({...editForm, flowerColor: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-[#555] block mb-1">イメージ</label>
+                    <input type="text" value={editForm.flowerVibe} onChange={(e) => setEditForm({...editForm, flowerVibe: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-[#555] block mb-1">イメージ（その他）</label>
+                  <input type="text" value={editForm.otherVibe} onChange={(e) => setEditForm({...editForm, otherVibe: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                </div>
+              </div>
+
+              {/* 立札・カード */}
+              <div className="space-y-3">
+                <h4 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2">🎴 立札・カード</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-[#555] block mb-1">カードタイプ</label>
+                    <select value={editForm.cardType} onChange={(e) => setEditForm({...editForm, cardType: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]">
+                      <option value="">指定なし</option>
+                      <option value="立札">立札</option>
+                      <option value="メッセージカード">メッセージカード</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-[#555] block mb-1">立札パターン</label>
+                    <input type="text" placeholder="例: 御祝、御供" value={editForm.tatePattern} onChange={(e) => setEditForm({...editForm, tatePattern: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <input type="text" placeholder="立札 1行目" value={editForm.tateInput1} onChange={(e) => setEditForm({...editForm, tateInput1: e.target.value})} className="h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>
+                  <input type="text" placeholder="立札 2行目" value={editForm.tateInput2} onChange={(e) => setEditForm({...editForm, tateInput2: e.target.value})} className="h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>
+                  <input type="text" placeholder="立札 3行目" value={editForm.tateInput3} onChange={(e) => setEditForm({...editForm, tateInput3: e.target.value})} className="h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-[#555] block mb-1">メッセージカード本文</label>
+                  <textarea value={editForm.cardMessage} onChange={(e) => setEditForm({...editForm, cardMessage: e.target.value})} rows={3} className="w-full px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                </div>
+              </div>
+
+              {/* 受取方法・配送先 */}
+              <div className="space-y-3">
+                <h4 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2">📦 受取方法・配送先</h4>
+                <div>
+                  <label className="text-[11px] font-bold text-[#555] block mb-1">受取方法</label>
+                  <select value={editForm.receiveMethod} onChange={(e) => setEditForm({...editForm, receiveMethod: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]">
+                    <option value="">指定なし</option>
+                    <option value="pickup">店頭受取</option>
+                    <option value="delivery">自社配達</option>
+                    <option value="sagawa">業者配送</option>
+                  </select>
+                </div>
+                {editForm.receiveMethod === 'pickup' && (
+                  <div>
+                    <label className="text-[11px] font-bold text-[#555] block mb-1">受取店舗</label>
+                    <input type="text" value={editForm.selectedShop} onChange={(e) => setEditForm({...editForm, selectedShop: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                  </div>
+                )}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={editForm.isRecipientDifferent} onChange={(e) => setEditForm({...editForm, isRecipientDifferent: e.target.checked})} className="accent-[#2D4B3E]"/>
+                  <span className="text-[12px] font-bold text-[#555]">注文者と別住所に届ける</span>
+                </label>
+                {editForm.isRecipientDifferent && (
+                  <div className="space-y-2 bg-[#FBFAF9] p-3 rounded-lg border border-[#EAEAEA]">
+                    <input type="text" placeholder="お届け先 お名前" value={editForm.recipientInfo.name || ''} onChange={(e) => setEditForm({...editForm, recipientInfo: {...editForm.recipientInfo, name: e.target.value}})} className="w-full h-11 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                    <input type="text" placeholder="郵便番号" value={editForm.recipientInfo.zip || ''} onChange={(e) => setEditForm({...editForm, recipientInfo: {...editForm.recipientInfo, zip: e.target.value}})} className="w-full h-11 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                    <input type="text" placeholder="住所1（都道府県・市区町村）" value={editForm.recipientInfo.address1 || ''} onChange={(e) => setEditForm({...editForm, recipientInfo: {...editForm.recipientInfo, address1: e.target.value}})} className="w-full h-11 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                    <input type="text" placeholder="住所2（番地・建物）" value={editForm.recipientInfo.address2 || ''} onChange={(e) => setEditForm({...editForm, recipientInfo: {...editForm.recipientInfo, address2: e.target.value}})} className="w-full h-11 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                    <input type="text" placeholder="電話番号" value={editForm.recipientInfo.phone || ''} onChange={(e) => setEditForm({...editForm, recipientInfo: {...editForm.recipientInfo, phone: e.target.value}})} className="w-full h-11 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                  </div>
+                )}
+              </div>
+
+              {/* 社内メモ */}
+              <div className="space-y-2">
+                <h4 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2">📝 社内メモ</h4>
+                <textarea value={editForm.note} onChange={(e) => setEditForm({...editForm, note: e.target.value})} rows={3} placeholder="変更内容のメモ等" className="w-full px-3 py-2 bg-yellow-50 border border-yellow-300 rounded-lg text-[13px] outline-none focus:border-yellow-500"/>
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 bg-white border-t border-[#EAEAEA] px-6 py-4 flex gap-2 rounded-b-2xl">
+              <button onClick={() => !isSavingEdit && setShowEditModal(false)} disabled={isSavingEdit} className="flex-1 h-12 bg-[#EAEAEA] text-[#555] text-[13px] font-bold rounded-xl hover:bg-[#dcdcdc] disabled:opacity-50">キャンセル</button>
+              <button onClick={handleSaveEdit} disabled={isSavingEdit} className="flex-1 h-12 bg-[#2D4B3E] text-white text-[13px] font-bold rounded-xl hover:bg-[#1f352b] disabled:opacity-50 flex items-center justify-center gap-1.5">
+                {isSavingEdit ? '保存中...' : <><CheckCircle2 size={15}/>変更を保存</>}
               </button>
             </div>
           </div>
