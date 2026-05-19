@@ -1615,8 +1615,14 @@ export default function OrderDetailModal({
 
       {/* ★ 完成写真メール送信前の確認モーダル */}
       {completionMailPreview && (
-        <div className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl">
+        <div
+          className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={(e) => { e.stopPropagation(); if (!isSendingMail) setCompletionMailPreview(null); }}
+        >
+          <div
+            className="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="sticky top-0 bg-white border-b border-[#EAEAEA] px-6 py-4 flex items-center justify-between rounded-t-2xl">
               <h3 className="text-[15px] font-bold text-[#2D4B3E]">📧 完成写真メールの送信確認</h3>
               <button
