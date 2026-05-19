@@ -331,6 +331,44 @@ export default function OrdersPage() {
                       <Calendar size={16} /> 納品日: {d.selectedDate || '未指定'} {d.selectedTime && `(${d.selectedTime})`}
                     </div>
 
+                    {/* ★ オーダー内容サマリー（用途・カラー・イメージ・立札・カード・お届け先） */}
+                    {(() => {
+                      const chips = [];
+                      const purpose = d.flowerPurpose || d.otherPurpose;
+                      const color = d.flowerColor;
+                      const vibe = d.flowerVibe || d.otherVibe;
+                      if (purpose) chips.push({ icon: '🎀', label: '用途', value: purpose, bg: 'bg-pink-50', border: 'border-pink-200', text: 'text-pink-900' });
+                      if (color) chips.push({ icon: '🎨', label: 'カラー', value: color, bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-900' });
+                      if (vibe) chips.push({ icon: '✨', label: 'イメージ', value: vibe, bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-900' });
+
+                      // 立札・カード
+                      const tateText = [d.tatePattern, d.tateInput1, d.tateInput2, d.tateInput3]
+                        .filter(Boolean).join(' / ');
+                      if (d.cardType === '立札' && tateText) {
+                        chips.push({ icon: '🎴', label: '立札', value: tateText, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-900' });
+                      } else if (d.cardType === 'メッセージカード' && d.cardMessage) {
+                        chips.push({ icon: '💌', label: 'カード', value: d.cardMessage.slice(0, 30) + (d.cardMessage.length > 30 ? '…' : ''), bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-900' });
+                      }
+
+                      // お届け先（別住所のときだけ）
+                      if (d.isRecipientDifferent && d.recipientInfo?.name) {
+                        chips.push({ icon: '📍', label: 'お届け先', value: `${d.recipientInfo.name} 様`, bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-900' });
+                      }
+
+                      if (chips.length === 0) return null;
+                      return (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {chips.map((c, i) => (
+                            <span key={i} className={`inline-flex items-center gap-1 ${c.bg} ${c.border} border ${c.text} text-[10px] font-bold px-2 py-1 rounded-md max-w-full`}>
+                              <span>{c.icon}</span>
+                              <span className="text-[9px] opacity-70">{c.label}:</span>
+                              <span className="truncate">{c.value}</span>
+                            </span>
+                          ))}
+                        </div>
+                      );
+                    })()}
+
                     {/* ★ 社内メモを黄色の付箋風で表示（メモがあるときだけ） */}
                     {d.note && (
                       <div className="mt-2 bg-yellow-50 border border-yellow-300 border-l-4 border-l-yellow-500 rounded-md px-3 py-2 shadow-sm">
