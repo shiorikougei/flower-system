@@ -491,7 +491,7 @@ export default function CorporateOrderPage() {
             <div className="space-y-6">
               <select className={`w-full h-16 px-5 bg-white border rounded-[20px] outline-none transition-all text-[15px] font-bold appearance-none shadow-sm ${flowerType ? 'border-[#2D4B3E] text-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#EAEAEA] focus:border-[#2D4B3E]'}`} value={flowerType} onChange={(e) => { setFlowerType(e.target.value); setItemPrice(''); setIsBring('shop'); }}>
                 <option value="">種類を選択してください</option>
-                {appSettings?.flowerItems?.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
+                {appSettings?.flowerItems?.filter(item => !item.staffOnly).map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
               </select>
 
               {flowerType ? (

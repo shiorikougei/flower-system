@@ -702,7 +702,7 @@ export default function CorporateDashboardPage() {
                   <label className="text-[11px] font-bold text-[#999999] tracking-widest">お花の種類 (必須)</label>
                   <select required value={omakaseModal.flowerType} onChange={e => setOmakaseModal({...omakaseModal, flowerType: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold focus:border-[#2D4B3E] outline-none">
                     <option value="">種類を選択してください</option>
-                    {appSettings?.flowerItems?.map(item => <option key={item.id} value={item.name}>{item.name}</option>) || (
+                    {appSettings?.flowerItems?.filter(item => !item.staffOnly).map(item => <option key={item.id} value={item.name}>{item.name}</option>) || (
                       <>
                         <option value="スタンド花">スタンド花</option>
                         <option value="胡蝶蘭">胡蝶蘭</option>

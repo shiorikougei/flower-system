@@ -888,6 +888,27 @@ export default function SettingsPage() {
               </div>
             </div>
 
+            {/* ★ 店舗注文受付のみ表示 (お客様画面では非表示) */}
+            <div className="pt-4 pb-2 border-t border-[#FBFAF9]">
+              <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${item.staffOnly ? 'bg-orange-50 border-orange-300' : 'bg-white border-[#EAEAEA] hover:border-orange-200'}`}>
+                <input
+                  type="checkbox"
+                  checked={!!item.staffOnly}
+                  onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, staffOnly:e.target.checked}:i))}
+                  className="accent-orange-600 w-5 h-5 mt-0.5"
+                />
+                <div className="flex-1">
+                  <p className={`text-[13px] font-bold ${item.staffOnly ? 'text-orange-700' : 'text-[#2D4B3E]'}`}>
+                    🏪 店舗注文受付のみ表示
+                  </p>
+                  <p className="text-[10px] text-[#999999] leading-tight mt-1">
+                    ONにすると、お客様のオンライン注文画面では表示されず、<strong>スタッフの店舗注文受付ページからのみ</strong>選択できるようになります。<br/>
+                    （電話・店頭限定の商品や、関係者向け商品などに）
+                  </p>
+                </div>
+              </label>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-[#FBFAF9] pt-6">
               <div className="space-y-4">
                 <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={16}/> 納期設定</p>
