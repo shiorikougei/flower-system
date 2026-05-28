@@ -112,7 +112,7 @@ export async function POST(request) {
 
       const { data: dbProducts, error: prodErr } = await supabaseAdmin
         .from('products')
-        .select('id, name, price, stock, image_url, tenant_id, is_active, box_size')
+        .select('id, name, price, stock, image_url, tenant_id, is_active, box_size, options')
         .in('id', ids);
       if (prodErr) return NextResponse.json({ error: '商品データの取得に失敗' }, { status: 500 });
 
@@ -127,15 +127,49 @@ export async function POST(request) {
         if (!p.is_active) return NextResponse.json({ error: `「${p.name}」は現在販売停止中です` }, { status: 400 });
         const qty = Math.max(1, Math.floor(Number(c.qty) || 0));
         if (qty > p.stock) return NextResponse.json({ error: `「${p.name}」の在庫が不足しています（在庫: ${p.stock}）` }, { status: 400 });
-        item += p.price * qty;
+
+        // ★ オプション金額をサーバー側で再検証（クライアントの数字を信用しない）
+        const productOpts = p.options || {};
+        const selected = c.selectedOptions || {};
+        let serverOptTotal = 0;
+        const verifiedOptions = {};
+        if (selected.wrapping && productOpts.wrapping?.enabled) {
+          const price = Number(productOpts.wrapping.price) || 0;
+          serverOptTotal += price;
+          verifiedOptions.wrapping = { price };
+        }
+        if (selected.messageCard && productOpts.messageCard?.enabled) {
+          const price = Number(productOpts.messageCard.price) || 0;
+          serverOptTotal += price;
+          verifiedOptions.messageCard = { price, text: String(selected.messageCard.text || '').slice(0, 500) };
+        }
+        if (selected.textInsertion && productOpts.textInsertion?.enabled) {
+          const price = Number(productOpts.textInsertion.price) || 0;
+          const maxLen = Number(productOpts.textInsertion.maxLength) || 30;
+          const allowKanji = Boolean(productOpts.textInsertion.allowKanji);
+          const text = String(selected.textInsertion.text || '').slice(0, maxLen);
+          if (!allowKanji && /[一-鿿]/.test(text)) {
+            return NextResponse.json({ error: `「${p.name}」の文字入れに漢字は使用できません` }, { status: 400 });
+          }
+          const validPositions = Array.isArray(productOpts.textInsertion.positions) ? productOpts.textInsertion.positions : [];
+          const position = validPositions.includes(selected.textInsertion.position) ? selected.textInsertion.position : (validPositions[0] || '');
+          serverOptTotal += price;
+          verifiedOptions.textInsertion = { price, text, position };
+        }
+        // クライアントから来たオプション情報をサーバー検証済みに置き換え
+        c.selectedOptions = Object.keys(verifiedOptions).length > 0 ? verifiedOptions : null;
+        c.optionsTotal = serverOptTotal;
+
+        const unitWithOpt = p.price + serverOptTotal;
+        item += unitWithOpt * qty;
         // 数値ベース比較（'80', '100', '120' 等）
         const r = Number(p.box_size) || 0;
         if (r > maxRank) { maxRank = r; maxSize = p.box_size || null; }
         lineItemsForStripe.push({
           price_data: {
             currency: 'jpy',
-            product_data: { name: p.name, images: p.image_url ? [p.image_url] : undefined },
-            unit_amount: p.price,
+            product_data: { name: p.name + (serverOptTotal > 0 ? '（オプション込み）' : ''), images: p.image_url ? [p.image_url] : undefined },
+            unit_amount: unitWithOpt,
           },
           quantity: qty,
         });
@@ -215,6 +249,8 @@ export async function POST(request) {
         status: 'new',
         managementNo,  // ★ 管理番号
         ecBoxFee,      // ★ EC箱代
+        // ★ EC注文はサーバー側で検証した金額を上書き保存
+        ...(isEcOrder ? { itemPrice: item } : {}),
       },
       payment_status: initialPaymentStatus,
     };

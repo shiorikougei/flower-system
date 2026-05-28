@@ -72,8 +72,15 @@ export default function ShopCatalogPage() {
     });
   }, [products, selectedCategory, searchQuery]);
 
-  function handleAddToCart(product, qty = 1) {
-    addToCart(tenantId, { id: product.id, name: product.name, price: product.price, imageUrl: product.image_url, stock: product.stock }, qty);
+  function handleAddToCart(product, qty = 1, selectedOptions = null) {
+    addToCart(tenantId, {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      imageUrl: product.image_url,
+      stock: product.stock,
+      selectedOptions: selectedOptions || null,  // ★ お客様が選択したオプション
+    }, qty);
     refreshCartCount();
     setAddingToast(`「${product.name}」をカートに入れました`);
     setTimeout(() => setAddingToast(null), 2000);
@@ -206,7 +213,7 @@ export default function ShopCatalogPage() {
         <ProductDetailModal
           product={selectedProduct}
           onClose={() => setSelectedProduct(null)}
-          onAddToCart={(qty) => { handleAddToCart(selectedProduct, qty); setSelectedProduct(null); }}
+          onAddToCart={(qty, opts) => { handleAddToCart(selectedProduct, qty, opts); setSelectedProduct(null); }}
         />
       )}
 
@@ -240,6 +247,55 @@ function ProductDetailModal({ product, onClose, onAddToCart }) {
   const [qty, setQty] = useState(1);
   const maxQty = product.stock;
 
+  // ★ 画像配列: メイン + 追加（最大5枚）
+  const allImages = [
+    ...(product.image_url ? [product.image_url] : []),
+    ...((Array.isArray(product.image_urls) ? product.image_urls : []).filter(u => typeof u === 'string' && u)),
+  ];
+  const [imageIdx, setImageIdx] = useState(0);
+  const currentImage = allImages[imageIdx] || product.image_url || '';
+
+  // ★ オプション選択状態
+  const opts = product.options || {};
+  const [wrappingOn, setWrappingOn] = useState(false);
+  const [messageCardOn, setMessageCardOn] = useState(false);
+  const [messageCardText, setMessageCardText] = useState('');
+  const [textInsertionOn, setTextInsertionOn] = useState(false);
+  const [textInsertionText, setTextInsertionText] = useState('');
+  const [textInsertionPos, setTextInsertionPos] = useState((opts.textInsertion?.positions || [])[0] || '');
+
+  // 文字入れバリデーション
+  const tiMax = Number(opts.textInsertion?.maxLength) || 30;
+  const tiAllowKanji = Boolean(opts.textInsertion?.allowKanji);
+  // 漢字判定: CJK統合漢字
+  const hasKanji = /[一-鿿]/.test(textInsertionText);
+  const tiError = textInsertionOn ? (
+    textInsertionText.length === 0 ? '文字を入力してください' :
+    textInsertionText.length > tiMax ? `${tiMax}文字以内で入力してください` :
+    (!tiAllowKanji && hasKanji) ? '漢字は使用できません' :
+    !textInsertionPos ? '文字入れ位置を選択してください' : ''
+  ) : '';
+
+  // 追加金額の合計
+  const wrappingPrice = wrappingOn ? (Number(opts.wrapping?.price) || 0) : 0;
+  const messageCardPrice = messageCardOn ? (Number(opts.messageCard?.price) || 0) : 0;
+  const textInsertionPrice = textInsertionOn ? (Number(opts.textInsertion?.price) || 0) : 0;
+  const optionsTotal = wrappingPrice + messageCardPrice + textInsertionPrice;
+  const totalPerUnit = product.price + optionsTotal;
+
+  const handleSubmit = () => {
+    if (textInsertionOn && tiError) {
+      alert(tiError);
+      return;
+    }
+    const selectedOptions = {
+      wrapping: wrappingOn ? { price: wrappingPrice } : null,
+      messageCard: messageCardOn ? { price: messageCardPrice, text: messageCardText } : null,
+      textInsertion: textInsertionOn ? { price: textInsertionPrice, text: textInsertionText, position: textInsertionPos } : null,
+    };
+    onAddToCart(qty, selectedOptions);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111111]/40 backdrop-blur-sm p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -249,8 +305,25 @@ function ProductDetailModal({ product, onClose, onAddToCart }) {
         </div>
         <div className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="aspect-square bg-[#FBFAF9] rounded-2xl overflow-hidden">
-              {product.image_url ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[#CCC]"><Package size={48}/></div>}
+            <div className="space-y-2">
+              {/* メイン画像 */}
+              <div className="aspect-square bg-[#FBFAF9] rounded-2xl overflow-hidden">
+                {currentImage ? <img src={currentImage} alt={product.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[#CCC]"><Package size={48}/></div>}
+              </div>
+              {/* サムネイル（複数画像がある場合） */}
+              {allImages.length > 1 && (
+                <div className="grid grid-cols-5 gap-2">
+                  {allImages.map((img, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setImageIdx(i)}
+                      className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${i === imageIdx ? 'border-[#2D4B3E]' : 'border-transparent hover:border-[#EAEAEA]'}`}
+                    >
+                      <img src={img} alt="" className="w-full h-full object-cover"/>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="space-y-4">
               {product.category && <p className="text-[10px] text-[#999999]">{product.category}</p>}
@@ -258,25 +331,123 @@ function ProductDetailModal({ product, onClose, onAddToCart }) {
               <p className="text-[26px] font-bold text-[#2D4B3E]">¥{product.price.toLocaleString()}<span className="text-[11px] font-normal text-[#999999] ml-1">(税抜)</span></p>
               <p className="text-[12px] text-[#555555] leading-relaxed whitespace-pre-wrap">{product.description || '—'}</p>
               <p className="text-[11px] text-[#999999]">在庫: <span className="font-bold text-[#555555]">{product.stock}</span></p>
+            </div>
+          </div>
 
-              <div className="pt-4 border-t border-[#F0F0F0] space-y-3">
-                <div className="flex items-center gap-3">
-                  <p className="text-[11px] font-bold text-[#999999]">個数:</p>
-                  <div className="flex items-center bg-[#FBFAF9] rounded-xl border border-[#EAEAEA]">
-                    <button onClick={() => setQty(Math.max(1, qty - 1))} className="w-10 h-10 text-[#555555] hover:bg-white rounded-l-xl">
-                      <Minus size={14} className="mx-auto" />
-                    </button>
-                    <span className="w-12 text-center font-bold">{qty}</span>
-                    <button onClick={() => setQty(Math.min(maxQty, qty + 1))} className="w-10 h-10 text-[#555555] hover:bg-white rounded-r-xl">
-                      <Plus size={14} className="mx-auto" />
-                    </button>
+          {/* ★ オプション選択 */}
+          {(opts.wrapping?.enabled || opts.messageCard?.enabled || opts.textInsertion?.enabled) && (
+            <div className="bg-pink-50 border border-pink-200 rounded-2xl p-5 space-y-4">
+              <p className="text-[13px] font-bold text-pink-900">🎀 オプション</p>
+
+              {opts.wrapping?.enabled && (
+                <label className="flex items-start gap-3 cursor-pointer bg-white p-3 rounded-lg border border-pink-100">
+                  <input type="checkbox" checked={wrappingOn} onChange={(e) => setWrappingOn(e.target.checked)} className="mt-0.5 w-5 h-5 accent-pink-600" />
+                  <div className="flex-1 flex items-center justify-between">
+                    <span className="text-[13px] font-bold text-[#111111]">🎁 ラッピング</span>
+                    <span className="text-[12px] font-bold text-pink-700">+¥{(Number(opts.wrapping?.price)||0).toLocaleString()}</span>
                   </div>
+                </label>
+              )}
+
+              {opts.messageCard?.enabled && (
+                <div className="bg-white p-3 rounded-lg border border-pink-100">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" checked={messageCardOn} onChange={(e) => setMessageCardOn(e.target.checked)} className="mt-0.5 w-5 h-5 accent-pink-600" />
+                    <div className="flex-1 flex items-center justify-between">
+                      <span className="text-[13px] font-bold text-[#111111]">💌 メッセージカード（紙）</span>
+                      <span className="text-[12px] font-bold text-pink-700">{(Number(opts.messageCard?.price)||0) === 0 ? '無料' : `+¥${(Number(opts.messageCard?.price)||0).toLocaleString()}`}</span>
+                    </div>
+                  </label>
+                  {messageCardOn && (
+                    <div className="mt-3 ml-8">
+                      <textarea
+                        value={messageCardText}
+                        onChange={(e) => setMessageCardText(e.target.value)}
+                        placeholder="メッセージ内容（任意）"
+                        className="w-full h-20 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] resize-none focus:border-pink-600 outline-none"
+                      />
+                    </div>
+                  )}
                 </div>
-                <button onClick={() => onAddToCart(qty)} className="w-full h-12 bg-[#2D4B3E] text-white rounded-xl text-[13px] font-bold hover:bg-[#1f352b] flex items-center justify-center gap-2">
-                  <ShoppingCart size={16}/> {qty}個をカートに追加
+              )}
+
+              {opts.textInsertion?.enabled && (
+                <div className="bg-white p-3 rounded-lg border border-pink-100">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" checked={textInsertionOn} onChange={(e) => setTextInsertionOn(e.target.checked)} className="mt-0.5 w-5 h-5 accent-pink-600" />
+                    <div className="flex-1 flex items-center justify-between">
+                      <span className="text-[13px] font-bold text-[#111111]">✍️ 文字入れ</span>
+                      <span className="text-[12px] font-bold text-pink-700">+¥{(Number(opts.textInsertion?.price)||0).toLocaleString()}</span>
+                    </div>
+                  </label>
+                  {textInsertionOn && (
+                    <div className="mt-3 ml-8 space-y-3">
+                      <div>
+                        <label className="text-[11px] font-bold text-[#555555] block mb-1">
+                          入れる文字（{tiMax}文字まで{tiAllowKanji ? '' : '・漢字不可'}）
+                        </label>
+                        <input
+                          type="text"
+                          value={textInsertionText}
+                          onChange={(e) => setTextInsertionText(e.target.value)}
+                          maxLength={tiMax}
+                          placeholder={tiAllowKanji ? '例: お誕生日おめでとう' : '例: 2025.7.18'}
+                          className="w-full h-10 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] font-bold focus:border-pink-600 outline-none"
+                        />
+                        <p className="text-[10px] text-[#999999] mt-1">{textInsertionText.length} / {tiMax}文字</p>
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-bold text-[#555555] block mb-1">文字入れ位置</label>
+                        <div className="flex gap-2 flex-wrap">
+                          {(opts.textInsertion?.positions || []).map(pos => (
+                            <button
+                              key={pos}
+                              type="button"
+                              onClick={() => setTextInsertionPos(pos)}
+                              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border-2 transition-all ${textInsertionPos === pos ? 'bg-pink-600 text-white border-pink-600' : 'bg-white text-[#555555] border-[#EAEAEA] hover:border-pink-300'}`}
+                            >
+                              {pos}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      {tiError && (
+                        <p className="text-[11px] font-bold text-red-600">⚠️ {tiError}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="pt-4 border-t border-[#F0F0F0] space-y-3">
+            <div className="flex items-center gap-3">
+              <p className="text-[11px] font-bold text-[#999999]">個数:</p>
+              <div className="flex items-center bg-[#FBFAF9] rounded-xl border border-[#EAEAEA]">
+                <button onClick={() => setQty(Math.max(1, qty - 1))} className="w-10 h-10 text-[#555555] hover:bg-white rounded-l-xl">
+                  <Minus size={14} className="mx-auto" />
+                </button>
+                <span className="w-12 text-center font-bold">{qty}</span>
+                <button onClick={() => setQty(Math.min(maxQty, qty + 1))} className="w-10 h-10 text-[#555555] hover:bg-white rounded-r-xl">
+                  <Plus size={14} className="mx-auto" />
                 </button>
               </div>
             </div>
+            {optionsTotal > 0 && (
+              <div className="bg-[#FBFAF9] rounded-xl p-3 text-[12px] space-y-1">
+                <div className="flex justify-between"><span className="text-[#555555]">商品代</span><span className="font-bold">¥{(product.price * qty).toLocaleString()}</span></div>
+                <div className="flex justify-between"><span className="text-[#555555]">オプション (×{qty})</span><span className="font-bold text-pink-700">+¥{(optionsTotal * qty).toLocaleString()}</span></div>
+                <div className="flex justify-between pt-1 border-t border-[#EAEAEA]"><span className="font-bold text-[#111111]">小計</span><span className="font-bold text-[#2D4B3E]">¥{(totalPerUnit * qty).toLocaleString()}</span></div>
+              </div>
+            )}
+            <button
+              onClick={handleSubmit}
+              disabled={textInsertionOn && Boolean(tiError)}
+              className="w-full h-12 bg-[#2D4B3E] text-white rounded-xl text-[13px] font-bold hover:bg-[#1f352b] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ShoppingCart size={16}/> {qty}個をカートに追加（¥{(totalPerUnit * qty).toLocaleString()}）
+            </button>
           </div>
         </div>
       </div>

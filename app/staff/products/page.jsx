@@ -103,16 +103,45 @@ function StaffProductsPageInner() {
       price: 3000,
       stock: 10,
       image_url: '',
+      image_urls: [],  // ★ 追加画像（最大5枚）
       category: '',
       is_active: true,
       restock_allowed: false,  // ★ 一点もの（ドライフラワー等）デフォルト
       box_size: shippingSizes[0] || '80',  // ★ 箱サイズ（業者配送マスタ連動）
       display_order: 0,
+      options: {
+        wrapping:      { enabled: false, price: 220 },
+        messageCard:   { enabled: false, price: 0 },
+        textInsertion: {
+          enabled: false,
+          price: 4400,
+          maxLength: 30,
+          allowKanji: false,
+          positions: ['真ん中', '右下', '下'],
+        },
+      },
     });
   }
 
   function openEdit(p) {
-    setEditTarget({ ...p });
+    // 後方互換: 既存データに image_urls/options が無ければデフォルト値を補完
+    const merged = {
+      ...p,
+      image_urls: Array.isArray(p.image_urls) ? p.image_urls : [],
+      options: {
+        wrapping:      { enabled: false, price: 220, ...(p.options?.wrapping || {}) },
+        messageCard:   { enabled: false, price: 0,   ...(p.options?.messageCard || {}) },
+        textInsertion: {
+          enabled: false,
+          price: 4400,
+          maxLength: 30,
+          allowKanji: false,
+          positions: ['真ん中', '右下', '下'],
+          ...(p.options?.textInsertion || {}),
+        },
+      },
+    };
+    setEditTarget(merged);
   }
 
   async function saveProduct() {
@@ -123,7 +152,7 @@ function StaffProductsPageInner() {
     setIsSaving(true);
     try {
       let imageUrl = editTarget.image_url;
-      // 新規アップロードファイルがあれば Storage に保存
+      // メイン画像の新規アップロード
       if (editTarget._uploadFile) {
         const fileExt = editTarget._uploadFile.name.split('.').pop();
         const fileName = `${Date.now()}.${fileExt}`;
@@ -136,6 +165,27 @@ function StaffProductsPageInner() {
         imageUrl = pub.publicUrl;
       }
 
+      // 追加画像（image_urls）のアップロード
+      const additionalUrls = [];
+      const currentAdditional = Array.isArray(editTarget.image_urls) ? editTarget.image_urls : [];
+      for (const entry of currentAdditional) {
+        if (typeof entry === 'string') {
+          // 既存URL → そのまま
+          additionalUrls.push(entry);
+        } else if (entry && entry._file) {
+          // 新規アップロード
+          const fileExt = entry._file.name.split('.').pop();
+          const fileName = `${Date.now()}_${Math.random().toString(36).slice(2,7)}.${fileExt}`;
+          const filePath = `${tenantId}/products/${fileName}`;
+          const { error: uploadErr } = await supabase.storage
+            .from('portfolio')
+            .upload(filePath, entry._file);
+          if (uploadErr) throw uploadErr;
+          const { data: pub } = supabase.storage.from('portfolio').getPublicUrl(filePath);
+          additionalUrls.push(pub.publicUrl);
+        }
+      }
+
       const payload = {
         tenant_id: tenantId,
         name: editTarget.name,
@@ -143,11 +193,13 @@ function StaffProductsPageInner() {
         price: Number(editTarget.price) || 0,
         stock: Number(editTarget.stock) || 0,
         image_url: imageUrl || '',
+        image_urls: additionalUrls,  // ★ 追加画像
         category: editTarget.category || '',
         is_active: Boolean(editTarget.is_active),
         restock_allowed: Boolean(editTarget.restock_allowed),  // ★ 再入荷可否
         box_size: editTarget.box_size || 'M',                   // ★ 箱サイズ
         display_order: Number(editTarget.display_order) || 0,
+        options: editTarget.options || {},  // ★ オプション設定
       };
 
       // ★ 在庫が 0→>0 に増えたかを判定するため、更新前の在庫を取得
@@ -349,9 +401,9 @@ function StaffProductsPageInner() {
             </div>
 
             <div className="p-6 space-y-5">
-              {/* 画像 */}
+              {/* メイン画像 */}
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-[#999999]">商品画像</label>
+                <label className="text-[11px] font-bold text-[#999999]">商品画像（メイン）</label>
                 <div className="aspect-square w-48 mx-auto bg-[#FBFAF9] border-2 border-dashed border-[#EAEAEA] rounded-2xl flex items-center justify-center overflow-hidden relative">
                   {(editTarget._previewUrl || editTarget.image_url) ? (
                     <img src={editTarget._previewUrl || editTarget.image_url} alt="" className="w-full h-full object-cover" />
@@ -370,6 +422,56 @@ function StaffProductsPageInner() {
                     }}
                   />
                 </div>
+              </div>
+
+              {/* 追加画像（最大4枚、メインと合わせて合計5枚） */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-[#999999]">追加画像（最大4枚 / メインと合わせて5枚まで）</label>
+                <div className="grid grid-cols-4 gap-3">
+                  {[0,1,2,3].map(idx => {
+                    const entry = (editTarget.image_urls || [])[idx];
+                    const previewSrc = entry?._previewUrl || (typeof entry === 'string' ? entry : '');
+                    return (
+                      <div key={idx} className="aspect-square bg-[#FBFAF9] border-2 border-dashed border-[#EAEAEA] rounded-xl flex items-center justify-center overflow-hidden relative">
+                        {previewSrc ? (
+                          <>
+                            <img src={previewSrc} alt="" className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const next = [...(editTarget.image_urls || [])];
+                                next.splice(idx, 1);
+                                setEditTarget({ ...editTarget, image_urls: next });
+                              }}
+                              className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] hover:bg-red-600"
+                              title="削除"
+                            ><X size={12}/></button>
+                          </>
+                        ) : (
+                          <div className="text-center text-[#CCC] text-[9px]"><ImageIcon size={20} className="mx-auto mb-0.5"/>追加</div>
+                        )}
+                        {!previewSrc && (
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (!f) return;
+                              if (f.size > 3 * 1024 * 1024) { alert('3MB以下の画像にしてください'); return; }
+                              const next = [...(editTarget.image_urls || [])];
+                              next[idx] = { _file: f, _previewUrl: URL.createObjectURL(f) };
+                              // 隙間を詰める（途中インデックスに入れた場合）
+                              const cleaned = next.filter(Boolean);
+                              setEditTarget({ ...editTarget, image_urls: cleaned });
+                            }}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-[#999999]">📸 商品の角度違い・サイズ感・ディテール写真など、お客様の購買判断に役立つ画像を追加できます。</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -459,6 +561,181 @@ function StaffProductsPageInner() {
                 <p className="text-[10px] text-orange-700 mt-2 leading-relaxed">
                   カート内の<strong>最大サイズの箱代</strong>がご注文時に加算されます（業者配送の送料計算もこのサイズを使用）。料金は設定 → 商品・配送 → 配送・時間枠 で変更可能。
                 </p>
+              </div>
+
+              {/* ★ オプション設定 */}
+              <div className="bg-pink-50 border border-pink-200 rounded-xl p-4 space-y-4">
+                <label className="text-[13px] font-bold text-pink-900 block">🎀 オプション設定（この商品で選択可能なオプション）</label>
+
+                {/* ラッピング */}
+                <div className="bg-white rounded-lg p-3 border border-pink-100">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(editTarget.options?.wrapping?.enabled)}
+                      onChange={(e) => setEditTarget({
+                        ...editTarget,
+                        options: {
+                          ...editTarget.options,
+                          wrapping: { ...editTarget.options?.wrapping, enabled: e.target.checked },
+                        },
+                      })}
+                      className="mt-0.5 w-5 h-5 accent-pink-600"
+                    />
+                    <div className="flex-1">
+                      <p className="text-[13px] font-bold text-[#111111]">🎁 ラッピング</p>
+                    </div>
+                  </label>
+                  {editTarget.options?.wrapping?.enabled && (
+                    <div className="mt-3 ml-8 flex items-center gap-2">
+                      <label className="text-[11px] font-bold text-[#555555]">料金（税抜）</label>
+                      <input
+                        type="number"
+                        value={editTarget.options?.wrapping?.price ?? 220}
+                        onChange={(e) => setEditTarget({
+                          ...editTarget,
+                          options: {
+                            ...editTarget.options,
+                            wrapping: { ...editTarget.options?.wrapping, price: Number(e.target.value) || 0 },
+                          },
+                        })}
+                        className="w-24 h-8 px-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded text-[12px] font-bold focus:border-pink-600 outline-none"
+                      />
+                      <span className="text-[11px] text-[#555555]">円</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* メッセージカード */}
+                <div className="bg-white rounded-lg p-3 border border-pink-100">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(editTarget.options?.messageCard?.enabled)}
+                      onChange={(e) => setEditTarget({
+                        ...editTarget,
+                        options: {
+                          ...editTarget.options,
+                          messageCard: { ...editTarget.options?.messageCard, enabled: e.target.checked },
+                        },
+                      })}
+                      className="mt-0.5 w-5 h-5 accent-pink-600"
+                    />
+                    <div className="flex-1">
+                      <p className="text-[13px] font-bold text-[#111111]">💌 メッセージカード（紙）</p>
+                    </div>
+                  </label>
+                  {editTarget.options?.messageCard?.enabled && (
+                    <div className="mt-3 ml-8 flex items-center gap-2">
+                      <label className="text-[11px] font-bold text-[#555555]">料金（税抜）</label>
+                      <input
+                        type="number"
+                        value={editTarget.options?.messageCard?.price ?? 0}
+                        onChange={(e) => setEditTarget({
+                          ...editTarget,
+                          options: {
+                            ...editTarget.options,
+                            messageCard: { ...editTarget.options?.messageCard, price: Number(e.target.value) || 0 },
+                          },
+                        })}
+                        className="w-24 h-8 px-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded text-[12px] font-bold focus:border-pink-600 outline-none"
+                      />
+                      <span className="text-[11px] text-[#555555]">円（0=無料）</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* 文字入れ */}
+                <div className="bg-white rounded-lg p-3 border border-pink-100">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(editTarget.options?.textInsertion?.enabled)}
+                      onChange={(e) => setEditTarget({
+                        ...editTarget,
+                        options: {
+                          ...editTarget.options,
+                          textInsertion: { ...editTarget.options?.textInsertion, enabled: e.target.checked },
+                        },
+                      })}
+                      className="mt-0.5 w-5 h-5 accent-pink-600"
+                    />
+                    <div className="flex-1">
+                      <p className="text-[13px] font-bold text-[#111111]">✍️ 文字入れ（ガラス面等）</p>
+                    </div>
+                  </label>
+                  {editTarget.options?.textInsertion?.enabled && (
+                    <div className="mt-3 ml-8 space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[11px] font-bold text-[#555555] block mb-1">料金（税抜）</label>
+                          <input
+                            type="number"
+                            value={editTarget.options?.textInsertion?.price ?? 4400}
+                            onChange={(e) => setEditTarget({
+                              ...editTarget,
+                              options: {
+                                ...editTarget.options,
+                                textInsertion: { ...editTarget.options?.textInsertion, price: Number(e.target.value) || 0 },
+                              },
+                            })}
+                            className="w-full h-8 px-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded text-[12px] font-bold focus:border-pink-600 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold text-[#555555] block mb-1">最大文字数</label>
+                          <input
+                            type="number"
+                            value={editTarget.options?.textInsertion?.maxLength ?? 30}
+                            onChange={(e) => setEditTarget({
+                              ...editTarget,
+                              options: {
+                                ...editTarget.options,
+                                textInsertion: { ...editTarget.options?.textInsertion, maxLength: Number(e.target.value) || 30 },
+                              },
+                            })}
+                            className="w-full h-8 px-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded text-[12px] font-bold focus:border-pink-600 outline-none"
+                          />
+                        </div>
+                      </div>
+                      <label className="flex items-center gap-2 text-[12px] font-bold text-[#555555]">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(editTarget.options?.textInsertion?.allowKanji)}
+                          onChange={(e) => setEditTarget({
+                            ...editTarget,
+                            options: {
+                              ...editTarget.options,
+                              textInsertion: { ...editTarget.options?.textInsertion, allowKanji: e.target.checked },
+                            },
+                          })}
+                          className="w-4 h-4 accent-pink-600"
+                        />
+                        漢字を許可する（OFF=ひらがな・カタカナ・英数字のみ）
+                      </label>
+                      <div>
+                        <label className="text-[11px] font-bold text-[#555555] block mb-1">文字入れ位置の選択肢（カンマ区切り）</label>
+                        <input
+                          type="text"
+                          value={(editTarget.options?.textInsertion?.positions || []).join(', ')}
+                          onChange={(e) => {
+                            const positions = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                            setEditTarget({
+                              ...editTarget,
+                              options: {
+                                ...editTarget.options,
+                                textInsertion: { ...editTarget.options?.textInsertion, positions },
+                              },
+                            });
+                          }}
+                          placeholder="例: 真ん中, 右下, 下"
+                          className="w-full h-9 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded text-[12px] font-bold focus:border-pink-600 outline-none"
+                        />
+                        <p className="text-[10px] text-[#999999] mt-1">お客様が文字入れ位置を選ぶ際の選択肢を入力（例: 真ん中, 右下, 下）</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

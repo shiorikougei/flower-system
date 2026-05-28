@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
 import { ShoppingCart, Plus, Minus, Trash2, ChevronLeft, Package, AlertCircle } from 'lucide-react';
-import { getCart, updateQty, removeFromCart, getCartTotal } from '@/utils/cart';
+import { getCart, updateQty, removeFromCart, getCartTotal, calcOptionsTotal } from '@/utils/cart';
 
 export default function CartPage() {
   const params = useParams();
@@ -90,7 +90,12 @@ export default function CartPage() {
     } catch (e) {}
   };
 
-  const subTotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  // ★ オプション金額も含めた小計
+  const subTotal = cart.reduce((sum, item) => {
+    const optTotal = calcOptionsTotal(item.selectedOptions);
+    return sum + (item.price + optTotal) * item.qty;
+  }, 0);
+  const optionsSubTotal = cart.reduce((sum, item) => sum + calcOptionsTotal(item.selectedOptions) * item.qty, 0);
 
   // ★ 箱代計算: カート内の最大サイズの箱代
   const ecBoxFees = appSettings?.boxFeeConfig?.ecBoxFees || {};
@@ -142,7 +147,16 @@ export default function CartPage() {
         shopId,
         // EC注文であることを示すフラグ
         orderType: 'ec',
-        cartItems: cart.map(c => ({ productId: c.id, name: c.name, price: c.price, qty: c.qty, imageUrl: c.imageUrl, box_size: productBoxSizes[c.id] })),
+        cartItems: cart.map(c => ({
+          productId: c.id,
+          name: c.name,
+          price: c.price,
+          qty: c.qty,
+          imageUrl: c.imageUrl,
+          box_size: productBoxSizes[c.id],
+          selectedOptions: c.selectedOptions || null,  // ★ 選択されたオプション
+          optionsTotal: calcOptionsTotal(c.selectedOptions),
+        })),
         itemPrice: subTotal,            // 商品代のみ
         calculatedFee: shippingFee,     // ★ 業者配送送料
         pickupFee: 0,
@@ -211,31 +225,50 @@ export default function CartPage() {
           <>
             {/* カート商品リスト */}
             <div className="space-y-3">
-              {cart.map(item => (
-                <div key={item.id} className="bg-white p-4 rounded-2xl border border-[#EAEAEA] flex gap-4">
-                  <div className="w-20 h-20 shrink-0 bg-[#FBFAF9] rounded-xl overflow-hidden">
-                    {item.imageUrl ? <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[#CCC]"><Package size={20}/></div>}
-                  </div>
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <p className="text-[13px] font-bold text-[#111111] truncate">{item.name}</p>
-                    <p className="text-[13px] font-bold text-[#2D4B3E]">¥{item.price.toLocaleString()}</p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center bg-[#FBFAF9] rounded-lg border border-[#EAEAEA]">
-                        <button onClick={() => handleQtyChange(item.id, item.qty - 1)} className="w-8 h-8 text-[#555555] hover:bg-white"><Minus size={12} className="mx-auto"/></button>
-                        <span className="w-8 text-center text-[12px] font-bold">{item.qty}</span>
-                        <button onClick={() => handleQtyChange(item.id, item.qty + 1)} className="w-8 h-8 text-[#555555] hover:bg-white"><Plus size={12} className="mx-auto"/></button>
+              {cart.map(item => {
+                const key = item.cartItemId || item.id;
+                const opt = item.selectedOptions || {};
+                const optTotal = calcOptionsTotal(opt);
+                return (
+                  <div key={key} className="bg-white p-4 rounded-2xl border border-[#EAEAEA] flex gap-4">
+                    <div className="w-20 h-20 shrink-0 bg-[#FBFAF9] rounded-xl overflow-hidden">
+                      {item.imageUrl ? <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[#CCC]"><Package size={20}/></div>}
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <p className="text-[13px] font-bold text-[#111111] truncate">{item.name}</p>
+                      <p className="text-[13px] font-bold text-[#2D4B3E]">¥{item.price.toLocaleString()}{optTotal > 0 && <span className="text-[10px] font-normal text-pink-700 ml-1">+ オプション¥{optTotal.toLocaleString()}</span>}</p>
+                      {/* オプション表示 */}
+                      {(opt.wrapping || opt.messageCard || opt.textInsertion) && (
+                        <div className="bg-pink-50 rounded-lg p-2 space-y-1">
+                          {opt.wrapping && (
+                            <p className="text-[10px] text-pink-900">🎁 ラッピング (+¥{(opt.wrapping.price||0).toLocaleString()})</p>
+                          )}
+                          {opt.messageCard && (
+                            <p className="text-[10px] text-pink-900">💌 メッセージカード{opt.messageCard.text ? ` 「${opt.messageCard.text.slice(0,15)}${opt.messageCard.text.length>15?'…':''}」` : ''} {opt.messageCard.price > 0 ? `(+¥${(opt.messageCard.price||0).toLocaleString()})` : '(無料)'}</p>
+                          )}
+                          {opt.textInsertion && (
+                            <p className="text-[10px] text-pink-900">✍️ 文字入れ「{opt.textInsertion.text}」({opt.textInsertion.position}) (+¥{(opt.textInsertion.price||0).toLocaleString()})</p>
+                          )}
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center bg-[#FBFAF9] rounded-lg border border-[#EAEAEA]">
+                          <button onClick={() => handleQtyChange(key, item.qty - 1)} className="w-8 h-8 text-[#555555] hover:bg-white"><Minus size={12} className="mx-auto"/></button>
+                          <span className="w-8 text-center text-[12px] font-bold">{item.qty}</span>
+                          <button onClick={() => handleQtyChange(key, item.qty + 1)} className="w-8 h-8 text-[#555555] hover:bg-white"><Plus size={12} className="mx-auto"/></button>
+                        </div>
+                        <button onClick={() => handleRemove(key)} className="text-red-400 hover:text-red-600"><Trash2 size={14}/></button>
                       </div>
-                      <button onClick={() => handleRemove(item.id)} className="text-red-400 hover:text-red-600"><Trash2 size={14}/></button>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* お見積もり内訳 */}
             <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-2">
               <p className="text-[11px] font-bold text-[#2D4B3E] mb-2">お見積もり内訳</p>
-              <div className="flex justify-between text-[13px] text-[#555555]"><span>商品代（税抜）</span><span>¥{subTotal.toLocaleString()}</span></div>
+              <div className="flex justify-between text-[13px] text-[#555555]"><span>商品代{optionsSubTotal > 0 ? '＋オプション' : ''}（税抜）</span><span>¥{subTotal.toLocaleString()}</span></div>
               {boxFee > 0 && (
                 <div className="flex justify-between text-[12px] text-[#555555]">
                   <span>梱包代 {maxSize ? `(${maxSize}サイズ)` : ''}</span>

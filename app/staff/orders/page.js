@@ -13,6 +13,7 @@ export default function OrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [filterMode, setFilterMode] = useState('未完了');
   const [productFilter, setProductFilter] = useState('all'); // ★ 商品(お花の種類)別フィルタ
+  const [sortMode, setSortMode] = useState('納期順'); // ★ ソート: '納期順'(デフォルト) or '登録順'
   const [selectedOrder, setSelectedOrder] = useState(null); 
   const [appSettings, setAppSettings] = useState(null);
   const [currentTenantId, setCurrentTenantId] = useState(null);
@@ -225,7 +226,7 @@ export default function OrdersPage() {
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1]); // 件数が多い順
   })();
 
-  const filteredOrders = baseFilteredOrders.filter(order => {
+  const productFilteredOrders = baseFilteredOrders.filter(order => {
     if (productFilter === 'all') return true;
     const d = order?.order_data || {};
     let name = d.flowerType;
@@ -235,6 +236,32 @@ export default function OrdersPage() {
     if (!name) name = '未設定';
     return name === productFilter;
   });
+
+  // ★ ソート: 納期順（予約日+時間が近い順）or 登録順（受注作成日時降順）
+  const filteredOrders = (() => {
+    if (sortMode !== '納期順') {
+      // 登録順 = 作成日時の降順（DB取得時のデフォルト）
+      return productFilteredOrders;
+    }
+    // 納期順 = deliveryDate + deliveryTime の昇順
+    // 納期未設定は最後に回す
+    const parseDeliveryTs = (o) => {
+      const d = o?.order_data || {};
+      const dateStr = d.deliveryDate || '';
+      if (!dateStr) return Number.POSITIVE_INFINITY;
+      // 時間が "HH:mm" や "13:00-14:00" の形式 → 先頭の HH:mm を採用
+      let timeStr = d.deliveryTime || d.preferredTime || '';
+      if (typeof timeStr === 'string') {
+        const m = timeStr.match(/(\d{1,2}):(\d{2})/);
+        timeStr = m ? `${m[1].padStart(2,'0')}:${m[2]}` : '09:00';
+      } else {
+        timeStr = '09:00';
+      }
+      const ts = new Date(`${dateStr}T${timeStr}:00`).getTime();
+      return isNaN(ts) ? Number.POSITIVE_INFINITY : ts;
+    };
+    return [...productFilteredOrders].sort((a, b) => parseDeliveryTs(a) - parseDeliveryTs(b));
+  })();
 
   const safeFormatDate = (dateString, withTime = false) => {
     try {
@@ -286,6 +313,23 @@ export default function OrdersPage() {
               アーカイブ
             </button>
           </div>
+        </div>
+
+        {/* ★ ソート切替（納期順 / 登録順） */}
+        <div className="max-w-[1000px] mx-auto mt-3 flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] font-bold text-[#999] tracking-widest">並び順:</span>
+          <button
+            onClick={() => setSortMode('納期順')}
+            className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all ${sortMode === '納期順' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-white text-[#555] border-[#EAEAEA] hover:border-[#2D4B3E]'}`}
+          >
+            📅 納期順（近い順）
+          </button>
+          <button
+            onClick={() => setSortMode('登録順')}
+            className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all ${sortMode === '登録順' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-white text-[#555] border-[#EAEAEA] hover:border-[#2D4B3E]'}`}
+          >
+            🆕 登録順（新しい順）
+          </button>
         </div>
 
         {/* ★ 商品(お花の種類)別フィルタ */}

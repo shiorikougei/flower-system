@@ -94,13 +94,26 @@ export function buildOrderConfirmationEmail({ order, shopName, bankInfo }) {
   // 商品リスト
   let itemsHtml = '';
   if (Array.isArray(d.cartItems) && d.cartItems.length > 0) {
-    itemsHtml = d.cartItems.map(c => `
-      <tr>
-        <td style="padding: 8px 0; border-bottom: 1px solid #EEE;">${escapeHtml(c.name)}</td>
-        <td style="padding: 8px 0; border-bottom: 1px solid #EEE; text-align: right;">× ${c.qty}</td>
-        <td style="padding: 8px 0; border-bottom: 1px solid #EEE; text-align: right;">¥${Number(c.price * c.qty).toLocaleString()}</td>
-      </tr>
-    `).join('');
+    itemsHtml = d.cartItems.map(c => {
+      const opt = c.selectedOptions || {};
+      const optTotal = Number(c.optionsTotal) || 0;
+      const lineTotal = (Number(c.price) + optTotal) * Number(c.qty);
+      // ★ オプション表示
+      const optLines = [];
+      if (opt.wrapping)      optLines.push(`🎁 ラッピング (+¥${(Number(opt.wrapping.price)||0).toLocaleString()})`);
+      if (opt.messageCard)   optLines.push(`💌 メッセージカード${opt.messageCard.text ? `「${escapeHtml(opt.messageCard.text)}」` : ''} ${Number(opt.messageCard.price) > 0 ? `(+¥${Number(opt.messageCard.price).toLocaleString()})` : '(無料)'}`);
+      if (opt.textInsertion) optLines.push(`✍️ 文字入れ「${escapeHtml(opt.textInsertion.text)}」(${escapeHtml(opt.textInsertion.position)}) (+¥${(Number(opt.textInsertion.price)||0).toLocaleString()})`);
+      const optBlock = optLines.length > 0
+        ? `<br><span style="font-size:11px; color:#b8588a;">${optLines.join('<br>')}</span>`
+        : '';
+      return `
+        <tr>
+          <td style="padding: 8px 0; border-bottom: 1px solid #EEE;">${escapeHtml(c.name)}${optBlock}</td>
+          <td style="padding: 8px 0; border-bottom: 1px solid #EEE; text-align: right;">× ${c.qty}</td>
+          <td style="padding: 8px 0; border-bottom: 1px solid #EEE; text-align: right;">¥${lineTotal.toLocaleString()}</td>
+        </tr>
+      `;
+    }).join('');
   } else if (d.flowerType) {
     itemsHtml = `
       <tr>

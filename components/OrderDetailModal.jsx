@@ -355,15 +355,29 @@ export default function OrderDetailModal({
         // ★ EC注文: cartItems を商品行ごとに表示
         let itemRows = '';
         if (isEcOrder) {
-          itemRows = modalData.cartItems.map(c => `
+          itemRows = modalData.cartItems.map(c => {
+            const opt = c.selectedOptions || {};
+            const optTotal = Number(c.optionsTotal) || 0;
+            // ★ オプションの詳細を商品名の下に表示
+            const optLines = [];
+            if (opt.wrapping)      optLines.push(`🎁 ラッピング (+¥${(Number(opt.wrapping.price)||0).toLocaleString()})`);
+            if (opt.messageCard)   optLines.push(`💌 メッセージカード${opt.messageCard.text ? ` 「${formatText(opt.messageCard.text)}」` : ''} ${Number(opt.messageCard.price) > 0 ? `(+¥${Number(opt.messageCard.price).toLocaleString()})` : '(無料)'}`);
+            if (opt.textInsertion) optLines.push(`✍️ 文字入れ「${formatText(opt.textInsertion.text)}」(${formatText(opt.textInsertion.position)}) (+¥${(Number(opt.textInsertion.price)||0).toLocaleString()})`);
+            const optBlock = optLines.length > 0
+              ? `<div class="item-detail" style="color:#b8588a; margin-top:1mm;">${optLines.join('<br/>')}</div>`
+              : '';
+            const lineTotal = (Number(c.price) + optTotal) * Number(c.qty);
+            return `
               <tr>
                 <td class="item-cell">
                   <div class="item-name">${formatText(c.name)}</div>
+                  ${optBlock}
                 </td>
                 <td class="qty-cell">${formatText(c.qty)}</td>
-                <td class="price-cell">${hidePrice ? '' : formatPrice(Number(c.price) * Number(c.qty))}</td>
+                <td class="price-cell">${hidePrice ? '' : formatPrice(lineTotal)}</td>
               </tr>
-          `).join('');
+            `;
+          }).join('');
         } else {
           itemRows = `
               <tr>
@@ -1222,25 +1236,51 @@ export default function OrderDetailModal({
                       <span className="text-[10px] text-[#999999]">{modalData.cartItems.length} 商品 / 合計 {modalData.cartItems.reduce((s, c) => s + (Number(c.qty) || 0), 0)} 点</span>
                     </div>
                     <div className="space-y-3">
-                      {modalData.cartItems.map((c, idx) => (
-                        <div key={idx} className="flex items-center gap-3 bg-white p-2 rounded-lg border border-[#EAEAEA]">
-                          {/* 商品画像 */}
-                          <div className="w-14 h-14 shrink-0 bg-[#FBFAF9] rounded-lg overflow-hidden">
-                            {c.imageUrl ? (
-                              <img src={c.imageUrl} alt={c.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-[#CCC] text-[10px]">No Img</div>
+                      {modalData.cartItems.map((c, idx) => {
+                        const opt = c.selectedOptions || {};
+                        const optTotal = Number(c.optionsTotal) || 0;
+                        const lineTotal = (Number(c.price) + optTotal) * Number(c.qty);
+                        return (
+                          <div key={idx} className="bg-white p-2 rounded-lg border border-[#EAEAEA] space-y-2">
+                            <div className="flex items-center gap-3">
+                              {/* 商品画像 */}
+                              <div className="w-14 h-14 shrink-0 bg-[#FBFAF9] rounded-lg overflow-hidden">
+                                {c.imageUrl ? (
+                                  <img src={c.imageUrl} alt={c.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-[#CCC] text-[10px]">No Img</div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[12px] font-bold text-[#111111] truncate">{c.name}</p>
+                                <p className="text-[10px] text-[#999999] mt-0.5">¥{Number(c.price).toLocaleString()}{optTotal > 0 && <span className="text-pink-700"> + オプション¥{optTotal.toLocaleString()}</span>} × {c.qty}</p>
+                              </div>
+                              <span className="text-[13px] text-[#2D4B3E] font-bold shrink-0">
+                                ¥{lineTotal.toLocaleString()}
+                              </span>
+                            </div>
+                            {/* ★ 選択オプションの詳細表示 */}
+                            {(opt.wrapping || opt.messageCard || opt.textInsertion) && (
+                              <div className="ml-[68px] bg-pink-50 rounded-lg p-2 space-y-1 border border-pink-100">
+                                {opt.wrapping && (
+                                  <p className="text-[10px] text-pink-900 font-bold">🎁 ラッピング (+¥{(Number(opt.wrapping.price)||0).toLocaleString()})</p>
+                                )}
+                                {opt.messageCard && (
+                                  <div className="text-[10px] text-pink-900">
+                                    <p className="font-bold">💌 メッセージカード {Number(opt.messageCard.price) > 0 ? `(+¥${Number(opt.messageCard.price).toLocaleString()})` : '(無料)'}</p>
+                                    {opt.messageCard.text && (
+                                      <p className="ml-3 text-[10px] text-[#555555] whitespace-pre-wrap mt-0.5">「{opt.messageCard.text}」</p>
+                                    )}
+                                  </div>
+                                )}
+                                {opt.textInsertion && (
+                                  <p className="text-[10px] text-pink-900 font-bold">✍️ 文字入れ「{opt.textInsertion.text}」({opt.textInsertion.position}) (+¥{(Number(opt.textInsertion.price)||0).toLocaleString()})</p>
+                                )}
+                              </div>
                             )}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[12px] font-bold text-[#111111] truncate">{c.name}</p>
-                            <p className="text-[10px] text-[#999999] mt-0.5">¥{Number(c.price).toLocaleString()} × {c.qty}</p>
-                          </div>
-                          <span className="text-[13px] text-[#2D4B3E] font-bold shrink-0">
-                            ¥{(Number(c.price) * Number(c.qty)).toLocaleString()}
-                          </span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ) : (

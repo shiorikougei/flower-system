@@ -570,7 +570,17 @@ export function formatRecipientInfo(orderData) {
 export function formatOrderItems(orderData) {
   const d = orderData || {};
   if (Array.isArray(d.cartItems) && d.cartItems.length > 0) {
-    return d.cartItems.map(c => `・${c.name} × ${c.qty}  ¥${Number(c.price * c.qty).toLocaleString()}`).join('\n');
+    return d.cartItems.map(c => {
+      const opt = c.selectedOptions || {};
+      const optTotal = Number(c.optionsTotal) || 0;
+      const lineTotal = (Number(c.price) + optTotal) * Number(c.qty);
+      const optLines = [];
+      if (opt.wrapping)      optLines.push(`    🎁 ラッピング (+¥${(Number(opt.wrapping.price)||0).toLocaleString()})`);
+      if (opt.messageCard)   optLines.push(`    💌 メッセージカード${opt.messageCard.text ? `「${opt.messageCard.text}」` : ''} ${Number(opt.messageCard.price) > 0 ? `(+¥${Number(opt.messageCard.price).toLocaleString()})` : '(無料)'}`);
+      if (opt.textInsertion) optLines.push(`    ✍️ 文字入れ「${opt.textInsertion.text}」(${opt.textInsertion.position}) (+¥${(Number(opt.textInsertion.price)||0).toLocaleString()})`);
+      const optBlock = optLines.length > 0 ? '\n' + optLines.join('\n') : '';
+      return `・${c.name} × ${c.qty}  ¥${lineTotal.toLocaleString()}${optBlock}`;
+    }).join('\n');
   }
   // カスタム注文
   const parts = [];
@@ -590,7 +600,11 @@ export function formatOrderBreakdown(orderData) {
   // EC注文 (cart) と カスタム注文 で itemPrice の計算が違うのでケアフル
   let itemSubtotal = 0;
   if (Array.isArray(d.cartItems) && d.cartItems.length > 0) {
-    itemSubtotal = d.cartItems.reduce((s, c) => s + Number(c.price || 0) * Number(c.qty || 1), 0);
+    // ★ オプション金額も商品代に含める
+    itemSubtotal = d.cartItems.reduce((s, c) => {
+      const optTotal = Number(c.optionsTotal) || 0;
+      return s + (Number(c.price || 0) + optTotal) * Number(c.qty || 1);
+    }, 0);
   } else {
     itemSubtotal = Number(d.itemPrice) || 0;
   }
