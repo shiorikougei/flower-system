@@ -194,10 +194,10 @@ export default function ShopCatalogPage() {
                       </button>
                     ) : (
                       <button
-                        onClick={() => handleAddToCart(p, 1)}
+                        onClick={() => setSelectedProduct(p)}
                         className="mt-auto w-full h-10 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold hover:bg-[#1f352b] transition-all flex items-center justify-center gap-1.5"
                       >
-                        <Plus size={14}/> カートに入れる
+                        <ShoppingCart size={14}/> 詳細を見てカートへ
                       </button>
                     )}
                   </div>
