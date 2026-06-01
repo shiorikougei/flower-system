@@ -422,8 +422,8 @@ export default function OrderDetailModal({
           </table>
         </div>
         ${thankYouMessage}
-        <div style="display:flex; justify-content:flex-end;">
-          ${!hidePrice ? `
+        ${!hidePrice ? `
+          <div style="display:flex; justify-content:flex-end;">
             <table class="amount-summary">
               <tbody>
                 <tr><td class="amount-label">商品代</td><td class="amount-val">${formatPrice(totals.item)}</td></tr>
@@ -432,8 +432,8 @@ export default function OrderDetailModal({
                 <tr><td class="amount-label-total">合計</td><td class="amount-val-total">${formatPrice(totals.total)}</td></tr>
               </tbody>
             </table>
-          ` : `<div style="height:23.5mm;"></div>`}
-        </div>
+          </div>
+        ` : ''}
       `;
       };
 
@@ -568,14 +568,14 @@ export default function OrderDetailModal({
             }
             * { box-sizing: border-box; }
             body { margin: 0; background-color: #f3f4f6; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; color: #222; }
-            /* ★ ③ A4 = 210x297mm。プリンター非印刷領域分の safety を大きめに確保 */
-            .page { width: 210mm; height: 297mm; background: #fff; margin: 0 auto 10mm auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; position: relative; overflow: hidden; padding: 8mm 0 18mm 0; }
-            /* 2分割伝票: A4の印刷可能領域 271mm ÷ 2 = 135.5mm/slip */
-            .slip { width: 100%; height: 135mm; padding: 3mm 14mm 3mm 14mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+            /* ★ ③ A4 = 210x297mm。プリンター非印刷領域分の safety を確保 */
+            .page { width: 210mm; height: 297mm; background: #fff; margin: 0 auto 10mm auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; position: relative; overflow: hidden; padding: 6mm 0 14mm 0; }
+            /* 2分割伝票: A4の印刷可能領域 277mm ÷ 2 = 138.5mm/slip */
+            .slip { width: 100%; height: 138mm; padding: 3mm 14mm 3mm 14mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
             .slip:first-child { border-bottom: 1px dashed #aaa; }
-            /* EC注文用: 1ページ全面（271mm） */
-            .slip-full { width: 100%; height: 271mm; padding: 4mm 14mm 6mm 14mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
-            .cutline { position: absolute; top: calc(8mm + 135mm); left: 10mm; right: 10mm; transform: translateY(-50%); display: flex; justify-content: center; align-items: center; z-index: 10; pointer-events: none; }
+            /* EC注文用: 1ページ全面（277mm） */
+            .slip-full { width: 100%; height: 277mm; padding: 4mm 14mm 6mm 14mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+            .cutline { position: absolute; top: calc(6mm + 138mm); left: 10mm; right: 10mm; transform: translateY(-50%); display: flex; justify-content: center; align-items: center; z-index: 10; pointer-events: none; }
             .cutline span { background: #fff; padding: 0 5mm; font-size: 8pt; color: #888; letter-spacing: 0.2em; }
             .slip-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3mm; }
             .slip-title { font-size: 16pt; font-weight: bold; letter-spacing: 0.3em; }
