@@ -559,25 +559,23 @@ export default function OrderDetailModal({
         <head>
           <meta charset="UTF-8" />
           <style>
-            /* ★ ③ A4 用紙の物理マージン（プリンターの非印刷領域）を考慮して @page にも余白を確保 */
-            @page { size: A4 portrait; margin: 8mm 5mm 10mm 5mm; }
+            /* ★ ③ A4そのまま。プリンター非印刷領域を考慮して内側に safety padding を確保 */
+            @page { size: A4 portrait; margin: 0; }
             @media print {
               body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-              .page { box-shadow: none !important; margin: 0 !important; page-break-after: always !important; break-after: page !important; width: 100% !important; height: auto !important; min-height: 0 !important; }
+              .page { box-shadow: none !important; margin: 0 !important; page-break-after: always !important; break-after: page !important; page-break-inside: avoid !important; }
               .page:last-child { page-break-after: auto !important; break-after: auto !important; }
-              /* 印刷時は高さ固定をやめて、内容に合わせる */
-              .slip { height: auto !important; min-height: 130mm; }
-              .slip-full { height: auto !important; min-height: 260mm; padding: 5mm 12mm 12mm 12mm !important; }
             }
             * { box-sizing: border-box; }
             body { margin: 0; background-color: #f3f4f6; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; color: #222; }
-            /* ★ ③ プレビュー画面の高さ（ブラウザで見るとき）は実物に近い 285mm に縮小 */
-            .page { width: 200mm; height: 285mm; background: #fff; margin: 0 auto 10mm auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; position: relative; overflow: hidden; }
-            .slip { width: 100%; height: 140mm; padding: 5mm 12mm 8mm 12mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+            /* ★ ③ A4 = 210x297mm。内側に上6mm/下8mm/左右0の safety を確保するため、slipの高さを少し縮める */
+            .page { width: 210mm; height: 297mm; background: #fff; margin: 0 auto 10mm auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; position: relative; overflow: hidden; padding: 6mm 0 8mm 0; }
+            /* 2分割伝票: A4の印刷可能領域 283mm ÷ 2 = 141mm/slip */
+            .slip { width: 100%; height: 141mm; padding: 4mm 14mm 4mm 14mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
             .slip:first-child { border-bottom: 1px dashed #aaa; }
-            /* ★ EC注文用: 1ページ全面 */
-            .slip-full { width: 100%; height: 280mm; padding: 5mm 12mm 12mm 12mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
-            .cutline { position: absolute; top: 140mm; left: 10mm; right: 10mm; transform: translateY(-50%); display: flex; justify-content: center; align-items: center; z-index: 10; pointer-events: none; }
+            /* EC注文用: 1ページ全面（283mm） */
+            .slip-full { width: 100%; height: 283mm; padding: 6mm 14mm 8mm 14mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+            .cutline { position: absolute; top: 50%; left: 10mm; right: 10mm; transform: translateY(-50%); display: flex; justify-content: center; align-items: center; z-index: 10; pointer-events: none; }
             .cutline span { background: #fff; padding: 0 5mm; font-size: 8pt; color: #888; letter-spacing: 0.2em; }
             .slip-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3mm; }
             .slip-title { font-size: 16pt; font-weight: bold; letter-spacing: 0.3em; }

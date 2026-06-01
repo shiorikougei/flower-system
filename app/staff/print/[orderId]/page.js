@@ -418,23 +418,23 @@ export default function PrintSlipPage() {
         }
 
         .print-page {
-          width: 200mm;
+          width: 210mm;
           padding: 8mm;
           box-sizing: border-box;
         }
 
         @media print {
-          /* ★ ③ プリンターの非印刷領域を考慮して @page にも余白を確保 */
+          /* ★ ③ A4 そのまま @page margin: 0、内側にsafety paddingで対処 */
           @page {
             size: A4 portrait !important;
-            margin: 8mm 5mm 10mm 5mm !important;
+            margin: 0mm !important;
           }
 
           html, body {
             background: white !important;
             margin: 0 !important;
             padding: 0 !important;
-            height: auto !important;
+            height: 100% !important;
             min-height: 0 !important;
             overflow: visible !important;
           }
@@ -462,12 +462,13 @@ export default function PrintSlipPage() {
           }
 
           .print-page {
-            width: 100% !important;
+            width: 210mm !important;
             margin: 0 !important;
-            padding: 5mm 8mm 10mm 8mm !important;
+            /* ★ ③ プリンター非印刷領域分の余白（top 6mm / bottom 8mm / sides 8mm） */
+            padding: 6mm 8mm 8mm 8mm !important;
             box-shadow: none !important;
             page-break-inside: avoid !important;
-            overflow: visible !important;
+            overflow: hidden !important;
           }
         }
       `}} />
