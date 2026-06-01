@@ -5,7 +5,7 @@ import {
   Settings as SettingsIcon, ListChecks, Store, Tag, Truck, User, Mail,
   Trash2, Plus, Clock, ShieldCheck, RotateCcw, Image as ImageIcon, Ruler,
   ChevronRight, Calendar as CalendarIcon, CalendarDays, Box, MapPin, X,
-  LayoutTemplate, Package, Eye, EyeOff, Sparkles, AlertCircle, Link as LinkIcon, Building2, CreditCard, Palette
+  LayoutTemplate, Package, Eye, EyeOff, Sparkles, AlertCircle, Link as LinkIcon, Building2, CreditCard, Palette, Lock
 } from 'lucide-react';
 import HelpTooltip from '@/components/HelpTooltip';
 
@@ -96,8 +96,8 @@ export default function SettingsPage() {
   const [staffList, setStaffList] = useState([]);
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffStore, setNewStaffStore] = useState('all');
-  // ★ ② PINコード伏字化用: 個別に表示ON/OFF
-  const [visiblePinIdx, setVisiblePinIdx] = useState(new Set());
+  // ★ ② PIN変更モーダル: 現在のPINは絶対に表示しない、書き換え時のみ新しいPINを入力
+  const [pinEditTarget, setPinEditTarget] = useState(null);  // { idx, value, confirm }
   const [staffOrderConfig, setStaffOrderConfig] = useState({ ignoreLeadTime: true, allowCustomPrice: true, paymentMethods: ['店頭支払い(済)', '銀行振込(請求書)', '代金引換'], sendAutoReply: false });
   
   const [autoReplyTemplates, setAutoReplyTemplates] = useState([
@@ -1478,34 +1478,20 @@ export default function SettingsPage() {
               <span className="font-bold text-[14px]">{s.name}</span>
               <span className="text-[9px] text-[#999999] font-bold tracking-tight">所属: {s.store === 'all' ? '全店' : shops.find(sh=>sh.id===Number(s.store))?.name || '不明'}</span>
             </div>
-            {/* ★ ② PIN伏字化: 「目」ボタンで一時的に表示 */}
-            <div className="flex items-center gap-1">
-              <input
-                type={visiblePinIdx.has(i) ? 'text' : 'password'}
-                inputMode="numeric"
-                maxLength={4}
-                placeholder="PIN(4桁)"
-                value={s.pin || ''}
-                onChange={(e) => {
-                  const next = [...staffList];
-                  next[i] = { ...next[i], pin: e.target.value.replace(/\D/g, '').slice(0, 4) };
-                  setStaffList(next);
-                }}
-                className="w-24 h-10 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[12px] font-bold outline-none focus:border-amber-500 text-center font-mono tracking-widest"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  const next = new Set(visiblePinIdx);
-                  if (next.has(i)) next.delete(i); else next.add(i);
-                  setVisiblePinIdx(next);
-                }}
-                title={visiblePinIdx.has(i) ? '伏字に戻す' : 'PINを表示'}
-                className="h-10 w-9 flex items-center justify-center bg-white border border-[#EAEAEA] rounded-lg text-[#999] hover:text-amber-600 hover:border-amber-300"
-              >
-                {visiblePinIdx.has(i) ? <EyeOff size={14}/> : <Eye size={14}/>}
-              </button>
-            </div>
+            {/* ★ ② PIN: 値は一切表示しない。状態バッジ＋「変更」ボタンで上書きのみ */}
+            <button
+              type="button"
+              onClick={() => setPinEditTarget({ idx: i, value: '', confirm: '' })}
+              className={`h-10 px-3 rounded-lg text-[11px] font-bold border-2 transition-all flex items-center gap-1.5 ${
+                s.pin
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:border-emerald-400'
+                  : 'bg-red-50 border-red-200 text-red-700 hover:border-red-400'
+              }`}
+              title="PINを変更する（現在のPINは表示されません）"
+            >
+              <Lock size={12}/>
+              {s.pin ? 'PIN設定済み・変更' : 'PIN未設定・登録'}
+            </button>
             <select
               value={s.role || 'staff'}
               onChange={(e) => {
@@ -1907,6 +1893,119 @@ export default function SettingsPage() {
               {toast.type === 'success' ? '✓' : '!'}
             </div>
             <span className="text-[13px] font-bold">{toast.message}</span>
+          </div>
+        </div>
+      )}
+
+      {/* ★ ② PIN変更モーダル: 現在のPIN値は一切表示しない */}
+      {pinEditTarget !== null && (
+        <div
+          className="fixed inset-0 z-[160] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setPinEditTarget(null)}
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center">
+              <div className="w-14 h-14 mx-auto bg-amber-100 rounded-full flex items-center justify-center mb-3">
+                <Lock size={24} className="text-amber-600"/>
+              </div>
+              <h3 className="text-[16px] font-bold text-[#111]">
+                {staffList[pinEditTarget.idx]?.name} のPINを{staffList[pinEditTarget.idx]?.pin ? '変更' : '新規登録'}
+              </h3>
+              <p className="text-[11px] text-[#999] mt-2 leading-relaxed">
+                セキュリティのため、現在のPINは表示されません。<br/>
+                新しい4桁PINを2回入力して登録してください。
+              </p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-[#999999] block">新しいPIN（4桁）</label>
+              <input
+                type="password"
+                inputMode="numeric"
+                maxLength={4}
+                autoFocus
+                placeholder="••••"
+                value={pinEditTarget.value}
+                onChange={(e) => setPinEditTarget({
+                  ...pinEditTarget,
+                  value: e.target.value.replace(/\D/g, '').slice(0, 4),
+                })}
+                className="w-full h-14 text-center text-[28px] font-bold tracking-[0.5em] bg-[#FBFAF9] border-2 border-[#EAEAEA] rounded-xl outline-none focus:border-amber-500 font-mono"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-[#999999] block">確認用（もう一度）</label>
+              <input
+                type="password"
+                inputMode="numeric"
+                maxLength={4}
+                placeholder="••••"
+                value={pinEditTarget.confirm}
+                onChange={(e) => setPinEditTarget({
+                  ...pinEditTarget,
+                  confirm: e.target.value.replace(/\D/g, '').slice(0, 4),
+                })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && pinEditTarget.value.length === 4 && pinEditTarget.value === pinEditTarget.confirm) {
+                    const next = [...staffList];
+                    next[pinEditTarget.idx] = { ...next[pinEditTarget.idx], pin: pinEditTarget.value };
+                    setStaffList(next);
+                    setPinEditTarget(null);
+                  }
+                }}
+                className="w-full h-14 text-center text-[28px] font-bold tracking-[0.5em] bg-[#FBFAF9] border-2 border-[#EAEAEA] rounded-xl outline-none focus:border-amber-500 font-mono"
+              />
+              {pinEditTarget.confirm.length === 4 && pinEditTarget.value !== pinEditTarget.confirm && (
+                <p className="text-[11px] font-bold text-red-600">PINが一致しません</p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPinEditTarget(null)}
+                className="flex-1 h-11 bg-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-xl hover:bg-[#DCDCDC]"
+              >
+                キャンセル
+              </button>
+              {staffList[pinEditTarget.idx]?.pin && (
+                <button
+                  onClick={() => {
+                    if (!confirm('PINを削除しますか？\nPIN必須設定が有効な場合、削除するとこのスタッフは切替できなくなります。')) return;
+                    const next = [...staffList];
+                    next[pinEditTarget.idx] = { ...next[pinEditTarget.idx], pin: '' };
+                    setStaffList(next);
+                    setPinEditTarget(null);
+                  }}
+                  className="px-3 h-11 bg-white border border-red-200 text-red-600 text-[11px] font-bold rounded-xl hover:bg-red-50"
+                >
+                  PIN削除
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  if (pinEditTarget.value.length !== 4) {
+                    alert('PINは4桁の数字で入力してください');
+                    return;
+                  }
+                  if (pinEditTarget.value !== pinEditTarget.confirm) {
+                    alert('確認用PINと一致しません');
+                    return;
+                  }
+                  const next = [...staffList];
+                  next[pinEditTarget.idx] = { ...next[pinEditTarget.idx], pin: pinEditTarget.value };
+                  setStaffList(next);
+                  setPinEditTarget(null);
+                }}
+                disabled={pinEditTarget.value.length !== 4 || pinEditTarget.value !== pinEditTarget.confirm}
+                className="flex-1 h-11 bg-amber-600 text-white text-[12px] font-bold rounded-xl hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                登録
+              </button>
+            </div>
+            <p className="text-[10px] text-[#999] text-center leading-relaxed">
+              💡 「保存」ボタンで全体設定を保存するまでDBには反映されません
+            </p>
           </div>
         </div>
       )}

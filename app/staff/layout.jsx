@@ -7,7 +7,7 @@ import {
   Home, ClipboardList, PlusSquare, CalendarDays, Truck, Briefcase,
   Users, Building2, Settings, TrendingUp, Lock, Sparkles, MessageSquare, X, Send, Image as ImageIcon, ShoppingBag, UserCheck, ChevronDown, History, Clock, BookOpen
 } from 'lucide-react';
-import { getCurrentStaff, setCurrentStaff, ROLE_LABELS, ROLE_DESCRIPTIONS, can } from '@/utils/staffRole';
+import { getCurrentStaff, setCurrentStaff, setAuthConfig, ROLE_LABELS, ROLE_DESCRIPTIONS, can } from '@/utils/staffRole';
 import { isFeatureEnabled } from '@/utils/features';
 import UpgradeModal from '@/components/UpgradeModal';
 
@@ -52,6 +52,8 @@ export default function StaffLayout({ children }) {
       }
       if (settingsData?.staffAuthConfig) {
         setStaffAuthConfig(prev => ({ ...prev, ...settingsData.staffAuthConfig }));
+        // ★ ① 操作チェック用にlocalStorageにも保存
+        setAuthConfig(settingsData.staffAuthConfig);
       }
     };
 
@@ -295,8 +297,14 @@ export default function StaffLayout({ children }) {
                   <UserCheck size={13}/>
                 </div>
                 <div className="text-left min-w-0">
-                  <p className="text-[11px] font-bold text-[#111] truncate">{currentStaff?.name || '未選択'}</p>
-                  <p className="text-[9px] text-[#999] truncate">{currentStaff?.role ? ROLE_LABELS[currentStaff.role] : '※全機能アクセス'}</p>
+                  <p className={`text-[11px] font-bold truncate ${currentStaff ? 'text-[#111]' : 'text-red-600'}`}>
+                    {currentStaff?.name || (staffAuthConfig.requirePin ? '⚠️ 未選択（操作不可）' : '未選択')}
+                  </p>
+                  <p className={`text-[9px] truncate ${currentStaff ? 'text-[#999]' : (staffAuthConfig.requirePin ? 'text-red-500 font-bold' : 'text-[#999]')}`}>
+                    {currentStaff?.role
+                      ? ROLE_LABELS[currentStaff.role]
+                      : (staffAuthConfig.requirePin ? '※スタッフを選んでください' : '※全機能アクセス')}
+                  </p>
                 </div>
               </div>
               <ChevronDown size={14} className="text-[#999] shrink-0"/>

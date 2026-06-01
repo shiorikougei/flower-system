@@ -7,6 +7,7 @@ import {
 import OrderDetailModal from '@/components/OrderDetailModal';
 import { logAction } from '@/utils/auditLog';
 import HelpTooltip from '@/components/HelpTooltip';
+import { ensureOperationAllowed } from '@/utils/staffRole';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -80,6 +81,9 @@ export default function OrdersPage() {
   }, []);
 
   const handleUpdateStatus = async (orderId, newStatus, staffName) => {
+    // ★ ① PIN必須なのにスタッフ未選択 → 操作拒否
+    const guard = ensureOperationAllowed('ステータス更新');
+    if (!guard.allowed) { alert(guard.message); return; }
     // ★ 担当スタッフは任意化 (未選択でも更新可能)
     try {
       const targetOrder = orders.find(o => o.id === orderId);

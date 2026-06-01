@@ -8,6 +8,7 @@ import {
   Tag, MessageSquare, CreditCard, CheckCircle2, Upload, ImageIcon 
 } from 'lucide-react';
 import TatefudaPreview from '@/components/TatefudaPreview';
+import { ensureOperationAllowed } from '@/utils/staffRole';
 
 export default function OrderDetailModal({ 
   order, 
@@ -1006,6 +1007,9 @@ export default function OrderDetailModal({
               </select>
               {/* 担当者選択は廃止：現在ログイン中のスタッフを自動使用 */}
               <button onClick={async () => {
+                // ★ ① PIN必須なのにスタッフ未選択 → 操作拒否
+                const guard = ensureOperationAllowed('ステータス更新');
+                if (!guard.allowed) { alert(guard.message); return; }
                 const currentStaff = (typeof window !== 'undefined') ? JSON.parse(localStorage.getItem('florix_currentStaff') || 'null') : null;
                 const autoStaff = currentStaff?.name || '';
 

@@ -9,6 +9,32 @@
 // （簡易版。本格的なログインは将来実装）
 
 const STORAGE_KEY = 'florix_current_staff';
+const AUTH_CONFIG_KEY = 'florix_auth_config';
+
+// ★ レイアウトから呼ぶ: PIN必須等の設定をlocalStorageに保存
+export function setAuthConfig(config) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(AUTH_CONFIG_KEY, JSON.stringify(config || {}));
+  } catch {}
+}
+
+// ★ 操作の事前チェック: PIN必須なのにスタッフ未選択なら拒否
+export function ensureOperationAllowed(actionLabel = '操作') {
+  if (typeof window === 'undefined') return { allowed: true };
+  try {
+    const cfg = localStorage.getItem(AUTH_CONFIG_KEY);
+    const requirePin = cfg ? Boolean(JSON.parse(cfg).requirePin) : false;
+    const staff = getCurrentStaff();
+    if (requirePin && !staff) {
+      return {
+        allowed: false,
+        message: `PIN認証が有効です。\n左上の「未選択」をタップして自分のスタッフ名を選び、PINを入力してから${actionLabel}してください。`,
+      };
+    }
+  } catch {}
+  return { allowed: true };
+}
 
 export const ROLES = ['owner', 'staff', 'parttime'];
 

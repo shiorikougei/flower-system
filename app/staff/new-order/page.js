@@ -5,6 +5,7 @@ import { supabase } from '@/utils/supabase';
 import { Store, AlertCircle, Calendar, ChevronRight, Package } from 'lucide-react';
 import TatefudaPreview from '@/components/TatefudaPreview';
 import HelpTooltip from '@/components/HelpTooltip';
+import { ensureOperationAllowed } from '@/utils/staffRole';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 const GALLERY_CACHE_KEY = 'florix_gallery_cache';
@@ -521,6 +522,9 @@ export default function StaffNewOrderPage() {
   const totalAmount = subTotal + tax;
 
   const handleSubmitStaffOrder = async () => {
+    // ★ ① PIN必須なのにスタッフ未選択 → 操作拒否
+    const guard = ensureOperationAllowed('注文受付');
+    if (!guard.allowed) { alert(guard.message); return; }
     let warnings = [];
 
     if (!receptionType) warnings.push('・受付区分');
