@@ -49,8 +49,9 @@ export function noReplyFooter({
  * @param {string} params.html - HTML本文
  * @param {string} [params.from] - 送信元（オプション）
  * @param {string[]} [params.bcc] - BCC（オプション）
+ * @param {string[]} [params.cc] - CC（オプション）★ 店舗通知用に追加
  */
-export async function sendEmail({ to, subject, html, from, bcc }) {
+export async function sendEmail({ to, subject, html, from, bcc, cc }) {
   if (!resend) {
     console.warn('[email] RESEND_API_KEY が未設定のためメール送信スキップ');
     return { skipped: true };
@@ -63,6 +64,7 @@ export async function sendEmail({ to, subject, html, from, bcc }) {
       subject,
       html,
       ...(bcc ? { bcc } : {}),
+      ...(cc ? { cc } : {}),
     });
     if (error) {
       console.error('[email] 送信失敗:', error);

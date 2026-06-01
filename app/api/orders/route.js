@@ -363,6 +363,73 @@ export async function POST(request) {
       }
     }
 
+    // ---- ★ 店舗 受注通知メール送信（管理者向け）----
+    async function sendStoreNotificationEmail(eventType = 'order') {
+      try {
+        // 店舗情報・テンプレート取得
+        const { data: settingsRow } = await supabaseAdmin
+          .from('app_settings')
+          .select('settings_data')
+          .eq('id', tenantId)
+          .single();
+        const settings = settingsRow?.settings_data || {};
+        const shop = settings.shops?.find(s => String(s.id) === String(shopId)) || settings.shops?.[0] || {};
+
+        // 通知先メアド未設定 or 該当タイミングOFFならスキップ
+        const notifyEmail = (shop.notifyEmail || '').trim();
+        if (!notifyEmail) return;
+        if (eventType === 'order' && shop.notifyOnOrder === false) return;
+        if (eventType === 'payment' && shop.notifyOnPayment === false) return;
+
+        // CC（カンマ区切り）
+        const ccEmails = (shop.notifyCcEmails || '')
+          .split(',').map(s => s.trim()).filter(Boolean);
+
+        const shopName = shop.name || settings.generalConfig?.appName || 'お花屋さん';
+        const shopPhone = shop.phone || '';
+        const customerName = orderData.customerInfo?.name || 'お客様';
+        const shortOrderId = String(orderId).slice(0, 8);
+
+        const eventLabel = eventType === 'payment' ? '【決済完了】' : '【新規注文】';
+        const subject = `${eventLabel} ${customerName}様より受注 (#${shortOrderId}) - ${shopName}`;
+
+        // 本文: お客様への確認メールと同じ詳細をHTMLで作成
+        const { buildOrderConfirmationEmail } = await import('@/utils/email');
+        const bankInfo = shop.bankInfo || '';
+        const { html: customerHtml } = buildOrderConfirmationEmail({
+          order: { id: orderId, order_data: orderRecord.order_data },
+          shopName,
+          bankInfo,
+        });
+        // 店舗向けバナーを上に追加
+        const storeBanner = `
+          <div style="background:#117768; color:white; padding:16px 20px; border-radius:8px 8px 0 0; font-size:14px; font-weight:bold;">
+            📥 ${eventLabel} 新しい注文が入りました
+          </div>
+          <div style="background:#f4faf8; padding:14px 20px; border-left:4px solid #117768; margin-bottom:16px; font-size:12px; color:#333; line-height:1.6;">
+            <strong>お客様:</strong> ${customerName} 様<br/>
+            <strong>注文ID:</strong> ${shortOrderId}<br/>
+            <strong>合計金額:</strong> ¥${totalAmount.toLocaleString()}（税込）<br/>
+            <strong>受付日時:</strong> ${new Date().toLocaleString('ja-JP')}<br/>
+            ${shopPhone ? `<strong>店舗TEL:</strong> ${shopPhone}<br/>` : ''}
+            <span style="font-size:11px; color:#666;">↓ 以下、お客様への確認メールと同じ内容です ↓</span>
+          </div>
+        `;
+        const html = storeBanner + customerHtml;
+
+        const from = `${shopName} 受注通知 <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
+        await sendEmail({
+          to: notifyEmail,
+          cc: ccEmails.length > 0 ? ccEmails : undefined,
+          subject,
+          html,
+          from,
+        });
+      } catch (e) {
+        console.warn('[orders] 店舗通知メール送信失敗:', e.message);
+      }
+    }
+
     // ---- スタッフ代理入力 / カード以外はそのまま完了（EC注文なら在庫減算） ----
     if (isStaffEntered || paymentMethod !== 'card') {
       // EC注文の銀行振込は、決済確認前に在庫を減らす（カードはwebhookで減らす）
@@ -388,6 +455,8 @@ export async function POST(request) {
 
       // 銀行振込はここで確定メール送信
       await sendConfirmationEmail();
+      // ★ 店舗 受注通知メール送信
+      await sendStoreNotificationEmail('order');
       return NextResponse.json({ orderId });
     }
 
@@ -460,6 +529,9 @@ export async function POST(request) {
       .from('orders')
       .update({ stripe_checkout_session_id: session.id })
       .eq('id', orderId);
+
+    // ★ クレカ決済も「注文が入った」段階で店舗通知（決済完了通知は webhook で別途送信）
+    await sendStoreNotificationEmail('order');
 
     return NextResponse.json({ orderId, checkoutUrl: session.url });
   } catch (err) {

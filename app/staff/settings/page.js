@@ -755,6 +755,64 @@ export default function SettingsPage() {
             <div className="space-y-1 md:col-span-2"><label className="text-[10px] font-bold text-[#999999]">インボイス番号</label><input type="text" value={shop.invoiceNumber || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, invoiceNumber:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="T12345..."/></div>
           </div>
           
+          {/* ★ 店舗 受注通知メール設定 */}
+          <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
+            <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Mail size={16}/> 受注通知メール設定</h3>
+            <p className="text-[11px] text-[#999999]">注文・決済・見積依頼が入った時に、店舗のメールアドレスに通知メールを送信します。</p>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-[#999999]">通知先メールアドレス（メイン）</label>
+                <input
+                  type="email"
+                  value={shop.notifyEmail || ''}
+                  onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, notifyEmail: e.target.value } : s))}
+                  placeholder="店舗のメールアドレス（例: shop@example.com）"
+                  className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-[#999999]">CC送信先（追加で通知したい人。複数の場合はカンマ区切り）</label>
+                <input
+                  type="text"
+                  value={shop.notifyCcEmails || ''}
+                  onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, notifyCcEmails: e.target.value } : s))}
+                  placeholder="例: owner@example.com, staff@example.com"
+                  className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"
+                />
+              </div>
+              <div className="bg-[#FBFAF9] p-3 rounded-xl space-y-2">
+                <p className="text-[11px] font-bold text-[#2D4B3E] mb-1">通知タイミング（ON/OFF）</p>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={shop.notifyOnOrder !== false}
+                    onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, notifyOnOrder: e.target.checked } : s))}
+                    className="w-4 h-4 accent-[#2D4B3E]"
+                  />
+                  <span className="text-[12px] font-bold text-[#555]">📥 お客様から注文が入った時</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={shop.notifyOnPayment !== false}
+                    onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, notifyOnPayment: e.target.checked } : s))}
+                    className="w-4 h-4 accent-[#2D4B3E]"
+                  />
+                  <span className="text-[12px] font-bold text-[#555]">💳 クレカ決済が完了した時</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={shop.notifyOnEstimate !== false}
+                    onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, notifyOnEstimate: e.target.checked } : s))}
+                    className="w-4 h-4 accent-[#2D4B3E]"
+                  />
+                  <span className="text-[12px] font-bold text-[#555]">📝 見積依頼が入った時</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
             <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={16}/> 振込先口座情報 (法人請求書等用)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">

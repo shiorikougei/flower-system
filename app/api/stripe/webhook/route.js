@@ -142,6 +142,39 @@ export async function POST(request) {
               await sendEmail({ to: customerEmail, subject, html, from });
               console.log('[webhook] 注文確認メール送信完了:', customerEmail);
 
+              // ★ 店舗向け 決済完了通知メール
+              try {
+                const notifyEmail = (shop.notifyEmail || '').trim();
+                if (notifyEmail && shop.notifyOnPayment !== false) {
+                  const ccEmails = (shop.notifyCcEmails || '').split(',').map(s => s.trim()).filter(Boolean);
+                  const storeBanner = `
+                    <div style="background:#117768; color:white; padding:16px 20px; border-radius:8px 8px 0 0; font-size:14px; font-weight:bold;">
+                      💳 【決済完了】クレジットカード決済が完了しました
+                    </div>
+                    <div style="background:#f4faf8; padding:14px 20px; border-left:4px solid #117768; margin-bottom:16px; font-size:12px; color:#333; line-height:1.6;">
+                      <strong>お客様:</strong> ${od.customerInfo?.name || 'お客様'} 様<br/>
+                      <strong>注文ID:</strong> ${String(orderId).slice(0, 8)}<br/>
+                      <strong>合計金額:</strong> ¥${total.toLocaleString()}（税込）<br/>
+                      <strong>決済日時:</strong> ${new Date().toLocaleString('ja-JP')}<br/>
+                      ${shopPhone ? `<strong>店舗TEL:</strong> ${shopPhone}<br/>` : ''}
+                      <span style="font-size:11px; color:#666;">↓ 以下、お客様への確認メールと同じ内容です ↓</span>
+                    </div>
+                  `;
+                  const storeSubject = `【決済完了】${od.customerInfo?.name || 'お客様'}様より受注 (#${String(orderId).slice(0, 8)}) - ${shopName}`;
+                  const storeFrom = `${shopName} 受注通知 <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
+                  await sendEmail({
+                    to: notifyEmail,
+                    cc: ccEmails.length > 0 ? ccEmails : undefined,
+                    subject: storeSubject,
+                    html: storeBanner + html,
+                    from: storeFrom,
+                  });
+                  console.log('[webhook] 店舗決済完了通知メール送信完了:', notifyEmail);
+                }
+              } catch (storeNotifyErr) {
+                console.warn('[webhook] 店舗決済完了通知メール送信失敗:', storeNotifyErr.message);
+              }
+
               // ★ LINE併送（有効時のみ）
               await sendLineParallelToEmail({
                 supabaseAdmin,

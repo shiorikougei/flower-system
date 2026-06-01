@@ -79,9 +79,18 @@ export async function POST(request) {
     // 店舗へ通知メール（構造化データがあれば見やすくHTMLテーブル化）
     try {
       const { data: tRow } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
-      const shopEmail = tRow?.settings_data?.generalConfig?.email || tRow?.settings_data?.shops?.[0]?.email;
-      const shopName = tRow?.settings_data?.generalConfig?.appName || tenantId;
-      if (shopEmail) {
+      const settings = tRow?.settings_data || {};
+      // ★ 該当店舗の notifyEmail を優先（なければ旧 email / generalConfig.email にフォールバック）
+      const targetShop = settings.shops?.find(s => String(s.id) === String(shopId)) || settings.shops?.[0] || {};
+      const shopEmail = (targetShop.notifyEmail || '').trim()
+        || targetShop.email
+        || settings.generalConfig?.email;
+      const shopName = targetShop.name || settings.generalConfig?.appName || tenantId;
+      // ★ CCメール（カンマ区切り）
+      const ccEmails = (targetShop.notifyCcEmails || '').split(',').map(s => s.trim()).filter(Boolean);
+      // ★ 通知タイミング OFF ならスキップ
+      const notifyEnabled = targetShop.notifyOnEstimate !== false;
+      if (shopEmail && notifyEnabled) {
         // 構造化データを見やすいHTMLテーブルに整形
         const escHtml = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>');
         const rd = requestData || {};
@@ -133,6 +142,7 @@ export async function POST(request) {
 
         await sendEmail({
           to: shopEmail,
+          cc: ccEmails.length > 0 ? ccEmails : undefined,
           subject: `【見積依頼】${customerName} 様 / ${rd.purpose || '用途不明'} / ${rd.budget || ''}`,
           html: `<!DOCTYPE html><html><body style="font-family:'Hiragino Sans',sans-serif;padding:20px;background:#fbfaf9;">
             <div style="max-width:600px;margin:0 auto;background:white;padding:30px;border-radius:12px;">
