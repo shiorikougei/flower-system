@@ -480,11 +480,11 @@ export default function OrderDetailModal({
           ${renderClientBoxes(hidePrice)}
           ${renderItemsBlock(hidePrice, type)}
           ${showReceiptNote ? `
-            <div class="receipt-note" style="margin-top: 3mm; margin-bottom: 2mm;">
-              <div style="font-size: 8.5pt; margin-bottom: 4mm;">上記の商品を確かに受領いたしました。</div>
-              <div style="display: flex; justify-content: flex-end; gap: 8mm; font-size: 10pt;">
-                <div>受領日：<span style="display:inline-block; width:12mm; border-bottom:1px solid #555;"></span>年<span style="display:inline-block; width:8mm; border-bottom:1px solid #555;"></span>月<span style="display:inline-block; width:8mm; border-bottom:1px solid #555;"></span>日</div>
-                <div>サインまたは印：<span style="display:inline-block; width:45mm; border-bottom:1px solid #555;"></span></div>
+            <div class="receipt-note" style="margin-top: 2mm; margin-bottom: 1mm;">
+              <div style="font-size: 8pt; margin-bottom: 2mm;">上記の商品を確かに受領いたしました。</div>
+              <div style="display: flex; justify-content: flex-end; gap: 6mm; font-size: 9pt;">
+                <div>受領日：<span style="display:inline-block; width:10mm; border-bottom:1px solid #555;"></span>年<span style="display:inline-block; width:7mm; border-bottom:1px solid #555;"></span>月<span style="display:inline-block; width:7mm; border-bottom:1px solid #555;"></span>日</div>
+                <div>サインまたは印：<span style="display:inline-block; width:40mm; border-bottom:1px solid #555;"></span></div>
               </div>
             </div>
           ` : ''}
@@ -568,13 +568,13 @@ export default function OrderDetailModal({
             }
             * { box-sizing: border-box; }
             body { margin: 0; background-color: #f3f4f6; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; color: #222; }
-            /* ★ ③ A4 = 210x297mm。内側に上6mm/下8mm/左右0の safety を確保するため、slipの高さを少し縮める */
-            .page { width: 210mm; height: 297mm; background: #fff; margin: 0 auto 10mm auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; position: relative; overflow: hidden; padding: 6mm 0 8mm 0; }
-            /* 2分割伝票: A4の印刷可能領域 283mm ÷ 2 = 141mm/slip */
-            .slip { width: 100%; height: 141mm; padding: 4mm 14mm 4mm 14mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+            /* ★ ③ A4 = 210x297mm。プリンター非印刷領域分の safety を確保 */
+            .page { width: 210mm; height: 297mm; background: #fff; margin: 0 auto 10mm auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; position: relative; overflow: hidden; padding: 7mm 0 13mm 0; }
+            /* 2分割伝票: A4の印刷可能領域 277mm ÷ 2 = 138.5mm/slip */
+            .slip { width: 100%; height: 138mm; padding: 4mm 14mm 4mm 14mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
             .slip:first-child { border-bottom: 1px dashed #aaa; }
-            /* EC注文用: 1ページ全面（283mm） */
-            .slip-full { width: 100%; height: 283mm; padding: 6mm 14mm 8mm 14mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+            /* EC注文用: 1ページ全面（277mm） */
+            .slip-full { width: 100%; height: 277mm; padding: 6mm 14mm 8mm 14mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
             .cutline { position: absolute; top: 50%; left: 10mm; right: 10mm; transform: translateY(-50%); display: flex; justify-content: center; align-items: center; z-index: 10; pointer-events: none; }
             .cutline span { background: #fff; padding: 0 5mm; font-size: 8pt; color: #888; letter-spacing: 0.2em; }
             .slip-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3mm; }
