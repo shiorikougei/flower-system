@@ -53,6 +53,15 @@ export default function StaffLayout({ children }) {
       if (settingsData?.staffAuthConfig) {
         setStaffAuthConfig(prev => ({ ...prev, ...settingsData.staffAuthConfig }));
       }
+      // ★ ① PIN必須が有効な場合、保存済みのスタッフ情報を破棄（毎回PINで再認証）
+      if (settingsData?.staffAuthConfig?.requirePin) {
+        const saved = getCurrentStaff();
+        if (saved) {
+          // セッションを跨いだ自動ログインを禁止して PIN を必ず通す
+          setCurrentStaff(null);
+          setCurrentStaffState(null);
+        }
+      }
     };
 
     // 現在のスタッフをlocalStorageからロード
@@ -157,9 +166,17 @@ export default function StaffLayout({ children }) {
   // PIN認証が必要か判定
   const needsPin = (targetStaff) => {
     if (!staffAuthConfig.requirePin) return false;
-    if (!targetStaff?.pin) return false;  // PIN未設定なら認証スキップ
+    if (!targetStaff?.pin) return false;  // PIN未設定スタッフはここでは false、別途警告
     if (targetStaff.role === 'owner') return true;  // オーナーは常に
     return staffAuthConfig.requireForOwnerOnly === false;  // 全員必須モードなら
+  };
+
+  // ★ ① 対象スタッフがPIN要求対象なのにPIN未設定だった場合の警告
+  const requiresPinButMissing = (targetStaff) => {
+    if (!staffAuthConfig.requirePin) return false;
+    if (targetStaff?.pin) return false;
+    if (targetStaff?.role === 'owner') return true;
+    return staffAuthConfig.requireForOwnerOnly === false;
   };
 
   const performSwitch = (s) => {
@@ -185,6 +202,11 @@ export default function StaffLayout({ children }) {
 
   // スタッフ切替（PIN認証込み）
   const switchStaff = (s) => {
+    // ★ ① PIN必須なのに該当スタッフがPIN未設定 → 切替不可
+    if (requiresPinButMissing(s)) {
+      alert(`「${s.name}」にはPINが設定されていません。\n\n設定 → スタッフ管理 から4桁PINを登録してください。`);
+      return;
+    }
     if (needsPin(s)) {
       setPinModal({ staff: s });
       setPinInput('');
@@ -252,6 +274,9 @@ export default function StaffLayout({ children }) {
   if (pathname === '/staff/login') {
     return <>{children}</>;
   }
+
+  // ★ ① PIN必須が有効＆スタッフ未選択 → UI全体をブロックして強制選択
+  const needsForceSelection = staffAuthConfig.requirePin && !currentStaff && staffList.length > 0;
 
   return (
     <div className="min-h-screen bg-[#FBFAF9] flex flex-col md:flex-row font-sans text-[#111111]">
@@ -430,6 +455,51 @@ export default function StaffLayout({ children }) {
         onClose={() => setShowUpgradeModal(false)}
         tenantSettings={tenantSettings}
       />
+
+      {/* ★ ① PIN必須かつスタッフ未選択時の強制選択ゲート */}
+      {needsForceSelection && !pinModal && (
+        <div className="fixed inset-0 z-[140] bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4">
+            <div className="text-center">
+              <div className="w-14 h-14 mx-auto bg-amber-100 rounded-full flex items-center justify-center mb-3">
+                <Lock size={24} className="text-amber-600"/>
+              </div>
+              <h3 className="text-[18px] font-bold text-[#111]">スタッフを選択してください</h3>
+              <p className="text-[12px] text-[#555] mt-2 leading-relaxed">
+                PIN認証が有効化されています。<br/>
+                受注操作の前に、自分のスタッフ名を選びPINを入力してください。
+              </p>
+            </div>
+            <div className="max-h-72 overflow-y-auto space-y-1">
+              {staffList.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => switchStaff(s)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-[#FBFAF9] border border-[#EAEAEA] hover:border-amber-400 transition-all text-left"
+                >
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-[11px] font-bold shrink-0 ${
+                    s.role === 'owner' ? 'bg-[#2D4B3E]' :
+                    s.role === 'staff' ? 'bg-[#117768]' :
+                    s.role === 'parttime' ? 'bg-[#D97D54]' : 'bg-[#117768]'
+                  }`}>
+                    <UserCheck size={15}/>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-bold text-[#111] truncate">{s.name}</p>
+                    <p className="text-[10px] text-[#999] truncate">
+                      {ROLE_LABELS[s.role || 'staff']}
+                      {!s.pin && <span className="text-red-600 ml-1">⚠️ PIN未設定</span>}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-[#999] text-center">
+              ⚠️ PIN未設定のスタッフは認証なしで切替できます。設定で全員にPINを登録してください。
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ★ PIN認証モーダル */}
       {pinModal && (

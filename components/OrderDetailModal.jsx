@@ -306,7 +306,8 @@ export default function OrderDetailModal({
       const shopZip = shop.zip || '0010025';
       const shopAddress = shop.address || '北海道札幌市北区北２５条西４丁目３−８ クレアノース25 1階';
       const shopTel = shop.phone || '011-600-1878';
-      const shopInvoice = shop.invoiceNumber || 'T1234567891012';
+      // ★ ④ インボイス番号: 未登録なら空欄（フェイク番号を出さない）
+      const shopInvoice = (shop.invoiceNumber || '').trim();
 
       const getTitleColor = (type) => {
         const map = { order_store: '#117768', customer: '#1a56a8', delivery: '#444444', receipt: '#444444' };
@@ -379,13 +380,15 @@ export default function OrderDetailModal({
             `;
           }).join('');
         } else {
+          // ★ ⑤ 納品書(delivery)は商品名のみ、用途・色・イメージ・備考は出さない
+          const isDeliverySlip = slipType === 'delivery';
           itemRows = `
               <tr>
                 <td class="item-cell">
                   <div class="item-name">${formatText(modalData.flowerType) || '未設定'}</div>
-                  <div class="item-detail">用途: ${formatText(modalData.flowerPurpose) || '-'}${modalData.otherPurpose ? ` (${formatText(modalData.otherPurpose)})` : ''} / 色: ${formatText(modalData.flowerColor) || '-'}${modalData.otherColor ? ` (${formatText(modalData.otherColor)})` : ''} / イメージ: ${formatText(modalData.flowerVibe) || '-'}${modalData.otherVibe ? ` (${formatText(modalData.otherVibe)})` : ''}</div>
-                  ${renderCardBlock()}
-                  ${modalData.note ? `<div class="item-detail" style="color:#d97c8f; margin-top:2mm;">備考: ${formatText(modalData.note)}</div>` : ''}
+                  ${isDeliverySlip ? '' : `<div class="item-detail">用途: ${formatText(modalData.flowerPurpose) || '-'}${modalData.otherPurpose ? ` (${formatText(modalData.otherPurpose)})` : ''} / 色: ${formatText(modalData.flowerColor) || '-'}${modalData.otherColor ? ` (${formatText(modalData.otherColor)})` : ''} / イメージ: ${formatText(modalData.flowerVibe) || '-'}${modalData.otherVibe ? ` (${formatText(modalData.otherVibe)})` : ''}</div>`}
+                  ${isDeliverySlip ? '' : renderCardBlock()}
+                  ${isDeliverySlip || !modalData.note ? '' : `<div class="item-detail" style="color:#d97c8f; margin-top:2mm;">備考: ${formatText(modalData.note)}</div>`}
                 </td>
                 <td class="qty-cell">1</td>
                 <td class="price-cell">${hidePrice ? '' : formatPrice(modalData.itemPrice)}</td>
@@ -460,7 +463,7 @@ export default function OrderDetailModal({
             <div class="shop-block">
               <div class="shop-name">${shopName}</div>
               <div>〒${shopZip} ${shopAddress}</div>
-              <div>TEL: ${shopTel} (${shopInvoice})</div>
+              <div>TEL: ${shopTel}${shopInvoice ? ` (${shopInvoice})` : ''}</div>
             </div>
             <div class="footer-actions">${footerActionsHtml}</div>
           </div>
@@ -471,7 +474,7 @@ export default function OrderDetailModal({
         <div class="${fullPage ? 'slip-full' : 'slip'}" style="color: ${hidePrice ? '#333' : 'inherit'}">
           <div class="slip-header">
             <div class="slip-title" style="color:${getTitleColor(type)}">${title}${isEcOrder ? ` <span style="font-size:9pt; background:#e3f2fd; color:#1565c0; padding:1mm 2mm; border-radius:1mm; font-weight:bold; vertical-align:middle;">EC注文</span>` : ''}</div>
-            ${renderHeaderMeta()}
+            ${type === 'delivery' ? '' /* ★ ⑥ 納品書はヘッダー右上の伝票番号・受付日・お渡し方法・希望日・入金状況を出さない */ : renderHeaderMeta()}
           </div>
           ${renderClientBoxes(hidePrice)}
           ${renderItemsBlock(hidePrice, type)}
@@ -555,20 +558,25 @@ export default function OrderDetailModal({
         <head>
           <meta charset="UTF-8" />
           <style>
-            @page { size: A4 portrait; margin: 0; }
+            /* ★ ③ A4 用紙の物理マージン（プリンターの非印刷領域）を考慮して @page にも余白を確保 */
+            @page { size: A4 portrait; margin: 8mm 5mm 10mm 5mm; }
             @media print {
               body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-              .page { box-shadow: none !important; margin: 0 !important; page-break-after: always !important; break-after: page !important; }
+              .page { box-shadow: none !important; margin: 0 !important; page-break-after: always !important; break-after: page !important; width: 100% !important; height: auto !important; min-height: 0 !important; }
               .page:last-child { page-break-after: auto !important; break-after: auto !important; }
+              /* 印刷時は高さ固定をやめて、内容に合わせる */
+              .slip { height: auto !important; min-height: 130mm; }
+              .slip-full { height: auto !important; min-height: 260mm; padding: 5mm 12mm 12mm 12mm !important; }
             }
             * { box-sizing: border-box; }
             body { margin: 0; background-color: #f3f4f6; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; color: #222; }
-            .page { width: 210mm; height: 296mm; background: #fff; margin: 0 auto 10mm auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; position: relative; overflow: hidden; }
-            .slip { width: 100%; height: 148mm; padding: 7mm 15mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+            /* ★ ③ プレビュー画面の高さ（ブラウザで見るとき）は実物に近い 285mm に縮小 */
+            .page { width: 200mm; height: 285mm; background: #fff; margin: 0 auto 10mm auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; position: relative; overflow: hidden; }
+            .slip { width: 100%; height: 140mm; padding: 5mm 12mm 8mm 12mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
             .slip:first-child { border-bottom: 1px dashed #aaa; }
-            /* ★ EC注文用: 1ページ全面（A4フルサイズ） */
-            .slip-full { width: 100%; height: 296mm; padding: 15mm 20mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
-            .cutline { position: absolute; top: 148mm; left: 10mm; right: 10mm; transform: translateY(-50%); display: flex; justify-content: center; align-items: center; z-index: 10; pointer-events: none; }
+            /* ★ EC注文用: 1ページ全面 */
+            .slip-full { width: 100%; height: 280mm; padding: 5mm 12mm 12mm 12mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+            .cutline { position: absolute; top: 140mm; left: 10mm; right: 10mm; transform: translateY(-50%); display: flex; justify-content: center; align-items: center; z-index: 10; pointer-events: none; }
             .cutline span { background: #fff; padding: 0 5mm; font-size: 8pt; color: #888; letter-spacing: 0.2em; }
             .slip-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3mm; }
             .slip-title { font-size: 16pt; font-weight: bold; letter-spacing: 0.3em; }

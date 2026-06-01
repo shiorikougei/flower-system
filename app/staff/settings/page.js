@@ -96,6 +96,8 @@ export default function SettingsPage() {
   const [staffList, setStaffList] = useState([]);
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffStore, setNewStaffStore] = useState('all');
+  // ★ ② PINコード伏字化用: 個別に表示ON/OFF
+  const [visiblePinIdx, setVisiblePinIdx] = useState(new Set());
   const [staffOrderConfig, setStaffOrderConfig] = useState({ ignoreLeadTime: true, allowCustomPrice: true, paymentMethods: ['店頭支払い(済)', '銀行振込(請求書)', '代金引換'], sendAutoReply: false });
   
   const [autoReplyTemplates, setAutoReplyTemplates] = useState([
@@ -1476,19 +1478,34 @@ export default function SettingsPage() {
               <span className="font-bold text-[14px]">{s.name}</span>
               <span className="text-[9px] text-[#999999] font-bold tracking-tight">所属: {s.store === 'all' ? '全店' : shops.find(sh=>sh.id===Number(s.store))?.name || '不明'}</span>
             </div>
-            <input
-              type="text"
-              inputMode="numeric"
-              maxLength={4}
-              placeholder="PIN(4桁)"
-              value={s.pin || ''}
-              onChange={(e) => {
-                const next = [...staffList];
-                next[i] = { ...next[i], pin: e.target.value.replace(/\D/g, '').slice(0, 4) };
-                setStaffList(next);
-              }}
-              className="w-24 h-10 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[12px] font-bold outline-none focus:border-amber-500 text-center font-mono tracking-widest"
-            />
+            {/* ★ ② PIN伏字化: 「目」ボタンで一時的に表示 */}
+            <div className="flex items-center gap-1">
+              <input
+                type={visiblePinIdx.has(i) ? 'text' : 'password'}
+                inputMode="numeric"
+                maxLength={4}
+                placeholder="PIN(4桁)"
+                value={s.pin || ''}
+                onChange={(e) => {
+                  const next = [...staffList];
+                  next[i] = { ...next[i], pin: e.target.value.replace(/\D/g, '').slice(0, 4) };
+                  setStaffList(next);
+                }}
+                className="w-24 h-10 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[12px] font-bold outline-none focus:border-amber-500 text-center font-mono tracking-widest"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const next = new Set(visiblePinIdx);
+                  if (next.has(i)) next.delete(i); else next.add(i);
+                  setVisiblePinIdx(next);
+                }}
+                title={visiblePinIdx.has(i) ? '伏字に戻す' : 'PINを表示'}
+                className="h-10 w-9 flex items-center justify-center bg-white border border-[#EAEAEA] rounded-lg text-[#999] hover:text-amber-600 hover:border-amber-300"
+              >
+                {visiblePinIdx.has(i) ? <EyeOff size={14}/> : <Eye size={14}/>}
+              </button>
+            </div>
             <select
               value={s.role || 'staff'}
               onChange={(e) => {
