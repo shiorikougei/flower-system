@@ -244,17 +244,52 @@ export async function PATCH(request) {
 
       // ★ LINE preference を尊重: 'line_only' ならメール送信スキップ
       let preference2 = 'both';
+      let isLineLinked = false;
       try {
         const { data: link } = await supabase
           .from('customer_line_links')
-          .select('notification_preference')
+          .select('notification_preference, is_active')
           .eq('tenant_id', cur.tenant_id)
           .eq('customer_email', cur.customer_email.toLowerCase())
           .eq('is_active', true)
           .limit(1)
           .maybeSingle();
         if (link?.notification_preference) preference2 = link.notification_preference;
+        if (link?.is_active) isLineLinked = true;
       } catch {}
+
+      // ★ LINE未連携のお客様向け招待ブロック（LINE機能ON & 未連携の場合のみ）
+      const lineInviteBlock = (!isLineLinked && settings2.lineConfig?.enabled && lineUrl2) ? `
+        <div style="margin:24px 0; background:#06C755; padding:2px; border-radius:14px;">
+          <div style="background:white; padding:20px; border-radius:12px;">
+            <div style="text-align:center; margin-bottom:14px;">
+              <span style="display:inline-block; background:#06C755; color:white; padding:6px 16px; border-radius:20px; font-size:11px; font-weight:bold;">💬 おすすめ</span>
+              <h3 style="color:#06C755; margin:10px 0 4px; font-size:16px;">LINEで進捗を受け取りませんか？</h3>
+              <p style="color:#666; font-size:12px; margin:0;">完成写真・お届け状況をLINEでお届けします🌸</p>
+            </div>
+            <div style="background:#f0fdf4; padding:14px; border-radius:8px; font-size:12px; color:#333; line-height:1.7;">
+              <p style="margin:0 0 8px; font-weight:bold; color:#117768;">📱 連携手順（30秒で完了）</p>
+              <ol style="margin:0; padding-left:20px;">
+                <li>下の「LINEで友達追加」ボタンをタップ</li>
+                <li>友達追加後、リッチメニュー「📧 LINE連携する」をタップ</li>
+                <li>下記のメールアドレスをトークに送信:<br/>
+                  <code style="display:inline-block; background:white; padding:4px 10px; border:1px dashed #06C755; border-radius:4px; margin-top:4px; font-family:monospace; color:#06C755; font-weight:bold;">${cur.customer_email}</code>
+                </li>
+                <li>連携完了！ 🎉</li>
+              </ol>
+            </div>
+            <p style="text-align:center; margin:14px 0 0;">
+              <a href="${lineUrl2}"
+                 style="display:inline-block; background:#06C755; color:white; padding:14px 36px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:14px;">
+                💬 LINEで友達追加する
+              </a>
+            </p>
+            <p style="text-align:center; color:#999; font-size:10px; margin:10px 0 0;">
+              ※ いつでもマイページから連携解除できます
+            </p>
+          </div>
+        </div>
+      ` : '';
 
       // お客様にメール (line_only なら送信スキップ)
       if (preference2 !== 'line_only') {
@@ -280,6 +315,7 @@ export async function PATCH(request) {
                    style="display:inline-block;background:#117768;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">
                   この内容で確定する →
                 </a>
+                ${lineInviteBlock}
                 ${noReplyFooter({ shopName: shopName2, shopEmail: shopEmail2, shopPhone: shopPhone2, lineAddFriendUrl: lineUrl2 })}
               </div>
             </body></html>`,
