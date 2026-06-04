@@ -55,6 +55,8 @@ export default function StaffNewOrderPage() {
   const [prepaymentSubType, setPrepaymentSubType] = useState('現金');
   // ★ 業者配送(sagawa) + 引き取り時に支払いの確認チェック
   const [sagawaPaymentLaterConfirmed, setSagawaPaymentLaterConfirmed] = useState(false);
+  // ★ ③ 入金メモ（備考）
+  const [paymentMemo, setPaymentMemo] = useState('');
 
   const [cardType, setCardType] = useState('なし');
   const [cardMessage, setCardMessage] = useState('');
@@ -554,8 +556,8 @@ export default function StaffNewOrderPage() {
         tateInput1, tateInput2, tateInput3, tateInput3a, tateInput3b,
         customerInfo, isRecipientDifferent, recipientInfo, note,
         paymentMethod,
-        // ★ 前払い済みの場合のサブ選択（現金/カード）
-        prepaymentSubType: paymentMethod === '前払い済み' ? prepaymentSubType : null,
+        // ★ ③ 入金メモ（自由記入）
+        paymentMemo: paymentMemo || '',
         // ★ 配達時の事前連絡同意
         priorContactAgreed: receiveMethod === 'delivery' ? priorContactAgreed : null,
         // ★ 業者配送+引き取り時支払いの確認
@@ -565,7 +567,7 @@ export default function StaffNewOrderPage() {
         // ★ 入金状況: 「前払い済み」→入金済扱い / 「引き取り時に支払い」→未入金扱い
         //    受注一覧の判定は paymentStatus に「未」が含まれているかで分岐
         paymentStatus: paymentMethod === '前払い済み'
-          ? `前払い済み（${prepaymentSubType}）`
+          ? '前払い済み'
           : '未入金（引き取り時）',
         referenceImage: selectedImage ? selectedImage.url : null,
         status: 'new',
@@ -1379,23 +1381,6 @@ export default function StaffNewOrderPage() {
                 <p className="text-[10px] text-[#999999] mt-1">受注一覧の入金ステータスに反映されます</p>
               </div>
 
-              {/* ★ 前払い済み: 現金 / カード のサブ選択 */}
-              {paymentMethod === '前払い済み' && (
-                <div className="space-y-2 p-4 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA] animate-in fade-in">
-                  <label className="text-[11px] font-bold text-[#999999]">支払い方法（前払い済み）</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button type="button" onClick={() => setPrepaymentSubType('現金')}
-                      className={`py-3 text-[12px] font-bold rounded-xl border transition-all ${prepaymentSubType === '現金' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-white border-[#EAEAEA] text-[#555555]'}`}>
-                      現金
-                    </button>
-                    <button type="button" onClick={() => setPrepaymentSubType('カード決済')}
-                      className={`py-3 text-[12px] font-bold rounded-xl border transition-all ${prepaymentSubType === 'カード決済' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-white border-[#EAEAEA] text-[#555555]'}`}>
-                      カード決済
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {/* ★ 引き取り時支払い + 自社配達 + 届け先異なる の場合の注意書き */}
               {paymentMethod === '引き取り時に支払い' && receiveMethod === 'delivery' && isRecipientDifferent && (
                 <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl flex items-start gap-2 animate-in fade-in">
@@ -1427,6 +1412,18 @@ export default function StaffNewOrderPage() {
                   </label>
                 </div>
               )}
+              {/* ★ ③ 入金メモ（自由記入の備考） */}
+              <div className="space-y-2 p-4 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA]">
+                <label className="text-[11px] font-bold text-[#999999]">📝 入金メモ（備考）</label>
+                <textarea
+                  value={paymentMemo || ''}
+                  onChange={(e) => setPaymentMemo(e.target.value)}
+                  placeholder="例: 現金で受領、振込予定 6/10、領収書発行済 など自由記入"
+                  rows={3}
+                  className="w-full bg-white border border-[#EAEAEA] rounded-xl px-3 py-2 text-[12px] outline-none focus:border-[#2D4B3E] resize-none"
+                />
+                <p className="text-[10px] text-[#999999]">受注詳細から後で参照できます。お客様にはメール送信されません。</p>
+              </div>
               {/* ★ 社内メモは セクション2 (詳細と金額) に移動済み */}
             </div>
           </div>

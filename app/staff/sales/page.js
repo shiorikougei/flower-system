@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import FeatureGate from '@/components/FeatureGate';
 import HelpTooltip from '@/components/HelpTooltip';
+import OrderDetailModal from '@/components/OrderDetailModal';
 
 export default function SalesPage() {
   return <FeatureGate feature="sales" label="売上管理"><SalesPageInner/></FeatureGate>;
@@ -24,6 +25,9 @@ function SalesPageInner() {
 
   // ★ 入金確認モーダル
   const [paymentModalOrder, setPaymentModalOrder] = useState(null); // { id, order_data }
+  // ★ ④ 受注詳細モーダル
+  const [detailOrder, setDetailOrder] = useState(null);
+  const [appSettings, setAppSettings] = useState(null);
   const [confirmDeliveryDate, setConfirmDeliveryDate] = useState('');
   const [confirmDeliveryTime, setConfirmDeliveryTime] = useState('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -47,9 +51,13 @@ function SalesPageInner() {
       if (!tId) throw new Error('tenant_id が取得できませんでした');
       setCurrentTenantId(tId);
 
-      const { data, error } = await supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false });
-      if (error) throw error;
-      setOrders(data || []);
+      const [ordersRes, settingsRes] = await Promise.all([
+        supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false }),
+        supabase.from('app_settings').select('settings_data').eq('id', tId).single(),
+      ]);
+      if (ordersRes.error) throw ordersRes.error;
+      setOrders(ordersRes.data || []);
+      if (settingsRes.data?.settings_data) setAppSettings(settingsRes.data.settings_data);
     } catch (error) {
       console.error('取得エラー:', error.message);
     } finally {
@@ -473,20 +481,30 @@ function SalesPageInner() {
                   return (
                     <div key={order.id} className="bg-white rounded-2xl border border-[#D97D54]/30 shadow-sm overflow-hidden flex flex-col md:flex-row items-center relative">
                       <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#D97D54]"></div>
-                      
-                      <div className="p-6 md:w-1/3 flex flex-col justify-center w-full border-b md:border-b-0 md:border-r border-[#EAEAEA]">
+
+                      {/* ★ ④ クリックで詳細モーダルを開く（左2/3エリア） */}
+                      <button
+                        type="button"
+                        onClick={() => setDetailOrder(order)}
+                        className="p-6 md:w-1/3 flex flex-col justify-center w-full border-b md:border-b-0 md:border-r border-[#EAEAEA] text-left hover:bg-[#FBFAF9] transition-colors"
+                      >
                         <div className="flex items-center gap-2 mb-2">
                           <span className="text-[10px] font-bold bg-[#D97D54]/10 text-[#D97D54] px-2 py-1 rounded-md">{d.paymentStatus || '未設定'}</span>
                           <span className="text-[12px] font-bold text-[#999]">{safeFormatDate(order.created_at)}</span>
                         </div>
                         <span className="text-[24px] font-bold text-[#D97D54] leading-none mb-1">¥{order.computedTotal.toLocaleString()}</span>
-                      </div>
+                        <span className="text-[10px] text-[#999] mt-1">タップで詳細を表示 →</span>
+                      </button>
 
-                      <div className="p-6 md:w-1/3 flex flex-col justify-center w-full space-y-2 border-b md:border-b-0 md:border-r border-[#EAEAEA]">
+                      <button
+                        type="button"
+                        onClick={() => setDetailOrder(order)}
+                        className="p-6 md:w-1/3 flex flex-col justify-center w-full space-y-2 border-b md:border-b-0 md:border-r border-[#EAEAEA] text-left hover:bg-[#FBFAF9] transition-colors"
+                      >
                         <p className="text-[14px] font-bold text-[#333] flex items-center gap-2"><User size={14} className="text-[#999]"/> {c.name || '名称未設定'} 様</p>
                         <p className="text-[12px] font-bold text-[#555] flex items-center gap-2"><Phone size={14} className="text-[#999]"/> {c.phone || '電話番号なし'}</p>
                         <p className="text-[11px] font-bold text-[#999] pt-1 border-t border-[#F7F7F7] truncate">{d.flowerType} / {d.receiveMethod === 'pickup' ? '店頭受取' : '配送・配達'}</p>
-                      </div>
+                      </button>
 
                       <div className="p-6 md:w-1/3 flex flex-col justify-center w-full">
                         <button
@@ -564,6 +582,22 @@ function SalesPageInner() {
           </div>
         )}
       </div>
+
+      {/* ★ ④ 受注詳細モーダル（未入金カードから開く） */}
+      {detailOrder && (
+        <OrderDetailModal
+          order={detailOrder}
+          appSettings={appSettings}
+          onClose={() => setDetailOrder(null)}
+          onUpdateStatus={async () => {
+            await fetchOrders();
+          }}
+          onDelete={async () => {
+            await fetchOrders();
+            setDetailOrder(null);
+          }}
+        />
+      )}
 
       {/* ★ 入金確認モーダル（受注一覧と同じフロー: 納品日確定+メール/LINE送信） */}
       {paymentModalOrder && (

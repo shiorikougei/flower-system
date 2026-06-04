@@ -247,14 +247,15 @@ export default function OrdersPage() {
       // 登録順 = 作成日時の降順（DB取得時のデフォルト）
       return productFilteredOrders;
     }
-    // 納期順 = deliveryDate + deliveryTime の昇順
+    // 納期順 = selectedDate + selectedTime の昇順
     // 納期未設定は最後に回す
     const parseDeliveryTs = (o) => {
       const d = o?.order_data || {};
-      const dateStr = d.deliveryDate || '';
+      // ★ 実フィールド: selectedDate / selectedTime（deliveryDate/Timeは互換用フォールバック）
+      const dateStr = d.selectedDate || d.deliveryDate || '';
       if (!dateStr) return Number.POSITIVE_INFINITY;
       // 時間が "HH:mm" や "13:00-14:00" の形式 → 先頭の HH:mm を採用
-      let timeStr = d.deliveryTime || d.preferredTime || '';
+      let timeStr = d.selectedTime || d.deliveryTime || d.preferredTime || '';
       if (typeof timeStr === 'string') {
         const m = timeStr.match(/(\d{1,2}):(\d{2})/);
         timeStr = m ? `${m[1].padStart(2,'0')}:${m[2]}` : '09:00';
