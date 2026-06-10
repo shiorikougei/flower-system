@@ -660,9 +660,19 @@ export default function CorporateOrderPage() {
                         <span className="text-[10px] font-bold text-[#2D4B3E] bg-[#2D4B3E]/10 px-2 py-1 rounded">※贈り主情報は自社データから自動入力されています</span>
                       </div>
 
-                      {tateNeeds.includes('3') && <input type="text" placeholder="③ 贈り主 (例: 株式会社〇〇)" value={tateInput3} onChange={(e) => setTateInput3(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
+                      {tateNeeds.includes('3') && (
+                        <div className="space-y-1">
+                          <textarea placeholder={"③ 贈り主 (例: 株式会社〇〇)\n※連名はEnterで改行"} value={tateInput3} onChange={(e) => setTateInput3(e.target.value)} rows={2} className="w-full px-4 py-2 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E] resize-y" />
+                          <p className="text-[10px] text-[#999] pl-1">💡 連名: Enterで改行</p>
+                        </div>
+                      )}
                       {tateNeeds.includes('3a') && <input type="text" placeholder="③-1 会社名" value={tateInput3a} onChange={(e) => setTateInput3a(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
-                      {tateNeeds.includes('3b') && <input type="text" placeholder="③-2 役職・氏名" value={tateInput3b} onChange={(e) => setTateInput3b(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
+                      {tateNeeds.includes('3b') && (
+                        <div className="space-y-1">
+                          <textarea placeholder={"③-2 役職・氏名\n※連名はEnterで改行"} value={tateInput3b} onChange={(e) => setTateInput3b(e.target.value)} rows={2} className="w-full px-4 py-2 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E] resize-y" />
+                          <p className="text-[10px] text-[#999] pl-1">💡 連名: Enterで改行</p>
+                        </div>
+                      )}
                       
                       <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4 mb-2">仕上がりプレビュー</p>
                       <TatefudaPreview 
