@@ -453,10 +453,9 @@ export async function POST(request) {
         }
       }
 
-      // 銀行振込はここで確定メール送信
-      await sendConfirmationEmail();
-      // ★ 店舗 受注通知メール送信
-      await sendStoreNotificationEmail('order');
+      // ★ メール送信はバックグラウンドで実行（フォーム応答を早く返すため）
+      sendConfirmationEmail().catch(e => console.warn('[orders] 確認メール bg:', e?.message));
+      sendStoreNotificationEmail('order').catch(e => console.warn('[orders] 店舗通知 bg:', e?.message));
       return NextResponse.json({ orderId });
     }
 
@@ -531,7 +530,8 @@ export async function POST(request) {
       .eq('id', orderId);
 
     // ★ クレカ決済も「注文が入った」段階で店舗通知（決済完了通知は webhook で別途送信）
-    await sendStoreNotificationEmail('order');
+    //    バックグラウンドで送信 → 即レスポンス
+    sendStoreNotificationEmail('order').catch(e => console.warn('[orders] 店舗通知 bg(card):', e?.message));
 
     return NextResponse.json({ orderId, checkoutUrl: session.url });
   } catch (err) {

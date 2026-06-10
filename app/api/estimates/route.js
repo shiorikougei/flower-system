@@ -76,7 +76,9 @@ export async function POST(request) {
       }, { status: 500 });
     }
 
-    // 店舗へ通知メール（構造化データがあれば見やすくHTMLテーブル化）
+    // ★ 店舗へ通知メール（重い処理なのでバックグラウンドで実行 = フォーム応答を早く返す）
+    //    insert 完了 → 即レスポンス → メール送信は別タスクで実行
+    (async () => {
     try {
       const { data: tRow } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
       const settings = tRow?.settings_data || {};
@@ -169,7 +171,9 @@ export async function POST(request) {
         });
       }
     } catch (e) { console.warn('[estimate notify mail]', e?.message); }
+    })().catch(e => console.warn('[estimate notify bg]', e?.message)); // ★ バックグラウンド実行のエラーをキャッチ
 
+    // ★ insert が成功した時点で即レスポンス（メール送信完了を待たない）
     return NextResponse.json({ ok: true, estimateId: data.id });
   } catch (err) {
     console.error('[estimates POST]', err);

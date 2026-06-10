@@ -7,21 +7,33 @@ export default function TatefudaPreview({ tatePattern, layout, isOsonae, input1,
     : '祝';
 
   // ★ 縦書き時の文字サイズ自動調整ヘルパー関数
+  //   連名（改行あり）の場合は、最も長い行の文字数で計算
   const getTextStyle = (text, defaultSize) => {
-    if (layout !== 'vertical') return {}; // 横型はそのまま
-    
-    const len = (text || '').length || 4;
+    if (layout !== 'vertical') {
+      // 横型: 連名でも改行を保持
+      return { whiteSpace: 'pre-line' };
+    }
+
+    const str = String(text || '');
+    // 改行で分割して、最も長い行の文字数を取得
+    const lines = str.split(/\n/).filter(l => l !== undefined);
+    const maxLen = Math.max(4, ...lines.map(l => l.length));
+    // 行数も加味（連名が増えると幅も少し縮める）
+    const lineCount = Math.max(1, lines.length);
     const availableHeight = 200; // プレビュー枠内の縦の利用可能スペース（px）
-    
+
     // 縦幅を文字数で割って最適なフォントサイズを計算
-    const calculatedSize = Math.floor(availableHeight / len);
+    const calculatedSize = Math.floor(availableHeight / maxLen);
     // 最小9px、最大はdefaultSizeに制限して小さくなりすぎないようにする
-    const finalSize = Math.min(defaultSize, Math.max(calculatedSize, 9)); 
-    
-    return { 
-      fontSize: `${finalSize}px`, 
+    let finalSize = Math.min(defaultSize, Math.max(calculatedSize, 9));
+    // 連名（2行以上）の場合はさらに小さくする
+    if (lineCount > 1) finalSize = Math.max(9, Math.floor(finalSize * 0.9));
+
+    return {
+      fontSize: `${finalSize}px`,
       lineHeight: '1.2',
-      writingMode: 'vertical-rl' 
+      writingMode: 'vertical-rl',
+      whiteSpace: 'pre-line',  // ★ 改行を保持
     };
   };
 

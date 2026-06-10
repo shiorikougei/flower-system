@@ -1615,9 +1615,31 @@ function OrderFormContent() {
                     <div className="space-y-3">
                       {tateNeeds.includes('1') && <input type="text" placeholder={`① 内容 (例: ${isOsonae ? '御供' : '御開店'})`} value={tateInput1} onChange={(e) => setTateInput1(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       {tateNeeds.includes('2') && <input type="text" placeholder="② 宛名 (例: 〇〇様)" value={tateInput2} onChange={(e) => setTateInput2(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
-                      {tateNeeds.includes('3') && <input type="text" placeholder="③ 贈り主 (例: 株式会社〇〇)" value={tateInput3} onChange={(e) => setTateInput3(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
+                      {tateNeeds.includes('3') && (
+                        <div className="space-y-1">
+                          <textarea
+                            placeholder={"③ 贈り主 (例: 株式会社〇〇)\n※連名の場合はEnterで改行してください"}
+                            value={tateInput3}
+                            onChange={(e) => setTateInput3(e.target.value)}
+                            rows={2}
+                            className="w-full px-4 py-2 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E] resize-y"
+                          />
+                          <p className="text-[10px] text-[#999] pl-1">💡 連名: Enterで改行（例: 山田太郎 ↵ 山田花子）</p>
+                        </div>
+                      )}
                       {tateNeeds.includes('3a') && <input type="text" placeholder="③-1 会社名" value={tateInput3a} onChange={(e) => setTateInput3a(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
-                      {tateNeeds.includes('3b') && <input type="text" placeholder="③-2 役職・氏名" value={tateInput3b} onChange={(e) => setTateInput3b(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
+                      {tateNeeds.includes('3b') && (
+                        <div className="space-y-1">
+                          <textarea
+                            placeholder={"③-2 役職・氏名\n※連名の場合はEnterで改行してください"}
+                            value={tateInput3b}
+                            onChange={(e) => setTateInput3b(e.target.value)}
+                            rows={2}
+                            className="w-full px-4 py-2 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E] resize-y"
+                          />
+                          <p className="text-[10px] text-[#999] pl-1">💡 連名: Enterで改行</p>
+                        </div>
+                      )}
                       
                       <p className="text-[10px] font-bold text-[#999999] text-center pt-4 mb-2">仕上がりプレビュー</p>
                       

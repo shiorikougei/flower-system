@@ -404,9 +404,19 @@ export default function EstimateAcceptPage() {
               <div className="space-y-2">
                 {selectedPattern.needs.includes('1') && <input type="text" placeholder={`① 内容 (例: ${isOsonae ? '御供' : '御開店'})`} value={orderForm.tateInput1} onChange={e => setOrderForm({...orderForm, tateInput1: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>}
                 {selectedPattern.needs.includes('2') && <input type="text" placeholder="② 宛名 (例: 〇〇様)" value={orderForm.tateInput2} onChange={e => setOrderForm({...orderForm, tateInput2: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>}
-                {selectedPattern.needs.includes('3') && <input type="text" placeholder="③ 贈り主 (例: 株式会社〇〇)" value={orderForm.tateInput3} onChange={e => setOrderForm({...orderForm, tateInput3: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>}
+                {selectedPattern.needs.includes('3') && (
+                  <div className="space-y-1">
+                    <textarea placeholder={"③ 贈り主 (例: 株式会社〇〇)\n※連名はEnterで改行"} value={orderForm.tateInput3} onChange={e => setOrderForm({...orderForm, tateInput3: e.target.value})} rows={2} className="w-full px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E] resize-y"/>
+                    <p className="text-[10px] text-[#999] pl-1">💡 連名: Enterで改行</p>
+                  </div>
+                )}
                 {selectedPattern.needs.includes('3a') && <input type="text" placeholder="③-1 会社名" value={orderForm.tateInput3a} onChange={e => setOrderForm({...orderForm, tateInput3a: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>}
-                {selectedPattern.needs.includes('3b') && <input type="text" placeholder="③-2 役職・氏名" value={orderForm.tateInput3b} onChange={e => setOrderForm({...orderForm, tateInput3b: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>}
+                {selectedPattern.needs.includes('3b') && (
+                  <div className="space-y-1">
+                    <textarea placeholder={"③-2 役職・氏名\n※連名はEnterで改行"} value={orderForm.tateInput3b} onChange={e => setOrderForm({...orderForm, tateInput3b: e.target.value})} rows={2} className="w-full px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E] resize-y"/>
+                    <p className="text-[10px] text-[#999] pl-1">💡 連名: Enterで改行</p>
+                  </div>
+                )}
 
                 {/* ★ 仕上がりプレビュー */}
                 <p className="text-[10px] font-bold text-[#999] text-center pt-3 mb-1">仕上がりプレビュー</p>
