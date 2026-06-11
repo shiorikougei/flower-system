@@ -43,17 +43,21 @@ export default function TatefudaPreview({ tatePattern, layout, isOsonae, input1,
   const nameColor = 'text-gray-900';  // 名前・会社名（黒）
   const redColor = 'text-red-600';    // 祝の文字・お祝い内容（赤）
 
+  // ★ 横型の時、連名で行数が多いとフォントサイズを下げる
+  const input3Lines = String(input3 || '').split(/\n/).filter(Boolean).length || 1;
+  const horizontalNameSize = input3Lines > 2 ? 'text-[14px]' : 'text-[16px]';
+
   return (
     <>
-      <div className={`relative mx-auto border border-[#EAEAEA] shadow-lg bg-white flex flex-col items-center font-serif ${layout === 'horizontal' ? 'aspect-[1.414/1] w-full justify-center p-6' : 'aspect-[1/1.414] h-[300px] pt-6 px-4'}`}>
+      <div className={`relative mx-auto border border-[#EAEAEA] shadow-lg bg-white flex flex-col items-center font-serif ${layout === 'horizontal' ? 'aspect-[1.414/1] w-full max-w-[500px] justify-center py-5 px-6' : 'aspect-[1/1.414] h-[320px] pt-5 px-4 pb-3'}`}>
 
         {/* メインの冠文字 — 祝=赤 / 供・御供=グレー */}
-        <div className={`font-black ${isOsonae ? 'text-gray-700' : redColor} ${layout === 'horizontal' ? 'text-[28px] mb-4' : 'text-[40px] mb-6 leading-none'}`}>
+        <div className={`font-black ${isOsonae ? 'text-gray-700' : redColor} ${layout === 'horizontal' ? 'text-[26px] mb-2' : 'text-[36px] mb-3 leading-none'}`}>
           {topPrefixText}
         </div>
 
         {/* 宛名・内容・贈り主のレイアウト */}
-        <div className={`flex w-full font-bold ${layout === 'horizontal' ? 'flex-col items-center gap-2 text-[16px]' : 'flex-row-reverse justify-center gap-6 h-[200px]'}`}>
+        <div className={`flex w-full font-bold ${layout === 'horizontal' ? `flex-col items-center gap-1 ${horizontalNameSize}` : 'flex-row-reverse justify-center gap-5 h-[220px] items-center'}`}>
 
           {tatePattern?.includes('p6') || tatePattern?.includes('p8') ? (
             <>
@@ -74,8 +78,8 @@ export default function TatefudaPreview({ tatePattern, layout, isOsonae, input1,
             <>
               {/* お祝い内容（ご開店・御生誕等） → 赤 */}
               {!isOsonae && <div className={`tracking-widest ${redColor}`} style={getTextStyle(input1 || '内容', 18)}>{input1 || '内容'}</div>}
-              {/* 贈り主名 → 黒 */}
-              <div className={`tracking-widest ${nameColor}`} style={getTextStyle(input3 || '贈り主', 18)}>{input3 || '贈り主'}</div>
+              {/* 贈り主名 → 黒（連名は1行ずつスタック） */}
+              <div className={`tracking-widest ${nameColor} ${layout === 'horizontal' ? 'text-center leading-tight' : ''}`} style={getTextStyle(input3 || '贈り主', 18)}>{input3 || '贈り主'}</div>
             </>
           )}
 
