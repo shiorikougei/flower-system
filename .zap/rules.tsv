@@ -1,0 +1,15 @@
+# OWASP ZAP ルール調整ファイル
+# フォーマット: <ルールID>\t<アクション>\t<URL正規表現>
+#
+# アクション:
+#   IGNORE  - このルールを完全無視
+#   WARN    - 警告のみ
+#   FAIL    - 失敗（CI失敗トリガー）
+#
+# 既知の偽陽性や許容範囲のルールはここに追加する
+
+# 例: CSP unsafe-inline は Next.js の制約上一旦 WARN
+10055	WARN	.*
+
+# 例: X-Powered-By ヘッダ漏洩はVercel側仕様のため許容
+10037	IGNORE	.*

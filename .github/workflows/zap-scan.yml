@@ -1,0 +1,41 @@
+# [Phase2.5-#117] OWASP ZAP 月次自動スキャン
+# 毎月1日の午前3時(JST 12:00)に noodleflorix.com に対して baseline scan を実施
+# 結果は GitHub Issue に自動作成され、メール通知される
+
+name: OWASP ZAP Baseline Scan
+
+on:
+  schedule:
+    # 毎月1日 03:00 UTC = 12:00 JST
+    - cron: "0 3 1 * *"
+  # 手動実行も可能
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: "スキャン対象URL"
+        required: false
+        default: "https://www.noodleflorix.com"
+
+jobs:
+  zap_baseline:
+    name: ZAP Baseline Scan
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write   # スキャン結果をIssueに作成するため
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.13.0
+        with:
+          target: ${{ github.event.inputs.target_url || 'https://www.noodleflorix.com' }}
+          # 詳細レポートをアーティファクトとしてアップロード
+          artifact_name: zap-baseline-report
+          # 既知の警告を無視するためのルール設定（必要に応じて追加）
+          rules_file_name: .zap/rules.tsv
+          # 失敗ステータスをIssueにする
+          issue_title: "🔒 OWASP ZAP: 月次セキュリティスキャン結果"
+          fail_action: false
+          allow_issue_writing: true

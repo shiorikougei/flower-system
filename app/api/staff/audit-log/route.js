@@ -4,8 +4,25 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'node:crypto';
 
 export const runtime = 'nodejs';
+
+// [Phase2.5-#114] ハッシュチェーン: 各レコードのハッシュ = SHA256(prev_hash + 主要フィールド)
+function computeRowHash({ prevHash, tenantId, staffName, staffRole, action, targetType, targetId, description, createdAtIso }) {
+  const payload = [
+    prevHash || '',
+    tenantId || '',
+    staffName || '',
+    staffRole || '',
+    action || '',
+    targetType || '',
+    targetId || '',
+    description || '',
+    createdAtIso || '',
+  ].join('|');
+  return crypto.createHash('sha256').update(payload).digest('hex');
+}
 
 async function authAndTenant(request) {
   const authHeader = request.headers.get('authorization') || '';
@@ -40,6 +57,29 @@ export async function POST(request) {
     const { action, targetType, targetId, description, metadata, staffName, staffRole } = body;
     if (!action) return NextResponse.json({ error: 'action必須' }, { status: 400 });
 
+    // [Phase2.5-#114] 直前レコードの row_hash を取得して、ハッシュチェーンを継続
+    const { data: lastRow } = await auth.supabaseAdmin
+      .from('audit_log')
+      .select('row_hash')
+      .eq('tenant_id', auth.tenantId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const prevHash = lastRow?.row_hash || '';
+
+    const createdAtIso = new Date().toISOString();
+    const rowHash = computeRowHash({
+      prevHash,
+      tenantId: auth.tenantId,
+      staffName: staffName || '未選択',
+      staffRole: staffRole || null,
+      action,
+      targetType: targetType || null,
+      targetId: targetId ? String(targetId) : null,
+      description: description || null,
+      createdAtIso,
+    });
+
     await auth.supabaseAdmin.from('audit_log').insert({
       tenant_id: auth.tenantId,
       staff_name: staffName || '未選択',
@@ -49,6 +89,9 @@ export async function POST(request) {
       target_id: targetId ? String(targetId) : null,
       description: description || null,
       metadata: metadata || null,
+      created_at: createdAtIso,
+      row_hash: rowHash,
+      prev_hash: prevHash,
     });
 
     return NextResponse.json({ ok: true });

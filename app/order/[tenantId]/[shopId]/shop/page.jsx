@@ -183,7 +183,8 @@ export default function ShopCatalogPage() {
                   </button>
                   <div className="p-4 space-y-2 flex-1 flex flex-col">
                     {p.category && <p className="text-[10px] text-[#999999]">{p.category}</p>}
-                    <button onClick={() => !isOutOfStock && setSelectedProduct(p)} className="text-left text-[13px] font-bold text-[#111111] hover:text-[#2D4B3E] line-clamp-2 min-h-[2.6em]">{p.name}</button>
+                    {/* [SEO] 商品名は個別ページへの<a>リンクに（クローラが追跡可能） */}
+                    <Link href={`/products/${tenantId}/${p.id}`} className="text-left text-[13px] font-bold text-[#111111] hover:text-[#2D4B3E] line-clamp-2 min-h-[2.6em]">{p.name}</Link>
                     <p className="text-[15px] font-bold text-[#2D4B3E]">¥{p.price.toLocaleString()}<span className="text-[10px] font-normal text-[#999999] ml-1">(税抜)</span></p>
                     {isOutOfStock ? (
                       <button

@@ -1,23 +1,19 @@
-// [Phase2-⑥] Sentry サーバー設定
-// Wizardで自動生成されたファイルに [Phase1-①] PII保護のスクラブ機能を追加
+// [Phase2-⑥] Sentry Edge runtime（Middleware/Edge Routes）設定
+// Wizard生成のファイルに [Phase1-①] PII保護スクラブを追加
 
 import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
   dsn: "https://c1d36121db424022d3bd8c7811c02741@o4511544338153472.ingest.us.sentry.io/4511544343003136",
 
-  // 本番ではトレースサンプリング率を下げる（料金抑制）
   tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
-
-  // ログ送信
   enableLogs: true,
 
-  // ★ PIIは個別フィールドでマスクするためデフォルト送信はOFF
+  // ★ PIIマスクで個別管理するため OFF
   sendDefaultPii: false,
 
-  // ★ [Phase1-①] 送信前にPIIをスクラブ
+  // ★ [Phase1-①] PII スクラブ
   beforeSend(event) {
-    // ヘッダー類から認証情報を除去
     if (event.request) {
       delete event.request.cookies;
       if (event.request.headers) {
@@ -25,16 +21,7 @@ Sentry.init({
         delete event.request.headers.cookie;
         delete event.request.headers["x-owner-password"];
       }
-      // リクエストボディに含まれるPIIをマスク
-      if (event.request.data && typeof event.request.data === "object") {
-        const data = event.request.data as Record<string, unknown>;
-        ["email", "phone", "customerEmail", "customerPhone", "customerName", "address", "address1", "address2", "zip", "pin"]
-          .forEach((key) => {
-            if (key in data) data[key] = "[redacted]";
-          });
-      }
     }
-    // 例外メッセージ内のPIIパターンを伏字
     if (event.exception?.values) {
       event.exception.values.forEach((ex) => {
         if (ex.value) {

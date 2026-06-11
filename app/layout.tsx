@@ -13,6 +13,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // [SEO] Google Search Console 所有権確認
+  verification: {
+    google: "l1ygH1P4VAAO2KR8XB4w7Oe-EPGyNQxXV9gpYe9HDfI",
+  },
   title: {
     default: "FLORIX",
     template: "%s | FLORIX",
