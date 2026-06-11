@@ -7,6 +7,21 @@ import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 import { DEFAULT_LP_PRICING, fetchLpPricing } from "@/utils/lpPricing";
 
+// LP料金プランの型（lpPricing.jsから来るがTS用に明示）
+type LpPlan = {
+  name: string;
+  subtitle: string;
+  price: number | null;
+  priceText?: string;
+  recommended?: boolean;
+  features: string[];
+};
+type LpPricing = {
+  plans: LpPlan[];
+  note?: string;
+  trialDays?: number;
+};
+
 // 1時間ごとに再ビルド（オーナー画面で料金変更したら最大1時間で反映）
 export const revalidate = 3600;
 
@@ -52,19 +67,19 @@ const softwareJsonLd = {
   },
 };
 
-async function getLpData() {
+async function getLpData(): Promise<{ pricing: LpPricing }> {
   try {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      return { pricing: DEFAULT_LP_PRICING };
+      return { pricing: DEFAULT_LP_PRICING as LpPricing };
     }
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
     const pricing = await fetchLpPricing(supabaseAdmin);
-    return { pricing };
+    return { pricing: pricing as LpPricing };
   } catch {
-    return { pricing: DEFAULT_LP_PRICING };
+    return { pricing: DEFAULT_LP_PRICING as LpPricing };
   }
 }
 
@@ -245,7 +260,7 @@ export default async function HomePage() {
             </p>
 
             <div className="grid md:grid-cols-3 gap-5">
-              {pricing.plans.map((plan, idx) => {
+              {pricing.plans.map((plan: LpPlan, idx: number) => {
                 const isRecommended = plan.recommended;
                 const priceDisplay = plan.priceText
                   ? plan.priceText
@@ -282,7 +297,7 @@ export default async function HomePage() {
                       )}
                     </div>
                     <ul className={`space-y-2 mb-5 text-[12px] ${isRecommended ? "" : "text-[#555]"}`}>
-                      {(plan.features || []).map((f, fi) => (
+                      {(plan.features || []).map((f: string, fi: number) => (
                         <li key={fi}>✓ {f}</li>
                       ))}
                     </ul>
@@ -293,7 +308,7 @@ export default async function HomePage() {
 
             {pricing.note && (
               <p className="text-center text-[12px] text-[#666] mt-8" dangerouslySetInnerHTML={{
-                __html: pricing.note
+                __html: String(pricing.note)
                   .replace(/30日間無料トライアル/g, "<strong>30日間無料トライアル</strong>")
                   .replace(/導入サポート無料/g, "<strong>導入サポート無料</strong>"),
               }} />
@@ -318,7 +333,7 @@ export default async function HomePage() {
                 「夜中の問い合わせ、見逃して常連さんを失う…」
               </p>
               <p>
-                そういった "現場の声" を、ひとつずつ機能にしてきました。
+                そういった『現場の声』を、ひとつずつ機能にしてきました。
               </p>
               <p>
                 大きなSaaSベンダーが作る、誰のものでもないシステムではなく、<br/>
