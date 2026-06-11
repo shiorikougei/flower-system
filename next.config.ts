@@ -45,8 +45,8 @@ const securityHeaders = [
       "font-src 'self' data: https://fonts.gstatic.com",
       // 画像: 自サイト + Supabase Storage + LINE プロフィール画像 + データURL
       "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://profile.line-scdn.net https://*.line-scdn.net",
-      // 接続(API): 自サイト + Supabase + Stripe + Resend + ZipCloud(住所検索) + LINE
-      "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.stripe.com https://api.resend.com https://zipcloud.ibsnet.co.jp https://*.line.me",
+      // 接続(API): 自サイト + Supabase + Stripe + Resend + ZipCloud(住所検索) + LINE + Sentry
+      "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.stripe.com https://api.resend.com https://zipcloud.ibsnet.co.jp https://*.line.me https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io",
       // iframe（Stripe決済UI）
       "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
       // ベース URL を制限（base-uri攻撃対策）
