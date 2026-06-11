@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 import {
   Home, ClipboardList, PlusSquare, CalendarDays, Truck, Briefcase,
-  Users, Building2, Settings, TrendingUp, Lock, Sparkles, MessageSquare, X, Send, Image as ImageIcon, ShoppingBag, UserCheck, ChevronDown, History, Clock, BookOpen
+  Users, Building2, Settings, TrendingUp, Lock, Sparkles, MessageSquare, X, Send, Image as ImageIcon, ShoppingBag, UserCheck, ChevronDown, History, Clock, BookOpen, FileText
 } from 'lucide-react';
 import { getCurrentStaff, setCurrentStaff, setAuthConfig, ROLE_LABELS, ROLE_DESCRIPTIONS, can } from '@/utils/staffRole';
 import { logAction } from '@/utils/auditLog';
@@ -114,6 +114,8 @@ export default function StaffLayout({ children }) {
       name: 'EC・売上',
       items: [
         { name: '商品管理（EC）', path: '/staff/products', icon: ShoppingBag, perm: 'products', feature: 'ec' },
+        { name: 'ブログ管理', path: '/staff/blog', icon: FileText, perm: 'products', feature: 'ec' },
+        { name: 'FAQ管理', path: '/staff/faq', icon: MessageSquare, perm: 'products', feature: 'ec' },
         { name: '売上管理', path: '/staff/sales', icon: TrendingUp, perm: 'sales', feature: 'sales' },
       ],
     },

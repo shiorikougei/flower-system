@@ -148,6 +148,40 @@ export default function OrderEntryPage() {
           </Link>
         </div>
 
+        {/* [UX-#38] よくあるご質問・ブログへの導線 */}
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Link
+            href={`/order/${tenantId}/${shopId}/faq`}
+            className="block p-4 bg-white border border-[#EAEAEA] rounded-2xl hover:border-[#2D4B3E] transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#FBFAF9] flex items-center justify-center shrink-0 text-[18px]">
+                ❓
+              </div>
+              <div className="flex-1">
+                <p className="text-[13px] font-bold text-[#111]">よくあるご質問</p>
+                <p className="text-[10px] text-[#555]">配達・支払い・キャンセル等のご案内</p>
+              </div>
+              <ChevronRight size={16} className="text-[#999] group-hover:text-[#2D4B3E]"/>
+            </div>
+          </Link>
+          <Link
+            href={`/blog/${tenantId}`}
+            className="block p-4 bg-white border border-[#EAEAEA] rounded-2xl hover:border-[#2D4B3E] transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#FBFAF9] flex items-center justify-center shrink-0 text-[18px]">
+                📖
+              </div>
+              <div className="flex-1">
+                <p className="text-[13px] font-bold text-[#111]">お花のブログ</p>
+                <p className="text-[10px] text-[#555]">季節のお花・贈り物のヒント・お役立ち情報</p>
+              </div>
+              <ChevronRight size={16} className="text-[#999] group-hover:text-[#2D4B3E]"/>
+            </div>
+          </Link>
+        </div>
+
         <div className="text-center mt-10">
           <p className="text-[11px] text-[#999999] leading-relaxed">
             お電話でのご注文も承っております{shop.phone ? <><br/>TEL: <a href={`tel:${String(shop.phone).replace(/[^\d+]/g, '')}`} className="text-[#2D4B3E] font-bold">{shop.phone}</a></> : ''}

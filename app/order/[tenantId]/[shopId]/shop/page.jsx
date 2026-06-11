@@ -140,6 +140,30 @@ export default function ShopCatalogPage() {
           <p className="text-[12px] text-[#555555] mt-1">気に入った商品をカートに追加して、まとめてご注文いただけます。</p>
         </div>
 
+        {/* [SEO-#16/#20] カテゴリから探す（カテゴリ専用ページへ） */}
+        <div>
+          <h2 className="text-[13px] font-bold text-[#2D4B3E] mb-3">🌸 カテゴリから探す</h2>
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3">
+            {[
+              { slug: 'bouquet', label: '花束・ブーケ', icon: '💐' },
+              { slug: 'arrangement', label: 'アレンジメント', icon: '🌷' },
+              { slug: 'stand', label: 'スタンド花', icon: '🎉' },
+              { slug: 'orchid', label: '胡蝶蘭・鉢物', icon: '🪴' },
+              { slug: 'preserved', label: 'プリザーブド', icon: '🌹' },
+              { slug: 'funeral', label: 'お供え花', icon: '🕊️' },
+            ].map(c => (
+              <Link
+                key={c.slug}
+                href={`/category/${tenantId}/${c.slug}`}
+                className="block p-3 bg-white border border-[#EAEAEA] rounded-xl hover:border-[#2D4B3E] hover:shadow-sm transition-all text-center"
+              >
+                <div className="text-[24px] mb-1">{c.icon}</div>
+                <p className="text-[10px] md:text-[11px] font-bold text-[#2D4B3E]">{c.label}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+
         {/* 検索 & カテゴリ */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -215,6 +239,34 @@ export default function ShopCatalogPage() {
             })}
           </div>
         )}
+
+        {/* [UX-#38] FAQ・ブログへの導線 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-12 pt-8 border-t border-[#EAEAEA]">
+          <Link
+            href={`/order/${tenantId}/${shopId}/faq`}
+            className="p-4 bg-white border border-[#EAEAEA] rounded-2xl hover:border-[#2D4B3E] transition-all text-center"
+          >
+            <div className="text-[24px] mb-1">❓</div>
+            <p className="text-[12px] font-bold text-[#2D4B3E]">よくあるご質問</p>
+            <p className="text-[10px] text-[#999] mt-0.5">配達・支払い等</p>
+          </Link>
+          <Link
+            href={`/blog/${tenantId}`}
+            className="p-4 bg-white border border-[#EAEAEA] rounded-2xl hover:border-[#2D4B3E] transition-all text-center"
+          >
+            <div className="text-[24px] mb-1">📖</div>
+            <p className="text-[12px] font-bold text-[#2D4B3E]">お花のブログ</p>
+            <p className="text-[10px] text-[#999] mt-0.5">お役立ち情報</p>
+          </Link>
+          <Link
+            href={`/order/${tenantId}/${shopId}/estimate`}
+            className="p-4 bg-white border border-[#EAEAEA] rounded-2xl hover:border-[#2D4B3E] transition-all text-center"
+          >
+            <div className="text-[24px] mb-1">💬</div>
+            <p className="text-[12px] font-bold text-[#2D4B3E]">お見積もり</p>
+            <p className="text-[10px] text-[#999] mt-0.5">特別な相談</p>
+          </Link>
+        </div>
       </main>
 
       {/* 商品詳細モーダル */}
