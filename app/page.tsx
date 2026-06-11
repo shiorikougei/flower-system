@@ -10,7 +10,7 @@ import { DEFAULT_LP_PRICING, fetchLpPricing } from "@/utils/lpPricing";
 import {
   Flower2, Gift, Star, Check, Mail, Monitor, Settings as SettingsIcon,
   Lock, Shield, Database, FileText, MessageCircle, Sprout, Send, Phone,
-  ArrowRight, Sparkles, HeartHandshake, Users, Wrench,
+  ArrowRight, Sparkles, Heart, Smile, Lightbulb,
 } from "lucide-react";
 
 // LP料金プランの型
@@ -105,8 +105,7 @@ export default async function HomePage() {
         <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#F4D4C4]">
           <div className="max-w-[1100px] mx-auto h-16 px-6 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Flower2 size={20} className="text-[#D97D54]" />
-              <span className="font-bold text-[20px] text-[#D97D54] tracking-wider">FLORIX</span>
+              <span className="font-bold text-[22px] text-[#D97D54] tracking-[0.15em]">FLORIX</span>
             </div>
             <div className="flex items-center gap-2 md:gap-4">
               <a href="#features" className="hidden md:block text-[12px] font-bold text-[#666] hover:text-[#D97D54]">特長</a>
@@ -152,23 +151,26 @@ export default async function HomePage() {
                   迷わず使えるやさしいクラウドシステムです。
                 </p>
 
-                {/* お試しプラン バッジ */}
-                <div className="bg-white rounded-3xl p-5 shadow-xl border-2 border-[#F4D4C4] mb-6 inline-block">
-                  <div className="text-[10px] font-bold text-[#D97D54] mb-1 flex items-center gap-1">
-                    <Gift size={11}/> まずはお試しから
+                {/* お試しプラン バッジ（強調版） */}
+                <div className="relative bg-gradient-to-br from-[#FFF8E1] to-[#FFEBC2] rounded-3xl p-6 shadow-2xl border-4 border-[#F9C846] mb-6 inline-block max-w-full">
+                  <div className="absolute -top-3 -left-3 bg-[#D97D54] text-white text-[11px] font-bold px-3 py-1.5 rounded-full shadow-md flex items-center gap-1">
+                    <Gift size={12}/> 期間限定キャンペーン
                   </div>
-                  <div className="flex items-baseline gap-2 justify-center md:justify-start">
-                    <span className="text-[12px] text-[#666]">月額</span>
-                    {featuredPlan?.price ? (
-                      <>
-                        <span className="text-[32px] font-bold text-[#D97D54]">¥{featuredPlan.price.toLocaleString()}</span>
-                        <span className="text-[12px] text-[#666]">〜（税抜）</span>
-                      </>
-                    ) : (
-                      <span className="text-[24px] font-bold text-[#D97D54]">お問い合わせ</span>
+                  <div className="text-center md:text-left mt-1">
+                    <div className="text-[28px] md:text-[36px] font-bold text-[#D97D54] leading-tight">
+                      <span className="text-[18px] md:text-[22px]">いまだけ</span><br className="md:hidden"/>
+                      <span className="bg-[#FFF] px-2 py-0.5 rounded shadow-sm">30日間</span> 無料お試し
+                    </div>
+                    <div className="text-[13px] text-[#8B6F2C] font-bold mt-2 leading-relaxed">
+                      クレジットカード登録 不要 ・ 初期費用 ¥0<br/>
+                      気に入らなければ自動解約 → リスクなし
+                    </div>
+                    {featuredPlan?.price && (
+                      <div className="mt-3 pt-3 border-t border-[#F9C846]/50 text-[11px] text-[#8B6F2C]">
+                        トライアル後は月額 <span className="font-bold text-[16px] text-[#D97D54]">¥{featuredPlan.price.toLocaleString()}〜</span>（税抜）
+                      </div>
                     )}
                   </div>
-                  <div className="text-[10px] text-[#999] mt-2">30日間無料トライアル / クレジットカード不要</div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -267,10 +269,10 @@ export default async function HomePage() {
                 },
                 {
                   no: "04",
-                  title: "現役花屋による日本語サポート",
-                  desc: "わからないことは、いつでもチャット・電話でご相談ください。導入時の研修・データ移行もすべて無料で対応します。",
+                  title: "迷わず使えるシンプル設計",
+                  desc: "PCやスマホが苦手でも安心。直感的なUIで、説明書なしでもすぐに使い始められます。現場の花屋さんと一緒に磨き上げた、やさしい操作性です。",
                   image: IMAGES.shopOwner,
-                  tags: ["無料サポート", "導入研修", "データ移行代行"],
+                  tags: ["直感的UI", "スマホ対応", "教育コスト低"],
                   bg: "bg-[#FFFAF3]",
                 },
               ].map((f, idx) => (
@@ -304,37 +306,68 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* サービス指針 3C */}
+        {/* FLORIXが大切にしていること */}
         <section className="py-16 md:py-24 px-6 bg-[#FCF3DF] relative">
-          <div className="max-w-[900px] mx-auto relative">
+          <div className="max-w-[1000px] mx-auto relative">
             <div className="text-center mb-12">
-              <p className="text-[12px] font-bold text-[#D97D54] tracking-widest mb-3">- OUR VALUES -</p>
-              <h2 className="text-[24px] md:text-[32px] font-bold text-[#2D4B3E]">
-                サービス指針 <span className="text-[#D97D54]">3C</span>
+              <p className="text-[12px] font-bold text-[#D97D54] tracking-widest mb-3">- OUR PROMISES -</p>
+              <h2 className="text-[24px] md:text-[32px] font-bold text-[#2D4B3E] leading-[1.5]">
+                FLORIXが<br className="md:hidden"/>
+                大切にしている<br className="md:hidden"/>
+                <span className="text-[#D97D54]">3つのこと</span>
               </h2>
-              <p className="text-[12px] text-[#666] mt-3">花屋さんに向き合う、3つの大切なこと</p>
+              <p className="text-[13px] text-[#666] mt-4 leading-[1.9]">
+                花屋さんと、お客様と、毎日の業務に。<br/>
+                FLORIXが約束する、3つの軸です。
+              </p>
             </div>
 
-            <div className="space-y-3">
+            <div className="grid md:grid-cols-3 gap-5">
               {[
-                { letter: "C", word: "ARE", title: "花屋さんの気持ちに寄り添う", desc: "毎日忙しい花屋さんが、もっと自分らしく働けるように。技術より、まずは『気持ち』を大切に。", bg: "bg-[#F4A5A5]", text: "text-white", icon: HeartHandshake },
-                { letter: "C", word: "ONNECT", title: "花屋さんとお客様をつなぐ", desc: "ご注文も配達もスムーズに。お客様とのつながりを深める仕組みを、ご提供します。", bg: "bg-[#F9E4A4]", text: "text-[#8B6F2C]", icon: Users },
-                { letter: "C", word: "REATE", title: "新しい花屋業務を、共に創る", desc: "現場の声を聞いて、毎月アップデート。花屋さんと一緒に、新しい働き方をつくります。", bg: "bg-[#A8C8A0]", text: "text-white", icon: Wrench },
+                {
+                  no: "01",
+                  title: "花屋さんの毎日に、寄り添う",
+                  desc: "毎日忙しい花屋さんが、もっと自分らしく働けるように。便利さよりも先に、まず気持ちに寄り添うシステムを目指しています。",
+                  Icon: Heart,
+                  bg: "bg-white",
+                  accent: "bg-[#F4A5A5]",
+                  textColor: "text-[#2D4B3E]",
+                },
+                {
+                  no: "02",
+                  title: "お店とお客様を、もっと近くに",
+                  desc: "ご注文から配達、その後のリピートまで。花屋さんとお客様の距離を、もっと近づける仕組みをつくります。",
+                  Icon: Smile,
+                  bg: "bg-white",
+                  accent: "bg-[#F9E4A4]",
+                  textColor: "text-[#2D4B3E]",
+                },
+                {
+                  no: "03",
+                  title: "現場の声で、進化し続ける",
+                  desc: "実際に使う花屋さんの声を聞いて、毎月アップデート。一緒に未来の花屋業務をつくっていきます。",
+                  Icon: Lightbulb,
+                  bg: "bg-white",
+                  accent: "bg-[#A8C8A0]",
+                  textColor: "text-[#2D4B3E]",
+                },
               ].map((c, idx) => {
-                const Icon = c.icon;
+                const Icon = c.Icon;
                 return (
-                  <div key={idx} className={`${c.bg} ${c.text} rounded-2xl p-5 md:p-6 shadow-md`}>
-                    <div className="flex items-center gap-4 md:gap-6">
-                      <div className="shrink-0 flex items-center gap-3">
-                        <Icon size={32} strokeWidth={2}/>
-                        <div className="text-[36px] md:text-[48px] font-bold leading-none">
-                          {c.letter}<span className="text-[22px] md:text-[28px] opacity-80">{c.word}</span>
-                        </div>
+                  <div key={idx} className={`${c.bg} rounded-3xl shadow-md border border-[#F4D4C4]/50 overflow-hidden flex flex-col`}>
+                    <div className={`${c.accent} p-5 flex items-center gap-3`}>
+                      <div className="w-12 h-12 rounded-full bg-white/40 flex items-center justify-center text-white">
+                        <Icon size={22}/>
                       </div>
-                      <div className="flex-1 border-l-2 border-current/30 pl-4 md:pl-6">
-                        <h3 className="font-bold text-[14px] md:text-[16px] mb-2">{c.title}</h3>
-                        <p className="text-[11.5px] md:text-[12.5px] leading-[1.9] opacity-90">{c.desc}</p>
-                      </div>
+                      <span className="text-[32px] font-bold text-white leading-none">{c.no}</span>
+                    </div>
+                    <div className="p-6 flex-1">
+                      <h3 className={`text-[16px] md:text-[17px] font-bold mb-3 leading-tight ${c.textColor}`}>
+                        {c.title}
+                      </h3>
+                      <p className="text-[12.5px] text-[#555] leading-[2]">
+                        {c.desc}
+                      </p>
                     </div>
                   </div>
                 );
@@ -408,10 +441,57 @@ export default async function HomePage() {
             {pricing.note && (
               <p className="text-center text-[13px] text-[#666] mt-10" dangerouslySetInnerHTML={{
                 __html: String(pricing.note)
-                  .replace(/30日間無料トライアル/g, "<strong class='text-[#D97D54]'>30日間無料トライアル</strong>")
-                  .replace(/導入サポート無料/g, "<strong class='text-[#D97D54]'>導入サポート無料</strong>"),
+                  .replace(/30日間無料トライアル/g, "<strong class='text-[#D97D54]'>30日間無料トライアル</strong>"),
               }} />
             )}
+          </div>
+        </section>
+
+        {/* 30日無料お試し 強調バナー */}
+        <section className="py-12 md:py-16 px-6 bg-gradient-to-br from-[#F9C846] via-[#F9E4A4] to-[#FFF1E6] relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/20 -mt-32 -mr-32"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full bg-white/15 -mb-24 -ml-24"></div>
+
+          <div className="max-w-[900px] mx-auto relative text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#D97D54] text-white text-[11px] font-bold rounded-full mb-5 shadow-md">
+              <Gift size={14}/> いまならキャンペーン中
+            </div>
+            <h2 className="text-[32px] md:text-[48px] font-bold text-[#3B2A1F] mb-3 leading-[1.3]">
+              まずは <span className="text-[#D97D54] underline decoration-wavy decoration-[#D97D54]/40 underline-offset-[10px]">30日間</span> 無料で<br/>
+              すべての機能を試せます
+            </h2>
+            <p className="text-[14px] md:text-[16px] text-[#5B4632] leading-[2] mb-8">
+              クレジットカード登録 <strong>不要</strong>・初期費用 <strong>¥0</strong>・<br className="md:hidden"/>
+              気に入らなければ <strong>自動解約</strong>。<br/>
+              続けるか決めるのは、お試しの後でOKです。
+            </p>
+
+            <div className="grid grid-cols-3 gap-3 md:gap-5 max-w-[600px] mx-auto mb-8">
+              {[
+                { num: "0", label: "初期費用" },
+                { num: "0", label: "クレカ登録" },
+                { num: "30", label: "日間無料" },
+              ].map((item, idx) => (
+                <div key={idx} className="bg-white rounded-2xl p-4 shadow-md">
+                  <div className="text-[36px] md:text-[48px] font-bold text-[#D97D54] leading-none">
+                    {item.num}
+                    {idx === 0 || idx === 1 ? <span className="text-[16px] ml-0.5">円</span> : <span className="text-[14px] ml-1">日</span>}
+                  </div>
+                  <p className="text-[11px] md:text-[12px] text-[#666] mt-2 font-bold">{item.label}</p>
+                </div>
+              ))}
+            </div>
+
+            <a
+              href="#contact"
+              className="inline-flex items-center gap-2 px-8 h-16 bg-[#D97D54] text-white rounded-full text-[15px] md:text-[16px] font-bold hover:bg-[#c66a44] transition-all shadow-xl"
+            >
+              いますぐ無料で試してみる
+              <ArrowRight size={18}/>
+            </a>
+            <p className="text-[11px] text-[#8B6F2C] mt-4">
+              30秒で完了するお問い合わせフォームへ
+            </p>
           </div>
         </section>
 
@@ -449,11 +529,6 @@ export default async function HomePage() {
                     <img src={v.img} alt={v.name} className="w-14 h-14 rounded-full object-cover border-2 border-[#F4D4C4]" />
                     <div>
                       <p className="text-[12px] font-bold text-[#2D4B3E]">{v.name}</p>
-                      <div className="flex gap-0.5 mt-1">
-                        {[1,2,3,4,5].map(s => (
-                          <Star key={s} size={10} className="text-[#F9C846]" fill="#F9C846"/>
-                        ))}
-                      </div>
                     </div>
                   </div>
                   <p className="text-[12.5px] text-[#555] leading-[2]">
@@ -517,8 +592,8 @@ export default async function HomePage() {
                 { Icon: Shield, title: "二段階認証" },
                 { Icon: Database, title: "自動バックアップ" },
                 { Icon: FileText, title: "操作履歴・監査ログ" },
-                { Icon: MessageCircle, title: "日本語サポート" },
                 { Icon: Sprout, title: "現場の声で進化" },
+                { Icon: Sparkles, title: "毎月アップデート" },
               ].map((s, idx) => {
                 const I = s.Icon;
                 return (
@@ -620,8 +695,7 @@ export default async function HomePage() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <Flower2 size={18} className="text-[#D97D54]"/>
-                  <span className="font-bold text-white text-[18px] tracking-wider">FLORIX</span>
+                  <span className="font-bold text-white text-[20px] tracking-[0.15em]">FLORIX</span>
                 </div>
                 <p>花屋さんのための、やさしいクラウド業務システム</p>
               </div>
