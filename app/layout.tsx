@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "FLORIX | お花屋さん向け業務システム",
+    default: "FLORIX",
     template: "%s | FLORIX",
   },
   description: "お花屋さんの注文管理・EC・顧客管理・スタッフ管理を一括で。NocoLde が提供するクラウド型業務システム。",
