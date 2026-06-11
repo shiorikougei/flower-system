@@ -279,8 +279,9 @@ export default function QrPrintPage() {
             <li><strong>A4シート</strong>: コクヨ等のラベルシール用紙に印刷→切って貼る</li>
             <li><strong>商品タグ付き</strong>: 厚紙印刷して紐穴を空けて値札タグとして使用</li>
             <li><strong>個別DL</strong>: SVGをテプラ等のシールプリンターに転送して印刷</li>
-            <li>⚠️ <strong>QRコードはスタッフ専用</strong>です。スキャンするとログイン画面に遷移し、ログイン後に在庫管理画面が開きます。</li>
-            <li>お客様がスキャンしてもログイン画面で止まるので、商品情報や在庫が見えることはありません。</li>
+            <li>📱 <strong>誰でもスキャン可能</strong>: 在庫数をスマホでサクッと確認できます</li>
+            <li>🔒 <strong>在庫変更はPIN必須</strong>: スタッフのみ「在庫を減らす」操作可。4桁PIN入力で本人確認</li>
+            <li>📋 監査ログに「誰が・いつ・何を・何個」自動記録</li>
           </ul>
         </div>
       </div>

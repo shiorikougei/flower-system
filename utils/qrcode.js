@@ -14,12 +14,11 @@ const BASE_URL =
     : process.env.NEXT_PUBLIC_APP_URL || "https://www.noodleflorix.com";
 
 /**
- * QR URLを取得（スタッフ専用スキャンページへ）
- * 未ログインなら /staff/login に飛ばされる
- * 引数 tenantId は後方互換のため受けるが使わない（スタッフ認証時に自動取得）
+ * QR URLを取得（公開スキャンページへ）
+ * 在庫確認はログイン不要、在庫変更時のみPIN認証
  */
 export function getProductQrUrl(_tenantId, productId) {
-  return `${BASE_URL}/staff/scan/${productId}`;
+  return `${BASE_URL}/scan/${productId}`;
 }
 
 /**
