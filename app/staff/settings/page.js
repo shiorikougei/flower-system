@@ -754,7 +754,89 @@ export default function SettingsPage() {
             <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">住所</label><input type="text" value={shop.address} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, address:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/></div>
             <div className="space-y-1 md:col-span-2"><label className="text-[10px] font-bold text-[#999999]">インボイス番号</label><input type="text" value={shop.invoiceNumber || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, invoiceNumber:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="T12345..."/></div>
           </div>
-          
+
+          {/* ★ [SEO-#12] 店舗紹介文（SEO・お客様向け） */}
+          <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
+            <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2">🌸 店舗紹介文（SEO対策）</h3>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] font-bold text-amber-900 leading-relaxed">
+              ⚠️ <strong>SEOで一番重要な項目です。</strong><br/>
+              テンプレ文章は Google に「重複コンテンツ」と判定されて評価が下がります。<br/>
+              <strong>各店舗の独自性を出した文章を必ず手入力</strong>してください。
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-[#999999]">📜 店舗紹介・店主の想い <span className="text-red-500">（推奨: 200文字以上）</span></label>
+                <textarea
+                  value={shop.shopIntroduction || ''}
+                  onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, shopIntroduction: e.target.value } : s))}
+                  placeholder="例: 1985年創業、札幌市北区の地域密着型フラワーショップです。当店は『お客様の人生の節目に寄り添うお花屋さん』をモットーに、ご出産・ご結婚・お祝い事から、お悔やみ・お供えまで、心を込めて一つひとつお花をお作りしています。代表の○○は、フラワーデザイナー歴30年以上の経験を活かし、お客様のご要望に合わせたオリジナルアレンジをご提案いたします..."
+                  rows={6}
+                  className="w-full px-4 py-3 bg-[#FBFAF9] border rounded-xl text-[12px] outline-none focus:border-[#2D4B3E] resize-y"
+                />
+                <p className="text-[10px] text-[#999]">文字数: {(shop.shopIntroduction || '').length}文字</p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-[#999999]">💪 こだわり・強み <span className="text-red-500">（推奨: 3点以上を箇条書きで）</span></label>
+                <textarea
+                  value={shop.shopStrengths || ''}
+                  onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, shopStrengths: e.target.value } : s))}
+                  placeholder="例:&#10;・市場から仕入れた新鮮な季節の花のみを使用&#10;・配達は当日朝の市場から直送、最も新鮮な状態でお届け&#10;・立札・メッセージカードはフラワーデザイナーが手書きで対応&#10;・コーポレートギフト・冠婚葬祭の特別対応も承ります"
+                  rows={5}
+                  className="w-full px-4 py-3 bg-[#FBFAF9] border rounded-xl text-[12px] outline-none focus:border-[#2D4B3E] resize-y"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-[#999999]">📅 創業年</label>
+                  <input
+                    type="number"
+                    value={shop.foundedYear || ''}
+                    onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, foundedYear: Number(e.target.value) || null } : s))}
+                    placeholder="1985"
+                    min="1900"
+                    max={new Date().getFullYear()}
+                    className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-[#999999]">👤 代表者・店主名</label>
+                  <input
+                    type="text"
+                    value={shop.ownerName || ''}
+                    onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, ownerName: e.target.value } : s))}
+                    placeholder="七社 愛希"
+                    className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-[#999999]">🏆 受賞歴・資格・専門分野</label>
+                <textarea
+                  value={shop.shopCredentials || ''}
+                  onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, shopCredentials: e.target.value } : s))}
+                  placeholder="例: フラワー装飾技能士1級、コンテスト〇〇大会優勝、ブライダルブーケ専門..."
+                  rows={2}
+                  className="w-full px-4 py-3 bg-[#FBFAF9] border rounded-xl text-[12px] outline-none focus:border-[#2D4B3E] resize-y"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-[#999999]">🎯 主な対応シーン・用途</label>
+                <input
+                  type="text"
+                  value={shop.shopServices || ''}
+                  onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, shopServices: e.target.value } : s))}
+                  placeholder="ブライダルブーケ, スタンド花, 胡蝶蘭, お供え花, アレンジメント, プリザーブドフラワー"
+                  className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] outline-none focus:border-[#2D4B3E]"
+                />
+                <p className="text-[10px] text-[#999]">カンマ区切りで入力</p>
+              </div>
+            </div>
+          </div>
+
           {/* ★ 店舗 受注通知メール設定 */}
           <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
             <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Mail size={16}/> 受注通知メール設定</h3>

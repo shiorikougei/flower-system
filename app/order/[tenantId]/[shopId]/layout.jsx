@@ -41,8 +41,11 @@ export async function generateMetadata({ params }) {
   const title = city
     ? `${shopName} | ${city}の花屋・お花のオーダーメイド`
     : `${shopName} | お花の注文・配達`;
+  // [SEO-#12] 店舗が手書きした紹介文を優先（重複コンテンツ判定回避）
   const description = (
-    `${shopName}${city ? `（${city}）` : ""}のオンラインショップ。誕生日・お祝い・お悔やみのお花を、こだわりのオーダーメイドで承ります。EC商品から見積依頼まで。`
+    shop.shopIntroduction
+      ? String(shop.shopIntroduction).slice(0, 160)
+      : `${shopName}${city ? `（${city}）` : ""}のオンラインショップ。誕生日・お祝い・お悔やみのお花を、こだわりのオーダーメイドで承ります。EC商品から見積依頼まで。`
   ).slice(0, 160);
   const url = `${BASE_URL}/order/${tenantId}/${shopId}`;
   const image = settings.generalConfig?.logoUrl || `${BASE_URL}/og-default.jpg`;
@@ -74,7 +77,11 @@ export default async function ShopLayout({ children, params }) {
   const { shop, settings } = await getShopData(tenantId, shopId);
   const shopName = shop.name || "FLORIX";
 
-  // [SEO-#5] LocalBusiness（Florist）JSON-LD
+  // [SEO-#5 #12 #18] LocalBusiness（Florist）JSON-LD（店舗紹介文・創業年・店主名を含む）
+  const services = shop.shopServices
+    ? String(shop.shopServices).split(",").map(s => s.trim()).filter(Boolean)
+    : [];
+
   const businessJsonLd = {
     "@context": "https://schema.org",
     "@type": "Florist",
@@ -82,6 +89,7 @@ export default async function ShopLayout({ children, params }) {
     image: settings.generalConfig?.logoUrl || `${BASE_URL}/og-default.jpg`,
     "@id": `${BASE_URL}/order/${tenantId}/${shopId}`,
     url: `${BASE_URL}/order/${tenantId}/${shopId}`,
+    description: shop.shopIntroduction || undefined,
     telephone: shop.phone || "",
     address: shop.address
       ? {
@@ -113,6 +121,11 @@ export default async function ShopLayout({ children, params }) {
     priceRange: "¥¥",
     paymentAccepted: "Credit Card, Bank Transfer",
     sameAs: settings.generalConfig?.socialLinks || [],
+    // [SEO-#18] E-E-A-T シグナル
+    foundingDate: shop.foundedYear ? `${shop.foundedYear}-01-01` : undefined,
+    founder: shop.ownerName ? { "@type": "Person", name: shop.ownerName } : undefined,
+    knowsAbout: services.length > 0 ? services : undefined,
+    award: shop.shopCredentials || undefined,
   };
 
   return (

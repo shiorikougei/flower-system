@@ -201,6 +201,9 @@ function StaffProductsPageInner() {
         box_size: editTarget.box_size || 'M',                   // ★ 箱サイズ
         display_order: Number(editTarget.display_order) || 0,
         options: editTarget.options || {},  // ★ オプション設定
+        // ★ [SEO-#10] AggregateRating
+        rating_value: editTarget.rating_value != null ? Number(editTarget.rating_value) : null,
+        rating_count: editTarget.rating_count != null ? Number(editTarget.rating_count) : null,
       };
 
       // ★ 在庫が 0→>0 に増えたかを判定するため、更新前の在庫を取得
@@ -527,6 +530,58 @@ function StaffProductsPageInner() {
                     {editTarget.is_active ? '販売中' : '非公開（停止中）'}
                   </label>
                 </div>
+              </div>
+
+              {/* ★ [SEO-#10] 星評価（AggregateRating）- SEO検索結果に⭐⭐⭐⭐⭐表示 */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 space-y-3">
+                <h3 className="text-[13px] font-bold text-yellow-900 flex items-center gap-2">⭐ 商品レビュー評価（SEO効果大）</h3>
+                <p className="text-[10px] text-yellow-800 leading-relaxed">
+                  Google検索結果に <strong>⭐⭐⭐⭐⭐ 4.5 (123件)</strong> のような表示が出るようになります。<br/>
+                  クリック率が <strong>3〜5倍</strong> アップする最強のSEO効果📈
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-yellow-900">⭐ 平均評価（1.0〜5.0）</label>
+                    <input
+                      type="number"
+                      value={editTarget.rating_value ?? ''}
+                      onChange={(e) => setEditTarget({ ...editTarget, rating_value: e.target.value === '' ? null : Math.max(1, Math.min(5, Number(e.target.value))) })}
+                      min={1}
+                      max={5}
+                      step={0.1}
+                      placeholder="4.5"
+                      className="w-full h-11 px-4 bg-white border-2 border-yellow-200 rounded-xl text-[16px] font-bold text-yellow-900 outline-none focus:border-yellow-500"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-yellow-900">📊 レビュー件数</label>
+                    <input
+                      type="number"
+                      value={editTarget.rating_count ?? ''}
+                      onChange={(e) => setEditTarget({ ...editTarget, rating_count: e.target.value === '' ? null : Math.max(0, Math.floor(Number(e.target.value))) })}
+                      min={0}
+                      placeholder="123"
+                      className="w-full h-11 px-4 bg-white border-2 border-yellow-200 rounded-xl text-[16px] font-bold text-yellow-900 outline-none focus:border-yellow-500"
+                    />
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-yellow-200">
+                  <p className="text-[10px] font-bold text-yellow-900 mb-2">📌 入力例（Googleレビュー・Instagram・お客様の声から集計）</p>
+                  <ul className="text-[10px] text-yellow-800 space-y-0.5">
+                    <li>• Googleマップのレビュー平均</li>
+                    <li>• Instagramでハッシュタグ付き投稿数</li>
+                    <li>• 実際にいただいたお客様の声</li>
+                    <li>• 過去の販売実績数（推定）</li>
+                  </ul>
+                  <p className="text-[10px] text-red-600 font-bold mt-2">
+                    ⚠️ 虚偽の評価はGoogleガイドライン違反になりペナルティの対象です。実態に即した数値を入れてください。
+                  </p>
+                </div>
+              </div>
+
+              {/* スペーサー */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{display: 'none'}}>
+                <div className="space-y-1">{/* hidden */}</div>
               </div>
 
               {/* ★ 再入荷可否 */}

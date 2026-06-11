@@ -84,7 +84,7 @@ export default async function ProductPage({ params }) {
   const shopName = shop.name || "FLORIX";
   const url = `${BASE_URL}/products/${tenantId}/${productId}`;
 
-  // [SEO-#6] Product JSON-LD（リッチリザルト・Googleショッピング対応）
+  // [SEO-#6 #10] Product JSON-LD（AggregateRating付きでリッチリザルト最大化）
   const productJsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -109,6 +109,18 @@ export default async function ProductPage({ params }) {
           : "https://schema.org/OutOfStock",
       seller: { "@type": "Organization", name: shopName },
     },
+    // [SEO-#10] 星評価（rating_value, rating_count が両方設定されている場合のみ）
+    ...(product.rating_value && product.rating_count
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: Number(product.rating_value).toFixed(1),
+            reviewCount: Number(product.rating_count),
+            bestRating: 5,
+            worstRating: 1,
+          },
+        }
+      : {}),
   };
 
   // [SEO-#5] LocalBusiness JSON-LD
