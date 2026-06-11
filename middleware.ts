@@ -17,10 +17,15 @@ import type { NextRequest } from "next/server";
 const PROTECTED_PATHS = ["/owner"];
 
 // [Phase2.5-#116] nonce生成（リクエストごとにランダム16バイト）
+// Edge runtime対応のため Buffer.from ではなく btoa を使用
 function generateNonce(): string {
   const arr = new Uint8Array(16);
   crypto.getRandomValues(arr);
-  return Buffer.from(arr).toString("base64");
+  let binary = "";
+  for (let i = 0; i < arr.length; i++) {
+    binary += String.fromCharCode(arr[i]);
+  }
+  return btoa(binary);
 }
 
 // 環境変数からホワイトリストを取得

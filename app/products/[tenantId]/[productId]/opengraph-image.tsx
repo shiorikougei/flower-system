@@ -1,23 +1,25 @@
 // [SEO-#8] 商品個別ページのOG画像を動的生成
 // 1200x630 でSNSシェア時の見栄えを最適化
+//
+// ⚠️ runtime: "nodejs" を使用（edge runtimeは Supabase JS client が動かないため）
 
 import { ImageResponse } from "next/og";
 import { createClient } from "@supabase/supabase-js";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 export const alt = "商品画像";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default async function ProductOgImage({ params }) {
-  const { tenantId, productId } = params;
+export default async function ProductOgImage({ params }: { params: Promise<{ tenantId: string; productId: string }> }) {
+  const { tenantId, productId } = await params;
 
-  let product = null;
+  let product: any = null;
   let shopName = "FLORIX";
   try {
     const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
     const [productRes, settingsRes] = await Promise.all([
       supabaseAdmin.from("products").select("name, price, image_url, description")
@@ -26,7 +28,7 @@ export default async function ProductOgImage({ params }) {
         .eq("id", tenantId).maybeSingle(),
     ]);
     product = productRes.data;
-    shopName = settingsRes.data?.settings_data?.shops?.[0]?.name || "FLORIX";
+    shopName = (settingsRes.data?.settings_data as any)?.shops?.[0]?.name || "FLORIX";
   } catch {}
 
   if (!product) {
