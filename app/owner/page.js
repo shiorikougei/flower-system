@@ -1657,10 +1657,14 @@ export default function OwnerDashboard() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {LP_IMAGE_KEYS.map(({ key, label, recommend }) => {
-                  const url = lpImages[key] || '';
+                {(Array.isArray(LP_IMAGE_KEYS) ? LP_IMAGE_KEYS : []).map((item) => {
+                  const key = item?.key || '';
+                  const label = item?.label || key;
+                  const recommend = item?.recommend || '';
+                  if (!key) return null;
+                  const url = (lpImages && lpImages[key]) || '';
                   const isUploading = lpImageUploading === key;
-                  const isDefault = url === DEFAULT_LP_IMAGES[key];
+                  const isDefault = url === (DEFAULT_LP_IMAGES && DEFAULT_LP_IMAGES[key]);
                   return (
                     <div key={key} className="border border-[#EAEAEA] rounded-xl p-4 bg-[#FBFAF9]">
                       <div className="flex items-start gap-3">
