@@ -6,6 +6,7 @@ import { Calendar, Package, ChevronRight, Store, Truck, AlertCircle, Phone, Shop
 import Link from 'next/link';
 
 import TatefudaPreview from '@/components/TatefudaPreview';
+import { getAvailableTateOptions } from '@/utils/tateMaster';
 import DatePicker from '@/components/DatePicker';
 
 // ★ 時間スロットを店舗営業時間でフィルタするヘルパー
@@ -318,22 +319,12 @@ function OrderFormContent() {
   };
 
   const isOsonae = flowerPurpose.includes('供') || flowerPurpose.includes('悔') || flowerPurpose.includes('葬') || flowerPurpose.includes('忌');
-  
-  const allTateOptions = isOsonae ? [
-    { id: 'p1', label: '① 御供｜横型 (背景あり)', needs: ['3'], layout: 'horizontal' },
-    { id: 'p3', label: '② 御供｜縦型 (シンプル)', needs: ['3'], layout: 'vertical' },
-    { id: 'p4', label: '③ 御供｜縦型 (会社名入)', needs: ['3a', '3b'], layout: 'vertical' }
-  ] : [
-    { id: 'p5', label: '⑤ 祝｜横型 (スタンダード)', needs: ['1', '3'], layout: 'horizontal' },
-    { id: 'p6', label: '⑥ 祝｜横型 (様へ構成)', needs: ['1', '2', '3'], layout: 'horizontal' },
-    { id: 'p7', label: '⑦ 祝｜縦型 (二列構成)', needs: ['1', '3'], layout: 'vertical' },
-    { id: 'p8', label: '⑧ 祝｜縦型 (三列完成版)', needs: ['1', '2', '3'], layout: 'vertical' }
-  ];
 
+  // [Phase2-⑦] 共通モジュール utils/tateMaster から取得（旧4ファイル重複定義を解消）
   const currentShopSettings = appSettings?.shops?.find(s => shopId === 'default' ? true : String(s.id) === String(shopId)) || appSettings?.shops?.[0] || {};
   const enabledTatePatterns = currentShopSettings.enabledTatePatterns || [];
-  
-  const availableTateOptions = allTateOptions.filter(opt => enabledTatePatterns.includes(opt.id));
+
+  const availableTateOptions = getAvailableTateOptions(isOsonae, enabledTatePatterns);
   const selectedTateOpt = availableTateOptions.find(opt => opt.id === tatePattern);
   const tateNeeds = selectedTateOpt?.needs || [];
 

@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
 import { ChevronLeft, Send, CheckCircle2, ImagePlus, X, Loader2 } from 'lucide-react';
+import { validateImageFile } from '@/utils/fileValidation';
 
 // ★ ヒアリング選択肢
 const PURPOSE_OPTIONS = [
@@ -138,10 +139,11 @@ export default function EstimatePage() {
     if (files.length > remaining) {
       alert(`最大10枚までです。最初の${remaining}枚のみアップロードします。`);
     }
-    // ★ サイズ上限を 20MB に緩和 (自動圧縮するので)
+    // ★ [Phase2-⑪] ファイル検証（MIME・拡張子・サイズ・ファイル名）
     for (const f of filesToUpload) {
-      if (f.size > 20 * 1024 * 1024) {
-        alert(`「${f.name}」は20MBを超えています。\n動画ファイルや非常に大きな画像は選択できません。\n20MB以下の画像を選択してください。`);
+      const v = validateImageFile(f, { maxSizeBytes: 20 * 1024 * 1024 });
+      if (!v.valid) {
+        alert(`「${f.name}」: ${v.error}`);
         return;
       }
     }

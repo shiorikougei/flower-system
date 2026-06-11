@@ -4,6 +4,7 @@ import { supabase } from '@/utils/supabase';
 import { Plus, Package, Edit2, Trash2, Image as ImageIcon, X, AlertCircle, Save, ToggleLeft, ToggleRight, Bell, Send } from 'lucide-react';
 import FeatureGate from '@/components/FeatureGate';
 import HelpTooltip from '@/components/HelpTooltip';
+import { validateImageFile } from '@/utils/fileValidation';
 
 export default function StaffProductsPage() {
   return <FeatureGate feature="ec" label="商品管理（EC）"><StaffProductsPageInner/></FeatureGate>;
@@ -417,7 +418,9 @@ function StaffProductsPageInner() {
                     onChange={(e) => {
                       const f = e.target.files?.[0];
                       if (!f) return;
-                      if (f.size > 3 * 1024 * 1024) { alert('3MB以下の画像にしてください'); return; }
+                      // [Phase2-⑪] ファイル検証（MIME・拡張子・サイズ・ファイル名）
+                      const v = validateImageFile(f, { maxSizeBytes: 3 * 1024 * 1024 });
+                      if (!v.valid) { alert(v.error); return; }
                       setEditTarget({ ...editTarget, _uploadFile: f, _previewUrl: URL.createObjectURL(f) });
                     }}
                   />
@@ -458,7 +461,9 @@ function StaffProductsPageInner() {
                             onChange={(e) => {
                               const f = e.target.files?.[0];
                               if (!f) return;
-                              if (f.size > 3 * 1024 * 1024) { alert('3MB以下の画像にしてください'); return; }
+                              // [Phase2-⑪] ファイル検証（MIME・拡張子・サイズ・ファイル名）
+                      const v = validateImageFile(f, { maxSizeBytes: 3 * 1024 * 1024 });
+                      if (!v.valid) { alert(v.error); return; }
                               const next = [...(editTarget.image_urls || [])];
                               next[idx] = { _file: f, _previewUrl: URL.createObjectURL(f) };
                               // 隙間を詰める（途中インデックスに入れた場合）
