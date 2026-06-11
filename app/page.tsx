@@ -1,13 +1,19 @@
-// [LP-#36/#41/#42] FLORIX LP - 花屋オーナー向けSaaS紹介ページ
-// トーン: 親しみ・温かみ（日本のLP風・写真豊富）
+// [LP-#36/#41/#42/#43] FLORIX LP - 花屋オーナー向けSaaS紹介ページ
+// トーン: 親しみ・温かみ（写真豊富）
 // CTA: お問い合わせフォーム
 // 料金: オーナー管理画面(/owner)から動的反映
+// 絵文字不使用・lucide-react アイコンを使用
 
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 import { DEFAULT_LP_PRICING, fetchLpPricing } from "@/utils/lpPricing";
+import {
+  Flower2, Gift, Star, Check, Mail, Monitor, Settings as SettingsIcon,
+  Lock, Shield, Database, FileText, MessageCircle, Sprout, Send, Phone,
+  ArrowRight, Sparkles, HeartHandshake, Users, Wrench,
+} from "lucide-react";
 
-// LP料金プランの型（lpPricing.jsから来るがTS用に明示）
+// LP料金プランの型
 type LpPlan = {
   name: string;
   subtitle: string;
@@ -22,32 +28,31 @@ type LpPricing = {
   trialDays?: number;
 };
 
-// 1時間ごとに再ビルド
 export const revalidate = 3600;
 
 // =============================================================
-// 📸 LP用 画像URL（差し替え可能）
+// LP用 画像URL（差し替え可能）
 // → 後で /owner 管理画面から編集できるようにする予定
-// → 暫定: Unsplashの無料画像を使用
+// → 暫定: Unsplashの無料画像
 // =============================================================
 const IMAGES = {
-  hero: "https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=1200&q=80&auto=format&fit=crop", // 花束
-  florist1: "https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=600&q=80&auto=format&fit=crop", // 花屋さん
-  florist2: "https://images.unsplash.com/photo-1469259943454-aa100abba749?w=600&q=80&auto=format&fit=crop", // 花のアレンジ
-  florist3: "https://images.unsplash.com/photo-1444128395449-09cd8babc8de?w=600&q=80&auto=format&fit=crop", // 花のディスプレイ
-  bouquet1: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=600&q=80&auto=format&fit=crop", // ピンクの花
-  bouquet2: "https://images.unsplash.com/photo-1545241047-6083a3684587?w=600&q=80&auto=format&fit=crop", // 白い花
-  bouquet3: "https://images.unsplash.com/photo-1457089328389-f7c2837cf7b1?w=600&q=80&auto=format&fit=crop", // 色とりどり
-  shopOwner: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=600&q=80&auto=format&fit=crop", // 笑顔の女性
-  testimonial1: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&q=80&auto=format&fit=crop", // 女性スマイル
-  testimonial2: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80&auto=format&fit=crop", // 男性
-  testimonial3: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&q=80&auto=format&fit=crop", // 女性
+  hero: "https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=1200&q=80&auto=format&fit=crop",
+  florist1: "https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=600&q=80&auto=format&fit=crop",
+  florist2: "https://images.unsplash.com/photo-1469259943454-aa100abba749?w=600&q=80&auto=format&fit=crop",
+  florist3: "https://images.unsplash.com/photo-1444128395449-09cd8babc8de?w=600&q=80&auto=format&fit=crop",
+  bouquet1: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=600&q=80&auto=format&fit=crop",
+  bouquet2: "https://images.unsplash.com/photo-1545241047-6083a3684587?w=600&q=80&auto=format&fit=crop",
+  bouquet3: "https://images.unsplash.com/photo-1457089328389-f7c2837cf7b1?w=600&q=80&auto=format&fit=crop",
+  shopOwner: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=600&q=80&auto=format&fit=crop",
+  testimonial1: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&q=80&auto=format&fit=crop",
+  testimonial2: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80&auto=format&fit=crop",
+  testimonial3: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&q=80&auto=format&fit=crop",
 };
 
 export const metadata = {
   title: "FLORIX | 花屋さんのための、やさしいクラウド業務システム",
   description:
-    "「もう、紙とExcelに戻れない」現役の花屋さんが作った、花屋さんのための業務システム。ご注文・配達・EC・顧客管理を、ひとつに。月額¥3,800〜・30日間無料トライアル。",
+    "現役の花屋さんが作った、花屋さんのための業務システム。ご注文・配達・EC・顧客管理を、ひとつに。月額¥3,800〜・30日間無料トライアル。",
   openGraph: {
     title: "FLORIX | 花屋さんのための、やさしいクラウド業務システム",
     description: "ご注文・配達・EC・顧客管理を、ひとつに。月額¥3,800〜。30日間無料トライアル。",
@@ -95,13 +100,13 @@ export default async function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }}
       />
-      <div className="min-h-screen bg-[#FFFAF3] font-sans text-[#3B2A1F]" style={{ fontFamily: "'Hiragino Maru Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif" }}>
+      <div className="min-h-screen bg-[#FFFAF3] text-[#3B2A1F]" style={{ fontFamily: "'Hiragino Maru Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif" }}>
         {/* ナビゲーション */}
         <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#F4D4C4]">
           <div className="max-w-[1100px] mx-auto h-16 px-6 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-[22px]">🌸</span>
-              <span className="font-bold text-[20px] text-[#D97D54]">FLORIX</span>
+              <Flower2 size={20} className="text-[#D97D54]" />
+              <span className="font-bold text-[20px] text-[#D97D54] tracking-wider">FLORIX</span>
             </div>
             <div className="flex items-center gap-2 md:gap-4">
               <a href="#features" className="hidden md:block text-[12px] font-bold text-[#666] hover:text-[#D97D54]">特長</a>
@@ -122,17 +127,18 @@ export default async function HomePage() {
 
         {/* HERO セクション */}
         <section className="relative overflow-hidden bg-gradient-to-b from-[#FFF1E6] via-[#FFEAD9] to-[#FFFAF3] py-16 md:py-20 px-6">
-          {/* 装飾 */}
-          <div className="absolute top-10 left-10 text-[60px] opacity-20">🌷</div>
-          <div className="absolute top-20 right-16 text-[40px] opacity-20">🌹</div>
-          <div className="absolute bottom-10 left-1/4 text-[50px] opacity-15">🌺</div>
-          <div className="absolute bottom-20 right-1/4 text-[35px] opacity-20">💐</div>
+          {/* 装飾（色つきの円） */}
+          <div className="absolute top-12 left-8 w-24 h-24 rounded-full bg-[#F4D4C4] opacity-40 blur-sm"></div>
+          <div className="absolute top-32 right-14 w-32 h-32 rounded-full bg-[#F9E4A4] opacity-30 blur-sm"></div>
+          <div className="absolute bottom-16 left-1/4 w-40 h-40 rounded-full bg-[#FFD9C2] opacity-25 blur-md"></div>
+          <div className="absolute bottom-24 right-1/4 w-28 h-28 rounded-full bg-[#FCE2D1] opacity-30 blur-sm"></div>
 
           <div className="max-w-[1000px] mx-auto relative">
             <div className="grid md:grid-cols-2 gap-8 items-center">
               <div className="text-center md:text-left">
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#F9E4A4] rounded-full text-[11px] font-bold text-[#8B6F2C] mb-5 shadow-sm">
-                  🌷 花屋さんのため "だけ" に作りました
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#F9E4A4] rounded-full text-[11px] font-bold text-[#8B6F2C] mb-5 shadow-sm">
+                  <Sparkles size={12} />
+                  花屋さんのため、だけ、に作りました
                 </div>
                 <h1 className="text-[26px] md:text-[40px] font-bold text-[#D97D54] leading-[1.5] mb-4">
                   花屋さんが、<br/>
@@ -148,7 +154,9 @@ export default async function HomePage() {
 
                 {/* お試しプラン バッジ */}
                 <div className="bg-white rounded-3xl p-5 shadow-xl border-2 border-[#F4D4C4] mb-6 inline-block">
-                  <div className="text-[10px] font-bold text-[#D97D54] mb-1">📌 まずはお試し！</div>
+                  <div className="text-[10px] font-bold text-[#D97D54] mb-1 flex items-center gap-1">
+                    <Gift size={11}/> まずはお試しから
+                  </div>
                   <div className="flex items-baseline gap-2 justify-center md:justify-start">
                     <span className="text-[12px] text-[#666]">月額</span>
                     {featuredPlan?.price ? (
@@ -168,28 +176,29 @@ export default async function HomePage() {
                     href="#contact"
                     className="px-6 h-14 bg-[#D97D54] text-white rounded-full text-[14px] font-bold hover:bg-[#c66a44] transition-all flex items-center justify-center gap-2 shadow-lg"
                   >
-                    🌸 お気軽にご相談ください
+                    お気軽にご相談ください
+                    <ArrowRight size={16}/>
                   </a>
                   <a
                     href="#features"
                     className="px-6 h-14 bg-white border-2 border-[#D97D54] text-[#D97D54] rounded-full text-[14px] font-bold hover:bg-[#FFF1E6] transition-all flex items-center justify-center"
                   >
-                    特長を見る ↓
+                    特長を見る
                   </a>
                 </div>
               </div>
 
               {/* HERO画像 */}
               <div className="relative">
-                <div className="absolute -top-4 -left-4 w-20 h-20 bg-[#F9E4A4] rounded-full opacity-50"></div>
-                <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-[#F4D4C4] rounded-full opacity-60"></div>
+                <div className="absolute -top-6 -left-6 w-24 h-24 bg-[#F9E4A4] rounded-full opacity-60"></div>
+                <div className="absolute -bottom-6 -right-6 w-28 h-28 bg-[#F4D4C4] rounded-full opacity-70"></div>
                 <img
                   src={IMAGES.hero}
                   alt="美しい花束"
                   className="relative rounded-3xl shadow-2xl w-full aspect-[4/5] object-cover"
                 />
-                <div className="absolute -top-3 -right-3 bg-[#D97D54] text-white text-[10px] font-bold px-3 py-2 rounded-full rotate-12 shadow-lg">
-                  🎁 30日間<br/>無料お試し
+                <div className="absolute -top-3 -right-3 bg-[#D97D54] text-white text-[11px] font-bold px-3 py-2 rounded-2xl rotate-6 shadow-lg leading-tight">
+                  30日間<br/>無料お試し
                 </div>
               </div>
             </div>
@@ -297,9 +306,6 @@ export default async function HomePage() {
 
         {/* サービス指針 3C */}
         <section className="py-16 md:py-24 px-6 bg-[#FCF3DF] relative">
-          <div className="absolute top-5 left-5 text-[100px] opacity-5 font-bold text-[#D97D54]">FLOWER</div>
-          <div className="absolute bottom-5 right-5 text-[100px] opacity-5 font-bold text-[#D97D54]">SHOP</div>
-
           <div className="max-w-[900px] mx-auto relative">
             <div className="text-center mb-12">
               <p className="text-[12px] font-bold text-[#D97D54] tracking-widest mb-3">- OUR VALUES -</p>
@@ -311,22 +317,28 @@ export default async function HomePage() {
 
             <div className="space-y-3">
               {[
-                { letter: "C", word: "ARE", title: "花屋さんの気持ちに寄り添う", desc: "毎日忙しい花屋さんが、もっと自分らしく働けるように。技術より、まずは「気持ち」を大切に。", bg: "bg-[#F4A5A5]", text: "text-white" },
-                { letter: "C", word: "ONNECT", title: "花屋さんとお客様をつなぐ", desc: "ご注文も配達もスムーズに。お客様とのつながりを深める仕組みを、ご提供します。", bg: "bg-[#F9E4A4]", text: "text-[#8B6F2C]" },
-                { letter: "C", word: "REATE", title: "新しい花屋業務を、共に創る", desc: "現場の声を聞いて、毎月アップデート。花屋さんと一緒に、新しい働き方をつくります。", bg: "bg-[#A8C8A0]", text: "text-white" },
-              ].map((c, idx) => (
-                <div key={idx} className={`${c.bg} ${c.text} rounded-2xl p-5 md:p-6 shadow-md`}>
-                  <div className="flex items-center gap-4 md:gap-6">
-                    <div className="text-[40px] md:text-[56px] font-bold leading-none">
-                      {c.letter}<span className="text-[24px] md:text-[32px] opacity-80">{c.word}</span>
-                    </div>
-                    <div className="flex-1 border-l-2 border-current/30 pl-4 md:pl-6">
-                      <h3 className="font-bold text-[14px] md:text-[16px] mb-2">{c.title}</h3>
-                      <p className="text-[11.5px] md:text-[12.5px] leading-[1.9] opacity-90">{c.desc}</p>
+                { letter: "C", word: "ARE", title: "花屋さんの気持ちに寄り添う", desc: "毎日忙しい花屋さんが、もっと自分らしく働けるように。技術より、まずは『気持ち』を大切に。", bg: "bg-[#F4A5A5]", text: "text-white", icon: HeartHandshake },
+                { letter: "C", word: "ONNECT", title: "花屋さんとお客様をつなぐ", desc: "ご注文も配達もスムーズに。お客様とのつながりを深める仕組みを、ご提供します。", bg: "bg-[#F9E4A4]", text: "text-[#8B6F2C]", icon: Users },
+                { letter: "C", word: "REATE", title: "新しい花屋業務を、共に創る", desc: "現場の声を聞いて、毎月アップデート。花屋さんと一緒に、新しい働き方をつくります。", bg: "bg-[#A8C8A0]", text: "text-white", icon: Wrench },
+              ].map((c, idx) => {
+                const Icon = c.icon;
+                return (
+                  <div key={idx} className={`${c.bg} ${c.text} rounded-2xl p-5 md:p-6 shadow-md`}>
+                    <div className="flex items-center gap-4 md:gap-6">
+                      <div className="shrink-0 flex items-center gap-3">
+                        <Icon size={32} strokeWidth={2}/>
+                        <div className="text-[36px] md:text-[48px] font-bold leading-none">
+                          {c.letter}<span className="text-[22px] md:text-[28px] opacity-80">{c.word}</span>
+                        </div>
+                      </div>
+                      <div className="flex-1 border-l-2 border-current/30 pl-4 md:pl-6">
+                        <h3 className="font-bold text-[14px] md:text-[16px] mb-2">{c.title}</h3>
+                        <p className="text-[11.5px] md:text-[12.5px] leading-[1.9] opacity-90">{c.desc}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>
@@ -360,8 +372,8 @@ export default async function HomePage() {
                     }`}
                   >
                     {isRecommended && (
-                      <span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#F9E4A4] text-[#8B6F2C] text-[11px] font-bold px-4 py-1.5 rounded-full shadow-md">
-                        ⭐ 人気No.1
+                      <span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#F9E4A4] text-[#8B6F2C] text-[11px] font-bold px-4 py-1.5 rounded-full shadow-md flex items-center gap-1">
+                        <Star size={11} fill="currentColor"/> 人気No.1
                       </span>
                     )}
                     <h3 className={`text-[18px] font-bold mb-1 ${isRecommended ? "" : "text-[#2D4B3E]"}`}>
@@ -383,7 +395,7 @@ export default async function HomePage() {
                     <ul className={`space-y-2.5 text-[12.5px] ${isRecommended ? "" : "text-[#555]"}`}>
                       {(plan.features || []).map((f: string, fi: number) => (
                         <li key={fi} className="flex items-start gap-2">
-                          <span className={isRecommended ? "text-[#F9E4A4]" : "text-[#D97D54]"}>✓</span>
+                          <Check size={14} className={`mt-0.5 shrink-0 ${isRecommended ? "text-[#F9E4A4]" : "text-[#D97D54]"}`}/>
                           <span>{f}</span>
                         </li>
                       ))}
@@ -419,31 +431,29 @@ export default async function HomePage() {
                 {
                   img: IMAGES.testimonial1,
                   name: "佐藤様（東京・個人店）",
-                  rating: "⭐⭐⭐⭐⭐",
-                  comment: "電話注文と店頭販売の在庫がバラバラで困っていました。FLORIXで一元管理できるようになり、毎日の確認時間が30分→5分に！",
-                  color: "bg-white",
+                  comment: "電話注文と店頭販売の在庫がバラバラで困っていました。FLORIXで一元管理できるようになり、毎日の確認時間が30分から5分に！",
                 },
                 {
                   img: IMAGES.testimonial2,
                   name: "田中様（札幌・3店舗運営）",
-                  rating: "⭐⭐⭐⭐⭐",
                   comment: "3店舗の売上を一画面で見られるようになり、経営判断がスピーディーに。スタッフのシフト管理も楽になりました。",
-                  color: "bg-white",
                 },
                 {
                   img: IMAGES.testimonial3,
                   name: "山田様（大阪・新規開業）",
-                  rating: "⭐⭐⭐⭐⭐",
-                  comment: "開店と同時に導入。ホームページがなくてもECが始められて、Google検索からのお客様も増えました🌸",
-                  color: "bg-white",
+                  comment: "開店と同時に導入。ホームページがなくてもECが始められて、Google検索からのお客様も増えました。",
                 },
               ].map((v, idx) => (
-                <div key={idx} className={`${v.color} rounded-3xl p-6 shadow-md border border-[#F4D4C4]/50`}>
+                <div key={idx} className="bg-white rounded-3xl p-6 shadow-md border border-[#F4D4C4]/50">
                   <div className="flex items-center gap-3 mb-4">
                     <img src={v.img} alt={v.name} className="w-14 h-14 rounded-full object-cover border-2 border-[#F4D4C4]" />
                     <div>
                       <p className="text-[12px] font-bold text-[#2D4B3E]">{v.name}</p>
-                      <p className="text-[11px]">{v.rating}</p>
+                      <div className="flex gap-0.5 mt-1">
+                        {[1,2,3,4,5].map(s => (
+                          <Star key={s} size={10} className="text-[#F9C846]" fill="#F9C846"/>
+                        ))}
+                      </div>
                     </div>
                   </div>
                   <p className="text-[12.5px] text-[#555] leading-[2]">
@@ -464,25 +474,30 @@ export default async function HomePage() {
                 ご利用までの<br className="md:hidden"/>
                 <span className="text-[#D97D54]">流れ</span>
               </h2>
-              <p className="text-[13px] text-[#666] mt-3">最短3日でスタート！</p>
+              <p className="text-[13px] text-[#666] mt-3">最短3日でスタート</p>
             </div>
 
             <div className="space-y-4">
               {[
-                { step: "STEP 01", title: "お問い合わせ", desc: "下のフォームからご相談ください。電話・メールでもOK。", icon: "✉️" },
-                { step: "STEP 02", title: "オンラインデモ（30分）", desc: "Zoomで実際の画面をお見せしながら、ご質問にお答えします。", icon: "💻" },
-                { step: "STEP 03", title: "初期セットアップ", desc: "お店の情報・スタッフ・商品データをご一緒に登録します。", icon: "🛠️" },
-                { step: "STEP 04", title: "30日間無料トライアル開始", desc: "全機能をお試しいただけます。気に入らなければそのまま自動解約。", icon: "🌸" },
-              ].map((s, idx) => (
-                <div key={idx} className="bg-white rounded-2xl p-5 shadow-md border border-[#F4D4C4]/50 flex items-center gap-4">
-                  <div className="text-[36px] md:text-[48px] shrink-0">{s.icon}</div>
-                  <div className="flex-1">
-                    <p className="text-[10px] font-bold text-[#D97D54] tracking-widest">{s.step}</p>
-                    <h3 className="text-[14px] md:text-[16px] font-bold text-[#2D4B3E] mt-1">{s.title}</h3>
-                    <p className="text-[12px] text-[#666] mt-1 leading-[1.8]">{s.desc}</p>
+                { step: "STEP 01", title: "お問い合わせ", desc: "下のフォームからご相談ください。電話・メールでもOK。", Icon: Mail },
+                { step: "STEP 02", title: "オンラインデモ（30分）", desc: "Zoomで実際の画面をお見せしながら、ご質問にお答えします。", Icon: Monitor },
+                { step: "STEP 03", title: "初期セットアップ", desc: "お店の情報・スタッフ・商品データをご一緒に登録します。", Icon: SettingsIcon },
+                { step: "STEP 04", title: "30日間無料トライアル開始", desc: "全機能をお試しいただけます。気に入らなければそのまま自動解約。", Icon: Flower2 },
+              ].map((s, idx) => {
+                const I = s.Icon;
+                return (
+                  <div key={idx} className="bg-white rounded-2xl p-5 shadow-md border border-[#F4D4C4]/50 flex items-center gap-4">
+                    <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-[#FFF1E6] flex items-center justify-center shrink-0 text-[#D97D54]">
+                      <I size={28}/>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[10px] font-bold text-[#D97D54] tracking-widest">{s.step}</p>
+                      <h3 className="text-[14px] md:text-[16px] font-bold text-[#2D4B3E] mt-1">{s.title}</h3>
+                      <p className="text-[12px] text-[#666] mt-1 leading-[1.8]">{s.desc}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>
@@ -493,31 +508,36 @@ export default async function HomePage() {
             <div className="text-center mb-10">
               <p className="text-[12px] font-bold text-[#D97D54] tracking-widest mb-3">- SAFETY -</p>
               <h2 className="text-[20px] md:text-[28px] font-bold text-[#2D4B3E]">
-                花屋さんの "大事なもの" を、しっかり守ります
+                花屋さんの大事なものを、しっかり守ります
               </h2>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-5">
               {[
-                { icon: "🔐", title: "お客様情報の暗号化" },
-                { icon: "🛡️", title: "二段階認証" },
-                { icon: "💾", title: "自動バックアップ" },
-                { icon: "📜", title: "操作履歴・監査ログ" },
-                { icon: "💬", title: "日本語サポート" },
-                { icon: "🌱", title: "現場の声で進化" },
-              ].map((s, idx) => (
-                <div key={idx} className="bg-white rounded-2xl p-4 text-center shadow-sm">
-                  <div className="text-[28px] md:text-[36px] mb-1">{s.icon}</div>
-                  <p className="text-[11px] md:text-[12px] font-bold text-[#2D4B3E]">{s.title}</p>
-                </div>
-              ))}
+                { Icon: Lock, title: "お客様情報の暗号化" },
+                { Icon: Shield, title: "二段階認証" },
+                { Icon: Database, title: "自動バックアップ" },
+                { Icon: FileText, title: "操作履歴・監査ログ" },
+                { Icon: MessageCircle, title: "日本語サポート" },
+                { Icon: Sprout, title: "現場の声で進化" },
+              ].map((s, idx) => {
+                const I = s.Icon;
+                return (
+                  <div key={idx} className="bg-white rounded-2xl p-4 text-center shadow-sm">
+                    <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-[#FFF1E6] flex items-center justify-center text-[#D97D54]">
+                      <I size={22}/>
+                    </div>
+                    <p className="text-[11px] md:text-[12px] font-bold text-[#2D4B3E]">{s.title}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
 
         {/* CTA / お問い合わせフォーム */}
         <section id="contact" className="py-16 md:py-24 px-6 bg-gradient-to-b from-[#D97D54] to-[#c66a44] text-white relative overflow-hidden">
-          <div className="absolute top-0 left-0 text-[120px] opacity-10">🌸</div>
-          <div className="absolute bottom-0 right-0 text-[120px] opacity-10">🌷</div>
+          <div className="absolute top-10 left-10 w-32 h-32 rounded-full bg-white/10"></div>
+          <div className="absolute bottom-10 right-10 w-40 h-40 rounded-full bg-white/5"></div>
 
           <div className="max-w-[700px] mx-auto text-center relative">
             <p className="text-[12px] font-bold text-[#F9E4A4] tracking-widest mb-3">- CONTACT -</p>
@@ -527,7 +547,7 @@ export default async function HomePage() {
             <p className="text-[13px] md:text-[14px] text-white/90 leading-[2] mb-10">
               現場の花屋さんと一緒に作ったシステムです。<br/>
               「うちの店でも使えるかな？」というご相談、ぜひ。<br/>
-              <strong>無理な営業はいたしません🌸</strong>
+              <strong>無理な営業はいたしません。</strong>
             </p>
 
             <div className="bg-white text-[#3B2A1F] rounded-3xl p-6 md:p-8 text-left shadow-2xl">
@@ -572,14 +592,14 @@ export default async function HomePage() {
                     name="ご相談内容"
                     rows={4}
                     className="w-full bg-[#FFFAF3] border-2 border-[#F4D4C4] rounded-xl px-4 py-3 text-[13px] focus:border-[#D97D54] outline-none"
-                    placeholder="お悩み、ご質問、デモご希望など、お気軽にどうぞ🌸"
+                    placeholder="お悩み、ご質問、デモご希望など、お気軽にどうぞ。"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="w-full h-14 bg-[#D97D54] text-white rounded-full text-[15px] font-bold hover:bg-[#c66a44] transition-all shadow-lg"
+                  className="w-full h-14 bg-[#D97D54] text-white rounded-full text-[15px] font-bold hover:bg-[#c66a44] transition-all shadow-lg flex items-center justify-center gap-2"
                 >
-                  🌸 送信する
+                  <Send size={16}/> 送信する
                 </button>
                 <p className="text-[11px] text-[#999] text-center">
                   ※ ご相談はすべて無料です。お電話でもどうぞ。
@@ -587,8 +607,9 @@ export default async function HomePage() {
               </form>
             </div>
 
-            <p className="text-[12px] text-white/80 mt-8">
-              📧 メールでも受付：<a href="mailto:contact@noodleflorix.com" className="underline font-bold">contact@noodleflorix.com</a>
+            <p className="text-[12px] text-white/80 mt-8 flex items-center justify-center gap-2 flex-wrap">
+              <Mail size={14}/> メールでも受付：
+              <a href="mailto:contact@noodleflorix.com" className="underline font-bold">contact@noodleflorix.com</a>
             </p>
           </div>
         </section>
@@ -599,8 +620,8 @@ export default async function HomePage() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <span>🌸</span>
-                  <span className="font-bold text-white text-[18px]">FLORIX</span>
+                  <Flower2 size={18} className="text-[#D97D54]"/>
+                  <span className="font-bold text-white text-[18px] tracking-wider">FLORIX</span>
                 </div>
                 <p>花屋さんのための、やさしいクラウド業務システム</p>
               </div>

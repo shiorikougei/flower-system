@@ -43,8 +43,8 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       // フォント
       "font-src 'self' data: https://fonts.gstatic.com",
-      // 画像: 自サイト + Supabase Storage + LINE + GA計測ピクセル + データURL
-      "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://profile.line-scdn.net https://*.line-scdn.net https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com",
+      // 画像: 自サイト + Supabase Storage + LINE + GA計測ピクセル + データURL + Unsplash(LP)
+      "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://profile.line-scdn.net https://*.line-scdn.net https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://images.unsplash.com",
       // 接続(API): 自サイト + Supabase + Stripe + Resend + ZipCloud + LINE + Sentry + GA4
       "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.stripe.com https://api.resend.com https://zipcloud.ibsnet.co.jp https://*.line.me https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://stats.g.doubleclick.net",
       // iframe（Stripe決済UI）
