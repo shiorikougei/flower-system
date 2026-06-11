@@ -18,6 +18,7 @@ import {
   ArrowRight, Check, ChevronDown, Mail, Phone, Send,
   ShoppingBag, Truck, Users, ClipboardList,
   Clock, AlertCircle, Inbox, GraduationCap, MessageSquare,
+  ShoppingCart, TrendingUp, UserCog,
 } from "lucide-react";
 
 // =============================================================
@@ -156,82 +157,157 @@ export default async function HomePage() {
         {/* ============================================ */}
         {/* HERO（CTA #1） */}
         {/* ============================================ */}
-        <section className="relative overflow-hidden pt-14 md:pt-24 pb-20 md:pb-28 px-6">
-          <div className="absolute top-32 -left-40 w-[480px] h-[480px] rounded-full bg-[#A7B8A1]/15 blur-3xl pointer-events-none"></div>
-          <div className="absolute bottom-0 -right-40 w-[420px] h-[420px] rounded-full bg-[#C97D60]/10 blur-3xl pointer-events-none"></div>
+        <section className="relative overflow-hidden pt-10 md:pt-16 pb-12 md:pb-20 px-6">
+          <div className="absolute top-32 -left-40 w-[480px] h-[480px] rounded-full bg-[#A7B8A1]/12 blur-3xl pointer-events-none"></div>
 
-          <div className="max-w-[1140px] mx-auto relative">
-            <div className="grid lg:grid-cols-[1.05fr_1fr] gap-12 lg:gap-16 items-center">
+          <div className="max-w-[1240px] mx-auto relative">
+            <div className="grid lg:grid-cols-[1fr_1.15fr] gap-10 lg:gap-12 items-center">
 
+              {/* 左：コピー */}
               <div>
-                <p
-                  className="inline-block text-[11px] tracking-[0.4em] text-[#7E9279] font-medium mb-6 pb-2 border-b border-[#A7B8A1]/50"
-                  style={{ fontFamily: "var(--font-outfit)" }}
-                >
-                  FOR FLORISTS — RECEIVING ORDERS, REIMAGINED
-                </p>
-
-                <h1
-                  className="text-[34px] md:text-[48px] lg:text-[58px] font-medium leading-[1.4] mb-8 tracking-[0.01em]"
-                  style={{ fontFamily: "var(--font-shippori), 'Noto Serif JP', serif" }}
-                >
-                  電話注文を減らし、<br/>
-                  営業時間外の売上を<br/>
-                  <span className="text-[#C97D60]">増やす</span>。
-                </h1>
-
-                <p
-                  className="text-[14px] md:text-[16px] text-[#5B5B5B] leading-[2] mb-10 max-w-[520px]"
+                {/* Top badge */}
+                <span
+                  className="inline-block text-[11px] md:text-[12px] font-medium bg-[#E8EFE6] text-[#5F7558] px-4 py-1.5 rounded-full mb-7"
                   style={{ fontFamily: "var(--font-zen-kaku)" }}
                 >
-                  花屋専用の受注クラウド、FLORIX。<br/>
-                  電話・LINE・EC・店頭の注文を、ひとつの画面に。<br/>
-                  花仕事に集中できる毎日を、つくります。
+                  花屋専門 業務クラウド
+                </span>
+
+                {/* Headline */}
+                <h1
+                  className="text-[34px] md:text-[44px] lg:text-[56px] leading-[1.45] mb-6 tracking-[0.02em] text-[#2F2F2F]"
+                  style={{ fontFamily: "var(--font-shippori), 'Noto Serif JP', serif", fontWeight: 500 }}
+                >
+                  電話注文を減らし、<br/>
+                  営業時間外の<span className="text-[#C97D60]">受注を増やす</span>。
+                </h1>
+
+                {/* Sub */}
+                <p
+                  className="text-[14px] md:text-[16px] text-[#5B5B5B] leading-[1.9] mb-10"
+                  style={{ fontFamily: "var(--font-zen-kaku)" }}
+                >
+                  花屋のための、オンライン受注・業務管理システム
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-3 mb-8">
+                {/* 3 Benefit chips */}
+                <div className="flex flex-wrap gap-x-5 gap-y-4 mb-10">
+                  {[
+                    { Icon: Phone, label: "電話・LINE対応\nを削減" },
+                    { badge: "24h", label: "営業時間外の\n注文を取りこぼさない" },
+                    { Icon: ClipboardList, label: "注文ミス・\n二度手間を防ぐ" },
+                  ].map((b, idx) => {
+                    const Icon = (b as any).Icon;
+                    return (
+                      <div key={idx} className="flex items-center gap-3">
+                        <div className="w-14 h-14 shrink-0 rounded-full bg-[#FBE8DF] flex items-center justify-center text-[#C97D60]">
+                          {Icon ? (
+                            <Icon size={22} strokeWidth={1.7}/>
+                          ) : (
+                            <span className="text-[14px] font-medium" style={{ fontFamily: "var(--font-outfit)" }}>{(b as any).badge}</span>
+                          )}
+                        </div>
+                        <p
+                          className="text-[11.5px] md:text-[12px] font-medium text-[#2F2F2F] leading-[1.6] whitespace-pre-line"
+                          style={{ fontFamily: "var(--font-zen-kaku)" }}
+                        >
+                          {b.label}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* CTA Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 mb-6">
                   <a
                     href="#contact"
-                    className="group inline-flex items-center justify-center gap-2 h-14 px-8 bg-[#C97D60] text-white rounded-full text-[14px] font-medium hover:bg-[#A8624A] transition-all shadow-[0_12px_36px_-12px_rgba(201,125,96,0.5)]"
+                    className="group inline-flex items-center justify-center gap-2 h-14 px-8 bg-[#E89B7D] text-white rounded-full text-[14px] font-medium hover:bg-[#C97D60] transition-all shadow-[0_12px_36px_-12px_rgba(232,155,125,0.55)]"
                   >
-                    30日間 無料で試してみる
+                    30日間無料で試してみる
                     <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform"/>
                   </a>
                   <a
                     href="#features"
-                    className="inline-flex items-center justify-center h-14 px-7 bg-white/60 backdrop-blur-md border border-[#E5DED2] text-[#2F2F2F] rounded-full text-[14px] font-medium hover:bg-white transition-all"
+                    className="inline-flex items-center justify-center h-14 px-7 bg-white border border-[#E5DED2] text-[#2F2F2F] rounded-full text-[14px] font-medium hover:bg-[#FAF7F2] transition-all"
                   >
-                    機能を見る
+                    機能を詳しく見る
                   </a>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] text-[#6B6B6B]" style={{ fontFamily: "var(--font-zen-kaku)" }}>
-                  <span className="flex items-center gap-1.5"><Check size={13} className="text-[#7E9279]"/> 初期費用 0円</span>
-                  <span className="flex items-center gap-1.5"><Check size={13} className="text-[#7E9279]"/> クレカ登録 不要</span>
-                  <span className="flex items-center gap-1.5"><Check size={13} className="text-[#7E9279]"/> いつでも解約OK</span>
+                {/* Trust badges */}
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px] text-[#6B6B6B]" style={{ fontFamily: "var(--font-zen-kaku)" }}>
+                  <span className="flex items-center gap-1.5"><Check size={14} className="text-[#7E9279]"/> 初期費用0円</span>
+                  <span className="flex items-center gap-1.5"><Check size={14} className="text-[#7E9279]"/> クレカ登録不要</span>
+                  <span className="flex items-center gap-1.5"><Check size={14} className="text-[#7E9279]"/> いつでも解約OK</span>
                 </div>
               </div>
 
-              {/* 右：写真 */}
+              {/* 右：Hero画像（PC+スマホ+タブレット合成想定） */}
               <div className="relative">
-                <div className="absolute -top-10 -right-10 w-44 h-44 rounded-full bg-[#A7B8A1]/30"></div>
-                <div className="absolute -bottom-10 -left-10 w-52 h-52 rounded-full bg-[#C97D60]/15"></div>
-
-                <div className="relative rounded-[36px] overflow-hidden shadow-[0_24px_64px_-24px_rgba(168,98,74,0.25)]">
-                  <img src={IMG.hero} alt="花屋の手仕事" className="w-full aspect-[4/5] object-cover"/>
-                </div>
-
-                <div className="absolute bottom-8 -left-4 md:-left-12 bg-white/95 backdrop-blur-xl border border-[#E5DED2] rounded-2xl px-5 py-4 shadow-[0_16px_48px_-12px_rgba(126,146,121,0.2)]">
-                  <p className="text-[10px] tracking-[0.25em] text-[#7E9279] font-medium mb-1" style={{ fontFamily: "var(--font-outfit)" }}>MONTHLY</p>
-                  <p
-                    className="text-[26px] text-[#2F2F2F] leading-none"
-                    style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}
-                  >
-                    {featuredPlan?.price ? `¥${featuredPlan.price.toLocaleString()}` : "お問い合わせ"}
-                    {featuredPlan?.price && <span className="text-[11px] text-[#6B6B6B] ml-1">/月〜</span>}
-                  </p>
-                </div>
+                <img
+                  src={IMG.hero}
+                  alt="FLORIX 受注管理画面"
+                  className="w-full aspect-[16/11] object-cover rounded-[24px]"
+                />
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ============================================ */}
+        {/* HERO直下: 5枚ギャラリー */}
+        {/* ============================================ */}
+        <section className="px-6 pb-12 md:pb-20">
+          <div className="max-w-[1240px] mx-auto">
+            <div className="grid grid-cols-5 gap-3 md:gap-4">
+              {[IMG.gallery1, IMG.gallery2, IMG.gallery3, IMG.gallery4, IMG.gallery5].map((src: string, idx: number) => (
+                <div key={idx} className="aspect-square rounded-2xl overflow-hidden bg-[#F4EFE6]">
+                  <img
+                    src={src}
+                    alt=""
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
+                    loading="lazy"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ============================================ */}
+        {/* 5機能サマリー行 */}
+        {/* ============================================ */}
+        <section className="px-6 pb-20 md:pb-28">
+          <div className="max-w-[1240px] mx-auto">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-5 md:gap-2">
+              {[
+                { Icon: ShoppingCart, title: "オンライン注文", desc: "Webから24時間受付" },
+                { Icon: ClipboardList, title: "注文・顧客管理", desc: "顧客情報や履歴を一元管理" },
+                { Icon: Truck, title: "配達・受け渡し管理", desc: "配達計画やステータス管理が簡単" },
+                { Icon: TrendingUp, title: "売上・分析", desc: "売上データを自動集計" },
+                { Icon: UserCog, title: "スタッフ管理", desc: "権限設定で安心運用" },
+              ].map((f, idx) => {
+                const Icon = f.Icon;
+                return (
+                  <div key={idx} className="flex flex-col md:flex-row items-center md:items-start gap-3 md:gap-4 px-3 text-center md:text-left">
+                    <div className="w-14 h-14 md:w-16 md:h-16 shrink-0 rounded-full bg-[#E8EFE6] flex items-center justify-center text-[#7E9279]">
+                      <Icon size={26} strokeWidth={1.6}/>
+                    </div>
+                    <div className="md:pt-1">
+                      <p
+                        className="text-[13px] md:text-[14px] text-[#2F2F2F] mb-1"
+                        style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}
+                      >
+                        {f.title}
+                      </p>
+                      <p className="text-[11px] text-[#6B6B6B] leading-[1.6]" style={{ fontFamily: "var(--font-zen-kaku)" }}>
+                        {f.desc}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>

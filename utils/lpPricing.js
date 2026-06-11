@@ -4,7 +4,15 @@
 
 // LPの画像キー（page.tsx の IMG オブジェクトと一致）
 export const LP_IMAGE_KEYS = [
-  { key: "hero", label: "ヒーロー画像（メイン大）", recommend: "縦長 4:5・1600px〜" },
+  // === Hero ===
+  { key: "hero", label: "ヒーロー画像（PC+スマホ+タブレット合成）", recommend: "横長 16:10・1600px〜・FLORIX画面が映る合成画像推奨" },
+  // === 5枚ギャラリー（Hero下） ===
+  { key: "gallery1", label: "ギャラリー1（制作風景）", recommend: "正方形 1:1・800px〜" },
+  { key: "gallery2", label: "ギャラリー2（ブーケ）", recommend: "正方形 1:1・800px〜" },
+  { key: "gallery3", label: "ギャラリー3（店内陳列）", recommend: "正方形 1:1・800px〜" },
+  { key: "gallery4", label: "ギャラリー4（PC作業）", recommend: "正方形 1:1・800px〜" },
+  { key: "gallery5", label: "ギャラリー5（受け渡し）", recommend: "正方形 1:1・800px〜" },
+  // === セクション内画像 ===
   { key: "problem1", label: "課題セクション 写真", recommend: "縦長 4:5・900px〜" },
   { key: "solution", label: "解決策セクション 写真", recommend: "横長 16:9・1400px〜" },
   { key: "f1", label: "機能01 受注管理 写真", recommend: "5:4・1000px〜" },
@@ -17,6 +25,11 @@ export const LP_IMAGE_KEYS = [
 // デフォルトのLP画像URL（Unsplash仮素材）
 export const DEFAULT_LP_IMAGES = {
   hero: "https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?w=1600&q=90&auto=format&fit=crop",
+  gallery1: "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=800&q=85&auto=format&fit=crop",
+  gallery2: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=800&q=85&auto=format&fit=crop",
+  gallery3: "https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=800&q=85&auto=format&fit=crop",
+  gallery4: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=800&q=85&auto=format&fit=crop",
+  gallery5: "https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=800&q=85&auto=format&fit=crop",
   problem1: "https://images.unsplash.com/photo-1487070183336-b863922373d4?w=900&q=85&auto=format&fit=crop",
   solution: "https://images.unsplash.com/photo-1493612276216-ee3925520721?w=1400&q=90&auto=format&fit=crop",
   f1: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=1000&q=85&auto=format&fit=crop",
