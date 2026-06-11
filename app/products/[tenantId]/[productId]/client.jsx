@@ -9,14 +9,89 @@ import { supabase } from "@/utils/supabase";
 import {
   ShoppingCart, Plus, Minus, ChevronLeft, Package,
   Truck, Store, CreditCard, ShieldCheck, AlertCircle,
+  CheckCircle2, X, Loader2,
 } from "lucide-react";
 import { addToCart } from "@/utils/cart";
+import { getCurrentStaff } from "@/utils/staffRole";
 
-export default function ProductDetailClient({ product, shop, tenantId }) {
+export default function ProductDetailClient({ product: initialProduct, shop, tenantId }) {
   const router = useRouter();
   const [qty, setQty] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [product, setProduct] = useState(initialProduct);
+
+  // [POS-#25] スタッフモード判定（Supabase Authでログイン中か）
+  const [isStaff, setIsStaff] = useState(false);
+  const [staffName, setStaffName] = useState("");
+  const [showStoreSaleModal, setShowStoreSaleModal] = useState(false);
+  const [storeSaleQty, setStoreSaleQty] = useState(1);
+  const [storeSaleNote, setStoreSaleNote] = useState("");
+  const [isProcessingSale, setIsProcessingSale] = useState(false);
+  const [storeSaleMessage, setStoreSaleMessage] = useState(null);
+
+  useEffect(() => {
+    // ログイン中のスタッフ判定
+    async function checkStaff() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          setIsStaff(true);
+          const cur = getCurrentStaff();
+          setStaffName(cur?.name || "スタッフ");
+        }
+      } catch {}
+    }
+    checkStaff();
+  }, []);
+
+  // 在庫減算（店頭販売）
+  async function handleStoreSale() {
+    if (storeSaleQty < 1) return;
+    setIsProcessingSale(true);
+    setStoreSaleMessage(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setStoreSaleMessage({ type: "error", text: "認証エラー: 再ログインしてください" });
+        return;
+      }
+      const res = await fetch("/api/staff/decrement-stock", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          productId: product.id,
+          qty: storeSaleQty,
+          note: storeSaleNote || null,
+          staffName,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        setStoreSaleMessage({ type: "error", text: data.error || "処理失敗" });
+        return;
+      }
+      setStoreSaleMessage({
+        type: "success",
+        text: `✅ ${data.productName} を ${data.decrementedQty}個 店頭販売しました\n（残り在庫: ${data.newStock}個）`,
+      });
+      // 在庫表示を更新
+      setProduct({ ...product, stock: data.newStock });
+      setStoreSaleQty(1);
+      setStoreSaleNote("");
+      setTimeout(() => {
+        setShowStoreSaleModal(false);
+        setStoreSaleMessage(null);
+      }, 2500);
+    } catch (e) {
+      setStoreSaleMessage({ type: "error", text: e.message || "処理失敗" });
+    } finally {
+      setIsProcessingSale(false);
+    }
+  }
 
   const shopId = String(shop.id || "default");
   const allImages = [
@@ -172,6 +247,27 @@ export default function ProductDetailClient({ product, shop, tenantId }) {
               </div>
             )}
 
+            {/* [POS-#25] スタッフ専用: 店頭販売ボタン（ログイン中のスタッフのみ表示） */}
+            {isStaff && (
+              <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold bg-amber-600 text-white px-2 py-0.5 rounded-md">👤 スタッフ専用</span>
+                  <span className="text-[11px] text-amber-700">{staffName}でログイン中</span>
+                </div>
+                <button
+                  onClick={() => { setStoreSaleQty(1); setStoreSaleNote(""); setStoreSaleMessage(null); setShowStoreSaleModal(true); }}
+                  disabled={product.stock === 0}
+                  className="w-full h-12 bg-amber-600 text-white rounded-xl text-[13px] font-bold hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  📦 店頭販売で在庫を減らす
+                </button>
+                <p className="text-[10px] text-amber-700 leading-relaxed">
+                  ※ レジ機能ではありません。EC在庫を実店舗販売分と合わせて管理するためのボタンです。<br/>
+                  ※ POS（U-Reji、Airレジ等）はそのままご利用ください。
+                </p>
+              </div>
+            )}
+
             {/* 店舗情報・配送・安心ポイント（SEO + 信頼性） */}
             <div className="bg-white border border-[#EAEAEA] rounded-2xl p-4 space-y-3 text-[12px]">
               <h2 className="font-bold text-[#2D4B3E] flex items-center gap-2">
@@ -223,6 +319,118 @@ export default function ProductDetailClient({ product, shop, tenantId }) {
           </div>
         </div>
       </div>
+
+      {/* [POS-#25] 店頭販売モーダル */}
+      {showStoreSaleModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={() => !isProcessingSale && setShowStoreSaleModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-md w-full shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-white border-b border-[#EAEAEA] p-4 flex justify-between items-center rounded-t-2xl">
+              <h3 className="text-[15px] font-bold text-amber-900 flex items-center gap-2">
+                📦 店頭販売で在庫を減らす
+              </h3>
+              {!isProcessingSale && (
+                <button onClick={() => setShowStoreSaleModal(false)} className="text-[#999] hover:text-[#111]">
+                  <X size={18} />
+                </button>
+              )}
+            </div>
+            <div className="p-6 space-y-4">
+              {/* 商品情報 */}
+              <div className="bg-[#FBFAF9] rounded-xl p-3 flex items-center gap-3">
+                {product.image_url && (
+                  <img src={product.image_url} alt={product.name} className="w-14 h-14 object-cover rounded-lg" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-bold text-[#111] truncate">{product.name}</p>
+                  <p className="text-[11px] text-[#999]">現在の在庫: <span className="font-bold text-[#2D4B3E]">{product.stock}個</span></p>
+                </div>
+              </div>
+
+              {/* 販売数量 */}
+              <div>
+                <label className="text-[11px] font-bold text-[#999] block mb-2">販売数量</label>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setStoreSaleQty(Math.max(1, storeSaleQty - 1))}
+                    disabled={isProcessingSale}
+                    className="w-12 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl hover:bg-white disabled:opacity-50"
+                  >
+                    <Minus size={16} className="mx-auto" />
+                  </button>
+                  <input
+                    type="number"
+                    value={storeSaleQty}
+                    onChange={(e) => setStoreSaleQty(Math.max(1, Math.min(product.stock, Number(e.target.value) || 1)))}
+                    min={1}
+                    max={product.stock}
+                    disabled={isProcessingSale}
+                    className="flex-1 h-12 text-center text-[20px] font-bold bg-[#FBFAF9] border-2 border-[#EAEAEA] rounded-xl focus:border-amber-500 outline-none"
+                  />
+                  <button
+                    onClick={() => setStoreSaleQty(Math.min(product.stock, storeSaleQty + 1))}
+                    disabled={isProcessingSale}
+                    className="w-12 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl hover:bg-white disabled:opacity-50"
+                  >
+                    <Plus size={16} className="mx-auto" />
+                  </button>
+                </div>
+                <p className="text-[10px] text-[#999] mt-1">最大 {product.stock}個まで</p>
+              </div>
+
+              {/* メモ（任意） */}
+              <div>
+                <label className="text-[11px] font-bold text-[#999] block mb-2">メモ（任意）</label>
+                <input
+                  type="text"
+                  value={storeSaleNote}
+                  onChange={(e) => setStoreSaleNote(e.target.value)}
+                  placeholder="例: お友達の田中様、ご来店"
+                  disabled={isProcessingSale}
+                  className="w-full h-11 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] focus:border-amber-500 outline-none"
+                />
+                <p className="text-[10px] text-[#999] mt-1">後で監査ログから振り返れます</p>
+              </div>
+
+              {/* メッセージ */}
+              {storeSaleMessage && (
+                <div className={`rounded-xl p-3 text-[12px] font-bold whitespace-pre-line ${
+                  storeSaleMessage.type === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"
+                }`}>
+                  {storeSaleMessage.text}
+                </div>
+              )}
+
+              {/* アクションボタン */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setShowStoreSaleModal(false)}
+                  disabled={isProcessingSale}
+                  className="flex-1 h-12 bg-[#EAEAEA] text-[#555] rounded-xl text-[12px] font-bold disabled:opacity-50"
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={handleStoreSale}
+                  disabled={isProcessingSale || storeSaleQty < 1 || storeSaleQty > product.stock}
+                  className="flex-1 h-12 bg-amber-600 text-white rounded-xl text-[12px] font-bold hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isProcessingSale ? (
+                    <><Loader2 size={14} className="animate-spin" /> 処理中...</>
+                  ) : (
+                    <><CheckCircle2 size={14} /> {storeSaleQty}個 販売した</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

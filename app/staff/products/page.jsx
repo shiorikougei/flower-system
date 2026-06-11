@@ -291,12 +291,20 @@ function StaffProductsPageInner() {
           <h1 className="text-[18px] font-bold tracking-tight text-[#2D4B3E] flex items-center gap-2">商品管理（EC） <HelpTooltip articleId="product_register"/> <HelpTooltip articleId="restock_notification" size={14}/></h1>
           <p className="text-[11px] text-[#999999] mt-0.5">プリセット商品のカタログ・在庫を管理</p>
         </div>
-        <button
-          onClick={openNew}
-          className="flex items-center gap-2 px-5 h-11 bg-[#2D4B3E] text-white rounded-xl font-bold text-[13px] hover:bg-[#1f352b] transition-all shadow-md"
-        >
-          <Plus size={16} /> 新規商品
-        </button>
+        <div className="flex items-center gap-2">
+          <a
+            href="/staff/products/qr-print"
+            className="flex items-center gap-2 px-4 h-11 bg-white border border-[#EAEAEA] text-[#2D4B3E] rounded-xl font-bold text-[12px] hover:border-[#2D4B3E] transition-all"
+          >
+            📱 QRコード印刷
+          </a>
+          <button
+            onClick={openNew}
+            className="flex items-center gap-2 px-5 h-11 bg-[#2D4B3E] text-white rounded-xl font-bold text-[13px] hover:bg-[#1f352b] transition-all shadow-md"
+          >
+            <Plus size={16} /> 新規商品
+          </button>
+        </div>
       </header>
 
       <div className="max-w-[1200px] mx-auto p-4 md:p-8 space-y-6">
