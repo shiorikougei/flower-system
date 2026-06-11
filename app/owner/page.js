@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { FEATURE_GROUPS, ALL_FEATURE_KEYS } from '@/utils/features';
 import { DEFAULT_PRICING, calcMonthlyFee, calcWithManualOverride } from '@/utils/subscriptionPricing';
+import { DEFAULT_LP_PRICING } from '@/utils/lpPricing';
 
 const DEFAULT_AI_PROMPT = '以下のテキストからお花の「価格」「用途」「カラー」「イメージ」をJSON形式で抽出してください。価格はカンマなしの数値で出力してください。';
 const DEFAULT_CAPTION_PROMPT = `あなたは {appName} の SNS担当です。お花の注文を受けて完成した作品をInstagramに投稿します。以下の条件でキャプションを作成してください。
@@ -211,6 +212,9 @@ export default function OwnerDashboard() {
   const [pricingConfig, setPricingConfig] = useState(DEFAULT_PRICING);
   const [tenantBilling, setTenantBilling] = useState({});  // { [tenantId]: { manualPriceJpy, manualReason, billingEmail } }
 
+  // ★ [LP-#41] LP表示用 料金プラン
+  const [lpPricing, setLpPricing] = useState(DEFAULT_LP_PRICING);
+
   // ★ 請求・入金管理
   const [invoices, setInvoices] = useState([]);
   const [invoiceFilter, setInvoiceFilter] = useState({ status: 'all', month: '', tenantId: '' });
@@ -230,6 +234,16 @@ export default function OwnerDashboard() {
         });
         if (s.tenantBilling) setTenantBilling(s.tenantBilling);
         if (s.invoices) setInvoices(s.invoices);
+        // [LP-#41] LP料金（部分マージでフィールド追加に強い）
+        if (s.lpPricing) {
+          setLpPricing({
+            ...DEFAULT_LP_PRICING,
+            ...s.lpPricing,
+            plans: Array.isArray(s.lpPricing.plans) && s.lpPricing.plans.length > 0
+              ? s.lpPricing.plans.map((p, idx) => ({ ...DEFAULT_LP_PRICING.plans[idx] || {}, ...p }))
+              : DEFAULT_LP_PRICING.plans,
+          });
+        }
 
         // ★ 既存テナントの subscriptionBilling を一度だけミラー
         //   （マニュアル料金や支払方法をアップグレードモーダルで参照できるように）
@@ -318,6 +332,54 @@ export default function OwnerDashboard() {
       await supabase.from('app_settings').upsert({ id: 'nocolde_owner', settings_data: next });
       alert('料金マスターを保存しました');
     } catch (e) { alert('保存失敗: ' + e.message); }
+  };
+
+  // [LP-#41] LP料金保存
+  const saveLpPricing = async () => {
+    try {
+      const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
+      const next = { ...(data?.settings_data || {}), lpPricing };
+      await supabase.from('app_settings').upsert({ id: 'nocolde_owner', settings_data: next });
+      alert('LP料金を保存しました。\n\n※ トップページへの反映には最大1時間かかります（キャッシュ）');
+    } catch (e) { alert('保存失敗: ' + e.message); }
+  };
+
+  const updateLpPlan = (idx, patch) => {
+    setLpPricing(prev => ({
+      ...prev,
+      plans: prev.plans.map((p, i) => i === idx ? { ...p, ...patch } : p),
+    }));
+  };
+
+  const updateLpPlanFeature = (planIdx, fIdx, value) => {
+    setLpPricing(prev => ({
+      ...prev,
+      plans: prev.plans.map((p, i) => {
+        if (i !== planIdx) return p;
+        const features = [...(p.features || [])];
+        features[fIdx] = value;
+        return { ...p, features };
+      }),
+    }));
+  };
+
+  const addLpPlanFeature = (planIdx) => {
+    setLpPricing(prev => ({
+      ...prev,
+      plans: prev.plans.map((p, i) => i === planIdx ? { ...p, features: [...(p.features || []), ''] } : p),
+    }));
+  };
+
+  const removeLpPlanFeature = (planIdx, fIdx) => {
+    setLpPricing(prev => ({
+      ...prev,
+      plans: prev.plans.map((p, i) => i === planIdx ? { ...p, features: (p.features || []).filter((_, fi) => fi !== fIdx) } : p),
+    }));
+  };
+
+  const resetLpPricing = () => {
+    if (!confirm('LP料金をデフォルトに戻します。よろしいですか？')) return;
+    setLpPricing(JSON.parse(JSON.stringify(DEFAULT_LP_PRICING)));
   };
 
   const saveTenantBilling = async (tenantId, patch) => {
@@ -1392,6 +1454,119 @@ export default function OwnerDashboard() {
                     );
                   })}
                 </div>
+              </div>
+            </div>
+
+            {/* [LP-#41] LP表示用 料金プラン */}
+            <div className="bg-white border border-[#EAEAEA] rounded-2xl p-6 shadow-xl space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <h4 className="text-[#2D4B3E] font-bold text-[13px] tracking-widest">🌸 LP（トップページ）表示料金</h4>
+                  <p className="text-[10px] text-[#777] mt-1">www.noodleflorix.com の料金セクションに表示される内容。営業用・公開向け。</p>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={resetLpPricing} className="px-3 h-9 bg-[#F5F2EE] hover:bg-[#EAEAEA] text-[#555] font-bold rounded-lg text-[11px] flex items-center gap-1">
+                    <RefreshCw size={12}/> デフォルトに戻す
+                  </button>
+                  <button onClick={saveLpPricing} className="px-4 h-9 bg-cyan-600 hover:bg-cyan-500 text-black font-bold rounded-lg text-[11px] tracking-widest flex items-center gap-2">
+                    <Save size={12}/> LP料金保存
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {lpPricing.plans.map((plan, idx) => (
+                  <div key={idx} className={`border rounded-xl p-4 space-y-3 ${plan.recommended ? 'border-cyan-500 bg-cyan-50' : 'border-[#EAEAEA] bg-[#FBFAF9]'}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-[#999]">プラン {idx + 1}</span>
+                      <label className="flex items-center gap-1 text-[10px] text-[#555] cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={!!plan.recommended}
+                          onChange={e => updateLpPlan(idx, { recommended: e.target.checked })}
+                          className="w-3 h-3"
+                        />
+                        おすすめ表示
+                      </label>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-[#777]">プラン名</label>
+                      <input
+                        type="text"
+                        value={plan.name || ''}
+                        onChange={e => updateLpPlan(idx, { name: e.target.value })}
+                        className="w-full mt-1 bg-white border border-[#D0D0D0] rounded-lg p-2 text-[12px] font-bold text-[#333] outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-[#777]">サブタイトル</label>
+                      <input
+                        type="text"
+                        value={plan.subtitle || ''}
+                        onChange={e => updateLpPlan(idx, { subtitle: e.target.value })}
+                        className="w-full mt-1 bg-white border border-[#D0D0D0] rounded-lg p-2 text-[11px] text-[#555] outline-none"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-bold text-[#777]">月額（円・税抜）</label>
+                        <input
+                          type="number"
+                          value={plan.price ?? ''}
+                          onChange={e => updateLpPlan(idx, { price: e.target.value === '' ? null : Number(e.target.value) })}
+                          placeholder="3800"
+                          className="w-full mt-1 bg-white border border-[#D0D0D0] rounded-lg p-2 text-[12px] font-mono text-[#333] outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-[#777]">価格テキスト</label>
+                        <input
+                          type="text"
+                          value={plan.priceText || ''}
+                          onChange={e => updateLpPlan(idx, { priceText: e.target.value })}
+                          placeholder="お問い合わせ"
+                          className="w-full mt-1 bg-white border border-[#D0D0D0] rounded-lg p-2 text-[11px] text-[#333] outline-none"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-[#999] -mt-1">※ 価格テキストが空なら月額¥{plan.price?.toLocaleString() || 0}表示。文字を入れると文字優先。</p>
+                    <div>
+                      <label className="text-[10px] font-bold text-[#777]">含まれる機能</label>
+                      <div className="space-y-1 mt-1">
+                        {(plan.features || []).map((f, fi) => (
+                          <div key={fi} className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              value={f}
+                              onChange={e => updateLpPlanFeature(idx, fi, e.target.value)}
+                              className="flex-1 bg-white border border-[#D0D0D0] rounded p-1.5 text-[11px] text-[#333] outline-none"
+                            />
+                            <button onClick={() => removeLpPlanFeature(idx, fi)} className="w-7 h-7 bg-red-50 hover:bg-red-100 rounded flex items-center justify-center">
+                              <X size={11} className="text-red-600"/>
+                            </button>
+                          </div>
+                        ))}
+                        <button onClick={() => addLpPlanFeature(idx)} className="text-[10px] text-cyan-700 font-bold hover:underline">
+                          + 機能を追加
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-[#777]">プラン下の注釈テキスト</label>
+                <input
+                  type="text"
+                  value={lpPricing.note || ''}
+                  onChange={e => setLpPricing({ ...lpPricing, note: e.target.value })}
+                  className="w-full mt-1 bg-[#FBFAF9] border border-[#D0D0D0] rounded-lg p-2 text-[12px] text-[#333] outline-none"
+                />
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-[11px] text-yellow-900">
+                ⚠️ <strong>反映タイミング</strong>: 保存後、トップページ（/）に反映されるまで最大1時間かかります（キャッシュ）。すぐ確認したい場合はVercelダッシュボードからキャッシュを手動クリアできます。
               </div>
             </div>
 

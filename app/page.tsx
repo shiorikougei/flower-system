@@ -1,8 +1,14 @@
-// [LP-#36] FLORIX LP - 花屋オーナー向けSaaS紹介ページ
+// [LP-#36/#41] FLORIX LP - 花屋オーナー向けSaaS紹介ページ
 // トーン: 親しみ・温かみ（中小店舗オーナー向け）
-// CTA: お問い合わせフォーム（/contact）
+// CTA: お問い合わせフォーム
+// 料金: オーナー管理画面(/owner)から動的に反映
 
 import Link from "next/link";
+import { createClient } from "@supabase/supabase-js";
+import { DEFAULT_LP_PRICING, fetchLpPricing } from "@/utils/lpPricing";
+
+// 1時間ごとに再ビルド（オーナー画面で料金変更したら最大1時間で反映）
+export const revalidate = 3600;
 
 export const metadata = {
   title: "FLORIX | 花屋さんのための、やさしいクラウド業務システム",
@@ -46,7 +52,24 @@ const softwareJsonLd = {
   },
 };
 
-export default function HomePage() {
+async function getLpData() {
+  try {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return { pricing: DEFAULT_LP_PRICING };
+    }
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+    const pricing = await fetchLpPricing(supabaseAdmin);
+    return { pricing };
+  } catch {
+    return { pricing: DEFAULT_LP_PRICING };
+  }
+}
+
+export default async function HomePage() {
+  const { pricing } = await getLpData();
   return (
     <>
       <script
@@ -222,65 +245,59 @@ export default function HomePage() {
             </p>
 
             <div className="grid md:grid-cols-3 gap-5">
-              {/* スタンダード */}
-              <div className="bg-white rounded-2xl p-6 border border-[#EAEAEA]">
-                <h3 className="text-[16px] font-bold text-[#2D4B3E] mb-1">スターター</h3>
-                <p className="text-[11px] text-[#999] mb-4">個人店・1店舗</p>
-                <div className="mb-5">
-                  <span className="text-[36px] font-bold text-[#2D4B3E]">¥3,800</span>
-                  <span className="text-[12px] text-[#555]">/月（税抜）</span>
-                </div>
-                <ul className="space-y-2 mb-5 text-[12px] text-[#555]">
-                  <li>✓ ご注文管理</li>
-                  <li>✓ 配達管理</li>
-                  <li>✓ 顧客管理</li>
-                  <li>✓ 立札自動生成</li>
-                  <li>✓ 操作履歴</li>
-                </ul>
-              </div>
-
-              {/* プロフェッショナル（推奨） */}
-              <div className="bg-[#2D4B3E] text-white rounded-2xl p-6 border border-[#2D4B3E] relative scale-105 shadow-xl shadow-[#2D4B3E]/20">
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#D97D54] text-white text-[10px] font-bold px-3 py-1 rounded-full">
-                  ⭐ 人気No.1
-                </span>
-                <h3 className="text-[16px] font-bold mb-1">プロフェッショナル</h3>
-                <p className="text-[11px] text-white/70 mb-4">EC・SEO対策を本格化</p>
-                <div className="mb-5">
-                  <span className="text-[36px] font-bold">¥7,800</span>
-                  <span className="text-[12px] text-white/70">/月（税抜）</span>
-                </div>
-                <ul className="space-y-2 mb-5 text-[12px]">
-                  <li>✓ スタータープランすべて</li>
-                  <li>✓ オンラインショップ（EC）</li>
-                  <li>✓ SEO対策（ブログ・FAQ）</li>
-                  <li>✓ QRコード在庫管理</li>
-                  <li>✓ 売上分析ダッシュボード</li>
-                  <li>✓ 独自ドメイン対応</li>
-                </ul>
-              </div>
-
-              {/* エンタープライズ */}
-              <div className="bg-white rounded-2xl p-6 border border-[#EAEAEA]">
-                <h3 className="text-[16px] font-bold text-[#2D4B3E] mb-1">エンタープライズ</h3>
-                <p className="text-[11px] text-[#999] mb-4">複数店舗・法人</p>
-                <div className="mb-5">
-                  <span className="text-[24px] font-bold text-[#2D4B3E]">お問い合わせ</span>
-                </div>
-                <ul className="space-y-2 mb-5 text-[12px] text-[#555]">
-                  <li>✓ プロフェッショナルすべて</li>
-                  <li>✓ 複数店舗管理</li>
-                  <li>✓ 法人請求書発行</li>
-                  <li>✓ 専任サポート</li>
-                  <li>✓ カスタマイズ対応</li>
-                  <li>✓ オンプレ・SLA対応可</li>
-                </ul>
-              </div>
+              {pricing.plans.map((plan, idx) => {
+                const isRecommended = plan.recommended;
+                const priceDisplay = plan.priceText
+                  ? plan.priceText
+                  : (plan.price != null ? `¥${Number(plan.price).toLocaleString()}` : "お問い合わせ");
+                const isCustomPriceText = !!plan.priceText || plan.price == null;
+                return (
+                  <div
+                    key={idx}
+                    className={`rounded-2xl p-6 relative ${
+                      isRecommended
+                        ? "bg-[#2D4B3E] text-white border border-[#2D4B3E] scale-105 shadow-xl shadow-[#2D4B3E]/20"
+                        : "bg-white border border-[#EAEAEA]"
+                    }`}
+                  >
+                    {isRecommended && (
+                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#D97D54] text-white text-[10px] font-bold px-3 py-1 rounded-full">
+                        ⭐ 人気No.1
+                      </span>
+                    )}
+                    <h3 className={`text-[16px] font-bold mb-1 ${isRecommended ? "" : "text-[#2D4B3E]"}`}>
+                      {plan.name}
+                    </h3>
+                    <p className={`text-[11px] mb-4 ${isRecommended ? "text-white/70" : "text-[#999]"}`}>
+                      {plan.subtitle}
+                    </p>
+                    <div className="mb-5">
+                      <span className={`${isCustomPriceText ? "text-[24px]" : "text-[36px]"} font-bold ${isRecommended ? "" : "text-[#2D4B3E]"}`}>
+                        {priceDisplay}
+                      </span>
+                      {!isCustomPriceText && (
+                        <span className={`text-[12px] ${isRecommended ? "text-white/70" : "text-[#555]"}`}>
+                          /月（税抜）
+                        </span>
+                      )}
+                    </div>
+                    <ul className={`space-y-2 mb-5 text-[12px] ${isRecommended ? "" : "text-[#555]"}`}>
+                      {(plan.features || []).map((f, fi) => (
+                        <li key={fi}>✓ {f}</li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
             </div>
 
-            <p className="text-center text-[12px] text-[#666] mt-8">
-              🌸 すべてのプランに <strong>30日間無料トライアル</strong>つき・<strong>導入サポート無料</strong>
-            </p>
+            {pricing.note && (
+              <p className="text-center text-[12px] text-[#666] mt-8" dangerouslySetInnerHTML={{
+                __html: pricing.note
+                  .replace(/30日間無料トライアル/g, "<strong>30日間無料トライアル</strong>")
+                  .replace(/導入サポート無料/g, "<strong>導入サポート無料</strong>"),
+              }} />
+            )}
           </div>
         </section>
 
@@ -327,7 +344,7 @@ export default function HomePage() {
                 { q: "今使っているExcelや顧客リストから移行できますか？", a: "はい、CSV形式の顧客リスト・商品リストをお送りいただければ、当社でインポート作業を代行します。初期導入無料で対応しています。" },
                 { q: "途中でプラン変更はできますか？", a: "もちろん可能です。お店の成長に合わせてスターター→プロフェッショナルへのアップグレードも、ダウングレードもいつでもどうぞ。" },
                 { q: "解約はいつでもできますか？", a: "はい、月単位でいつでも解約可能です。違約金や年契約縛りはありません。安心してお試しください。" },
-                { q: "ホームページがないけどECだけ作れますか？", a: "はい、FLORIXのオンラインショップは独自ドメインにも対応しているので、これがあなたのお店の "公式オンラインショップ" になります。Google検索対策（SEO）も自動でついてきます。" },
+                { q: "ホームページがないけどECだけ作れますか？", a: "はい、FLORIXのオンラインショップは独自ドメインにも対応しているので、これがあなたのお店の『公式オンラインショップ』になります。Google検索対策（SEO）も自動でついてきます。" },
                 { q: "セキュリティは大丈夫ですか？", a: "はい、お客様の個人情報はデータベース上で暗号化保管、通信もSSL/TLS、二段階認証、操作監査ログ、Sentry監視を導入しています。法的なプライバシーポリシーも完備。" },
               ].map((item, idx) => (
                 <details key={idx} className="bg-white rounded-2xl p-5 border border-[#EAEAEA] group">
