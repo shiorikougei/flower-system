@@ -52,12 +52,19 @@ export default function TatefudaPreview({ tatePattern, layout, isOsonae, input1,
       <div className={`relative mx-auto border border-[#EAEAEA] shadow-lg bg-white flex flex-col items-center font-serif ${layout === 'horizontal' ? 'aspect-[1.414/1] w-full max-w-[500px] justify-center py-5 px-6' : 'aspect-[1/1.414] h-[320px] pt-5 px-4 pb-3'}`}>
 
         {/* メインの冠文字 — 祝=赤 / 供・御供=グレー */}
-        <div className={`font-black ${isOsonae ? 'text-gray-700' : redColor} ${layout === 'horizontal' ? 'text-[26px] mb-2' : 'text-[36px] mb-3 leading-none'}`}>
+        <div className={`font-black ${isOsonae ? 'text-gray-700' : redColor} ${layout === 'horizontal' ? 'text-[26px] mb-2' : 'text-[32px] mb-1 leading-none'}`}>
           {topPrefixText}
         </div>
 
+        {/* ★ 縦型 p8: 祝の真下に 内容（ご開店等）を横書きで配置 */}
+        {layout === 'vertical' && tatePattern?.includes('p8') && !isOsonae && (
+          <div className={`tracking-widest font-bold ${redColor} text-[16px] mb-3`}>
+            {input1 || '内容'}
+          </div>
+        )}
+
         {/* 宛名・内容・贈り主のレイアウト */}
-        <div className={`flex w-full font-bold ${layout === 'horizontal' ? `flex-col items-center gap-1 ${horizontalNameSize}` : 'flex-row-reverse justify-center gap-5 h-[220px] items-center'}`}>
+        <div className={`flex w-full font-bold ${layout === 'horizontal' ? `flex-col items-center gap-1 ${horizontalNameSize}` : 'flex-row-reverse justify-center gap-8 h-[180px] items-center'}`}>
 
           {tatePattern?.includes('p6') || tatePattern?.includes('p8') ? (
             layout === 'horizontal' ? (
@@ -69,9 +76,8 @@ export default function TatefudaPreview({ tatePattern, layout, isOsonae, input1,
               </>
             ) : (
               <>
-                {/* ★ 縦型 三列: 宛名様(右) / 内容(中) / 贈り主(左) の伝統的配置 */}
+                {/* ★ 縦型 p8: 内容は上に出したので、ここは 宛名様(右) / 贈り主(左) の二列 */}
                 <div className={`tracking-widest ${nameColor}`} style={getTextStyle(input2 || '宛名', 18)}>{input2 || '宛名'}様</div>
-                {!isOsonae && <div className={`tracking-widest ${redColor}`} style={getTextStyle(input1 || '内容', 18)}>{input1 || '内容'}</div>}
                 <div className={`tracking-widest ${nameColor}`} style={getTextStyle(input3 || '贈り主', 18)}>{input3 || '贈り主'}</div>
               </>
             )
