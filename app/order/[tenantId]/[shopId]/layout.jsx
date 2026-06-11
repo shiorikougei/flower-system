@@ -99,6 +99,14 @@ export default async function ShopLayout({ children, params }) {
           addressCountry: "JP",
         }
       : undefined,
+    // [SEO-#23] geo（緯度経度）でGoogle Maps表示精度UP
+    geo: (shop.latitude && shop.longitude)
+      ? {
+          "@type": "GeoCoordinates",
+          latitude: Number(shop.latitude),
+          longitude: Number(shop.longitude),
+        }
+      : undefined,
     openingHoursSpecification:
       shop.openTime && shop.closeTime
         ? [

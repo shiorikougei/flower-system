@@ -36,7 +36,25 @@ async function getProductData(tenantId, productId) {
   const settings = settingsRes.data?.settings_data || {};
   const shop = settings.shops?.[0] || {};
 
-  return { product, settings, shop };
+  // [SEO-#20] 関連商品: 同カテゴリの他商品を最大4件取得
+  let relatedProducts = [];
+  try {
+    if (product.category) {
+      const { data: related } = await supabaseAdmin
+        .from("products")
+        .select("id, name, price, image_url, category, stock, restock_allowed")
+        .eq("tenant_id", tenantId)
+        .eq("is_active", true)
+        .eq("category", product.category)
+        .neq("id", productId)
+        .limit(8);
+      relatedProducts = (related || [])
+        .filter(p => !(Number(p.stock) === 0 && !p.restock_allowed))
+        .slice(0, 4);
+    }
+  } catch {}
+
+  return { product, settings, shop, relatedProducts };
 }
 
 // [SEO-#2] 動的メタタグ生成
@@ -80,7 +98,7 @@ export default async function ProductPage({ params }) {
   const data = await getProductData(tenantId, productId);
   if (!data) notFound();
 
-  const { product, settings, shop } = data;
+  const { product, settings, shop, relatedProducts } = data;
   const shopName = shop.name || "FLORIX";
   const url = `${BASE_URL}/products/${tenantId}/${productId}`;
 
@@ -191,6 +209,7 @@ export default async function ProductPage({ params }) {
         product={product}
         shop={shop}
         tenantId={tenantId}
+        relatedProducts={relatedProducts}
       />
     </>
   );

@@ -62,12 +62,43 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // [SEO-#18] Core Web Vitals 最適化
+  // 画像の最適化（next/image を使った時に自動でAVIF/WebP変換 → LCP改善）
+  images: {
+    formats: ["image/avif", "image/webp"],
+    remotePatterns: [
+      { protocol: "https", hostname: "*.supabase.co" },
+      { protocol: "https", hostname: "*.supabase.in" },
+      { protocol: "https", hostname: "*.line-scdn.net" },
+      { protocol: "https", hostname: "profile.line-scdn.net" },
+    ],
+    // 一般的なEC画像の代表サイズに最適化
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 64, 96, 128, 256, 384],
+  },
+  // 圧縮を有効化（Vercelでは既定でON、念のため）
+  compress: true,
+  // 不要なpoweredByヘッダーを削除（軽量化＆セキュリティ）
+  poweredByHeader: false,
   async headers() {
     return [
       {
         // 全パスに適用
         source: "/:path*",
         headers: securityHeaders,
+      },
+      // [SEO-#18] 静的アセット長期キャッシュ
+      {
+        source: "/_next/static/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
+        source: "/:path*\\.(jpg|jpeg|png|webp|avif|gif|svg|ico)",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
       },
     ];
   },

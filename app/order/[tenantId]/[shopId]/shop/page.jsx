@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
 import { ShoppingCart, Plus, Minus, Package, X, ChevronLeft, Search, Sparkles, Bell, CheckCircle2 } from 'lucide-react';
 import { getCart, addToCart, getCartCount } from '@/utils/cart';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 export default function ShopCatalogPage() {
   const params = useParams();
@@ -126,7 +127,14 @@ export default function ShopCatalogPage() {
         </div>
       </header>
 
-      <main className="max-w-[1100px] mx-auto px-6 pt-10 space-y-8">
+      <main className="max-w-[1100px] mx-auto px-6 pt-6 space-y-8">
+        {/* [SEO-#22] パンくず */}
+        <Breadcrumbs
+          items={[
+            { label: targetShop.name || 'ホーム', href: `/order/${tenantId}/${shopId}` },
+            { label: '商品一覧' },
+          ]}
+        />
         <div>
           <h1 className="text-[24px] font-bold text-[#2D4B3E]">商品ラインナップ</h1>
           <p className="text-[12px] text-[#555555] mt-1">気に入った商品をカートに追加して、まとめてご注文いただけます。</p>

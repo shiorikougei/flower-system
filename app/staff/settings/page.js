@@ -753,6 +753,23 @@ export default function SettingsPage() {
             <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">郵便番号</label><input type="text" value={shop.zip} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, zip:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="000-0000"/></div>
             <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">住所</label><input type="text" value={shop.address} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, address:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/></div>
             <div className="space-y-1 md:col-span-2"><label className="text-[10px] font-bold text-[#999999]">インボイス番号</label><input type="text" value={shop.invoiceNumber || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, invoiceNumber:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="T12345..."/></div>
+
+            {/* ★ [SEO-#23] 緯度経度（LocalBusiness geo） */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-[#999999]">緯度（Latitude）</label>
+              <input type="number" step="0.0000001" value={shop.latitude || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, latitude:e.target.value === '' ? null : Number(e.target.value)}:s))} placeholder="35.6809591" className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-[#999999]">経度（Longitude）</label>
+              <input type="number" step="0.0000001" value={shop.longitude || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, longitude:e.target.value === '' ? null : Number(e.target.value)}:s))} placeholder="139.7673068" className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/>
+            </div>
+            <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-xl p-3 text-[11px] text-blue-900 leading-relaxed">
+              📍 <strong>緯度経度の取得方法</strong>:
+              <a href="https://www.google.co.jp/maps" target="_blank" rel="noopener" className="underline font-bold">Google マップ</a> で店舗住所を検索 →
+              店舗ピンを<strong>右クリック</strong> → 一番上の数字（例: 35.6809591, 139.7673068）をコピー →
+              緯度（最初の数字）と経度（次の数字）をそれぞれの欄に貼り付け。
+              <br/>📌 Google マップでの店舗表示精度UP + LocalBusiness Schema強化に効果絶大。
+            </div>
           </div>
 
           {/* ★ [SEO-#12] 店舗紹介文（SEO・お客様向け） */}

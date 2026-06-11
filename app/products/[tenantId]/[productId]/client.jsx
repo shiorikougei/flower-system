@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { addToCart } from "@/utils/cart";
 
-export default function ProductDetailClient({ product, shop, tenantId }) {
+export default function ProductDetailClient({ product, shop, tenantId, relatedProducts = [] }) {
   const router = useRouter();
   const [qty, setQty] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -220,8 +220,51 @@ export default function ProductDetailClient({ product, shop, tenantId }) {
               <p className="text-[12px] font-bold text-[#2D4B3E]">💬 見積もり依頼</p>
               <p className="text-[10px] text-[#999] mt-1">スタッフが提案</p>
             </Link>
+            <Link
+              href={`/order/${tenantId}/${shopId}/faq`}
+              className="block p-4 bg-white border border-[#EAEAEA] rounded-xl hover:border-[#2D4B3E] transition-all"
+            >
+              <p className="text-[12px] font-bold text-[#2D4B3E]">❓ よくある質問</p>
+              <p className="text-[10px] text-[#999] mt-1">配達・支払い・お問い合わせ</p>
+            </Link>
           </div>
         </div>
+
+        {/* [SEO-#20] 関連商品（同カテゴリ） */}
+        {relatedProducts && relatedProducts.length > 0 && (
+          <div className="mt-12 pt-8 border-t border-[#EAEAEA]">
+            <h2 className="text-[14px] font-bold text-[#2D4B3E] mb-1">
+              ✨ 関連商品{product.category ? `（${product.category}）` : ""}
+            </h2>
+            <p className="text-[11px] text-[#999] mb-4">同じカテゴリで他にも素敵な商品があります</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {relatedProducts.map(rp => (
+                <Link
+                  key={rp.id}
+                  href={`/products/${tenantId}/${rp.id}`}
+                  className="bg-white rounded-2xl border border-[#EAEAEA] overflow-hidden hover:shadow-md transition-all flex flex-col group"
+                >
+                  <div className="aspect-square bg-[#FBFAF9] overflow-hidden">
+                    {rp.image_url ? (
+                      <img
+                        src={rp.image_url}
+                        alt={`${rp.name}`}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[#CCC]">📦</div>
+                    )}
+                  </div>
+                  <div className="p-3 flex-1 flex flex-col">
+                    <p className="text-[12px] font-bold text-[#111] line-clamp-2">{rp.name}</p>
+                    <p className="text-[14px] font-bold text-[#2D4B3E] mt-auto pt-2">¥{Number(rp.price).toLocaleString()}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
