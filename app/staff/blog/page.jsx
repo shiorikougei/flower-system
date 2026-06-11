@@ -4,32 +4,57 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Edit2, Trash2, Eye, ExternalLink, X, Save } from "lucide-react";
-import { createBrowserClient } from "@/utils/supabase";
-import { useStaff } from "@/contexts/StaffContext";
+import { Plus, Edit2, Trash2, ExternalLink, X, Save } from "lucide-react";
+import { supabase } from "@/utils/supabase";
 
 export default function StaffBlogPage() {
-  const { tenantId } = useStaff();
-  const supabase = createBrowserClient();
+  const [tenantId, setTenantId] = useState(null);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(null); // 編集中の記事 or { new: true }
+  const [editing, setEditing] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
 
-  const loadPosts = async () => {
+  useEffect(() => {
+    initData();
+  }, []);
+
+  async function initData() {
     setLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = "/staff/login";
+        return;
+      }
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", session.user.id)
+        .single();
+      const tId = profile?.tenant_id;
+      if (!tId) throw new Error("tenant_id が取得できません");
+      setTenantId(tId);
+      await loadPosts(tId);
+    } catch (e) {
+      console.error("[blog admin init]", e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadPosts(tId) {
+    const id = tId || tenantId;
+    if (!id) return;
     const { data, error } = await supabase
       .from("blog_posts")
       .select("*")
-      .eq("tenant_id", String(tenantId).toLowerCase())
+      .eq("tenant_id", String(id).toLowerCase())
       .order("created_at", { ascending: false });
-    if (!error) setPosts(data || []);
-    setLoading(false);
-  };
+    if (error) console.error("[blog posts load]", error);
+    setPosts(data || []);
+  }
 
-  useEffect(() => { if (tenantId) loadPosts(); }, [tenantId]);
-
-  const handleSave = async (post) => {
+  async function handleSave(post) {
     const payload = {
       tenant_id: String(tenantId).toLowerCase(),
       slug: post.slug,
@@ -52,14 +77,22 @@ export default function StaffBlogPage() {
     }
     setEditing(null);
     loadPosts();
-  };
+  }
 
-  const handleDelete = async (id) => {
+  async function handleDelete(id) {
     if (!confirm("この記事を削除します。よろしいですか？")) return;
     const { error } = await supabase.from("blog_posts").delete().eq("id", id);
     if (error) return alert(`削除失敗: ${error.message}`);
     loadPosts();
-  };
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center">
+        <p className="text-[#999] text-[13px]">読み込み中...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FBFAF9] p-6 md:p-10">
@@ -85,9 +118,7 @@ export default function StaffBlogPage() {
           </div>
         </div>
 
-        {loading ? (
-          <div className="text-center text-[#999] py-12">読み込み中...</div>
-        ) : posts.length === 0 ? (
+        {posts.length === 0 ? (
           <div className="bg-white border border-dashed border-[#EAEAEA] rounded-2xl p-12 text-center">
             <p className="text-[14px] font-bold text-[#999]">まだ記事がありません</p>
             <p className="text-[11px] text-[#CCC] mt-2">「新規記事」から最初の記事を書いてみましょう</p>
@@ -100,7 +131,7 @@ export default function StaffBlogPage() {
                   <img src={p.cover_image_url} alt="" className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.is_published ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                       {p.is_published ? '公開中' : '下書き'}
                     </span>
@@ -112,7 +143,7 @@ export default function StaffBlogPage() {
                   <p className="text-[10px] text-[#999] mt-1">/{p.slug} {p.published_at && `· ${new Date(p.published_at).toLocaleDateString('ja-JP')}`}</p>
                 </div>
                 <div className="flex gap-1">
-                  {p.is_published && (
+                  {p.is_published && tenantId && (
                     <Link
                       href={`/blog/${tenantId}/${p.slug}`}
                       target="_blank"
@@ -220,7 +251,6 @@ function EditModal({ post, onClose, onSave }) {
   });
   const [tagInput, setTagInput] = useState("");
 
-  // タイトルからslugを自動生成（編集中はしない）
   const autoSlug = () => {
     if (!form.title) return;
     const slug = form.title
@@ -334,6 +364,7 @@ function EditModal({ post, onClose, onSave }) {
                   onChange={e => setTagInput(e.target.value)}
                   onKeyDown={e => {
                     if (e.key === "Enter" && tagInput.trim()) {
+                      e.preventDefault();
                       setForm({ ...form, tags: [...form.tags, tagInput.trim()] });
                       setTagInput("");
                     }
@@ -351,7 +382,7 @@ function EditModal({ post, onClose, onSave }) {
                 onChange={e => setForm({ ...form, content_md: e.target.value })}
                 rows={18}
                 className="w-full bg-[#FBFAF9] border rounded-xl px-4 py-3 text-[12px] font-mono"
-                placeholder={`## はじめに\n\n母の日に贈るお花のおすすめをご紹介します。\n\n## 1位：ピンクのバラブーケ\n\n華やかさNo.1のバラのブーケ...\n\n[商品ページはこちら](/products/...)`}
+                placeholder={`## はじめに\n\n母の日に贈るお花のおすすめをご紹介します。\n\n## 1位：ピンクのバラブーケ\n\n華やかさNo.1のバラのブーケ...`}
               />
               <p className="text-[10px] text-[#999] mt-1">{form.content_md.length} 文字（1500文字以上推奨）</p>
             </div>

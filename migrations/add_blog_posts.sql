@@ -25,7 +25,8 @@ CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(tenant_id, slug);
 -- RLS
 ALTER TABLE blog_posts ENABLE ROW LEVEL SECURITY;
 
--- 公開記事は誰でも読める
+-- 公開記事は誰でも読める（冪等化: 既存ポリシーを削除してから作成）
+DROP POLICY IF EXISTS "blog_posts_public_read" ON blog_posts;
 CREATE POLICY "blog_posts_public_read" ON blog_posts
   FOR SELECT
   USING (is_published = true);
