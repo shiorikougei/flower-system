@@ -14,7 +14,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe, APP_URL } from '@/utils/stripe';
 import { sendEmail } from '@/utils/email';
-import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatOrderBreakdown, formatRecipientInfo, formatLineAddFriendBlock } from '@/utils/emailTemplates';
+import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatOrderBreakdown, formatRecipientInfo, formatLineAddFriendBlock, escapeHtml } from '@/utils/emailTemplates';
 import { sendLineParallelToEmail } from '@/utils/line';
 import { createMypageMagicUrl } from '@/utils/mypageLink';
 import { rateLimit, getClientIp } from '@/utils/rateLimit';
@@ -401,17 +401,17 @@ export async function POST(request) {
           shopName,
           bankInfo,
         });
-        // 店舗向けバナーを上に追加
+        // ★ [Phase1-③ XSS対策] 顧客入力(customerName)・店舗入力(shopPhone等)を全てescapeHtml
         const storeBanner = `
           <div style="background:#117768; color:white; padding:16px 20px; border-radius:8px 8px 0 0; font-size:14px; font-weight:bold;">
-            📥 ${eventLabel} 新しい注文が入りました
+            📥 ${escapeHtml(eventLabel)} 新しい注文が入りました
           </div>
           <div style="background:#f4faf8; padding:14px 20px; border-left:4px solid #117768; margin-bottom:16px; font-size:12px; color:#333; line-height:1.6;">
-            <strong>お客様:</strong> ${customerName} 様<br/>
-            <strong>注文ID:</strong> ${shortOrderId}<br/>
+            <strong>お客様:</strong> ${escapeHtml(customerName)} 様<br/>
+            <strong>注文ID:</strong> ${escapeHtml(shortOrderId)}<br/>
             <strong>合計金額:</strong> ¥${totalAmount.toLocaleString()}（税込）<br/>
             <strong>受付日時:</strong> ${new Date().toLocaleString('ja-JP')}<br/>
-            ${shopPhone ? `<strong>店舗TEL:</strong> ${shopPhone}<br/>` : ''}
+            ${shopPhone ? `<strong>店舗TEL:</strong> ${escapeHtml(shopPhone)}<br/>` : ''}
             <span style="font-size:11px; color:#666;">↓ 以下、お客様への確認メールと同じ内容です ↓</span>
           </div>
         `;

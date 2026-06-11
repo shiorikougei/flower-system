@@ -11,7 +11,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/utils/stripe';
 import { sendEmail } from '@/utils/email';
-import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatOrderBreakdown, formatRecipientInfo, formatLineAddFriendBlock } from '@/utils/emailTemplates';
+import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatOrderBreakdown, formatRecipientInfo, formatLineAddFriendBlock, escapeHtml } from '@/utils/emailTemplates';
 import { sendLineParallelToEmail } from '@/utils/line';
 import { createMypageMagicUrl } from '@/utils/mypageLink';
 
@@ -147,16 +147,17 @@ export async function POST(request) {
                 const notifyEmail = (shop.notifyEmail || '').trim();
                 if (notifyEmail && shop.notifyOnPayment !== false) {
                   const ccEmails = (shop.notifyCcEmails || '').split(',').map(s => s.trim()).filter(Boolean);
+                  // ★ [Phase1-③ XSS対策] 顧客入力・店舗入力を全てescapeHtml
                   const storeBanner = `
                     <div style="background:#117768; color:white; padding:16px 20px; border-radius:8px 8px 0 0; font-size:14px; font-weight:bold;">
                       💳 【決済完了】クレジットカード決済が完了しました
                     </div>
                     <div style="background:#f4faf8; padding:14px 20px; border-left:4px solid #117768; margin-bottom:16px; font-size:12px; color:#333; line-height:1.6;">
-                      <strong>お客様:</strong> ${od.customerInfo?.name || 'お客様'} 様<br/>
-                      <strong>注文ID:</strong> ${String(orderId).slice(0, 8)}<br/>
+                      <strong>お客様:</strong> ${escapeHtml(od.customerInfo?.name || 'お客様')} 様<br/>
+                      <strong>注文ID:</strong> ${escapeHtml(String(orderId).slice(0, 8))}<br/>
                       <strong>合計金額:</strong> ¥${total.toLocaleString()}（税込）<br/>
                       <strong>決済日時:</strong> ${new Date().toLocaleString('ja-JP')}<br/>
-                      ${shopPhone ? `<strong>店舗TEL:</strong> ${shopPhone}<br/>` : ''}
+                      ${shopPhone ? `<strong>店舗TEL:</strong> ${escapeHtml(shopPhone)}<br/>` : ''}
                       <span style="font-size:11px; color:#666;">↓ 以下、お客様への確認メールと同じ内容です ↓</span>
                     </div>
                   `;

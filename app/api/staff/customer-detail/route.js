@@ -59,10 +59,11 @@ export async function GET(request) {
       .eq('customer_email', email)
       .order('linked_at', { ascending: false });
 
-    // テナント全体のLINE紐付け（移動候補のため）
+    // ★ [Phase1-① PII保護] 他顧客のメールアドレスは返さない（移動候補は表示名・IDのみ）
+    //    customer_email を含めると一覧で他顧客のメアドが見える状態になっていた
     const { data: allLineLinksInTenant } = await supabaseAdmin
       .from('customer_line_links')
-      .select('id, line_user_id, customer_email, display_name, is_active, linked_at')
+      .select('id, line_user_id, display_name, is_active, linked_at')
       .eq('tenant_id', tenantId)
       .order('linked_at', { ascending: false });
 

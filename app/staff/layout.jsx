@@ -8,6 +8,7 @@ import {
   Users, Building2, Settings, TrendingUp, Lock, Sparkles, MessageSquare, X, Send, Image as ImageIcon, ShoppingBag, UserCheck, ChevronDown, History, Clock, BookOpen
 } from 'lucide-react';
 import { getCurrentStaff, setCurrentStaff, setAuthConfig, ROLE_LABELS, ROLE_DESCRIPTIONS, can } from '@/utils/staffRole';
+import { logAction } from '@/utils/auditLog';
 import { isFeatureEnabled } from '@/utils/features';
 import UpgradeModal from '@/components/UpgradeModal';
 
@@ -209,13 +210,71 @@ export default function StaffLayout({ children }) {
     performSwitch(s);
   };
 
+  // ★ [Phase1-② PINブルートフォース対策] 失敗回数とロックアウトの管理
+  //    localStorageに失敗履歴を保存。5回失敗 → 5分間ロック
+  const PIN_LOCK_KEY = 'florix_pin_lock';
+  const PIN_MAX_ATTEMPTS = 5;
+  const PIN_LOCK_DURATION_MS = 5 * 60 * 1000; // 5分
+
+  const getPinLockState = () => {
+    if (typeof window === 'undefined') return { attempts: 0, lockedUntil: 0 };
+    try {
+      const raw = localStorage.getItem(PIN_LOCK_KEY);
+      if (!raw) return { attempts: 0, lockedUntil: 0 };
+      const parsed = JSON.parse(raw);
+      // ロック期限切れならリセット
+      if (parsed.lockedUntil && Date.now() > parsed.lockedUntil) {
+        localStorage.removeItem(PIN_LOCK_KEY);
+        return { attempts: 0, lockedUntil: 0 };
+      }
+      return parsed;
+    } catch { return { attempts: 0, lockedUntil: 0 }; }
+  };
+
+  const setPinLockState = (state) => {
+    if (typeof window === 'undefined') return;
+    try { localStorage.setItem(PIN_LOCK_KEY, JSON.stringify(state)); } catch {}
+  };
+
   const verifyPin = () => {
     if (!pinModal?.staff) return;
-    if (pinInput !== pinModal.staff.pin) {
-      setPinError('PINが違います');
+
+    // ロック中なら拒否
+    const lockState = getPinLockState();
+    if (lockState.lockedUntil && Date.now() < lockState.lockedUntil) {
+      const remainSec = Math.ceil((lockState.lockedUntil - Date.now()) / 1000);
+      const remainMin = Math.ceil(remainSec / 60);
+      setPinError(`連続失敗のため${remainMin}分間ロック中です。しばらく経ってからお試しください。`);
       setPinInput('');
       return;
     }
+
+    if (pinInput !== pinModal.staff.pin) {
+      const nextAttempts = (lockState.attempts || 0) + 1;
+      if (nextAttempts >= PIN_MAX_ATTEMPTS) {
+        // ロックアウト発動
+        const lockedUntil = Date.now() + PIN_LOCK_DURATION_MS;
+        setPinLockState({ attempts: nextAttempts, lockedUntil });
+        setPinError(`5回連続で失敗しました。5分間ロックします。`);
+        // 監査ログにも記録（fire-and-forget）
+        try {
+          logAction({
+            action: 'pin_lockout',
+            target: pinModal.staff.name,
+            detail: `${nextAttempts}回連続失敗のためロックアウト`,
+          });
+        } catch {}
+      } else {
+        setPinLockState({ attempts: nextAttempts, lockedUntil: 0 });
+        const remaining = PIN_MAX_ATTEMPTS - nextAttempts;
+        setPinError(`PINが違います（残り${remaining}回）`);
+      }
+      setPinInput('');
+      return;
+    }
+
+    // 成功 → カウンタリセット
+    setPinLockState({ attempts: 0, lockedUntil: 0 });
     performSwitch(pinModal.staff);
   };
 

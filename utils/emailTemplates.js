@@ -468,7 +468,8 @@ export function bodyToHtml(body, { shopName, shopEmail, shopPhone, lineAddFriend
 </html>`;
 }
 
-function escapeHtml(s) {
+// ★ [Phase1-③ XSS対策] HTML エスケープ関数。他のAPI Routeからも import 可能に
+export function escapeHtml(s) {
   if (!s) return '';
   return String(s)
     .replace(/&/g, '&amp;')

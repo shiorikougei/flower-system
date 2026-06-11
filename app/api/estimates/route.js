@@ -65,14 +65,13 @@ export async function POST(request) {
     const { data, error } = await supabase.from('estimates').insert([insertPayload]).select('id').single();
 
     if (error) {
-      // ★ 詳細なエラー情報を返す（デバッグ用）
-      console.error('[estimates POST] insert error:', error);
-      console.error('[estimates POST] payload:', JSON.stringify(insertPayload).slice(0, 500));
+      // ★ [Phase1-① PII保護] 詳細エラーは本番でクライアントに返さない（DB構造・PII漏洩リスク）
+      console.error('[estimates POST] insert error:', error?.code || 'unknown');
+      // payloadのログ出力は廃止（顧客個人情報を含む）
       return NextResponse.json({
-        error: '見積依頼の登録に失敗しました',
-        detail: error.message || String(error),
-        code: error.code,
-        hint: error.hint || null,
+        error: '見積依頼の登録に失敗しました。しばらく経ってから再度お試しください。',
+        // 開発環境のみ詳細を返す
+        ...(process.env.NODE_ENV === 'development' ? { detail: error.message, code: error.code } : {}),
       }, { status: 500 });
     }
 

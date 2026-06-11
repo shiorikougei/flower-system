@@ -759,6 +759,10 @@ export default function SettingsPage() {
           <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
             <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Mail size={16}/> 受注通知メール設定</h3>
             <p className="text-[11px] text-[#999999]">注文・決済・見積依頼が入った時に、店舗のメールアドレスに通知メールを送信します。</p>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] font-bold text-amber-900 leading-relaxed">
+              ⚠️ 通知メアドが間違っていると、お客様の個人情報が他人に届いてしまいます。<br/>
+              新しいメアドを入力したら、<strong>必ず「テスト送信」</strong>で実際に届くか確認してください。
+            </div>
             <div className="space-y-3">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-[#999999]">通知先メールアドレス（メイン）</label>
@@ -780,6 +784,37 @@ export default function SettingsPage() {
                   className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"
                 />
               </div>
+              {/* ★ [Phase1-⑤] テスト送信ボタン */}
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!shop.notifyEmail) { alert('通知先メールアドレスを入力してください'); return; }
+                  try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const ccEmails = (shop.notifyCcEmails || '').split(',').map(s => s.trim()).filter(Boolean);
+                    const res = await fetch('/api/staff/test-notification', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${session?.access_token || ''}`,
+                      },
+                      body: JSON.stringify({
+                        email: shop.notifyEmail,
+                        ccEmails,
+                        shopName: shop.name,
+                      }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || '送信失敗');
+                    alert(`✅ テストメールを送信しました\n\n送信先: ${data.sentTo}${data.cc?.length > 0 ? `\nCC: ${data.cc.join(', ')}` : ''}\n\n数分以内にメールが届いているか確認してください。\n届かない場合はメアドが間違っている可能性があります。`);
+                  } catch (e) {
+                    alert(`❌ テスト送信に失敗しました\n\n${e.message}`);
+                  }
+                }}
+                className="w-full h-10 bg-amber-600 text-white rounded-xl text-[12px] font-bold hover:bg-amber-700 flex items-center justify-center gap-2"
+              >
+                ✉️ このメアドにテスト送信して確認する
+              </button>
               <div className="bg-[#FBFAF9] p-3 rounded-xl space-y-2">
                 <p className="text-[11px] font-bold text-[#2D4B3E] mb-1">通知タイミング（ON/OFF）</p>
                 <label className="flex items-center gap-2 cursor-pointer">

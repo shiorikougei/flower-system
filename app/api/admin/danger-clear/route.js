@@ -61,12 +61,15 @@ export async function POST(request) {
           .delete({ count: 'exact' })
           .not('id', 'is', null);
         if (error) {
-          results.push({ table, ok: false, error: error.message });
+          // ★ [Phase1-① PII保護] error.messageにDB構造やPIIが含まれる可能性。サーバーログのみ
+          console.error(`[danger-clear] table=${table}:`, error?.code || 'unknown');
+          results.push({ table, ok: false, error: 'テーブル削除失敗' });
         } else {
           results.push({ table, ok: true, deleted: count ?? 0 });
         }
       } catch (e) {
-        results.push({ table, ok: false, error: e.message });
+        console.error(`[danger-clear] exception table=${table}`);
+        results.push({ table, ok: false, error: 'テーブル削除失敗' });
       }
     }
 

@@ -287,7 +287,13 @@ export default function OrderDetailModal({
       const history = modalData.statusHistory || [];
       const activeStatuses = getStatusOptions();
 
-      const formatText = (txt) => String(txt || '');
+      // ★ [Phase1-③ XSS対策] HTMLエンティティをエスケープ。帳票HTMLに顧客入力を埋め込む際は必ずこの関数経由で
+      const formatText = (txt) => String(txt || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
       const safeId = String(order.id || '').slice(0, 8);
       const receiveMethodStr = getMethodLabel(modalData.receiveMethod);
       const datePart = modalData.selectedDate || '未指定';
