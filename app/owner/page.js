@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { FEATURE_GROUPS, ALL_FEATURE_KEYS } from '@/utils/features';
 import { DEFAULT_PRICING, calcMonthlyFee, calcWithManualOverride } from '@/utils/subscriptionPricing';
-import { DEFAULT_LP_PRICING } from '@/utils/lpPricing';
+import { DEFAULT_LP_PRICING, DEFAULT_LP_IMAGES, LP_IMAGE_KEYS } from '@/utils/lpPricing';
 
 const DEFAULT_AI_PROMPT = '以下のテキストからお花の「価格」「用途」「カラー」「イメージ」をJSON形式で抽出してください。価格はカンマなしの数値で出力してください。';
 const DEFAULT_CAPTION_PROMPT = `あなたは {appName} の SNS担当です。お花の注文を受けて完成した作品をInstagramに投稿します。以下の条件でキャプションを作成してください。
@@ -215,6 +215,10 @@ export default function OwnerDashboard() {
   // ★ [LP-#41] LP表示用 料金プラン
   const [lpPricing, setLpPricing] = useState(DEFAULT_LP_PRICING);
 
+  // ★ [LP-#45] LP画像
+  const [lpImages, setLpImages] = useState(DEFAULT_LP_IMAGES);
+  const [lpImageUploading, setLpImageUploading] = useState(null);  // 現在アップロード中のキー
+
   // ★ 請求・入金管理
   const [invoices, setInvoices] = useState([]);
   const [invoiceFilter, setInvoiceFilter] = useState({ status: 'all', month: '', tenantId: '' });
@@ -243,6 +247,10 @@ export default function OwnerDashboard() {
               ? s.lpPricing.plans.map((p, idx) => ({ ...DEFAULT_LP_PRICING.plans[idx] || {}, ...p }))
               : DEFAULT_LP_PRICING.plans,
           });
+        }
+        // [LP-#45] LP画像
+        if (s.lpImages) {
+          setLpImages({ ...DEFAULT_LP_IMAGES, ...s.lpImages });
         }
 
         // ★ 既存テナントの subscriptionBilling を一度だけミラー
@@ -380,6 +388,60 @@ export default function OwnerDashboard() {
   const resetLpPricing = () => {
     if (!confirm('LP料金をデフォルトに戻します。よろしいですか？')) return;
     setLpPricing(JSON.parse(JSON.stringify(DEFAULT_LP_PRICING)));
+  };
+
+  // ★ [LP-#45] LP画像 保存
+  const saveLpImages = async () => {
+    try {
+      const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
+      const next = { ...(data?.settings_data || {}), lpImages };
+      await supabase.from('app_settings').upsert({ id: 'nocolde_owner', settings_data: next });
+      alert('LP画像を保存しました。\n\n※ トップページへの反映には最大1時間かかります（キャッシュ）');
+    } catch (e) { alert('保存失敗: ' + e.message); }
+  };
+
+  // 画像URL直接変更
+  const updateLpImage = (key, url) => {
+    setLpImages(prev => ({ ...prev, [key]: url }));
+  };
+
+  // ファイルアップロード（Supabase Storage portfolio バケットを再利用）
+  const uploadLpImage = async (key, file) => {
+    if (!file) return;
+    // 簡易バリデーション
+    if (file.size > 10 * 1024 * 1024) {
+      alert('画像サイズは10MB以下にしてください');
+      return;
+    }
+    if (!/^image\//.test(file.type)) {
+      alert('画像ファイルを選択してください');
+      return;
+    }
+
+    setLpImageUploading(key);
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const filePath = `lp/${key}-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('portfolio').upload(filePath, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: pub } = supabase.storage.from('portfolio').getPublicUrl(filePath);
+      if (pub?.publicUrl) {
+        setLpImages(prev => ({ ...prev, [key]: pub.publicUrl }));
+      }
+    } catch (e) {
+      alert('アップロード失敗: ' + e.message);
+    } finally {
+      setLpImageUploading(null);
+    }
+  };
+
+  const resetLpImage = (key) => {
+    setLpImages(prev => ({ ...prev, [key]: DEFAULT_LP_IMAGES[key] }));
+  };
+
+  const resetAllLpImages = () => {
+    if (!confirm('すべてのLP画像をデフォルトに戻します。よろしいですか？')) return;
+    setLpImages({ ...DEFAULT_LP_IMAGES });
   };
 
   const saveTenantBilling = async (tenantId, patch) => {
@@ -1567,6 +1629,102 @@ export default function OwnerDashboard() {
 
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-[11px] text-yellow-900">
                 ⚠️ <strong>反映タイミング</strong>: 保存後、トップページ（/）に反映されるまで最大1時間かかります（キャッシュ）。すぐ確認したい場合はVercelダッシュボードからキャッシュを手動クリアできます。
+              </div>
+            </div>
+
+            {/* [LP-#45] LP画像管理 */}
+            <div className="bg-white border border-[#EAEAEA] rounded-2xl p-6 shadow-xl space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <h4 className="text-[#2D4B3E] font-bold text-[13px] tracking-widest">🖼️ LP（トップページ）画像</h4>
+                  <p className="text-[10px] text-[#777] mt-1">www.noodleflorix.com に表示される画像。アップロード or URL貼り付けで差し替え。</p>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={resetAllLpImages} className="px-3 h-9 bg-[#F5F2EE] hover:bg-[#EAEAEA] text-[#555] font-bold rounded-lg text-[11px] flex items-center gap-1">
+                    <RefreshCw size={12}/> 全部デフォルトに戻す
+                  </button>
+                  <button onClick={saveLpImages} className="px-4 h-9 bg-cyan-600 hover:bg-cyan-500 text-black font-bold rounded-lg text-[11px] tracking-widest flex items-center gap-2">
+                    <Save size={12}/> LP画像保存
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[11px] text-blue-900 leading-relaxed">
+                📌 <strong>使い方</strong>:
+                ①「アップロード」で画像ファイル選択（JPG/PNG/WebP・10MB以下）<br/>
+                ② または右側にURL貼り付け（Supabase Storage・自社サーバ等）<br/>
+                ③「LP画像保存」で確定 → トップページに反映（最大1時間・即時化はVercel Redeploy）
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {LP_IMAGE_KEYS.map(({ key, label, recommend }) => {
+                  const url = lpImages[key] || '';
+                  const isUploading = lpImageUploading === key;
+                  const isDefault = url === DEFAULT_LP_IMAGES[key];
+                  return (
+                    <div key={key} className="border border-[#EAEAEA] rounded-xl p-4 bg-[#FBFAF9]">
+                      <div className="flex items-start gap-3">
+                        {/* プレビュー */}
+                        <div className="w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-[#EAEAEA] border border-[#D0D0D0]">
+                          {url ? (
+                            <img src={url} alt={label} className="w-full h-full object-cover"/>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[#999] text-[10px]">No image</div>
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[12px] font-bold text-[#2D4B3E] truncate">{label}</p>
+                          <p className="text-[10px] text-[#999] mt-0.5">推奨: {recommend}</p>
+                          <div className="flex gap-1 mt-2">
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${isDefault ? 'bg-gray-100 text-gray-600' : 'bg-green-100 text-green-700'}`}>
+                              {isDefault ? 'デフォルト' : 'カスタム'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 space-y-2">
+                        {/* アップロード */}
+                        <label className={`block w-full text-center py-2 rounded-lg text-[11px] font-bold cursor-pointer transition ${isUploading ? 'bg-gray-100 text-gray-400' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b]'}`}>
+                          {isUploading ? 'アップロード中...' : '📁 画像をアップロード'}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            disabled={isUploading}
+                            onChange={e => uploadLpImage(key, e.target.files?.[0])}
+                            className="hidden"
+                          />
+                        </label>
+
+                        {/* URL貼り付け */}
+                        <input
+                          type="url"
+                          value={url}
+                          onChange={e => updateLpImage(key, e.target.value)}
+                          placeholder="またはURLを貼り付け"
+                          className="w-full bg-white border border-[#D0D0D0] rounded-lg px-3 py-1.5 text-[10px] text-[#333] outline-none truncate"
+                        />
+
+                        {/* リセット */}
+                        {!isDefault && (
+                          <button
+                            onClick={() => resetLpImage(key)}
+                            className="w-full text-[10px] text-[#999] hover:text-[#666] underline"
+                          >
+                            この画像だけデフォルトに戻す
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-[11px] text-yellow-900">
+                💡 <strong>画像のコツ</strong>:
+                花仕事の手元・店舗陳列・パソコン作業など、<strong>「FLORIXを使う花屋さん」の世界観</strong>が伝わる写真を選ぶと効果的です。<br/>
+                Apple/Notionレベルの高品質写真を使用すると、ブランド価値が大幅に上がります。
               </div>
             </div>
 

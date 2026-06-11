@@ -1,6 +1,47 @@
-// [LP-#41] LP用 料金プラン定義
-// オーナー管理画面から編集 → app_settings.nocolde_owner.lpPricing に保存
+// [LP-#41/#45] LP用 料金プラン + 画像定義
+// オーナー管理画面から編集 → app_settings.nocolde_owner.lpPricing / lpImages に保存
 // LPトップページ(/)で表示
+
+// LPの画像キー（page.tsx の IMG オブジェクトと一致）
+export const LP_IMAGE_KEYS = [
+  { key: "hero", label: "ヒーロー画像（メイン大）", recommend: "縦長 4:5・1600px〜" },
+  { key: "problem1", label: "課題セクション 写真", recommend: "縦長 4:5・900px〜" },
+  { key: "solution", label: "解決策セクション 写真", recommend: "横長 16:9・1400px〜" },
+  { key: "f1", label: "機能01 受注管理 写真", recommend: "5:4・1000px〜" },
+  { key: "f2", label: "機能02 配達管理 写真", recommend: "5:4・1000px〜" },
+  { key: "f3", label: "機能03 EC機能 写真", recommend: "5:4・1000px〜" },
+  { key: "f4", label: "機能04 顧客管理 写真", recommend: "5:4・1000px〜" },
+  { key: "usage", label: "ご利用フロー 写真", recommend: "縦長 4:5・1200px〜" },
+];
+
+// デフォルトのLP画像URL（Unsplash仮素材）
+export const DEFAULT_LP_IMAGES = {
+  hero: "https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?w=1600&q=90&auto=format&fit=crop",
+  problem1: "https://images.unsplash.com/photo-1487070183336-b863922373d4?w=900&q=85&auto=format&fit=crop",
+  solution: "https://images.unsplash.com/photo-1493612276216-ee3925520721?w=1400&q=90&auto=format&fit=crop",
+  f1: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=1000&q=85&auto=format&fit=crop",
+  f2: "https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=1000&q=85&auto=format&fit=crop",
+  f3: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1000&q=85&auto=format&fit=crop",
+  f4: "https://images.unsplash.com/photo-1518621736915-f3b1c41bfd00?w=1000&q=85&auto=format&fit=crop",
+  usage: "https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=1200&q=90&auto=format&fit=crop",
+};
+
+/**
+ * LPの画像を取得（DBから or デフォルト）
+ */
+export async function fetchLpImages(supabaseAdmin) {
+  try {
+    const { data } = await supabaseAdmin
+      .from("app_settings")
+      .select("settings_data")
+      .eq("id", "nocolde_owner")
+      .maybeSingle();
+    const stored = data?.settings_data?.lpImages || {};
+    return { ...DEFAULT_LP_IMAGES, ...stored };
+  } catch {
+    return DEFAULT_LP_IMAGES;
+  }
+}
 
 export const DEFAULT_LP_PRICING = {
   plans: [

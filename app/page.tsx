@@ -13,7 +13,7 @@
 
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
-import { DEFAULT_LP_PRICING, fetchLpPricing } from "@/utils/lpPricing";
+import { DEFAULT_LP_PRICING, fetchLpPricing, DEFAULT_LP_IMAGES, fetchLpImages } from "@/utils/lpPricing";
 import {
   ArrowRight, Check, ChevronDown, Mail, Phone, Send,
   ShoppingBag, Truck, Users, ClipboardList,
@@ -38,19 +38,9 @@ type LpPricing = {
 };
 
 // =============================================================
-// 画像（キュレーション済み・水揚げ/制作/陳列フォーカス）
+// 画像はオーナー管理画面(/owner)から動的取得（DBにあればそれを使用、無ければデフォルト）
 // =============================================================
-const IMG = {
-  hero: "https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?w=1600&q=90&auto=format&fit=crop",
-  problem1: "https://images.unsplash.com/photo-1487070183336-b863922373d4?w=900&q=85&auto=format&fit=crop",
-  problem2: "https://images.unsplash.com/photo-1602940659805-770d1b3b9911?w=900&q=85&auto=format&fit=crop",
-  solution: "https://images.unsplash.com/photo-1493612276216-ee3925520721?w=1400&q=90&auto=format&fit=crop",
-  f1: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=1000&q=85&auto=format&fit=crop",
-  f2: "https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=1000&q=85&auto=format&fit=crop",
-  f3: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1000&q=85&auto=format&fit=crop",
-  f4: "https://images.unsplash.com/photo-1518621736915-f3b1c41bfd00?w=1000&q=85&auto=format&fit=crop",
-  usage: "https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=1200&q=90&auto=format&fit=crop",
-};
+// IMG オブジェクトは getLpData() で動的に組み立てる
 
 // =============================================================
 // SEO メタデータ
@@ -68,13 +58,13 @@ export const metadata = {
     siteName: "FLORIX",
     locale: "ja_JP",
     type: "website",
-    images: [{ url: IMG.hero, width: 1200, height: 630, alt: "FLORIX" }],
+    images: [{ url: DEFAULT_LP_IMAGES.hero, width: 1200, height: 630, alt: "FLORIX" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "電話注文を減らし、営業時間外の売上を増やす花屋専用システム",
     description: "FLORIX | 花屋専用 受注クラウド",
-    images: [IMG.hero],
+    images: [DEFAULT_LP_IMAGES.hero],
   },
 };
 
@@ -97,24 +87,31 @@ const structuredData = [
   },
 ];
 
-async function getLpData(): Promise<{ pricing: LpPricing }> {
+type LpImages = Record<string, string>;
+
+async function getLpData(): Promise<{ pricing: LpPricing; images: LpImages }> {
   try {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      return { pricing: DEFAULT_LP_PRICING as LpPricing };
+      return { pricing: DEFAULT_LP_PRICING as LpPricing, images: DEFAULT_LP_IMAGES };
     }
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
-    const pricing = await fetchLpPricing(supabaseAdmin);
-    return { pricing: pricing as LpPricing };
+    const [pricing, images] = await Promise.all([
+      fetchLpPricing(supabaseAdmin),
+      fetchLpImages(supabaseAdmin),
+    ]);
+    return { pricing: pricing as LpPricing, images: images as LpImages };
   } catch {
-    return { pricing: DEFAULT_LP_PRICING as LpPricing };
+    return { pricing: DEFAULT_LP_PRICING as LpPricing, images: DEFAULT_LP_IMAGES };
   }
 }
 
 export default async function HomePage() {
-  const { pricing } = await getLpData();
+  const { pricing, images } = await getLpData();
+  // 画像URLを統一的に参照（後方互換のため IMG という名前は維持）
+  const IMG = images;
   const featuredPlan = pricing.plans.find(p => p.recommended) || pricing.plans[0];
 
   return (
