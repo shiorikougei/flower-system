@@ -13,6 +13,7 @@ import { getProductQrUrl, getQrCodeDataUrl, getQrCodeSvg } from '@/utils/qrcode'
 
 export default function QrPrintPage() {
   const [tenantId, setTenantId] = useState(null);
+  const [shopName, setShopName] = useState('FLORIX');
   const [products, setProducts] = useState([]);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [printMode, setPrintMode] = useState('sheet'); // 'sheet' | 'tag' | 'individual'
@@ -35,6 +36,11 @@ export default function QrPrintPage() {
       const tId = profile?.tenant_id;
       if (!tId) throw new Error('tenant_id が取得できません');
       setTenantId(tId);
+
+      // 店舗名取得
+      const { data: settingsRow } = await supabase.from('app_settings').select('settings_data').eq('id', tId).single();
+      const shops = settingsRow?.settings_data?.shops || [];
+      setShopName(shops[0]?.name || settingsRow?.settings_data?.generalConfig?.appName || 'FLORIX');
 
       const { data, error } = await supabase
         .from('products')
@@ -218,7 +224,7 @@ export default function QrPrintPage() {
                   {selectedProducts.map(p => (
                     <div key={p.id} className="border-2 border-[#2D4B3E] rounded-xl p-3 bg-white print:break-inside-avoid">
                       <div className="text-center mb-2">
-                        <p className="text-[11px] font-bold text-[#2D4B3E] tracking-widest">FLORIX</p>
+                        <p className="text-[11px] font-bold text-[#2D4B3E] tracking-widest line-clamp-1">{shopName}</p>
                       </div>
                       <div className="bg-white p-2 flex items-center justify-center">
                         {qrDataUrls[p.id] ? (
@@ -231,8 +237,7 @@ export default function QrPrintPage() {
                         <p className="text-[12px] font-bold text-[#111] line-clamp-2">{p.name}</p>
                         <p className="text-[16px] font-bold text-[#2D4B3E]">¥{p.price.toLocaleString()}<span className="text-[10px] font-normal text-[#999] ml-1">(税抜)</span></p>
                         <div className="text-[8px] text-[#999] border-t border-[#EAEAEA] pt-1 mt-2 leading-relaxed">
-                          📱 スキャンで在庫確認・ご予約<br/>
-                          🌸 取扱: 直射日光・乾燥を避けて
+                          スキャンで在庫確認
                         </div>
                       </div>
                     </div>
@@ -272,9 +277,10 @@ export default function QrPrintPage() {
           <p className="font-bold mb-2">📌 使い方ガイド</p>
           <ul className="space-y-1 ml-4 list-disc">
             <li><strong>A4シート</strong>: コクヨ等のラベルシール用紙に印刷→切って貼る</li>
-            <li><strong>商品タグ付き</strong>: 厚紙印刷して紐穴を空けてラッピングに添える</li>
+            <li><strong>商品タグ付き</strong>: 厚紙印刷して紐穴を空けて値札タグとして使用</li>
             <li><strong>個別DL</strong>: SVGをテプラ等のシールプリンターに転送して印刷</li>
-            <li>QRをスキャンすると商品ページが開きます。お客様は在庫確認、スタッフはログイン中なら在庫減算ボタンが表示されます。</li>
+            <li>⚠️ <strong>QRコードはスタッフ専用</strong>です。スキャンするとログイン画面に遷移し、ログイン後に在庫管理画面が開きます。</li>
+            <li>お客様がスキャンしてもログイン画面で止まるので、商品情報や在庫が見えることはありません。</li>
           </ul>
         </div>
       </div>
