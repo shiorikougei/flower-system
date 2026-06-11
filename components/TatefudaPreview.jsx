@@ -60,14 +60,21 @@ export default function TatefudaPreview({ tatePattern, layout, isOsonae, input1,
         <div className={`flex w-full font-bold ${layout === 'horizontal' ? `flex-col items-center gap-1 ${horizontalNameSize}` : 'flex-row-reverse justify-center gap-5 h-[220px] items-center'}`}>
 
           {tatePattern?.includes('p6') || tatePattern?.includes('p8') ? (
-            <>
-              {/* お相手様の宛名 → 黒 */}
-              <div className={`tracking-widest ${nameColor}`} style={getTextStyle(input2 || '宛名', 18)}>{input2 || '宛名'}様</div>
-              {/* お祝い内容（ご開店・御生誕等） → 赤 */}
-              {!isOsonae && <div className={`tracking-widest ${redColor}`} style={getTextStyle(input1 || '内容', 18)}>{input1 || '内容'}</div>}
-              {/* 贈り主名 → 黒 */}
-              <div className={`tracking-widest ${nameColor}`} style={getTextStyle(input3 || '贈り主', 18)}>{input3 || '贈り主'}</div>
-            </>
+            layout === 'horizontal' ? (
+              <>
+                {/* ★ 横型: 祝の直下に 内容 → 宛名様 → 贈り主 の順 */}
+                {!isOsonae && <div className={`tracking-widest ${redColor}`} style={getTextStyle(input1 || '内容', 18)}>{input1 || '内容'}</div>}
+                <div className={`tracking-widest ${nameColor} mt-1`} style={getTextStyle(input2 || '宛名', 18)}>{input2 || '宛名'}様</div>
+                <div className={`tracking-widest ${nameColor} mt-1 text-center leading-tight`} style={{...getTextStyle(input3 || '贈り主', 18), whiteSpace: 'pre-line'}}>{input3 || '贈り主'}</div>
+              </>
+            ) : (
+              <>
+                {/* ★ 縦型 三列: 宛名様(右) / 内容(中) / 贈り主(左) の伝統的配置 */}
+                <div className={`tracking-widest ${nameColor}`} style={getTextStyle(input2 || '宛名', 18)}>{input2 || '宛名'}様</div>
+                {!isOsonae && <div className={`tracking-widest ${redColor}`} style={getTextStyle(input1 || '内容', 18)}>{input1 || '内容'}</div>}
+                <div className={`tracking-widest ${nameColor}`} style={getTextStyle(input3 || '贈り主', 18)}>{input3 || '贈り主'}</div>
+              </>
+            )
           ) : tatePattern?.includes('p4') ? (
             <>
               {/* 会社名・役職氏名 → 黒 */}
