@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Playfair_Display, Noto_Serif_JP } from "next/font/google";
+import { Geist, Geist_Mono, Shippori_Mincho, Zen_Kaku_Gothic_New, Outfit } from "next/font/google";
 import "./globals.css";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import WebVitals from "@/components/WebVitals";
@@ -14,16 +14,23 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// LP用 セリフフォント
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
+// LP用 上質和フォント
+const shipporiMincho = Shippori_Mincho({
+  variable: "--font-shippori",
+  weight: ["500", "600", "700"],
   subsets: ["latin"],
   display: "swap",
 });
-const notoSerifJp = Noto_Serif_JP({
-  variable: "--font-noto-serif-jp",
+const zenKakuGothic = Zen_Kaku_Gothic_New({
+  variable: "--font-zen-kaku",
+  weight: ["400", "500", "700"],
   subsets: ["latin"],
-  weight: ["400", "700"],
+  display: "swap",
+});
+const outfit = Outfit({
+  variable: "--font-outfit",
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
   display: "swap",
 });
 
@@ -60,7 +67,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${notoSerifJp.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${shipporiMincho.variable} ${zenKakuGothic.variable} ${outfit.variable} antialiased`}
       >
         <GoogleAnalytics />
         <WebVitals />

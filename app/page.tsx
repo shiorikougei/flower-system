@@ -1,21 +1,23 @@
 // =============================================================
-// FLORIX LP - 花屋専門クラウド業務システム
-// プロフェッショナルチーム共同設計 (LP-#43)
+// FLORIX LP - 花屋専用 受注クラウド
+// プロチーム共同設計（最終版）
 // =============================================================
-//   Design   : Warm Beige + Sage Green + Terracotta / Soft UI + Glass
-//   Marketing: AIDA + PASONA / モバイルファースト
-//   SEO      : 構造化データ4種 + 動的メタタグ
-//   Engineer : Server Component / 動的料金 / lucide-react
+//   コンセプト: 花屋のブランド価値を上げる、上質な業務OS
+//   配色      : Sage Green #A7B8A1 / Terracotta #C97D60 / BG #FAF7F2
+//   フォント  : Shippori Mincho（見出し）/ Zen Kaku Gothic New（本文）/ Outfit（英字）
+//   構成      : Hero → Problem → Solution → Features → CTA → Usage
+//             → Benefits → CTA → Pricing → FAQ → Final CTA → Footer
+//   CTA       : 4箇所配置 + モバイルSticky
+//   実績/声   : 削除（架空訴求しない）
 // =============================================================
 
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 import { DEFAULT_LP_PRICING, fetchLpPricing } from "@/utils/lpPricing";
 import {
-  ArrowRight, Check, ChevronDown, Mail, Phone, Send, Star,
-  ShoppingBag, Truck, Calendar as CalendarIcon, Users, Sparkles,
-  Lock, Smartphone, MessageCircle, LineChart, Heart, Layers,
-  ClipboardList, Package, Zap, ShieldCheck, Bell,
+  ArrowRight, Check, ChevronDown, Mail, Phone, Send,
+  ShoppingBag, Truck, Users, ClipboardList,
+  Clock, AlertCircle, Inbox, GraduationCap, MessageSquare,
 } from "lucide-react";
 
 // =============================================================
@@ -36,23 +38,18 @@ type LpPricing = {
 };
 
 // =============================================================
-// 画像URL（高品質Unsplash・後から差替可能）
+// 画像（キュレーション済み・水揚げ/制作/陳列フォーカス）
 // =============================================================
-const IMAGES = {
-  hero: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=1400&q=85&auto=format&fit=crop",
-  heroBg: "https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=1600&q=80&auto=format&fit=crop",
-  problem1: "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=600&q=80&auto=format&fit=crop",
-  problem2: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80&auto=format&fit=crop",
-  problem3: "https://images.unsplash.com/photo-1494178270175-e96de2971df9?w=600&q=80&auto=format&fit=crop",
-  solution: "https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=1200&q=85&auto=format&fit=crop",
-  feature1: "https://images.unsplash.com/photo-1469259943454-aa100abba749?w=800&q=85&auto=format&fit=crop",
-  feature2: "https://images.unsplash.com/photo-1444128395449-09cd8babc8de?w=800&q=85&auto=format&fit=crop",
-  feature3: "https://images.unsplash.com/photo-1545241047-6083a3684587?w=800&q=85&auto=format&fit=crop",
-  feature4: "https://images.unsplash.com/photo-1457089328389-f7c2837cf7b1?w=800&q=85&auto=format&fit=crop",
-  usage: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=800&q=85&auto=format&fit=crop",
-  testimonial1: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&q=85&auto=format&fit=crop",
-  testimonial2: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=85&auto=format&fit=crop",
-  testimonial3: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&q=85&auto=format&fit=crop",
+const IMG = {
+  hero: "https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?w=1600&q=90&auto=format&fit=crop",
+  problem1: "https://images.unsplash.com/photo-1487070183336-b863922373d4?w=900&q=85&auto=format&fit=crop",
+  problem2: "https://images.unsplash.com/photo-1602940659805-770d1b3b9911?w=900&q=85&auto=format&fit=crop",
+  solution: "https://images.unsplash.com/photo-1493612276216-ee3925520721?w=1400&q=90&auto=format&fit=crop",
+  f1: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=1000&q=85&auto=format&fit=crop",
+  f2: "https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=1000&q=85&auto=format&fit=crop",
+  f3: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1000&q=85&auto=format&fit=crop",
+  f4: "https://images.unsplash.com/photo-1518621736915-f3b1c41bfd00?w=1000&q=85&auto=format&fit=crop",
+  usage: "https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=1200&q=90&auto=format&fit=crop",
 };
 
 // =============================================================
@@ -61,29 +58,26 @@ const IMAGES = {
 export const revalidate = 3600;
 
 export const metadata = {
-  title: "FLORIX｜花屋専門のクラウド業務システム | 受注・EC・配達を1画面で",
-  description: "FLORIX（フローリックス）は、花屋さんのために開発された業務支援クラウド。電話・LINE・店頭・ECの受注を一元化、配達ルート最適化、立札自動生成、顧客カルテ、SEO対策EC機能まで。月額¥3,800〜・30日間無料トライアル。",
-  keywords: ["花屋", "業務システム", "フラワーショップ", "受注管理", "配達管理", "EC", "顧客管理", "クラウドSaaS", "POS", "立札", "ファミリービジネス", "FLORIX"],
+  title: "FLORIX｜花屋専用 受注クラウド | 電話注文を減らし、営業時間外の売上を増やす",
+  description: "FLORIX（フローリックス）は、花屋さんのために開発された受注クラウド。電話・LINE・店頭・ECの受注を一画面に統合。配達ルート最適化、立札自動生成、独自ドメインEC、顧客カルテまで。月額¥3,800〜・30日間無料。",
+  keywords: ["花屋", "受注管理", "業務システム", "フラワーショップ", "EC", "配達管理", "顧客管理", "クラウド", "SaaS", "FLORIX"],
   openGraph: {
-    title: "花屋業務を、ひとつに。FLORIX",
-    description: "受注・配達・EC・顧客管理を統合した、花屋専門クラウド。月額¥3,800〜・30日無料トライアル。",
+    title: "電話注文を減らし、営業時間外の売上を増やす花屋専用システム",
+    description: "受注・配達・EC・顧客管理を、ひとつの画面に。FLORIX は花屋さんの日常を変える業務OSです。",
     url: "https://www.noodleflorix.com",
     siteName: "FLORIX",
     locale: "ja_JP",
     type: "website",
-    images: [{ url: IMAGES.hero, width: 1200, height: 630, alt: "FLORIX" }],
+    images: [{ url: IMG.hero, width: 1200, height: 630, alt: "FLORIX" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "花屋業務を、ひとつに。FLORIX",
-    description: "受注・配達・EC・顧客管理を統合した、花屋専門クラウド。",
-    images: [IMAGES.hero],
+    title: "電話注文を減らし、営業時間外の売上を増やす花屋専用システム",
+    description: "FLORIX | 花屋専用 受注クラウド",
+    images: [IMG.hero],
   },
 };
 
-// =============================================================
-// 構造化データ
-// =============================================================
 const structuredData = [
   {
     "@context": "https://schema.org",
@@ -91,24 +85,18 @@ const structuredData = [
     name: "FLORIX",
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
-    description: "花屋専門のクラウド業務管理システム。受注・配達・EC・顧客管理・スタッフ管理を統合。",
+    description: "花屋専用のクラウド受注・業務管理システム。",
     offers: { "@type": "Offer", price: "3800", priceCurrency: "JPY" },
     provider: { "@type": "Organization", name: "NocoLde", url: "https://www.noodleflorix.com" },
-    aggregateRating: { "@type": "AggregateRating", ratingValue: "4.8", reviewCount: "27" },
   },
   {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "NocoLde",
     url: "https://www.noodleflorix.com",
-    logo: "https://www.noodleflorix.com/og-default.jpg",
-    sameAs: [],
   },
 ];
 
-// =============================================================
-// データフェッチ
-// =============================================================
 async function getLpData(): Promise<{ pricing: LpPricing }> {
   try {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -125,9 +113,6 @@ async function getLpData(): Promise<{ pricing: LpPricing }> {
   }
 }
 
-// =============================================================
-// メインコンポーネント
-// =============================================================
 export default async function HomePage() {
   const { pricing } = await getLpData();
   const featuredPlan = pricing.plans.find(p => p.recommended) || pricing.plans[0];
@@ -135,319 +120,341 @@ export default async function HomePage() {
   return (
     <>
       {structuredData.map((sd, i) => (
-        <script
-          key={i}
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(sd) }}
-        />
+        <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(sd) }}/>
       ))}
 
-      <div className="min-h-screen bg-[#FFFDF9] text-[#2C2C2C] selection:bg-[#D9825B]/20" style={{ fontFamily: "'Inter','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif" }}>
+      <div
+        className="min-h-screen bg-[#FAF7F2] text-[#2F2F2F] selection:bg-[#C97D60]/15"
+        style={{ fontFamily: "var(--font-zen-kaku), 'Hiragino Kaku Gothic ProN', system-ui, sans-serif" }}
+      >
 
-        {/* ============================================== */}
-        {/* NAV BAR - Glass morphism */}
-        {/* ============================================== */}
-        <nav className="sticky top-0 z-50 bg-[#FFFDF9]/80 backdrop-blur-xl border-b border-[#E8DFD0]/50">
-          <div className="max-w-[1180px] mx-auto h-[68px] px-6 flex items-center justify-between">
-            <Link href="/" className="font-bold text-[22px] text-[#2C2C2C] tracking-[0.18em]">
+        {/* ============================================ */}
+        {/* NAV */}
+        {/* ============================================ */}
+        <nav className="sticky top-0 z-50 bg-[#FAF7F2]/85 backdrop-blur-xl border-b border-[#E5DED2]/60">
+          <div className="max-w-[1140px] mx-auto h-[68px] px-6 flex items-center justify-between">
+            <Link
+              href="/"
+              className="text-[24px] tracking-[0.18em] font-medium text-[#2F2F2F]"
+              style={{ fontFamily: "var(--font-outfit), system-ui" }}
+            >
               FLORIX
             </Link>
-            <div className="flex items-center gap-1 md:gap-5">
-              <a href="#features" className="hidden md:block text-[13px] font-medium text-[#6B6B6B] hover:text-[#2C2C2C] transition">特長</a>
-              <a href="#pricing" className="hidden md:block text-[13px] font-medium text-[#6B6B6B] hover:text-[#2C2C2C] transition">料金</a>
-              <a href="#voice" className="hidden md:block text-[13px] font-medium text-[#6B6B6B] hover:text-[#2C2C2C] transition">お客様の声</a>
-              <a href="#faq" className="hidden md:block text-[13px] font-medium text-[#6B6B6B] hover:text-[#2C2C2C] transition">よくある質問</a>
-              <Link href="/staff/login" className="text-[12px] font-medium text-[#6B6B6B] hover:text-[#2C2C2C] px-3 py-1.5 transition">
-                ログイン
-              </Link>
+            <div className="flex items-center gap-1 md:gap-6">
+              <a href="#problem" className="hidden md:block text-[13px] text-[#6B6B6B] hover:text-[#2F2F2F] transition">花屋の課題</a>
+              <a href="#features" className="hidden md:block text-[13px] text-[#6B6B6B] hover:text-[#2F2F2F] transition">機能</a>
+              <a href="#pricing" className="hidden md:block text-[13px] text-[#6B6B6B] hover:text-[#2F2F2F] transition">料金</a>
+              <a href="#faq" className="hidden md:block text-[13px] text-[#6B6B6B] hover:text-[#2F2F2F] transition">FAQ</a>
+              <Link href="/staff/login" className="text-[12px] text-[#6B6B6B] hover:text-[#2F2F2F] px-3 py-1.5 transition">ログイン</Link>
               <a
                 href="#contact"
-                className="text-[13px] font-semibold bg-[#2C2C2C] text-white px-5 py-2.5 rounded-full hover:bg-[#D9825B] transition-all"
+                className="text-[12px] font-medium bg-[#2F2F2F] text-white px-5 py-2.5 rounded-full hover:bg-[#C97D60] transition-all"
               >
-                無料で試す
+                無料相談
               </a>
             </div>
           </div>
         </nav>
 
-        {/* ============================================== */}
-        {/* HERO - AIDA: Attention */}
-        {/* ============================================== */}
-        <section className="relative overflow-hidden pt-16 md:pt-24 pb-20 md:pb-32 px-6 bg-gradient-to-b from-[#F8F2E8] via-[#FBF6EE] to-[#FFFDF9]">
-          {/* 装飾円 */}
-          <div className="absolute top-32 -left-32 w-[400px] h-[400px] rounded-full bg-[#AFC6B2]/20 blur-3xl"></div>
-          <div className="absolute bottom-0 -right-32 w-[400px] h-[400px] rounded-full bg-[#D9825B]/15 blur-3xl"></div>
+        {/* ============================================ */}
+        {/* HERO（CTA #1） */}
+        {/* ============================================ */}
+        <section className="relative overflow-hidden pt-14 md:pt-24 pb-20 md:pb-28 px-6">
+          <div className="absolute top-32 -left-40 w-[480px] h-[480px] rounded-full bg-[#A7B8A1]/15 blur-3xl pointer-events-none"></div>
+          <div className="absolute bottom-0 -right-40 w-[420px] h-[420px] rounded-full bg-[#C97D60]/10 blur-3xl pointer-events-none"></div>
 
-          <div className="max-w-[1180px] mx-auto relative">
-            <div className="grid lg:grid-cols-[1.1fr_1fr] gap-12 lg:gap-16 items-center">
+          <div className="max-w-[1140px] mx-auto relative">
+            <div className="grid lg:grid-cols-[1.05fr_1fr] gap-12 lg:gap-16 items-center">
 
-              {/* 左：テキスト */}
               <div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/70 backdrop-blur-md border border-white/80 rounded-full text-[11px] font-semibold text-[#7A9279] mb-6 shadow-sm">
-                  <span className="w-1.5 h-1.5 bg-[#AFC6B2] rounded-full animate-pulse"></span>
-                  花屋専門 業務クラウド
-                </div>
+                <p
+                  className="inline-block text-[11px] tracking-[0.4em] text-[#7E9279] font-medium mb-6 pb-2 border-b border-[#A7B8A1]/50"
+                  style={{ fontFamily: "var(--font-outfit)" }}
+                >
+                  FOR FLORISTS — RECEIVING ORDERS, REIMAGINED
+                </p>
 
-                <h1 className="text-[40px] md:text-[58px] lg:text-[68px] font-bold leading-[1.15] tracking-tight mb-6 text-[#2C2C2C]" style={{ fontFamily: "'Playfair Display','Noto Serif JP',serif" }}>
-                  花屋業務、<br/>
-                  <span className="text-[#D9825B]">ぜんぶ</span> FLORIX で。
+                <h1
+                  className="text-[34px] md:text-[48px] lg:text-[58px] font-medium leading-[1.4] mb-8 tracking-[0.01em]"
+                  style={{ fontFamily: "var(--font-shippori), 'Noto Serif JP', serif" }}
+                >
+                  電話注文を減らし、<br/>
+                  営業時間外の売上を<br/>
+                  <span className="text-[#C97D60]">増やす</span>。
                 </h1>
 
-                <p className="text-[15px] md:text-[17px] text-[#5B5B5B] leading-[2] mb-10 max-w-[520px]">
-                  受注・配達・EC・顧客管理・スタッフ管理。<br/>
-                  花屋さんの1日を、ひとつのシステムでまるごと支える。<br/>
-                  現役の花屋さんと共創する、業務クラウドです。
+                <p
+                  className="text-[14px] md:text-[16px] text-[#5B5B5B] leading-[2] mb-10 max-w-[520px]"
+                  style={{ fontFamily: "var(--font-zen-kaku)" }}
+                >
+                  花屋専用の受注クラウド、FLORIX。<br/>
+                  電話・LINE・EC・店頭の注文を、ひとつの画面に。<br/>
+                  花仕事に集中できる毎日を、つくります。
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-3 mb-8">
                   <a
                     href="#contact"
-                    className="group inline-flex items-center justify-center gap-2 h-14 px-7 bg-[#D9825B] text-white rounded-full text-[14px] font-bold hover:bg-[#B86340] transition-all shadow-lg shadow-[#D9825B]/25"
+                    className="group inline-flex items-center justify-center gap-2 h-14 px-8 bg-[#C97D60] text-white rounded-full text-[14px] font-medium hover:bg-[#A8624A] transition-all shadow-[0_12px_36px_-12px_rgba(201,125,96,0.5)]"
                   >
-                    30日間 無料で始める
-                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform"/>
+                    30日間 無料で試してみる
+                    <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform"/>
                   </a>
                   <a
                     href="#features"
-                    className="inline-flex items-center justify-center h-14 px-7 bg-white/80 backdrop-blur-sm border border-[#E8DFD0] text-[#2C2C2C] rounded-full text-[14px] font-semibold hover:bg-white hover:border-[#AFC6B2] transition-all"
+                    className="inline-flex items-center justify-center h-14 px-7 bg-white/60 backdrop-blur-md border border-[#E5DED2] text-[#2F2F2F] rounded-full text-[14px] font-medium hover:bg-white transition-all"
                   >
                     機能を見る
                   </a>
                 </div>
 
-                <div className="flex items-center gap-6 text-[11px] text-[#6B6B6B]">
-                  <span className="flex items-center gap-1.5"><Check size={14} className="text-[#7A9279]"/> 初期費用 ¥0</span>
-                  <span className="flex items-center gap-1.5"><Check size={14} className="text-[#7A9279]"/> クレカ登録不要</span>
-                  <span className="flex items-center gap-1.5"><Check size={14} className="text-[#7A9279]"/> いつでも解約OK</span>
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] text-[#6B6B6B]" style={{ fontFamily: "var(--font-zen-kaku)" }}>
+                  <span className="flex items-center gap-1.5"><Check size={13} className="text-[#7E9279]"/> 初期費用 0円</span>
+                  <span className="flex items-center gap-1.5"><Check size={13} className="text-[#7E9279]"/> クレカ登録 不要</span>
+                  <span className="flex items-center gap-1.5"><Check size={13} className="text-[#7E9279]"/> いつでも解約OK</span>
                 </div>
               </div>
 
-              {/* 右：Glass Photo Card */}
+              {/* 右：写真 */}
               <div className="relative">
-                <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-[#F8E0D0] opacity-70"></div>
-                <div className="absolute -bottom-8 -left-8 w-40 h-40 rounded-full bg-[#E5EDDF] opacity-70"></div>
+                <div className="absolute -top-10 -right-10 w-44 h-44 rounded-full bg-[#A7B8A1]/30"></div>
+                <div className="absolute -bottom-10 -left-10 w-52 h-52 rounded-full bg-[#C97D60]/15"></div>
 
-                <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl shadow-[#D9825B]/20">
-                  <img src={IMAGES.hero} alt="美しい花束" className="w-full aspect-[4/5] object-cover"/>
+                <div className="relative rounded-[36px] overflow-hidden shadow-[0_24px_64px_-24px_rgba(168,98,74,0.25)]">
+                  <img src={IMG.hero} alt="花屋の手仕事" className="w-full aspect-[4/5] object-cover"/>
+                </div>
 
-                  {/* Glass overlay card 左下 */}
-                  <div className="absolute bottom-6 left-6 right-6 bg-white/85 backdrop-blur-xl border border-white/60 rounded-2xl p-5 shadow-xl">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#AFC6B2] to-[#7A9279] flex items-center justify-center text-white">
-                        <Sparkles size={20}/>
+                <div className="absolute bottom-8 -left-4 md:-left-12 bg-white/95 backdrop-blur-xl border border-[#E5DED2] rounded-2xl px-5 py-4 shadow-[0_16px_48px_-12px_rgba(126,146,121,0.2)]">
+                  <p className="text-[10px] tracking-[0.25em] text-[#7E9279] font-medium mb-1" style={{ fontFamily: "var(--font-outfit)" }}>MONTHLY</p>
+                  <p
+                    className="text-[26px] text-[#2F2F2F] leading-none"
+                    style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}
+                  >
+                    {featuredPlan?.price ? `¥${featuredPlan.price.toLocaleString()}` : "お問い合わせ"}
+                    {featuredPlan?.price && <span className="text-[11px] text-[#6B6B6B] ml-1">/月〜</span>}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ============================================ */}
+        {/* PROBLEM */}
+        {/* ============================================ */}
+        <section id="problem" className="py-24 md:py-36 px-6 bg-[#FAF7F2]">
+          <div className="max-w-[1140px] mx-auto">
+            <div className="max-w-[640px] mb-16">
+              <p className="text-[11px] tracking-[0.35em] text-[#C97D60] font-medium mb-5" style={{ fontFamily: "var(--font-outfit)" }}>
+                PROBLEM
+              </p>
+              <h2
+                className="text-[28px] md:text-[40px] leading-[1.5] mb-6 text-[#2F2F2F]"
+                style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}
+              >
+                花屋の現場には、<br/>
+                見えない 5 つの負担があります。
+              </h2>
+              <p className="text-[14px] text-[#5B5B5B] leading-[2]">
+                毎日の業務に追われ、本当はやりたい花仕事に時間が割けない。<br/>
+                その悩み、システムで解けるものが意外と多いのです。
+              </p>
+            </div>
+
+            {/* 大きな1枚 + 5項目 */}
+            <div className="grid md:grid-cols-[1fr_1fr] gap-10 md:gap-16 items-start">
+              <div className="relative">
+                <div className="rounded-[32px] overflow-hidden shadow-[0_24px_64px_-24px_rgba(168,98,74,0.2)]">
+                  <img src={IMG.problem1} alt="店内の電話受付" className="w-full aspect-[4/5] object-cover"/>
+                </div>
+              </div>
+
+              <ul className="space-y-3">
+                {[
+                  { Icon: Phone, title: "電話が止まらず、制作の手が止まる", desc: "1日の3割を電話対応に費やしているかもしれません。" },
+                  { Icon: MessageSquare, title: "LINE・メール・店頭で注文が散在", desc: "確認漏れ・転記ミスが、ご注文ミスの温床に。" },
+                  { Icon: Clock, title: "営業時間外の注文を、取りこぼしている", desc: "深夜・早朝の問い合わせの多くは、翌朝には別店舗へ。" },
+                  { Icon: AlertCircle, title: "立札の文字・宛名で、ヒヤッとする", desc: "手書きの煩雑さが、ミスのリスクをつくります。" },
+                  { Icon: GraduationCap, title: "新人教育に、毎回1ヶ月以上", desc: "業務を覚えるまで、人件費と機会損失が重なります。" },
+                ].map(({ Icon, title, desc }, idx) => (
+                  <li
+                    key={idx}
+                    className="bg-white/80 backdrop-blur-sm border border-[#E5DED2] rounded-[20px] p-5 md:p-6 hover:bg-white hover:shadow-[0_8px_32px_-8px_rgba(126,146,121,0.15)] transition-all"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-11 h-11 shrink-0 rounded-2xl bg-[#F4EFE6] flex items-center justify-center text-[#C97D60]">
+                        <Icon size={18}/>
                       </div>
-                      <div className="flex-1">
-                        <p className="text-[11px] text-[#6B6B6B] font-medium">月額（最小プラン）</p>
-                        <p className="text-[22px] font-bold text-[#2C2C2C] leading-tight">
-                          {featuredPlan?.price
-                            ? `¥${featuredPlan.price.toLocaleString()}〜`
-                            : "お問い合わせ"}
-                          <span className="text-[10px] text-[#6B6B6B] ml-1">/月</span>
-                        </p>
+                      <div className="flex-1 pt-0.5">
+                        <h3
+                          className="text-[15px] md:text-[16px] font-medium text-[#2F2F2F] mb-1.5"
+                          style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}
+                        >
+                          {title}
+                        </h3>
+                        <p className="text-[12.5px] text-[#6B6B6B] leading-[1.9]">{desc}</p>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
 
-                {/* 浮遊バッジ */}
-                <div className="absolute -top-5 -right-3 bg-white shadow-xl rounded-2xl px-4 py-3 border border-[#E8DFD0]">
-                  <p className="text-[9px] text-[#6B6B6B] font-bold tracking-widest">CAMPAIGN</p>
-                  <p className="text-[15px] font-bold text-[#D9825B]">30日 無料</p>
+        {/* ============================================ */}
+        {/* SOLUTION */}
+        {/* ============================================ */}
+        <section className="py-24 md:py-36 px-6 bg-[#F4EFE6] relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-[#A7B8A1]/10 blur-3xl"></div>
+
+          <div className="max-w-[1140px] mx-auto relative">
+            <div className="text-center max-w-[700px] mx-auto mb-16">
+              <p className="text-[11px] tracking-[0.35em] text-[#7E9279] font-medium mb-5" style={{ fontFamily: "var(--font-outfit)" }}>
+                SOLUTION
+              </p>
+              <h2
+                className="text-[28px] md:text-[44px] leading-[1.5] mb-6 text-[#2F2F2F]"
+                style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}
+              >
+                すべての受注を、<br/>
+                ひとつの画面に。
+              </h2>
+              <p className="text-[14px] text-[#5B5B5B] leading-[2]">
+                電話・LINE・EC・店頭。注文経路がいくつあっても、<br/>
+                FLORIX のダッシュボードに集約されます。<br/>
+                聞き間違いゼロ、確認時間ゼロを目指せます。
+              </p>
+            </div>
+
+            <div className="relative max-w-[960px] mx-auto">
+              <div className="rounded-[40px] overflow-hidden shadow-[0_32px_80px_-24px_rgba(126,146,121,0.3)]">
+                <img src={IMG.solution} alt="作業デスク" className="w-full aspect-[16/9] object-cover"/>
+              </div>
+
+              {/* Floating glass cards */}
+              <div className="absolute -left-3 md:-left-8 top-1/4 hidden sm:block">
+                <div className="bg-white/90 backdrop-blur-xl border border-[#E5DED2] rounded-2xl p-4 shadow-xl max-w-[220px]">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#A7B8A1] animate-pulse"></span>
+                    <p className="text-[10px] tracking-[0.2em] text-[#7E9279] font-medium" style={{ fontFamily: "var(--font-outfit)" }}>LIVE</p>
+                  </div>
+                  <p className="text-[12px] font-medium text-[#2F2F2F]">LINE経由の注文</p>
+                  <p className="text-[20px] font-medium text-[#C97D60]" style={{ fontFamily: "var(--font-shippori), serif" }}>3 件</p>
+                </div>
+              </div>
+              <div className="absolute -right-3 md:-right-8 bottom-1/4 hidden sm:block">
+                <div className="bg-white/90 backdrop-blur-xl border border-[#E5DED2] rounded-2xl p-4 shadow-xl max-w-[220px]">
+                  <p className="text-[10px] tracking-[0.2em] text-[#7E9279] font-medium mb-1" style={{ fontFamily: "var(--font-outfit)" }}>TODAY</p>
+                  <p className="text-[12px] font-medium text-[#2F2F2F]">本日の配達</p>
+                  <p className="text-[20px] font-medium text-[#C97D60]" style={{ fontFamily: "var(--font-shippori), serif" }}>12 件</p>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ============================================== */}
-        {/* PROBLEM - PASONA: Problem + Agitation */}
-        {/* ============================================== */}
-        <section className="py-24 md:py-32 px-6 bg-[#FFFDF9]">
-          <div className="max-w-[1180px] mx-auto">
-            <div className="text-center mb-16">
-              <p className="text-[11px] font-bold text-[#D9825B] tracking-[0.3em] mb-4">PROBLEM</p>
-              <h2 className="text-[28px] md:text-[40px] font-bold text-[#2C2C2C] leading-[1.4]" style={{ fontFamily: "'Playfair Display','Noto Serif JP',serif" }}>
-                こんなお悩み、ありませんか？
+        {/* ============================================ */}
+        {/* FEATURES */}
+        {/* ============================================ */}
+        <section id="features" className="py-24 md:py-36 px-6 bg-[#FAF7F2]">
+          <div className="max-w-[1140px] mx-auto">
+            <div className="text-center max-w-[600px] mx-auto mb-20">
+              <p className="text-[11px] tracking-[0.35em] text-[#C97D60] font-medium mb-5" style={{ fontFamily: "var(--font-outfit)" }}>
+                FEATURES
+              </p>
+              <h2
+                className="text-[28px] md:text-[44px] leading-[1.5] mb-6 text-[#2F2F2F]"
+                style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}
+              >
+                花仕事に、戻る時間を。
               </h2>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6 md:gap-8">
-              {[
-                {
-                  image: IMAGES.problem1,
-                  title: "電話の注文メモが、行方不明",
-                  desc: "走り書きのメモが束になって、誰宛か、いつまでか、わからなくなる。",
-                },
-                {
-                  image: IMAGES.problem2,
-                  title: "配達ルートの組み立てに、毎朝1時間",
-                  desc: "Googleマップで1件ずつ確認しながら、手書きで順番を決める日々。",
-                },
-                {
-                  image: IMAGES.problem3,
-                  title: "夜中の問い合わせを、見逃してしまう",
-                  desc: "営業時間外の注文に対応できず、お客様を逃しているかもしれない。",
-                },
-              ].map((p, idx) => (
-                <article key={idx} className="group bg-white rounded-[2rem] overflow-hidden shadow-[0_8px_32px_rgba(217,130,91,0.06)] hover:shadow-[0_12px_48px_rgba(217,130,91,0.12)] transition-all border border-[#F0E8DD]">
-                  <div className="aspect-[5/4] overflow-hidden">
-                    <img src={p.image} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
-                  </div>
-                  <div className="p-7">
-                    <h3 className="text-[17px] md:text-[18px] font-bold text-[#2C2C2C] mb-3 leading-[1.5]">{p.title}</h3>
-                    <p className="text-[13px] text-[#6B6B6B] leading-[2]">{p.desc}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
-
-            <p className="text-center text-[16px] md:text-[20px] font-medium text-[#5B5B5B] mt-16 leading-[1.9]">
-              わかります。<br/>
-              <span className="text-[#D9825B] font-bold">FLORIX</span> なら、それぞれの悩みが
-              <span className="font-bold text-[#2C2C2C]">ひとつの画面</span>で解決します。
-            </p>
-          </div>
-        </section>
-
-        {/* ============================================== */}
-        {/* SOLUTION - PASONA: Solution */}
-        {/* ============================================== */}
-        <section className="py-24 md:py-32 px-6 bg-[#F8F2E8] relative overflow-hidden">
-          <div className="absolute top-1/2 -translate-y-1/2 -left-32 w-[500px] h-[500px] rounded-full bg-[#AFC6B2]/10 blur-3xl"></div>
-
-          <div className="max-w-[1180px] mx-auto relative">
-            <div className="text-center mb-16">
-              <p className="text-[11px] font-bold text-[#7A9279] tracking-[0.3em] mb-4">SOLUTION</p>
-              <h2 className="text-[28px] md:text-[44px] font-bold text-[#2C2C2C] leading-[1.4]" style={{ fontFamily: "'Playfair Display','Noto Serif JP',serif" }}>
-                FLORIX ひとつで、<br className="md:hidden"/>
-                すべてが変わる。
-              </h2>
-              <p className="text-[14px] md:text-[15px] text-[#5B5B5B] leading-[2] mt-5 max-w-[600px] mx-auto">
-                注文、配達、EC、顧客管理、スタッフ管理。<br/>
-                バラバラだった業務が、ひとつのダッシュボードに。
+              <p className="text-[14px] text-[#5B5B5B] leading-[2]">
+                4 つの主軸機能が、花屋の 1 日を支えます。
               </p>
             </div>
 
-            <div className="relative max-w-[900px] mx-auto">
-              <div className="absolute -top-6 -left-6 w-24 h-24 rounded-full bg-white/50 backdrop-blur-md"></div>
-              <div className="absolute -bottom-6 -right-6 w-32 h-32 rounded-full bg-[#D9825B]/15 backdrop-blur-md"></div>
-
-              <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl shadow-[#AFC6B2]/30">
-                <img src={IMAGES.solution} alt="FLORIX ダッシュボード" className="w-full aspect-[16/9] object-cover"/>
-                {/* Glass overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
-                <div className="absolute bottom-6 left-6 right-6 md:bottom-10 md:left-10 md:right-10 bg-white/85 backdrop-blur-xl border border-white/60 rounded-2xl p-5 md:p-7 shadow-xl">
-                  <div className="grid grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
-                    {[
-                      { Icon: ClipboardList, label: "受注" },
-                      { Icon: Truck, label: "配達" },
-                      { Icon: ShoppingBag, label: "EC" },
-                      { Icon: Users, label: "顧客" },
-                    ].map((s, idx) => {
-                      const I = s.Icon;
-                      return (
-                        <div key={idx} className={`text-center ${idx === 3 ? "hidden md:block" : ""}`}>
-                          <div className="w-10 h-10 md:w-12 md:h-12 mx-auto rounded-2xl bg-gradient-to-br from-[#F8F2E8] to-[#E8DFD0] flex items-center justify-center text-[#D9825B] mb-2">
-                            <I size={20}/>
-                          </div>
-                          <p className="text-[11px] md:text-[12px] font-semibold text-[#2C2C2C]">{s.label}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ============================================== */}
-        {/* FEATURES - AIDA: Interest */}
-        {/* ============================================== */}
-        <section id="features" className="py-24 md:py-32 px-6 bg-[#FFFDF9]">
-          <div className="max-w-[1180px] mx-auto">
-            <div className="text-center mb-16">
-              <p className="text-[11px] font-bold text-[#D9825B] tracking-[0.3em] mb-4">FEATURES</p>
-              <h2 className="text-[28px] md:text-[44px] font-bold text-[#2C2C2C] leading-[1.4]" style={{ fontFamily: "'Playfair Display','Noto Serif JP',serif" }}>
-                花屋業務を、もっと自由に。
-              </h2>
-              <p className="text-[14px] md:text-[15px] text-[#5B5B5B] leading-[2] mt-5">
-                すべての機能が、花屋さんの現場目線で設計されています。
-              </p>
-            </div>
-
-            <div className="space-y-10 md:space-y-16">
+            <div className="space-y-24 md:space-y-32">
               {[
                 {
                   no: "01",
+                  category: "ORDER",
+                  title: "受注を、ひとつの画面に。",
+                  lead: "電話・LINE・EC・店頭。すべての注文経路を統合管理。",
+                  desc: "ばらばらだった注文情報が、FLORIX に集約されます。納期カレンダーで配達日を自動管理、立札と領収書も自動生成。手書きの煩わしさから、解放されます。",
+                  tags: ["カスタムオーダー", "納期カレンダー", "立札 8 パターン自動生成", "領収書 PDF", "インボイス対応"],
+                  image: IMG.f1,
                   Icon: ClipboardList,
-                  title: "受注を、一画面で。",
-                  subtitle: "電話・LINE・店頭・ECを、ひとつに統合。",
-                  desc: "ばらばらだった注文経路が、すべて FLORIX に集約。納期カレンダーで配達日も自動管理。立札・領収書も自動生成されるから、手書きの煩わしさから解放されます。",
-                  features: ["カスタムオーダー受付", "納期カレンダー連動", "立札8パターン自動生成", "領収書PDF発行", "インボイス対応"],
-                  image: IMAGES.feature1,
-                  align: "left",
                 },
                 {
                   no: "02",
-                  Icon: Truck,
+                  category: "DELIVERY",
                   title: "配達を、最短ルートで。",
-                  subtitle: "Googleマップ連携で、配達計画を自動最適化。",
-                  desc: "配達順・ドライバー・到着予定時刻を地図ビューで見える化。お客様への通知（LINE・SMS）も自動。配達遅延の連絡漏れも、もうありません。",
-                  features: ["配達ルート最適化", "地図ビュー管理", "LINE通知連携", "配達状況リアルタイム"],
-                  image: IMAGES.feature2,
-                  align: "right",
+                  lead: "Google マップ連携で、配達計画を自動最適化。",
+                  desc: "配達順・ドライバー・到着予定時刻を地図ビューで一目に。お客様への完成通知と配達連絡は LINE で自動送信。遅延の連絡漏れも、もうありません。",
+                  tags: ["ルート最適化", "地図ビュー", "LINE 自動通知", "配達状況リアルタイム"],
+                  image: IMG.f2,
+                  Icon: Truck,
                 },
                 {
                   no: "03",
+                  category: "ECOMMERCE",
+                  title: "EC で、24 時間営業に。",
+                  lead: "独自ドメインのオンラインショップを、すぐに開設。",
+                  desc: "Stripe 決済・在庫管理・SEO 対策（構造化データ・サイトマップ・OG 画像）まで標準装備。深夜・早朝の検索流入も、売上に変えていきます。",
+                  tags: ["独自ドメイン対応", "Stripe 決済", "SEO 標準装備", "QR 在庫管理", "FAQ・ブログ機能"],
+                  image: IMG.f3,
                   Icon: ShoppingBag,
-                  title: "ECで、新しいお客様と出会う。",
-                  subtitle: "ホームページがなくても、24時間販売開始。",
-                  desc: "独自ドメイン対応のオンラインショップを、すぐに開設。Stripe決済・在庫管理・SEO対策（構造化データ・サイトマップ・OG画像）が標準装備。Google検索からの集客も自動でついてきます。",
-                  features: ["独自ドメイン対応", "Stripe決済連携", "SEO対策標準装備", "在庫リアルタイム同期", "QR在庫管理"],
-                  image: IMAGES.feature3,
-                  align: "left",
                 },
                 {
                   no: "04",
+                  category: "CRM",
+                  title: "顧客を、一生のお客様に。",
+                  lead: "誕生日も、好みも、自動で蓄積。",
+                  desc: "ご注文履歴からお客様の好み傾向を自動分析。記念日リマインダー・誕生日メッセージは自動配信。LINE 公式連携で、もっと近くなるお客様との関係。",
+                  tags: ["顧客カルテ", "好み傾向分析", "記念日リマインダー", "LINE 公式連携"],
+                  image: IMG.f4,
                   Icon: Users,
-                  title: "顧客カルテで、リピート促進。",
-                  subtitle: "誕生日も、好みのお花も、すべて自動で蓄積。",
-                  desc: "ご注文履歴から、お客様の好み傾向を自動分析。記念日リマインダーや誕生日メッセージも自動配信。LINE公式連携で、もっと近くなるお客様との関係。",
-                  features: ["顧客カルテ", "好み傾向AI分析", "記念日リマインダー", "LINE公式連携", "誕生日メッセージ"],
-                  image: IMAGES.feature4,
-                  align: "right",
                 },
               ].map((f, idx) => {
                 const Icon = f.Icon;
-                const isLeft = f.align === "left";
+                const isLeft = idx % 2 === 0;
                 return (
-                  <article key={idx} className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
-                    <div className={`${isLeft ? "" : "md:order-2"}`}>
-                      <div className="relative">
-                        <div className={`absolute ${isLeft ? "-top-6 -left-6" : "-top-6 -right-6"} w-24 h-24 rounded-full bg-[#AFC6B2]/30`}></div>
-                        <img src={f.image} alt={f.title} className="relative rounded-[2rem] shadow-xl shadow-[#AFC6B2]/20 w-full aspect-[4/3] object-cover"/>
+                  <article key={f.no} className="grid md:grid-cols-2 gap-10 md:gap-20 items-center">
+                    <div className={`${isLeft ? "" : "md:order-2"} relative`}>
+                      <div className={`absolute ${isLeft ? "-top-6 -left-6" : "-top-6 -right-6"} w-32 h-32 rounded-full bg-[#A7B8A1]/20`}></div>
+                      <div className="relative rounded-[32px] overflow-hidden shadow-[0_24px_64px_-24px_rgba(168,98,74,0.18)]">
+                        <img src={f.image} alt={f.title} className="w-full aspect-[5/4] object-cover"/>
                       </div>
                     </div>
-                    <div className={`${isLeft ? "" : "md:order-1"}`}>
+
+                    <div className={isLeft ? "" : "md:order-1"}>
                       <div className="flex items-center gap-3 mb-4">
-                        <span className="text-[12px] font-bold text-[#D9825B] tracking-[0.3em]">{f.no}</span>
-                        <span className="h-px flex-1 bg-gradient-to-r from-[#D9825B]/40 to-transparent"></span>
+                        <span className="text-[11px] tracking-[0.35em] text-[#7E9279] font-medium" style={{ fontFamily: "var(--font-outfit)" }}>
+                          {f.no}　/　{f.category}
+                        </span>
                       </div>
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#F8F2E8] to-[#E8DFD0] flex items-center justify-center text-[#D9825B]">
-                          <Icon size={22}/>
+                      <div className="flex items-start gap-3 mb-5">
+                        <div className="w-11 h-11 shrink-0 rounded-2xl bg-[#F4EFE6] flex items-center justify-center text-[#C97D60]">
+                          <Icon size={20}/>
                         </div>
-                        <h3 className="text-[22px] md:text-[28px] font-bold text-[#2C2C2C] leading-tight" style={{ fontFamily: "'Playfair Display','Noto Serif JP',serif" }}>
+                        <h3
+                          className="text-[24px] md:text-[32px] leading-[1.4] text-[#2F2F2F] pt-1"
+                          style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}
+                        >
                           {f.title}
                         </h3>
                       </div>
-                      <p className="text-[14px] md:text-[15px] font-semibold text-[#7A9279] mb-4">{f.subtitle}</p>
-                      <p className="text-[13.5px] md:text-[14px] text-[#5B5B5B] leading-[2] mb-5">{f.desc}</p>
+                      <p className="text-[14px] md:text-[15px] font-medium text-[#7E9279] mb-4 leading-relaxed">
+                        {f.lead}
+                      </p>
+                      <p className="text-[13.5px] md:text-[14px] text-[#5B5B5B] leading-[2] mb-6">
+                        {f.desc}
+                      </p>
                       <ul className="flex flex-wrap gap-2">
-                        {f.features.map(item => (
-                          <li key={item} className="text-[11.5px] font-medium text-[#5B5B5B] bg-[#F8F2E8] px-3.5 py-1.5 rounded-full border border-[#E8DFD0]">
-                            {item}
+                        {f.tags.map(tag => (
+                          <li key={tag} className="text-[11.5px] font-medium text-[#5B5B5B] bg-white border border-[#E5DED2] px-3.5 py-1.5 rounded-full">
+                            {tag}
                           </li>
                         ))}
                       </ul>
@@ -459,202 +466,205 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* ============================================== */}
+        {/* ============================================ */}
+        {/* CTA #2 - 機能後 */}
+        {/* ============================================ */}
+        <section className="py-20 px-6 bg-[#FAF7F2]">
+          <div className="max-w-[900px] mx-auto">
+            <div className="relative rounded-[32px] overflow-hidden bg-gradient-to-br from-[#A7B8A1] to-[#7E9279] p-10 md:p-16 text-white">
+              <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/10 blur-2xl -mt-32 -mr-32"></div>
+
+              <div className="relative text-center">
+                <p className="text-[11px] tracking-[0.35em] text-white/70 font-medium mb-5" style={{ fontFamily: "var(--font-outfit)" }}>
+                  YOUR FLOWER SHOP, REIMAGINED
+                </p>
+                <h2
+                  className="text-[24px] md:text-[36px] leading-[1.5] mb-6"
+                  style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}
+                >
+                  いまの業務、見直してみませんか。
+                </h2>
+                <p className="text-[14px] text-white/85 leading-[2] mb-8 max-w-[560px] mx-auto">
+                  まずは 30 分のオンラインデモから。<br/>
+                  実際の画面をお見せしながら、ご質問にお答えします。
+                </p>
+                <a
+                  href="#contact"
+                  className="group inline-flex items-center justify-center gap-2 h-14 px-8 bg-white text-[#2F2F2F] rounded-full text-[14px] font-medium hover:bg-[#C97D60] hover:text-white transition-all shadow-xl"
+                >
+                  無料相談・デモを申し込む
+                  <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform"/>
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ============================================ */}
         {/* USAGE FLOW */}
-        {/* ============================================== */}
-        <section className="py-24 md:py-32 px-6 bg-[#F8F2E8]">
-          <div className="max-w-[1180px] mx-auto">
-            <div className="text-center mb-16">
-              <p className="text-[11px] font-bold text-[#7A9279] tracking-[0.3em] mb-4">USAGE</p>
-              <h2 className="text-[28px] md:text-[40px] font-bold text-[#2C2C2C] leading-[1.4]" style={{ fontFamily: "'Playfair Display','Noto Serif JP',serif" }}>
-                朝から夜まで、ずっとそばに。
+        {/* ============================================ */}
+        <section className="py-24 md:py-36 px-6 bg-[#F4EFE6]">
+          <div className="max-w-[1140px] mx-auto">
+            <div className="text-center max-w-[600px] mx-auto mb-16">
+              <p className="text-[11px] tracking-[0.35em] text-[#7E9279] font-medium mb-5" style={{ fontFamily: "var(--font-outfit)" }}>
+                USAGE
+              </p>
+              <h2
+                className="text-[28px] md:text-[40px] leading-[1.5] mb-6 text-[#2F2F2F]"
+                style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}
+              >
+                ご注文の流れ
               </h2>
-              <p className="text-[14px] text-[#5B5B5B] leading-[2] mt-5">
-                花屋さんの1日に、FLORIXが寄り添う実例
+              <p className="text-[14px] text-[#5B5B5B] leading-[2]">
+                お客様のご注文が、お届けに変わるまでの 5 ステップ
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
-              <div className="relative order-2 md:order-1">
-                <div className="absolute -top-8 -left-8 w-32 h-32 rounded-full bg-[#D9825B]/15"></div>
-                <img src={IMAGES.usage} alt="花屋さんの日常" className="relative rounded-[2.5rem] shadow-2xl shadow-[#AFC6B2]/30 w-full aspect-[4/5] object-cover"/>
+            <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-start">
+              <div className="relative md:sticky md:top-24">
+                <div className="rounded-[32px] overflow-hidden shadow-[0_24px_64px_-24px_rgba(168,98,74,0.2)]">
+                  <img src={IMG.usage} alt="店舗陳列" className="w-full aspect-[4/5] object-cover"/>
+                </div>
               </div>
 
-              <div className="order-1 md:order-2 space-y-5">
+              <ol className="space-y-3">
                 {[
-                  { time: "8:00", title: "朝の注文確認", desc: "前夜の電話・LINE・EC注文がダッシュボードに集約。スタッフ全員で当日の出荷を確認。" },
-                  { time: "10:00", title: "配達ルート確認", desc: "今日の配達先と最適ルートが自動表示。ドライバーがスマホで確認しながら出発。" },
-                  { time: "14:00", title: "店頭販売も同期", desc: "QRコードで商品をスキャン、PIN認証で在庫を減算。ECとの在庫差異もゼロに。" },
-                  { time: "20:00", title: "1日の振り返り", desc: "売上ダッシュボードを確認。顧客カルテに今日のメモを追記して、明日へ。" },
-                ].map((s, idx) => (
-                  <div key={idx} className="bg-white rounded-2xl p-5 shadow-[0_4px_24px_rgba(174,198,178,0.15)] border border-white">
-                    <div className="flex items-start gap-4">
-                      <div className="w-14 h-14 shrink-0 rounded-2xl bg-gradient-to-br from-[#AFC6B2] to-[#7A9279] flex items-center justify-center">
-                        <span className="text-white font-bold text-[12px]">{s.time}</span>
-                      </div>
+                  { step: "01", title: "お客様がご注文", desc: "電話・LINE・EC・店頭、どの経路でも FLORIX に集約。" },
+                  { step: "02", title: "スタッフが受注確認", desc: "ダッシュボードで全注文が一覧。配達日・立札・支払方法も即時確認。" },
+                  { step: "03", title: "制作・立札準備", desc: "立札は 8 パターンから自動生成。連名・縦書きも対応。" },
+                  { step: "04", title: "配達・受渡", desc: "配達ルート最適化。完成と配達状況を LINE で自動通知。" },
+                  { step: "05", title: "次回への蓄積", desc: "顧客カルテに自動記録。記念日リマインダーで次の機会へ。" },
+                ].map((s) => (
+                  <li
+                    key={s.step}
+                    className="bg-white/80 backdrop-blur-sm border border-[#E5DED2] rounded-[24px] p-6 hover:bg-white transition-all"
+                  >
+                    <div className="flex items-start gap-5">
+                      <span
+                        className="text-[24px] text-[#C97D60] leading-none shrink-0"
+                        style={{ fontFamily: "var(--font-outfit)", fontWeight: 500 }}
+                      >
+                        {s.step}
+                      </span>
                       <div className="flex-1">
-                        <h3 className="text-[15px] font-bold text-[#2C2C2C] mb-1.5">{s.title}</h3>
-                        <p className="text-[12.5px] text-[#5B5B5B] leading-[1.9]">{s.desc}</p>
+                        <h3
+                          className="text-[16px] md:text-[18px] text-[#2F2F2F] mb-2"
+                          style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}
+                        >
+                          {s.title}
+                        </h3>
+                        <p className="text-[13px] text-[#5B5B5B] leading-[1.95]">
+                          {s.desc}
+                        </p>
                       </div>
                     </div>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ol>
             </div>
           </div>
         </section>
 
-        {/* ============================================== */}
-        {/* BENEFITS - Before/After */}
-        {/* ============================================== */}
-        <section className="py-24 md:py-32 px-6 bg-[#FFFDF9]">
-          <div className="max-w-[1180px] mx-auto">
-            <div className="text-center mb-16">
-              <p className="text-[11px] font-bold text-[#D9825B] tracking-[0.3em] mb-4">BENEFITS</p>
-              <h2 className="text-[28px] md:text-[40px] font-bold text-[#2C2C2C] leading-[1.4]" style={{ fontFamily: "'Playfair Display','Noto Serif JP',serif" }}>
-                導入したら、こう変わる。
+        {/* ============================================ */}
+        {/* BENEFITS */}
+        {/* ============================================ */}
+        <section className="py-24 md:py-36 px-6 bg-[#FAF7F2]">
+          <div className="max-w-[1140px] mx-auto">
+            <div className="text-center max-w-[700px] mx-auto mb-16">
+              <p className="text-[11px] tracking-[0.35em] text-[#C97D60] font-medium mb-5" style={{ fontFamily: "var(--font-outfit)" }}>
+                BENEFITS
+              </p>
+              <h2
+                className="text-[28px] md:text-[40px] leading-[1.5] mb-6 text-[#2F2F2F]"
+                style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}
+              >
+                導入で、こう変わる。
               </h2>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6 max-w-[900px] mx-auto">
-              {/* BEFORE */}
-              <div className="bg-[#F4EEE4] rounded-[2rem] p-8 md:p-10 border border-[#E8DFD0]">
-                <p className="text-[10px] font-bold text-[#A8A299] tracking-[0.3em] mb-3">BEFORE</p>
-                <h3 className="text-[18px] font-bold text-[#5B5B5B] mb-6">いままで</h3>
-                <ul className="space-y-4 text-[13px] text-[#6B6B6B]">
-                  {[
-                    "電話注文は紙メモ・LINE注文はスマホで別管理",
-                    "配達ルートは毎朝Googleマップで手作業",
-                    "立札は手書き・連名で混乱",
-                    "売上集計は月末にExcelで2時間",
-                    "EC開設には別の制作会社に発注必要",
-                  ].map(item => (
-                    <li key={item} className="flex items-start gap-2.5 line-through opacity-70">
-                      <span className="text-[#A8A299] mt-1.5 shrink-0">―</span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* AFTER */}
-              <div className="bg-gradient-to-br from-[#AFC6B2] to-[#7A9279] rounded-[2rem] p-8 md:p-10 text-white shadow-xl shadow-[#7A9279]/20">
-                <p className="text-[10px] font-bold text-white/80 tracking-[0.3em] mb-3">AFTER</p>
-                <h3 className="text-[18px] font-bold mb-6">FLORIX 導入後</h3>
-                <ul className="space-y-4 text-[13px]">
-                  {[
-                    "すべての注文経路を1画面で確認・一元管理",
-                    "配達ルートは自動最適化・所要時間も予測",
-                    "立札8パターンから選んで自動で文字入れ",
-                    "売上はリアルタイムでダッシュボード表示",
-                    "独自ドメインで24時間ECがすぐスタート",
-                  ].map(item => (
-                    <li key={item} className="flex items-start gap-2.5">
-                      <Check size={18} className="mt-0.5 shrink-0 text-white"/>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ============================================== */}
-        {/* ACHIEVEMENTS - 数字で語る */}
-        {/* ============================================== */}
-        <section className="py-20 md:py-28 px-6 bg-gradient-to-br from-[#F8F2E8] via-[#FBF6EE] to-[#F8F2E8]">
-          <div className="max-w-[1180px] mx-auto">
-            <div className="text-center mb-12">
-              <p className="text-[11px] font-bold text-[#7A9279] tracking-[0.3em] mb-4">ACHIEVEMENTS</p>
-              <h2 className="text-[24px] md:text-[36px] font-bold text-[#2C2C2C] leading-[1.4]" style={{ fontFamily: "'Playfair Display','Noto Serif JP',serif" }}>
-                数字が語る、FLORIXの実力。
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
               {[
-                { num: "27", unit: "店舗", label: "導入実績" },
-                { num: "85", unit: "%", label: "業務時間短縮（平均）" },
-                { num: "4.8", unit: "/ 5", label: "お客様満足度" },
-                { num: "30", unit: "日", label: "無料トライアル" },
-              ].map((a, idx) => (
-                <div key={idx} className="bg-white/70 backdrop-blur-md border border-white rounded-[1.5rem] p-6 md:p-8 text-center shadow-[0_4px_24px_rgba(174,198,178,0.12)]">
-                  <div className="text-[40px] md:text-[56px] font-bold text-[#D9825B] leading-none" style={{ fontFamily: "'Playfair Display',serif" }}>
-                    {a.num}
-                    <span className="text-[14px] md:text-[18px] ml-1 text-[#7A9279]">{a.unit}</span>
+                { before: "30 分", after: "5 分", label: "1日の注文確認時間" },
+                { before: "取り逃し", after: "受注確保", label: "営業時間外の注文" },
+                { before: "手書き", after: "自動生成", label: "立札の文字入れ" },
+                { before: "1 ヶ月", after: "1 週間", label: "新人スタッフの教育期間" },
+              ].map((b, idx) => (
+                <div
+                  key={idx}
+                  className="bg-white border border-[#E5DED2] rounded-[28px] p-7 md:p-8 hover:shadow-[0_16px_48px_-16px_rgba(126,146,121,0.18)] transition-all"
+                >
+                  <p className="text-[10px] tracking-[0.25em] text-[#7E9279] font-medium mb-2" style={{ fontFamily: "var(--font-outfit)" }}>
+                    BEFORE
+                  </p>
+                  <p className="text-[20px] text-[#A8A299] line-through mb-4" style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 500 }}>
+                    {b.before}
+                  </p>
+
+                  <p className="text-[10px] tracking-[0.25em] text-[#C97D60] font-medium mb-2" style={{ fontFamily: "var(--font-outfit)" }}>
+                    AFTER
+                  </p>
+                  <p className="text-[34px] md:text-[40px] text-[#C97D60] leading-none mb-4" style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}>
+                    {b.after}
+                  </p>
+
+                  <div className="pt-4 border-t border-[#E5DED2]">
+                    <p className="text-[12px] text-[#6B6B6B] leading-[1.7]">
+                      {b.label}
+                    </p>
                   </div>
-                  <p className="text-[11px] md:text-[12px] font-semibold text-[#5B5B5B] mt-2 tracking-wider">{a.label}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ============================================== */}
-        {/* TESTIMONIALS */}
-        {/* ============================================== */}
-        <section id="voice" className="py-24 md:py-32 px-6 bg-[#FFFDF9]">
-          <div className="max-w-[1180px] mx-auto">
-            <div className="text-center mb-16">
-              <p className="text-[11px] font-bold text-[#D9825B] tracking-[0.3em] mb-4">VOICE</p>
-              <h2 className="text-[28px] md:text-[40px] font-bold text-[#2C2C2C] leading-[1.4]" style={{ fontFamily: "'Playfair Display','Noto Serif JP',serif" }}>
-                花屋さんから、嬉しい声。
-              </h2>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6">
-              {[
-                {
-                  img: IMAGES.testimonial1,
-                  name: "佐藤様",
-                  shop: "東京・個人店オーナー",
-                  comment: "電話注文と店頭販売の在庫がバラバラで困っていました。FLORIXで一元管理できるようになり、毎日の確認時間が30分から5分に短縮されました。",
-                },
-                {
-                  img: IMAGES.testimonial2,
-                  name: "田中様",
-                  shop: "札幌・3店舗運営",
-                  comment: "3店舗の売上を一画面で見られるようになり、経営判断がスピーディーに。スタッフのシフト管理もすべて FLORIX 内で完結します。",
-                },
-                {
-                  img: IMAGES.testimonial3,
-                  name: "山田様",
-                  shop: "大阪・新規開業",
-                  comment: "開店と同時に導入。ホームページを別途作る必要がなく、FLORIX の EC機能だけで Google検索からのお客様も増えています。",
-                },
-              ].map((v, idx) => (
-                <article key={idx} className="bg-white rounded-[2rem] p-8 border border-[#F0E8DD] shadow-[0_8px_32px_rgba(217,130,91,0.05)]">
-                  <p className="text-[13px] md:text-[14px] text-[#3C3C3C] leading-[2.1] mb-6 font-medium">
-                    「{v.comment}」
-                  </p>
-                  <div className="flex items-center gap-3 pt-5 border-t border-[#F0E8DD]">
-                    <img src={v.img} alt={v.name} className="w-12 h-12 rounded-full object-cover"/>
-                    <div>
-                      <p className="text-[13px] font-bold text-[#2C2C2C]">{v.name}</p>
-                      <p className="text-[11px] text-[#7A9279]">{v.shop}</p>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
+        {/* ============================================ */}
+        {/* CTA #3 - 料金前 */}
+        {/* ============================================ */}
+        <section className="py-16 px-6 bg-[#FAF7F2]">
+          <div className="max-w-[900px] mx-auto text-center">
+            <p className="text-[11px] tracking-[0.35em] text-[#C97D60] font-medium mb-4" style={{ fontFamily: "var(--font-outfit)" }}>
+              GET STARTED FREE
+            </p>
+            <h2
+              className="text-[24px] md:text-[32px] leading-[1.5] mb-6 text-[#2F2F2F]"
+              style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}
+            >
+              まずは 30 日間、<br className="md:hidden"/>無料で試してみませんか。
+            </h2>
+            <p className="text-[13px] text-[#5B5B5B] leading-[2] mb-8 max-w-[560px] mx-auto">
+              クレジットカードのご登録は不要です。<br/>
+              気に入らなければ、自動で解約されます。
+            </p>
+            <a
+              href="#contact"
+              className="group inline-flex items-center justify-center gap-2 h-14 px-8 bg-[#C97D60] text-white rounded-full text-[14px] font-medium hover:bg-[#A8624A] transition-all shadow-[0_12px_36px_-12px_rgba(201,125,96,0.5)]"
+            >
+              無料トライアルを申し込む
+              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform"/>
+            </a>
           </div>
         </section>
 
-        {/* ============================================== */}
-        {/* PRICING - 動的にオーナー画面と連携 */}
-        {/* ============================================== */}
-        <section id="pricing" className="py-24 md:py-32 px-6 bg-[#F8F2E8] relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-[#AFC6B2]/10 blur-3xl"></div>
+        {/* ============================================ */}
+        {/* PRICING */}
+        {/* ============================================ */}
+        <section id="pricing" className="py-24 md:py-36 px-6 bg-[#F4EFE6] relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-[#A7B8A1]/15 blur-3xl"></div>
 
-          <div className="max-w-[1180px] mx-auto relative">
-            <div className="text-center mb-16">
-              <p className="text-[11px] font-bold text-[#7A9279] tracking-[0.3em] mb-4">PRICING</p>
-              <h2 className="text-[28px] md:text-[44px] font-bold text-[#2C2C2C] leading-[1.4]" style={{ fontFamily: "'Playfair Display','Noto Serif JP',serif" }}>
-                わかりやすい、3つのプラン。
+          <div className="max-w-[1140px] mx-auto relative">
+            <div className="text-center max-w-[600px] mx-auto mb-16">
+              <p className="text-[11px] tracking-[0.35em] text-[#7E9279] font-medium mb-5" style={{ fontFamily: "var(--font-outfit)" }}>
+                PRICING
+              </p>
+              <h2
+                className="text-[28px] md:text-[44px] leading-[1.5] mb-6 text-[#2F2F2F]"
+                style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}
+              >
+                必要な機能だけ、選べる3プラン。
               </h2>
-              <p className="text-[14px] text-[#5B5B5B] leading-[2] mt-5">
-                必要な機能だけ。お店の規模に合わせて選べます。
+              <p className="text-[14px] text-[#5B5B5B] leading-[2]">
+                お店の規模・運営スタイルに合わせて、ご検討ください。
               </p>
             </div>
 
@@ -668,50 +678,59 @@ export default async function HomePage() {
                 return (
                   <div
                     key={idx}
-                    className={`relative rounded-[2rem] p-8 transition-all ${
+                    className={`relative rounded-[28px] p-8 transition-all ${
                       isRecommended
-                        ? "bg-[#2C2C2C] text-white shadow-2xl shadow-[#2C2C2C]/15 md:scale-105"
-                        : "bg-white/80 backdrop-blur-md border border-white shadow-[0_8px_32px_rgba(174,198,178,0.12)]"
+                        ? "bg-[#2F2F2F] text-white md:scale-105 shadow-2xl"
+                        : "bg-white border border-[#E5DED2]"
                     }`}
                   >
                     {isRecommended && (
-                      <span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#D9825B] text-white text-[11px] font-bold px-4 py-1.5 rounded-full shadow-lg whitespace-nowrap">
-                        おすすめ
+                      <span
+                        className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#C97D60] text-white text-[10px] font-medium px-4 py-1.5 rounded-full tracking-[0.2em]"
+                        style={{ fontFamily: "var(--font-outfit)" }}
+                      >
+                        RECOMMENDED
                       </span>
                     )}
-                    <h3 className={`text-[20px] font-bold mb-1 ${isRecommended ? "" : "text-[#2C2C2C]"}`} style={{ fontFamily: "'Playfair Display','Noto Serif JP',serif" }}>
+                    <h3
+                      className={`text-[20px] mb-1 ${isRecommended ? "" : "text-[#2F2F2F]"}`}
+                      style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}
+                    >
                       {plan.name}
                     </h3>
-                    <p className={`text-[11px] mb-6 ${isRecommended ? "text-white/70" : "text-[#7A9279]"}`}>
+                    <p className={`text-[11px] mb-7 ${isRecommended ? "text-white/60" : "text-[#7E9279]"}`}>
                       {plan.subtitle}
                     </p>
                     <div className="mb-7 pb-7 border-b border-current/15">
-                      <span className={`${isCustomPriceText ? "text-[26px]" : "text-[44px]"} font-bold leading-none ${isRecommended ? "text-[#F8F2E8]" : "text-[#D9825B]"}`} style={{ fontFamily: "'Playfair Display',serif" }}>
+                      <span
+                        className={`${isCustomPriceText ? "text-[26px]" : "text-[42px]"} leading-none ${isRecommended ? "text-white" : "text-[#C97D60]"}`}
+                        style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}
+                      >
                         {priceDisplay}
                       </span>
                       {!isCustomPriceText && (
-                        <span className={`text-[12px] ml-2 ${isRecommended ? "text-white/70" : "text-[#6B6B6B]"}`}>
+                        <span className={`text-[11px] ml-2 ${isRecommended ? "text-white/60" : "text-[#6B6B6B]"}`}>
                           / 月（税抜）
                         </span>
                       )}
                     </div>
-                    <ul className="space-y-3 text-[13px] mb-7">
+                    <ul className="space-y-3 text-[13px] mb-7 min-h-[160px]">
                       {(plan.features || []).map((f: string, fi: number) => (
                         <li key={fi} className="flex items-start gap-2.5">
-                          <Check size={15} className={`mt-0.5 shrink-0 ${isRecommended ? "text-[#AFC6B2]" : "text-[#7A9279]"}`}/>
-                          <span className={isRecommended ? "text-white/90" : "text-[#5B5B5B]"}>{f}</span>
+                          <Check size={14} className={`mt-1 shrink-0 ${isRecommended ? "text-[#A7B8A1]" : "text-[#7E9279]"}`}/>
+                          <span className={isRecommended ? "text-white/85" : "text-[#5B5B5B]"}>{f}</span>
                         </li>
                       ))}
                     </ul>
                     <a
                       href="#contact"
-                      className={`block w-full text-center h-12 leading-[48px] rounded-full text-[13px] font-bold transition-all ${
+                      className={`block w-full text-center h-12 leading-[48px] rounded-full text-[13px] font-medium transition-all ${
                         isRecommended
-                          ? "bg-[#D9825B] text-white hover:bg-[#B86340]"
-                          : "bg-[#2C2C2C] text-white hover:bg-[#D9825B]"
+                          ? "bg-[#C97D60] text-white hover:bg-[#A8624A]"
+                          : "bg-[#2F2F2F] text-white hover:bg-[#C97D60]"
                       }`}
                     >
-                      無料で始める
+                      無料相談する
                     </a>
                   </div>
                 );
@@ -719,38 +738,50 @@ export default async function HomePage() {
             </div>
 
             {pricing.note && (
-              <p className="text-center text-[13px] text-[#5B5B5B] mt-10" dangerouslySetInnerHTML={{
-                __html: String(pricing.note).replace(/30日間無料トライアル/g, "<strong class='text-[#D9825B]'>30日間無料トライアル</strong>"),
+              <p className="text-center text-[12px] text-[#6B6B6B] mt-10" dangerouslySetInnerHTML={{
+                __html: String(pricing.note).replace(/30日間無料トライアル/g, "<strong class='text-[#C97D60]'>30日間無料トライアル</strong>"),
               }} />
             )}
           </div>
         </section>
 
-        {/* ============================================== */}
+        {/* ============================================ */}
         {/* FAQ */}
-        {/* ============================================== */}
-        <section id="faq" className="py-24 md:py-32 px-6 bg-[#FFFDF9]">
-          <div className="max-w-[800px] mx-auto">
+        {/* ============================================ */}
+        <section id="faq" className="py-24 md:py-36 px-6 bg-[#FAF7F2]">
+          <div className="max-w-[840px] mx-auto">
             <div className="text-center mb-14">
-              <p className="text-[11px] font-bold text-[#D9825B] tracking-[0.3em] mb-4">FAQ</p>
-              <h2 className="text-[28px] md:text-[40px] font-bold text-[#2C2C2C] leading-[1.4]" style={{ fontFamily: "'Playfair Display','Noto Serif JP',serif" }}>
+              <p className="text-[11px] tracking-[0.35em] text-[#C97D60] font-medium mb-5" style={{ fontFamily: "var(--font-outfit)" }}>
+                FAQ
+              </p>
+              <h2
+                className="text-[28px] md:text-[40px] leading-[1.5] text-[#2F2F2F]"
+                style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}
+              >
                 よくいただくご質問
               </h2>
             </div>
 
             <div className="space-y-3">
               {[
-                { q: "パソコンが苦手でも使えますか？", a: "はい、スマホ・タブレットから操作可能です。導入時はオンライン研修を実施しますので、安心してご利用いただけます。" },
-                { q: "今使っているExcelや顧客リストから移行できますか？", a: "はい、CSV形式でお送りいただければインポート作業を代行いたします。新規導入時の初期セットアップでサポートします。" },
-                { q: "途中でプラン変更はできますか？", a: "もちろん可能です。お店の成長に合わせてアップグレード・ダウングレードがいつでも可能。日割り計算で精算します。" },
-                { q: "解約はいつでもできますか？", a: "はい、月単位でいつでも解約可能です。違約金や年契約縛りは一切ありません。" },
-                { q: "ホームページがないけどECだけ作れますか？", a: "はい、独自ドメインに対応したオンラインショップとしてご利用いただけます。SEO対策（サイトマップ・構造化データ・OG画像）も標準装備です。" },
-                { q: "セキュリティは大丈夫ですか？", a: "個人情報は暗号化保管、通信もSSL/TLS、二段階認証、操作監査ログ、リアルタイム監視（Sentry）まで導入済みです。" },
+                { q: "パソコンが苦手でも使えますか。", a: "スマホ・タブレットからも操作できます。導入時のオンライン研修（30〜60分）もご用意しているため、安心してお試しいただけます。" },
+                { q: "今使っている Excel から移行できますか。", a: "CSV 形式でお送りいただければ、商品・顧客データのインポート作業を導入時に代行いたします。" },
+                { q: "途中でプラン変更はできますか。", a: "いつでも可能です。お店の成長に合わせて、アップグレード・ダウングレードともに日割り計算で対応します。" },
+                { q: "解約はいつでもできますか。", a: "月単位でいつでも解約可能です。違約金や年契約縛りは一切ありません。" },
+                { q: "ホームページがなくても EC は始められますか。", a: "FLORIX のオンラインショップは独自ドメインに対応しているため、これがそのまま貴店の EC サイトになります。SEO 対策も標準装備です。" },
+                { q: "セキュリティは大丈夫ですか。", a: "個人情報はデータベース上で暗号化、通信は SSL/TLS、二段階認証、操作監査ログ、リアルタイム監視まで装備しています。" },
+                { q: "電話注文の受付件数は、本当に減りますか。", a: "EC・LINE 注文に流れることで、繁忙期の電話本数が減ったというお声を多くいただいています。お試し中の効果測定もご相談ください。" },
+                { q: "導入までの期間はどれくらいですか。", a: "最短 3 日でご利用開始いただけます。データ移行を含めても、通常 1〜2 週間です。" },
               ].map((item, idx) => (
-                <details key={idx} className="group bg-[#F8F2E8] rounded-[1.5rem] border border-[#E8DFD0] open:bg-white open:shadow-md transition-all">
+                <details key={idx} className="group bg-white border border-[#E5DED2] rounded-[20px] open:shadow-[0_8px_32px_-8px_rgba(126,146,121,0.15)] transition-all">
                   <summary className="flex items-center justify-between p-6 cursor-pointer list-none">
-                    <span className="font-bold text-[14px] md:text-[15px] text-[#2C2C2C] pr-4">{item.q}</span>
-                    <span className="w-8 h-8 shrink-0 rounded-full bg-white border border-[#E8DFD0] flex items-center justify-center text-[#D9825B] group-open:rotate-180 transition-transform">
+                    <span
+                      className="font-medium text-[14px] md:text-[15px] text-[#2F2F2F] pr-4"
+                      style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}
+                    >
+                      {item.q}
+                    </span>
+                    <span className="w-9 h-9 shrink-0 rounded-full bg-[#F4EFE6] flex items-center justify-center text-[#C97D60] group-open:rotate-180 transition-transform">
                       <ChevronDown size={16}/>
                     </span>
                   </summary>
@@ -763,107 +794,121 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* ============================================== */}
-        {/* FINAL CTA - PASONA: Narrow + Action */}
-        {/* ============================================== */}
-        <section id="contact" className="py-24 md:py-32 px-6 bg-gradient-to-br from-[#2C2C2C] via-[#3A3A3A] to-[#2C2C2C] text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-[#D9825B]/20 blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-[#AFC6B2]/15 blur-3xl"></div>
+        {/* ============================================ */}
+        {/* CTA #4 (FINAL) */}
+        {/* ============================================ */}
+        <section id="contact" className="py-24 md:py-36 px-6 bg-[#2F2F2F] text-white relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-[#C97D60]/15 blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-[#A7B8A1]/15 blur-3xl"></div>
 
-          <div className="max-w-[800px] mx-auto relative">
+          <div className="max-w-[760px] mx-auto relative">
             <div className="text-center mb-12">
-              <p className="text-[11px] font-bold text-[#D9825B] tracking-[0.3em] mb-4">GET STARTED</p>
-              <h2 className="text-[32px] md:text-[52px] font-bold leading-[1.2] mb-6" style={{ fontFamily: "'Playfair Display','Noto Serif JP',serif" }}>
+              <p className="text-[11px] tracking-[0.35em] text-[#C97D60] font-medium mb-5" style={{ fontFamily: "var(--font-outfit)" }}>
+                CONTACT
+              </p>
+              <h2
+                className="text-[32px] md:text-[48px] leading-[1.4] mb-7"
+                style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}
+              >
                 花屋業務、<br/>
                 ぜんぶ FLORIX に。
               </h2>
-              <div className="inline-block bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-6 py-4 mb-8">
-                <p className="text-[13px] md:text-[14px] text-white/90 font-medium">
-                  期間限定 — 30日間 無料・初期費用 ¥0・クレカ登録 不要
+              <div className="inline-flex items-center gap-3 bg-white/5 backdrop-blur-md border border-white/10 rounded-full px-5 py-2.5 mb-8">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#A7B8A1] animate-pulse"></span>
+                <p className="text-[12px] text-white/85 font-medium">
+                  30日間 無料・初期費用 0円・クレカ登録 不要
                 </p>
               </div>
-              <p className="text-[14px] text-white/70 leading-[1.9] max-w-[600px] mx-auto">
-                ご相談・デモご希望は、下のフォームから30秒で。<br/>
+              <p className="text-[13px] md:text-[14px] text-white/70 leading-[2] max-w-[560px] mx-auto">
+                ご相談・無料デモのご希望は、下のフォームから。<br/>
                 押し売りはいたしません。
               </p>
             </div>
 
-            <div className="bg-white text-[#2C2C2C] rounded-[2rem] p-7 md:p-10 shadow-2xl">
+            <div className="bg-[#FAF7F2] text-[#2F2F2F] rounded-[32px] p-7 md:p-12 shadow-2xl">
               <form action="mailto:contact@noodleflorix.com" method="post" encType="text/plain" className="space-y-5">
                 <div>
-                  <label className="text-[12px] font-bold text-[#2C2C2C] block mb-2">お店のお名前・お名前 *</label>
+                  <label className="text-[12px] font-medium text-[#2F2F2F] block mb-2">お店のお名前・お名前 <span className="text-[#C97D60]">*</span></label>
                   <input
                     type="text"
                     name="お店・お名前"
                     required
-                    className="w-full h-12 bg-[#FFFDF9] border border-[#E8DFD0] rounded-xl px-4 text-[13px] focus:border-[#D9825B] focus:outline-none focus:ring-2 focus:ring-[#D9825B]/20 transition"
-                    placeholder="例：花屋さくら / 田中太郎"
+                    className="w-full h-12 bg-white border border-[#E5DED2] rounded-xl px-4 text-[13px] focus:border-[#C97D60] focus:outline-none focus:ring-2 focus:ring-[#C97D60]/15 transition"
+                    placeholder="例：花屋さくら／田中太郎"
                   />
                 </div>
                 <div>
-                  <label className="text-[12px] font-bold text-[#2C2C2C] block mb-2">メールアドレス *</label>
+                  <label className="text-[12px] font-medium text-[#2F2F2F] block mb-2">メールアドレス <span className="text-[#C97D60]">*</span></label>
                   <input
                     type="email"
                     name="メール"
                     required
-                    className="w-full h-12 bg-[#FFFDF9] border border-[#E8DFD0] rounded-xl px-4 text-[13px] focus:border-[#D9825B] focus:outline-none focus:ring-2 focus:ring-[#D9825B]/20 transition"
+                    className="w-full h-12 bg-white border border-[#E5DED2] rounded-xl px-4 text-[13px] focus:border-[#C97D60] focus:outline-none focus:ring-2 focus:ring-[#C97D60]/15 transition"
                     placeholder="your@email.com"
                   />
                 </div>
                 <div>
-                  <label className="text-[12px] font-bold text-[#2C2C2C] block mb-2">電話番号</label>
+                  <label className="text-[12px] font-medium text-[#2F2F2F] block mb-2">電話番号</label>
                   <input
                     type="tel"
                     name="電話"
-                    className="w-full h-12 bg-[#FFFDF9] border border-[#E8DFD0] rounded-xl px-4 text-[13px] focus:border-[#D9825B] focus:outline-none focus:ring-2 focus:ring-[#D9825B]/20 transition"
+                    className="w-full h-12 bg-white border border-[#E5DED2] rounded-xl px-4 text-[13px] focus:border-[#C97D60] focus:outline-none focus:ring-2 focus:ring-[#C97D60]/15 transition"
                     placeholder="090-0000-0000（任意）"
                   />
                 </div>
                 <div>
-                  <label className="text-[12px] font-bold text-[#2C2C2C] block mb-2">ご相談内容</label>
+                  <label className="text-[12px] font-medium text-[#2F2F2F] block mb-2">ご相談内容</label>
                   <textarea
                     name="ご相談内容"
                     rows={4}
-                    className="w-full bg-[#FFFDF9] border border-[#E8DFD0] rounded-xl px-4 py-3 text-[13px] focus:border-[#D9825B] focus:outline-none focus:ring-2 focus:ring-[#D9825B]/20 transition resize-none"
-                    placeholder="お悩み、ご質問、デモご希望など、お気軽にどうぞ。"
+                    className="w-full bg-white border border-[#E5DED2] rounded-xl px-4 py-3 text-[13px] focus:border-[#C97D60] focus:outline-none focus:ring-2 focus:ring-[#C97D60]/15 transition resize-none"
+                    placeholder="ご質問・デモご希望など、お気軽にどうぞ。"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="group w-full h-14 bg-[#D9825B] text-white rounded-full text-[15px] font-bold hover:bg-[#B86340] transition-all shadow-lg shadow-[#D9825B]/30 flex items-center justify-center gap-2"
+                  className="group w-full h-14 bg-[#C97D60] text-white rounded-full text-[14px] font-medium hover:bg-[#A8624A] transition-all shadow-[0_12px_36px_-12px_rgba(201,125,96,0.5)] flex items-center justify-center gap-2"
                 >
-                  <Send size={16}/>
+                  <Send size={15}/>
                   30日間 無料で始める
-                  <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform"/>
+                  <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform"/>
                 </button>
-                <p className="text-[11px] text-[#7A9279] text-center pt-2">
-                  ※ ご相談はすべて無料です。お電話でも受付しています。
+                <p className="text-[11px] text-[#7E9279] text-center pt-1">
+                  ご相談は無料です。お電話でも受付しています。
                 </p>
               </form>
             </div>
 
-            <div className="text-center mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-[13px] text-white/80">
+            <div className="text-center mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-8 text-[12px] text-white/70">
               <a href="mailto:contact@noodleflorix.com" className="hover:text-white inline-flex items-center gap-2 transition">
-                <Mail size={14}/> contact@noodleflorix.com
+                <Mail size={13}/> contact@noodleflorix.com
               </a>
               <span className="hidden sm:inline text-white/30">|</span>
               <span className="inline-flex items-center gap-2">
-                <Phone size={14}/> 平日 9:00 - 18:00
+                <Phone size={13}/> 平日 9:00 - 18:00
               </span>
             </div>
           </div>
         </section>
 
-        {/* ============================================== */}
+        {/* ============================================ */}
         {/* FOOTER */}
-        {/* ============================================== */}
-        <footer className="py-12 px-6 bg-[#1C1C1C] text-white/60">
-          <div className="max-w-[1180px] mx-auto">
-            <div className="grid md:grid-cols-2 gap-6 mb-8">
+        {/* ============================================ */}
+        <footer className="py-12 px-6 bg-[#1E1E1E] text-white/55">
+          <div className="max-w-[1140px] mx-auto">
+            <div className="grid md:grid-cols-2 gap-8 mb-8">
               <div>
-                <p className="font-bold text-white text-[22px] tracking-[0.18em] mb-2">FLORIX</p>
-                <p className="text-[12px] leading-[1.9]">
-                  花屋業務を、ぜんぶ FLORIX に。<br/>
+                <p
+                  className="font-medium text-white text-[24px] tracking-[0.18em] mb-3"
+                  style={{ fontFamily: "var(--font-outfit)" }}
+                >
+                  FLORIX
+                </p>
+                <p
+                  className="text-[12px] leading-[2]"
+                  style={{ fontFamily: "var(--font-zen-kaku)" }}
+                >
+                  花屋業務、ぜんぶ FLORIX に。<br/>
                   運営: NocoLde
                 </p>
               </div>
@@ -873,11 +918,23 @@ export default async function HomePage() {
                 <Link href="/staff/login" className="hover:text-white transition">ログイン</Link>
               </div>
             </div>
-            <div className="pt-6 border-t border-white/10 text-center text-[11px]">
+            <div className="pt-6 border-t border-white/10 text-center text-[11px]" style={{ fontFamily: "var(--font-outfit)" }}>
               © {new Date().getFullYear()} NocoLde / FLORIX. All rights reserved.
             </div>
           </div>
         </footer>
+
+        {/* ============================================ */}
+        {/* MOBILE STICKY CTA */}
+        {/* ============================================ */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 px-4 pb-4 pt-3 bg-gradient-to-t from-[#FAF7F2] via-[#FAF7F2]/95 to-transparent">
+          <a
+            href="#contact"
+            className="block w-full text-center h-14 leading-[56px] bg-[#C97D60] text-white rounded-full text-[14px] font-medium shadow-[0_8px_28px_-8px_rgba(201,125,96,0.6)]"
+          >
+            30日間 無料ではじめる
+          </a>
+        </div>
       </div>
     </>
   );
