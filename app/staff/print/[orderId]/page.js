@@ -347,14 +347,53 @@ export default function PrintSlipPage() {
       
       {/* 印刷コントローラー（画面上部） */}
       <div className="max-w-[1000px] mx-auto bg-white p-5 rounded-xl shadow-lg mb-8 print-hidden border border-gray-200 sticky top-4 z-50">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
           <div className="text-sm font-bold text-gray-700 flex items-center gap-2">
             🖨️ 伝票・立札 印刷センター
             <span className="bg-gray-100 text-gray-500 text-[10px] px-2 py-1 rounded-md">A4サイズ / 100%倍率推奨</span>
           </div>
-          <button onClick={() => window.print()} className="px-6 py-3 bg-[#2D4B3E] text-white font-bold rounded-lg shadow-md hover:bg-[#1f352b] transition-all flex items-center gap-2 active:scale-95">
-            PDF保存 / プリンターで印刷する
-          </button>
+          {/* [印刷-2] 印刷ボタン群: モバイル対応で代替手段を併設 */}
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => {
+                try {
+                  window.print();
+                } catch (e) {
+                  alert('印刷ダイアログが開けませんでした。\n\n下の「PDFで保存」ボタンを使用してください。');
+                }
+              }}
+              className="px-5 py-3 bg-[#2D4B3E] text-white font-bold rounded-lg shadow-md hover:bg-[#1f352b] transition-all flex items-center gap-2 active:scale-95 text-sm"
+            >
+              🖨️ 印刷ダイアログを開く
+            </button>
+            <button
+              onClick={async () => {
+                // PDF保存代替: 印刷ダイアログのPDF出力を案内
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                if (isMobile) {
+                  // iOS/Android: ブラウザの共有 → PDFで保存 を案内
+                  if (confirm(
+                    'モバイルからPDFで保存する手順：\n\n' +
+                    'iPhone/iPad: 画面下部の共有ボタン → 「プリント」または「PDFを保存」\n\n' +
+                    'Android: ブラウザメニュー（︙）→ 共有 → 「印刷」→ プリンター選択で「PDFとして保存」\n\n' +
+                    'OKで印刷ダイアログを開きます'
+                  )) {
+                    try { window.print(); } catch {}
+                  }
+                } else {
+                  alert(
+                    'PDFとして保存する手順：\n\n' +
+                    '1.「印刷ダイアログを開く」ボタンを押す\n' +
+                    '2. 送信先（プリンター）で「PDFに保存」を選択\n' +
+                    '3.「保存」をクリック'
+                  );
+                }
+              }}
+              className="px-5 py-3 bg-white border-2 border-[#2D4B3E] text-[#2D4B3E] font-bold rounded-lg hover:bg-[#FBFAF9] transition-all text-sm"
+            >
+              📄 PDF保存の手順
+            </button>
+          </div>
         </div>
         
         {/* モード切替ボタン */}
@@ -417,6 +456,31 @@ export default function PrintSlipPage() {
           color-adjust: exact !important;
         }
 
+        /* [印刷-1] 全テキストの折り返しを強制（プリンター差・長文での崩れを完全防止） */
+        .print-page,
+        .print-page *,
+        .slip-container,
+        .slip-container * {
+          word-break: break-word !important;
+          overflow-wrap: anywhere !important;
+          white-space: normal;
+        }
+        .slip-container p,
+        .slip-container span,
+        .slip-container td {
+          max-width: 100%;
+        }
+        /* テーブルセルの長文も折り返し */
+        .slip-container td, .slip-container th {
+          word-break: break-all !important;
+          overflow-wrap: anywhere !important;
+        }
+        /* 数量・金額など固定幅セルは折り返し対象外 */
+        .slip-container td.no-wrap, .slip-container th.no-wrap {
+          word-break: keep-all !important;
+          white-space: nowrap !important;
+        }
+
         .print-page {
           width: 210mm;
           padding: 8mm;
@@ -464,10 +528,17 @@ export default function PrintSlipPage() {
           .print-page {
             width: 210mm !important;
             margin: 0 !important;
-            /* ★ ③ プリンター非印刷領域分の余白（top 6mm / bottom 8mm / sides 8mm） */
-            padding: 6mm 8mm 8mm 8mm !important;
+            /* ★ ③ プリンター非印刷領域分の safety 余白（top 8mm / bottom 10mm / sides 10mm） */
+            /* プリンターによる非印刷領域差を吸収（5mm→10mmへ強化） */
+            padding: 8mm 10mm 10mm 10mm !important;
             box-shadow: none !important;
             page-break-inside: avoid !important;
+            overflow: hidden !important;
+          }
+
+          /* スリップ枠も最大幅制約 */
+          .slip-container {
+            max-width: 100% !important;
             overflow: hidden !important;
           }
         }

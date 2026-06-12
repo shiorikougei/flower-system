@@ -198,7 +198,8 @@ export default function QrPrintPage() {
 
         {/* プレビュー（印刷対象） */}
         {selectedProducts.length > 0 && (
-          <div className="print:break-inside-avoid">
+          <div className="print:break-inside-avoid qr-print-area">
+
             {printMode === 'sheet' && (
               <div className="bg-white p-4 print:p-0">
                 <h2 className="text-[12px] font-bold text-[#999] mb-3 print:hidden">📄 プレビュー（A4シート一括）</h2>
@@ -287,9 +288,60 @@ export default function QrPrintPage() {
       </div>
 
       <style jsx global>{`
+        /* [印刷-3] QR印刷の印刷範囲完全制御 */
         @media print {
-          @page { margin: 8mm; size: A4 portrait; }
-          body { background: white !important; }
+          @page {
+            size: A4 portrait;
+            margin: 8mm;
+          }
+
+          /* デフォルトで全要素を非表示 */
+          html, body {
+            background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          /* ヘッダー・コントロールUIを完全非表示 */
+          header,
+          .print\\:hidden {
+            display: none !important;
+          }
+
+          /* メインコンテナのpadding/margin削除 */
+          main, .max-w-\\[1200px\\] {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: none !important;
+          }
+
+          /* 印刷対象だけ表示 */
+          .qr-print-area {
+            display: block !important;
+            page-break-inside: avoid;
+          }
+
+          /* 印刷対象内の白背景・枠線をクリーン化 */
+          .qr-print-area .bg-white {
+            background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+
+          /* タグデザインのボーダー色を確実に表示 */
+          .qr-print-area * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+
+          /* page-breakを各タグ要素に適用（タグが途中で切れない） */
+          .qr-print-area .border-2 {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
         }
       `}</style>
     </main>
