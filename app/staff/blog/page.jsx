@@ -75,6 +75,29 @@ export default function StaffBlogPage() {
       const { error } = await supabase.from("blog_posts").insert(payload);
       if (error) return alert(`作成失敗: ${error.message}`);
     }
+
+    // [GEO-5] 公開記事の場合、IndexNow に即時通知 → Bing/ChatGPT searchで素早く索引
+    if (payload.is_published && payload.slug) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          const blogUrl = `https://www.noodleflorix.com/blog/${payload.tenant_id}/${payload.slug}`;
+          const blogIndexUrl = `https://www.noodleflorix.com/blog/${payload.tenant_id}`;
+          await fetch("/api/indexnow", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ urls: [blogUrl, blogIndexUrl] }),
+          });
+        }
+      } catch (e) {
+        // ping失敗してもブログ保存自体は成功扱い
+        console.warn("[blog] IndexNow ping failed", e);
+      }
+    }
+
     setEditing(null);
     loadPosts();
   }

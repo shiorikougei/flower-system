@@ -213,12 +213,34 @@ function StaffProductsPageInner() {
         prevStock = prev?.stock ?? null;
       }
 
+      let savedProductId = editTarget.id;
       if (editTarget.id) {
         const { error } = await supabase.from('products').update(payload).eq('id', editTarget.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('products').insert([payload]);
+        const { data: inserted, error } = await supabase.from('products').insert([payload]).select('id').single();
         if (error) throw error;
+        savedProductId = inserted?.id;
+      }
+
+      // [GEO-5] 公開中の商品をIndexNowに即時通知
+      if (payload.is_active && savedProductId) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            const productUrl = `https://www.noodleflorix.com/products/${payload.tenant_id}/${savedProductId}`;
+            await fetch('/api/indexnow', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({ urls: [productUrl] }),
+            });
+          }
+        } catch (e) {
+          console.warn('[products] IndexNow ping failed', e);
+        }
       }
 
       // ★ 在庫が 0 から +以上になった場合、入荷通知を自動送信
