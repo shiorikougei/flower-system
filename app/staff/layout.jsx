@@ -331,7 +331,7 @@ export default function StaffLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-[#FBFAF9] flex flex-col md:flex-row font-sans text-[#111111]">
-      <aside className="w-full md:w-64 bg-white border-r border-[#EAEAEA] md:fixed h-full z-40 flex flex-col">
+      <aside className="w-full md:w-64 bg-white border-r border-[#EAEAEA] md:fixed h-full z-40 flex flex-col print:hidden">
         <div className="p-6 flex flex-col gap-1 border-b border-[#EAEAEA] shrink-0">
           {logoUrl ? (
             <img src={logoUrl} alt={appName} className="h-8 object-contain object-left mb-1" />
@@ -467,7 +467,7 @@ export default function StaffLayout({ children }) {
         </div>
       </aside>
       
-      <main className="flex-1 md:ml-64 min-w-0">
+      <main className="flex-1 md:ml-64 min-w-0 print:ml-0">
         {children}
       </main>
 

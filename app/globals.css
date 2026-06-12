@@ -36,3 +36,38 @@ input, textarea, select {
 input::placeholder, textarea::placeholder {
   color: #999999;
 }
+
+/* ============================================ */
+/* [印刷-3] グローバル印刷防御
+   サイドバー・ヘッダー・モーダル等の管理UIが
+   印刷時に表示されないように一括防御 */
+/* ============================================ */
+@media print {
+  /* スタッフ管理レイアウトのサイドバーを完全非表示 */
+  aside { display: none !important; }
+
+  /* main要素の左マージン解除（サイドバー分） */
+  main { margin-left: 0 !important; }
+
+  /* 操作系UI要素を非表示 */
+  .print-hidden,
+  [class*="print:hidden"],
+  nav.sticky,
+  header.sticky,
+  .fixed { display: none !important; }
+
+  /* メインコンテンツの背景・余白リセット */
+  html, body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* sticky/fixed 要素を解除 */
+  .sticky { position: static !important; }
+
+  /* 印刷時の不要な影・背景 */
+  .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl, .shadow-sm {
+    box-shadow: none !important;
+  }
+}
