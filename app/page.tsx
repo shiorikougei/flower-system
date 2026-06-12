@@ -261,11 +261,17 @@ export default async function HomePage() {
         <section className="px-6 pb-12 md:pb-20">
           <div className="max-w-[1240px] mx-auto">
             <div className="grid grid-cols-5 gap-3 md:gap-4">
-              {[IMG.gallery1, IMG.gallery2, IMG.gallery3, IMG.gallery4, IMG.gallery5].map((src: string, idx: number) => (
+              {[
+                { src: IMG.gallery1, alt: "花束を制作する花屋スタッフ" },
+                { src: IMG.gallery2, alt: "完成した美しいブーケ" },
+                { src: IMG.gallery3, alt: "花屋の店内陳列" },
+                { src: IMG.gallery4, alt: "FLORIXで受注管理する花屋オーナー" },
+                { src: IMG.gallery5, alt: "花束をお客様にお渡しする様子" },
+              ].map((item, idx) => (
                 <div key={idx} className="aspect-square rounded-2xl overflow-hidden bg-[#F4EFE6]">
                   <img
-                    src={src}
-                    alt=""
+                    src={item.src}
+                    alt={item.alt}
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
                     loading="lazy"
                   />
