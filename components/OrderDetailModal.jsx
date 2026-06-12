@@ -1723,19 +1723,131 @@ export default function OrderDetailModal({
                 </p>
               </div>
 
-              {/* 写真プレビュー */}
+              {/* 写真プレビュー（削除・差し替え・追加可能） */}
               <div>
-                <p className="text-[11px] font-bold text-[#999] mb-2">📷 送信される完成写真 ({completionMailPreview.images.length}枚)</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[11px] font-bold text-[#999]">📷 送信される完成写真 ({completionMailPreview.images.length}枚)</p>
+                  {/* 追加ボタン */}
+                  <label className={`text-[10px] font-bold px-3 py-1.5 rounded-lg cursor-pointer transition ${isUploading ? 'bg-gray-100 text-gray-400' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b]'}`}>
+                    {isUploading ? 'アップロード中...' : '＋ 写真追加'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      disabled={isUploading}
+                      onChange={async (e) => {
+                        const files = Array.from(e.target.files || []);
+                        if (files.length === 0) return;
+                        setIsUploading(true);
+                        try {
+                          const uploadedUrls = [];
+                          for (const file of files) {
+                            const ext = file.name.split('.').pop();
+                            const fileName = `completion_${order.id}_${Date.now()}_${Math.random().toString(36).slice(2,6)}.${ext}`;
+                            const { error: uploadError } = await supabase.storage.from('portfolio').upload(fileName, file);
+                            if (uploadError) throw uploadError;
+                            const { data: { publicUrl } } = supabase.storage.from('portfolio').getPublicUrl(fileName);
+                            uploadedUrls.push(publicUrl);
+                          }
+                          const newImages = [...completionMailPreview.images, ...uploadedUrls];
+                          // 注文DBにも反映
+                          const updatedData = { ...modalData, completionImages: newImages, completionImage: newImages[0] };
+                          await supabase.from('orders').update({ order_data: updatedData }).eq('id', order.id);
+                          if (order?.order_data) {
+                            order.order_data.completionImages = newImages;
+                            order.order_data.completionImage = newImages[0];
+                          }
+                          setCompletionMailPreview({ ...completionMailPreview, images: newImages });
+                        } catch (err) {
+                          alert(`追加失敗: ${err.message}`);
+                        } finally {
+                          setIsUploading(false);
+                          e.target.value = '';
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {completionMailPreview.images.map((url, idx) => (
-                    <div key={idx} className="relative aspect-square bg-[#FBFAF9] rounded-lg overflow-hidden border border-[#EAEAEA]">
+                    <div key={idx} className="relative aspect-square bg-[#FBFAF9] rounded-lg overflow-hidden border border-[#EAEAEA] group">
                       <img src={url} alt={`完成写真${idx+1}`} className="w-full h-full object-cover"/>
                       <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] px-2 py-0.5 rounded-full">
                         {idx+1}枚目
                       </div>
+                      {/* 操作ボタン群（右上） */}
+                      <div className="absolute top-1 right-1 flex gap-1">
+                        {/* 差し替えボタン */}
+                        <label className={`w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition ${isUploading ? 'bg-gray-300 text-gray-500' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-md'}`} title="この写真を差し替える">
+                          <span className="text-[10px]">📷</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            disabled={isUploading}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              setIsUploading(true);
+                              try {
+                                const ext = file.name.split('.').pop();
+                                const fileName = `completion_${order.id}_${Date.now()}_${Math.random().toString(36).slice(2,6)}.${ext}`;
+                                const { error: uploadError } = await supabase.storage.from('portfolio').upload(fileName, file);
+                                if (uploadError) throw uploadError;
+                                const { data: { publicUrl } } = supabase.storage.from('portfolio').getPublicUrl(fileName);
+                                const newImages = [...completionMailPreview.images];
+                                newImages[idx] = publicUrl;
+                                // 注文DBにも反映
+                                const updatedData = { ...modalData, completionImages: newImages, completionImage: newImages[0] };
+                                await supabase.from('orders').update({ order_data: updatedData }).eq('id', order.id);
+                                if (order?.order_data) {
+                                  order.order_data.completionImages = newImages;
+                                  order.order_data.completionImage = newImages[0];
+                                }
+                                setCompletionMailPreview({ ...completionMailPreview, images: newImages });
+                              } catch (err) {
+                                alert(`差し替え失敗: ${err.message}`);
+                              } finally {
+                                setIsUploading(false);
+                                e.target.value = '';
+                              }
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                        {/* 削除ボタン */}
+                        <button
+                          onClick={async () => {
+                            if (completionMailPreview.images.length <= 1) {
+                              alert('最低1枚は必要です。差し替えにてご対応ください。');
+                              return;
+                            }
+                            if (!confirm(`${idx+1}枚目の写真を削除します。よろしいですか？`)) return;
+                            const newImages = completionMailPreview.images.filter((_, i) => i !== idx);
+                            try {
+                              const updatedData = { ...modalData, completionImages: newImages, completionImage: newImages[0] };
+                              await supabase.from('orders').update({ order_data: updatedData }).eq('id', order.id);
+                              if (order?.order_data) {
+                                order.order_data.completionImages = newImages;
+                                order.order_data.completionImage = newImages[0];
+                              }
+                              setCompletionMailPreview({ ...completionMailPreview, images: newImages });
+                            } catch (err) {
+                              alert(`削除失敗: ${err.message}`);
+                            }
+                          }}
+                          className="w-7 h-7 bg-red-600 hover:bg-red-500 text-white rounded-full shadow-md flex items-center justify-center transition"
+                          title="この写真を削除"
+                        >
+                          <span className="text-[12px] font-bold">×</span>
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
+                <p className="text-[10px] text-[#999] mt-2 leading-relaxed">
+                  💡 各写真の右上で <strong>📷 差し替え</strong> / <strong>× 削除</strong> ができます。「＋ 写真追加」で複数枚一気に追加もOK。
+                </p>
               </div>
 
               {/* ★ 納品日確認・編集（入金確認モーダルと同じスキーム） */}
