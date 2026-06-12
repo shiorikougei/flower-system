@@ -511,6 +511,13 @@ export default function SettingsPage() {
               <button key={t} onClick={() => setStatusConfig({...statusConfig, type: t})} className={`flex-1 py-3 rounded-lg font-bold text-[12px] ${statusConfig.type === t ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}>{t === 'template' ? '標準' : 'カスタム'}</button>
             ))}
           </div>
+          {/* 標準モード時の案内 */}
+          {statusConfig.type === 'template' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-[11px] text-blue-900 leading-relaxed">
+              💡 <strong>標準モードは編集できません</strong>（このまま使用されます）。<br/>
+              ステータスを <strong>追加・編集・並び替え</strong> したい場合は、<strong>「カスタム」タブ</strong>に切り替えてください。
+            </div>
+          )}
           <div className="space-y-3">
             {(statusConfig.type === 'template' ? ['受注', '制作', '配達', '片付', '請求'] : statusConfig.customLabels).map((l, i) => (
               <div key={i} className="flex gap-2">

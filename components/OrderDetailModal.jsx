@@ -140,7 +140,8 @@ export default function OrderDetailModal({
       } else if (config?.type === 'custom' && config?.customLabels?.length > 0) {
         labels = [...config.customLabels];
       } else {
-        labels = ['受注', '制作', '配達', '片付'];
+        // ★ 標準モードのデフォルト（設定画面の表示と揃える）
+        labels = ['受注', '制作', '配達', '片付', '請求'];
       }
     }
 
