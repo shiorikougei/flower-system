@@ -635,14 +635,14 @@ export default function StaffNewOrderPage() {
           <div className="bg-white p-8 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-6">
             <h2 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-3">1. 受付情報と商品</h2>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-[#999999]">受付区分</label>
-                <div className="flex gap-2 flex-wrap">
-                  <button onClick={() => setReceptionType('phone')} className={`flex-1 min-w-[80px] py-3 text-[12px] font-bold rounded-xl border transition-all ${receptionType === 'phone' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>電話受付</button>
-                  <button onClick={() => setReceptionType('store')} className={`flex-1 min-w-[80px] py-3 text-[12px] font-bold rounded-xl border transition-all ${receptionType === 'store' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>店頭受付</button>
+                <div className="grid grid-cols-3 gap-2">
+                  <button onClick={() => setReceptionType('phone')} className={`py-3 text-[11px] md:text-[12px] font-bold rounded-xl border transition-all ${receptionType === 'phone' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>電話受付</button>
+                  <button onClick={() => setReceptionType('store')} className={`py-3 text-[11px] md:text-[12px] font-bold rounded-xl border transition-all ${receptionType === 'store' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>店頭受付</button>
                   {/* [業務-3] 担当者個人受付（売上担当者を明示） */}
-                  <button onClick={() => { setReceptionType('personal'); /* 自動で受付スタッフをログインユーザに */ const me = currentStaff?.name; if (me) setStaffName(me); }} className={`flex-1 min-w-[100px] py-3 text-[12px] font-bold rounded-xl border transition-all ${receptionType === 'personal' ? 'bg-[#C97D60] text-white border-[#C97D60]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>担当者個人受付</button>
+                  <button onClick={() => { setReceptionType('personal'); const me = currentStaff?.name; if (me) setStaffName(me); }} className={`py-3 text-[11px] md:text-[12px] font-bold rounded-xl border transition-all ${receptionType === 'personal' ? 'bg-[#C97D60] text-white border-[#C97D60]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>担当者個人</button>
                 </div>
                 {receptionType === 'personal' && (
                   <p className="text-[10px] text-[#C97D60] font-bold flex items-center gap-1">
