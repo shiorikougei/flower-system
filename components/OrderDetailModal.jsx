@@ -947,6 +947,29 @@ export default function OrderDetailModal({
             <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all">
               <Printer size={14} /> <span className="hidden sm:inline">印刷 / PDF出力</span>
             </button>
+
+            {/* [業務-5] 完成写真メール 後から送信ボタン（既に写真がアップロード済みの注文のみ） */}
+            {(() => {
+              const hasImages = (Array.isArray(modalData.completionImages) && modalData.completionImages.length > 0) || !!modalData.completionImage;
+              const customerEmail = modalData.customerInfo?.email;
+              if (!hasImages || !customerEmail) return null;
+              const allImages = Array.isArray(modalData.completionImages) && modalData.completionImages.length > 0
+                ? modalData.completionImages
+                : [modalData.completionImage];
+              return (
+                <button
+                  onClick={() => {
+                    setCompletionDeliveryDate(modalData.selectedDate || '');
+                    setCompletionDeliveryTime(modalData.selectedTime || '');
+                    setCompletionMailPreview({ images: allImages, customerEmail });
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-[#FFF8E1] border border-[#F9C846] rounded-xl text-[10px] md:text-[11px] font-bold text-[#8B6F2C] hover:bg-[#FFEFC2] transition-all"
+                  title="完成写真メールを今から送信"
+                >
+                  <Send size={14} /> <span className="hidden sm:inline">完成写真メール送信</span>
+                </button>
+              );
+            })()}
             
             {/* ★ 新規追加：メール作成ボタン＆ドロップダウンメニュー */}
             {modalData.customerInfo?.email && (
@@ -1896,16 +1919,19 @@ export default function OrderDetailModal({
                   onClick={() => setCompletionMailPreview(null)}
                   className="flex-1 h-11 bg-white border border-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-xl hover:bg-[#FBFAF9]"
                 >
-                  キャンセル (送信しない)
+                  🕒 後で送る
                 </button>
                 <button
                   onClick={sendCompletionPhotoMail}
                   disabled={isSendingMail}
                   className="flex-1 h-11 bg-[#117768] text-white text-[12px] font-bold rounded-xl hover:bg-[#0f6358] disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
-                  {isSendingMail ? '送信中...' : <>📧 この内容で送信</>}
+                  {isSendingMail ? '送信中...' : <>📧 今すぐ送信</>}
                 </button>
               </div>
+              <p className="text-[10px] text-[#999] text-center -mt-1">
+                💡「後で送る」を選んでも、注文詳細の <strong>「完成写真メール送信」ボタン</strong> から、いつでも再度送信できます
+              </p>
             </div>
           </div>
         </div>
