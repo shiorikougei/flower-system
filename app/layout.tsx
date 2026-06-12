@@ -35,9 +35,13 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  // [SEO] Google Search Console 所有権確認
+  // [SEO] 検索エンジン所有権確認
   verification: {
     google: "l1ygH1P4VAAO2KR8XB4w7Oe-EPGyNQxXV9gpYe9HDfI",
+    // [GEO-3] Bing Webmaster Tools（ChatGPT searchはBing索引使用）
+    other: {
+      "msvalidate.01": "5861F320892618FB3809343F278737DA",
+    },
   },
   title: {
     default: "FLORIX",
