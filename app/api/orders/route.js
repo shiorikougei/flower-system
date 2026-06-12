@@ -253,6 +253,9 @@ export async function POST(request) {
         ...(isEcOrder ? { itemPrice: item } : {}),
       },
       payment_status: initialPaymentStatus,
+      // [業務-3] 担当者個人受付の場合の売上帰属（NULL OK）
+      attributed_staff_id: orderData.attributedStaffId || null,
+      attributed_staff_name: orderData.attributedStaffName || null,
     };
 
     const { data: inserted, error: insertErr } = await supabaseAdmin

@@ -5,7 +5,7 @@ import { supabase } from '@/utils/supabase';
 import { Store, AlertCircle, Calendar, ChevronRight, Package } from 'lucide-react';
 import TatefudaPreview from '@/components/TatefudaPreview';
 import HelpTooltip from '@/components/HelpTooltip';
-import { ensureOperationAllowed } from '@/utils/staffRole';
+import { ensureOperationAllowed, getCurrentStaff } from '@/utils/staffRole';
 import { getAvailableTateOptions } from '@/utils/tateMaster';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
@@ -14,6 +14,7 @@ const GALLERY_CACHE_KEY = 'florix_gallery_cache';
 export default function StaffNewOrderPage() {
   const router = useRouter();
   const [appSettings, setAppSettings] = useState(null);
+  const [currentStaff, setCurrentStaffState] = useState(null);
   const [portfolioImages, setPortfolioImages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,6 +71,11 @@ export default function StaffNewOrderPage() {
 
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', email: '', zip: '', address1: '', address2: '' });
   const [isRecipientDifferent, setIsRecipientDifferent] = useState(false);
+  // [業務-2] 郵便番号わからないモード
+  const [zipUnknownMode, setZipUnknownMode] = useState(false);
+  const [zipSearchAddress, setZipSearchAddress] = useState("");
+  const [zipSearchResult, setZipSearchResult] = useState(null);
+  const [zipSearching, setZipSearching] = useState(false);
   const [recipientInfo, setRecipientInfo] = useState({ name: '', phone: '', zip: '', address1: '', address2: '' });
   const [calculatedFee, setCalculatedFee] = useState(null);
   const [pickupFee, setPickupFee] = useState(0); 
@@ -96,6 +102,11 @@ export default function StaffNewOrderPage() {
     const applyDataToState = (settingsData, galleryData) => {
       if (settingsData) {
         setAppSettings(settingsData);
+        // [業務-3] 現在のログインスタッフ取得（受付者帰属用）
+        try {
+          const me = getCurrentStaff();
+          if (me) setCurrentStaffState(me);
+        } catch {}
         if (settingsData.timeSlots) setTimeSlots(settingsData.timeSlots);
         
         if (isFirstLoad) {
@@ -537,8 +548,16 @@ export default function StaffNewOrderPage() {
     
     setIsSubmitting(true);
     try {
+      // [業務-3] 担当者個人受付 → 売上をその担当者に帰属
+      const attributedStaff = receptionType === 'personal'
+        ? (currentStaff || (appSettings?.staffList || []).find(s => (s.name || s) === staffName))
+        : null;
+
       const orderPayload = {
         receptionType, staffName, shopId, flowerType, isBring, receiveMethod, selectedShop,
+        // [業務-3] 売上帰属の担当者（personalモードのみセット）
+        attributedStaffId: attributedStaff?.id || null,
+        attributedStaffName: attributedStaff?.name || (typeof attributedStaff === 'string' ? attributedStaff : null),
         selectedDate, receiveDate: selectedDate, shippingDate,
         selectedTime, itemPrice, calculatedFee, pickupFee, 
         absenceAction, absenceNote, 
@@ -619,10 +638,17 @@ export default function StaffNewOrderPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-[#999999]">受付区分</label>
-                <div className="flex gap-2">
-                  <button onClick={() => setReceptionType('phone')} className={`flex-1 py-3 text-[13px] font-bold rounded-xl border transition-all ${receptionType === 'phone' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>電話受付</button>
-                  <button onClick={() => setReceptionType('store')} className={`flex-1 py-3 text-[13px] font-bold rounded-xl border transition-all ${receptionType === 'store' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>店頭受付</button>
+                <div className="flex gap-2 flex-wrap">
+                  <button onClick={() => setReceptionType('phone')} className={`flex-1 min-w-[80px] py-3 text-[12px] font-bold rounded-xl border transition-all ${receptionType === 'phone' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>電話受付</button>
+                  <button onClick={() => setReceptionType('store')} className={`flex-1 min-w-[80px] py-3 text-[12px] font-bold rounded-xl border transition-all ${receptionType === 'store' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>店頭受付</button>
+                  {/* [業務-3] 担当者個人受付（売上担当者を明示） */}
+                  <button onClick={() => { setReceptionType('personal'); /* 自動で受付スタッフをログインユーザに */ const me = currentStaff?.name; if (me) setStaffName(me); }} className={`flex-1 min-w-[100px] py-3 text-[12px] font-bold rounded-xl border transition-all ${receptionType === 'personal' ? 'bg-[#C97D60] text-white border-[#C97D60]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>担当者個人受付</button>
                 </div>
+                {receptionType === 'personal' && (
+                  <p className="text-[10px] text-[#C97D60] font-bold flex items-center gap-1">
+                    👤 この注文の売上は <strong>{staffName || 'ログイン中のスタッフ'}</strong> に帰属します
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <label className="text-[11px] font-bold text-[#999999]">受付スタッフ</label>
@@ -663,8 +689,9 @@ export default function StaffNewOrderPage() {
                 <label className="text-[11px] font-bold text-[#999999]">受取方法</label>
                 <div className="flex gap-2">
                   <button onClick={() => { setReceiveMethod('pickup'); setAbsenceAction('持ち戻り'); setAbsenceNote(''); setIsRecipientDifferent(false); }} className={`flex-1 py-3 text-[12px] font-bold rounded-xl border ${receiveMethod === 'pickup' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>店頭受取</button>
-                  <button onClick={() => setReceiveMethod('delivery')} className={`flex-1 py-3 text-[12px] font-bold rounded-xl border ${receiveMethod === 'delivery' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>自社配達</button>
-                  <button onClick={() => { setReceiveMethod('sagawa'); setAbsenceAction('持ち戻り'); setAbsenceNote(''); }} className={`flex-1 py-3 text-[12px] font-bold rounded-xl border ${receiveMethod === 'sagawa' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>業者配送</button>
+                  {/* [業務-1] 配達/業者配送は「お届け先 ≠ 注文者」をデフォルトON（業務実態に即した自動判定） */}
+                  <button onClick={() => { setReceiveMethod('delivery'); setIsRecipientDifferent(true); }} className={`flex-1 py-3 text-[12px] font-bold rounded-xl border ${receiveMethod === 'delivery' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>自社配達</button>
+                  <button onClick={() => { setReceiveMethod('sagawa'); setAbsenceAction('持ち戻り'); setAbsenceNote(''); setIsRecipientDifferent(true); }} className={`flex-1 py-3 text-[12px] font-bold rounded-xl border ${receiveMethod === 'sagawa' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#555555]'}`}>業者配送</button>
                 </div>
               </div>
               
@@ -686,40 +713,204 @@ export default function StaffNewOrderPage() {
                 return (
                 <div className="md:col-span-2 bg-emerald-50 border border-emerald-300 rounded-xl p-4 space-y-3 animate-in fade-in mt-2">
                   <label className="text-[12px] font-bold text-emerald-900 flex items-center gap-1.5">
-                    📍 配達先住所（エリア＆料金確認用）
+                    📍 お届け先住所（エリア＆料金確認用）
                   </label>
                   <p className="text-[10px] text-emerald-700">
-                    住所を入力すると、自社配達対応エリアか・送料がいくらかを自動判定します。<br/>
-                    お届け先が注文者と異なる場合は、後の「お届け先情報」欄でチェックを入れてからご入力ください。
+                    {isRecipientDifferent ? (
+                      <>✅ <strong>お届け先情報</strong>に保存されます（注文者と別住所）<br/>
+                      住所を入力するとエリア判定＆送料を自動計算します。</>
+                    ) : (
+                      <>📝 <strong>注文者情報</strong>に保存されます（注文者本人にお届け）<br/>
+                      別の住所にお届けする場合は「お届け先情報」欄の <strong>「お届け先が注文者と異なる」</strong> にチェックしてください。</>
+                    )}
                   </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="flex items-center gap-2 pb-2 border-b border-emerald-200">
                     <input
-                      type="text"
-                      placeholder="郵便番号 (7桁)"
-                      value={target.zip || ''}
-                      onChange={(e) => {
-                        setTarget({...target, zip: e.target.value});
-                        if (e.target.value.length === 7) fetchAddress(e.target.value, targetKey);
-                      }}
-                      inputMode="numeric"
-                      maxLength={7}
-                      className="h-11 bg-white border border-emerald-200 rounded-lg px-3 text-[12px] font-bold focus:border-emerald-500 outline-none"
+                      type="checkbox"
+                      id="quickRecipientToggle"
+                      checked={isRecipientDifferent}
+                      onChange={(e) => setIsRecipientDifferent(e.target.checked)}
+                      className="w-4 h-4 accent-emerald-600 rounded"
                     />
-                    <input
-                      type="text"
-                      placeholder="都道府県・市区町村 (自動入力)"
-                      value={target.address1 || ''}
-                      readOnly
-                      className="h-11 bg-emerald-50 border border-emerald-200 rounded-lg px-3 text-[12px] text-[#555] outline-none"
-                    />
-                    <input
-                      type="text"
-                      placeholder="番地・建物名"
-                      value={target.address2 || ''}
-                      onChange={(e) => setTarget({...target, address2: e.target.value})}
-                      className="h-11 bg-white border border-emerald-200 rounded-lg px-3 text-[12px] focus:border-emerald-500 outline-none"
-                    />
+                    <label htmlFor="quickRecipientToggle" className="text-[11px] font-bold text-emerald-900 cursor-pointer">
+                      お届け先は注文者と異なる住所（贈り物）
+                    </label>
                   </div>
+                  {!zipUnknownMode ? (
+                    /* 通常モード: 郵便番号→住所 */
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input
+                        type="text"
+                        placeholder="郵便番号 (7桁)"
+                        value={target.zip || ''}
+                        onChange={(e) => {
+                          setTarget({...target, zip: e.target.value});
+                          if (e.target.value.length === 7) fetchAddress(e.target.value, targetKey);
+                        }}
+                        inputMode="numeric"
+                        maxLength={7}
+                        className="h-11 bg-white border border-emerald-200 rounded-lg px-3 text-[12px] font-bold focus:border-emerald-500 outline-none"
+                      />
+                      <input
+                        type="text"
+                        placeholder="都道府県・市区町村 (自動入力)"
+                        value={target.address1 || ''}
+                        readOnly
+                        className="h-11 bg-emerald-50 border border-emerald-200 rounded-lg px-3 text-[12px] text-[#555] outline-none"
+                      />
+                      <input
+                        type="text"
+                        placeholder="番地・建物名"
+                        value={target.address2 || ''}
+                        onChange={(e) => setTarget({...target, address2: e.target.value})}
+                        className="h-11 bg-white border border-emerald-200 rounded-lg px-3 text-[12px] focus:border-emerald-500 outline-none"
+                      />
+                    </div>
+                  ) : (
+                    /* [業務-2] 郵便番号わからないモード: 住所→正規化 */
+                    <div className="space-y-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      <p className="text-[11px] font-bold text-amber-900 flex items-center gap-1">
+                        🔍 郵便番号がわからない場合
+                      </p>
+                      <p className="text-[10px] text-amber-700 leading-relaxed">
+                        住所だけを入力して「住所を確認」を押してください。<br/>
+                        都道府県・市区町村を自動で正規化してエリア判定します。<br/>
+                        ※ 郵便番号は後で電話確認などで取得してください。
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
+                        <input
+                          type="text"
+                          placeholder="例: 東京都新宿区西新宿1-1-1"
+                          value={zipSearchAddress}
+                          onChange={(e) => setZipSearchAddress(e.target.value)}
+                          onKeyDown={async (e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (!zipSearchAddress || zipSearchAddress.length < 4) return;
+                              setZipSearching(true);
+                              setZipSearchResult(null);
+                              try {
+                                const res = await fetch(`/api/postal/search-by-address?address=${encodeURIComponent(zipSearchAddress)}`);
+                                const data = await res.json();
+                                setZipSearchResult(data);
+                                if (data.ok && data.best) {
+                                  setTarget({
+                                    ...target,
+                                    zip: '',
+                                    address1: `${data.best.pref}${data.best.city}${data.best.town || ''}`,
+                                    address2: data.best.banchi || '',
+                                  });
+                                }
+                              } catch (err) {
+                                setZipSearchResult({ ok: false, error: err?.message || 'エラー' });
+                              } finally {
+                                setZipSearching(false);
+                              }
+                            }
+                          }}
+                          className="h-11 bg-white border border-amber-300 rounded-lg px-3 text-[12px] focus:border-amber-500 outline-none"
+                        />
+                        <button
+                          onClick={async () => {
+                            if (!zipSearchAddress || zipSearchAddress.length < 4) return;
+                            setZipSearching(true);
+                            setZipSearchResult(null);
+                            try {
+                              const res = await fetch(`/api/postal/search-by-address?address=${encodeURIComponent(zipSearchAddress)}`);
+                              const data = await res.json();
+                              setZipSearchResult(data);
+                              if (data.ok && data.best) {
+                                setTarget({
+                                  ...target,
+                                  zip: '',
+                                  address1: `${data.best.pref}${data.best.city}${data.best.town || ''}`,
+                                  address2: data.best.banchi || '',
+                                });
+                              }
+                            } catch (err) {
+                              setZipSearchResult({ ok: false, error: err?.message || 'エラー' });
+                            } finally {
+                              setZipSearching(false);
+                            }
+                          }}
+                          disabled={zipSearching || !zipSearchAddress}
+                          className={`h-11 px-4 rounded-lg text-[11px] font-bold whitespace-nowrap ${zipSearching || !zipSearchAddress ? 'bg-gray-200 text-gray-500' : 'bg-amber-600 hover:bg-amber-500 text-white'}`}
+                        >
+                          {zipSearching ? '検索中...' : '住所を確認'}
+                        </button>
+                      </div>
+
+                      {/* 検索結果 */}
+                      {zipSearchResult && (
+                        <div className={`p-2 rounded text-[11px] ${zipSearchResult.ok ? 'bg-emerald-100 text-emerald-900' : 'bg-red-100 text-red-900'}`}>
+                          {zipSearchResult.ok && zipSearchResult.best ? (
+                            <div>
+                              ✅ 確認できました: <strong>{zipSearchResult.best.full}</strong>
+                              {zipSearchResult.candidates.length > 1 && (
+                                <details className="mt-1">
+                                  <summary className="cursor-pointer text-[10px]">他の候補 ({zipSearchResult.candidates.length - 1}件)</summary>
+                                  <ul className="mt-1 space-y-0.5 ml-3 list-disc">
+                                    {zipSearchResult.candidates.slice(1).map((c, i) => (
+                                      <li key={i} className="text-[10px]">
+                                        <button
+                                          onClick={() => {
+                                            setTarget({
+                                              ...target,
+                                              zip: '',
+                                              address1: `${c.pref}${c.city}${c.town || ''}`,
+                                              address2: c.banchi || '',
+                                            });
+                                          }}
+                                          className="underline hover:text-emerald-700"
+                                        >
+                                          {c.full}
+                                        </button>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </details>
+                              )}
+                            </div>
+                          ) : (
+                            <div>⚠️ {zipSearchResult.error || '住所が見つかりませんでした'}</div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* 確定した住所表示 */}
+                      {target.address1 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                          <input
+                            type="text"
+                            placeholder="都道府県・市区町村"
+                            value={target.address1 || ''}
+                            readOnly
+                            className="h-11 bg-emerald-50 border border-emerald-200 rounded-lg px-3 text-[12px] text-[#555]"
+                          />
+                          <input
+                            type="text"
+                            placeholder="番地・建物名"
+                            value={target.address2 || ''}
+                            onChange={(e) => setTarget({...target, address2: e.target.value})}
+                            className="h-11 bg-white border border-emerald-200 rounded-lg px-3 text-[12px] focus:border-emerald-500 outline-none"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* モード切替リンク */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setZipUnknownMode(!zipUnknownMode);
+                      setZipSearchResult(null);
+                      setZipSearchAddress("");
+                    }}
+                    className="text-[10px] text-emerald-700 hover:text-emerald-900 underline self-start mt-1"
+                  >
+                    {zipUnknownMode ? '↩ 郵便番号入力モードに戻る' : '🔍 郵便番号がわからない場合はこちら'}
+                  </button>
 
                   {/* 料金比較カード */}
                   {target.address1 && feeComparison && (

@@ -9,6 +9,7 @@ import {
 import FeatureGate from '@/components/FeatureGate';
 import HelpTooltip from '@/components/HelpTooltip';
 import OrderDetailModal from '@/components/OrderDetailModal';
+import { getCurrentStaff } from '@/utils/staffRole';
 
 export default function SalesPage() {
   return <FeatureGate feature="sales" label="売上管理"><SalesPageInner/></FeatureGate>;
@@ -19,8 +20,10 @@ function SalesPageInner() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentTenantId, setCurrentTenantId] = useState(null);
 
-  // ★ 表示モードに 'unpaid' (未入金一覧) を追加！
-  const [viewMode, setViewMode] = useState('monthly'); // 'monthly', 'daily', or 'unpaid'
+  // ★ 表示モードに 'unpaid' (未入金一覧) と 'byStaff' (担当者別) を追加！
+  const [viewMode, setViewMode] = useState('monthly'); // 'monthly', 'daily', 'unpaid', 'byStaff'
+  // [業務-3] 担当者別売上の閲覧権限（owner/manager のみ）
+  const [canViewByStaff, setCanViewByStaff] = useState(false);
   const [targetMonth, setTargetMonth] = useState('');
 
   // ★ 入金確認モーダル
@@ -58,6 +61,15 @@ function SalesPageInner() {
       if (ordersRes.error) throw ordersRes.error;
       setOrders(ordersRes.data || []);
       if (settingsRes.data?.settings_data) setAppSettings(settingsRes.data.settings_data);
+
+      // [業務-3] 権限判定: owner/manager のみ担当者別ビュー可
+      try {
+        const me = getCurrentStaff();
+        const role = me?.role || '';
+        if (role === 'owner' || role === 'manager' || me?.isOwner) {
+          setCanViewByStaff(true);
+        }
+      } catch {}
     } catch (error) {
       console.error('取得エラー:', error.message);
     } finally {
@@ -81,6 +93,37 @@ function SalesPageInner() {
       setTargetMonth(availableMonths[0]);
     }
   }, [availableMonths, targetMonth]);
+
+  // [業務-3] 担当者別売上集計（attributed_staff_name でグループ化）
+  const byStaffData = useMemo(() => {
+    if (!targetMonth) return [];
+    const groups = {};
+    orders.forEach(order => {
+      const d = order.order_data || {};
+      if (d.status === 'キャンセル') return;
+      const date = new Date(order.created_at);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (monthKey !== targetMonth) return;
+      // 担当者個人受付 only（attributed_staff_id がある注文）
+      const staffName = order.attributed_staff_name || d.attributedStaffName;
+      if (!staffName) return;
+      if (!groups[staffName]) {
+        groups[staffName] = {
+          staffName,
+          orderCount: 0,
+          totalSales: 0,
+          totalItem: 0,
+          totalFee: 0,
+        };
+      }
+      groups[staffName].orderCount += 1;
+      groups[staffName].totalSales += Number(d.totalAmount || 0);
+      groups[staffName].totalItem += Number(d.itemPrice || 0);
+      groups[staffName].totalFee += Number(d.calculatedFee || 0) + Number(d.ecBoxFee || 0);
+    });
+    return Object.values(groups)
+      .sort((a, b) => b.totalSales - a.totalSales);
+  }, [orders, targetMonth]);
 
   // ==========================================
   // ★ 新規追加：未入金オーダーのみを抽出するロジック
@@ -405,6 +448,12 @@ function SalesPageInner() {
               <AlertCircle size={14}/> 未入金一覧
               {unpaidOrders.length > 0 && <span className={`ml-1 px-1.5 rounded-full text-[10px] ${viewMode === 'unpaid' ? 'bg-white text-[#D97D54]' : 'bg-[#D97D54] text-white'}`}>{unpaidOrders.length}</span>}
             </button>
+            {/* [業務-3] 担当者別タブ（owner/manager のみ表示） */}
+            {canViewByStaff && (
+              <button onClick={() => setViewMode('byStaff')} className={`flex items-center gap-1.5 px-4 py-2 text-[12px] font-bold rounded-lg transition-all ${viewMode === 'byStaff' ? 'bg-[#2D4B3E] shadow-sm text-white' : 'text-[#999]'}`}>
+                <User size={14}/> 担当者別
+              </button>
+            )}
           </div>
 
           {/* 日別モードの時の月セレクター */}
@@ -459,6 +508,64 @@ function SalesPageInner() {
 
         {isLoading ? (
           <div className="p-20 text-center text-[#999] font-bold animate-pulse">データを計算中...</div>
+        ) : viewMode === 'byStaff' ? (
+          /* ========================================================
+             [業務-3] 担当者別売上モード
+             ======================================================== */
+          <div className="space-y-4 animate-in fade-in">
+            <div className="flex items-center justify-between border-b border-[#EAEAEA] pb-2">
+              <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2">
+                <User size={18} /> 担当者別売上 ({targetMonth.replace('-', '年')}月)
+              </h2>
+              <select value={targetMonth} onChange={(e) => setTargetMonth(e.target.value)} className="h-10 px-4 bg-white border border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#555] outline-none">
+                {availableMonths.map(m => <option key={m} value={m}>{m.replace('-', '年')}月</option>)}
+              </select>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-[11px] text-blue-900 leading-relaxed">
+              📊 受付区分が「担当者個人受付」の注文のみを担当者ごとに集計しています。<br/>
+              💡 電話受付・店頭受付は含まれません。担当者が個人で獲得した売上のみが対象です。
+            </div>
+
+            {byStaffData.length === 0 ? (
+              <div className="bg-white rounded-3xl border border-dashed border-[#CCC] p-20 text-center">
+                <p className="text-[14px] font-bold text-[#999]">この月の担当者個人受付の注文はありません</p>
+                <p className="text-[11px] text-[#CCC] mt-2">新規注文時に「担当者個人受付」を選択すると、ここに集計されます</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {byStaffData.map((s, idx) => {
+                  const rank = idx + 1;
+                  const isTop3 = rank <= 3;
+                  const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
+                  return (
+                    <div key={s.staffName} className={`bg-white rounded-2xl p-5 border ${isTop3 ? 'border-[#D97D54] shadow-md' : 'border-[#EAEAEA]'} flex items-center gap-4`}>
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#FBE8DF] to-[#F4D4C4] flex items-center justify-center shrink-0 text-[20px] font-bold text-[#C97D60]">
+                        {medal || rank}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-bold text-[#2D4B3E] truncate">{s.staffName}</p>
+                        <div className="flex gap-4 mt-1 text-[11px] text-[#666]">
+                          <span>受注 <strong className="text-[#2D4B3E]">{s.orderCount}件</strong></span>
+                          <span>客単価 <strong className="text-[#2D4B3E]">¥{Math.round(s.totalSales / s.orderCount).toLocaleString()}</strong></span>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-[10px] text-[#999] font-bold">売上合計 (税込)</p>
+                        <p className="text-[22px] font-bold text-[#C97D60]">¥{s.totalSales.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* 合計 */}
+                <div className="bg-[#2D4B3E] text-white rounded-2xl p-5 flex items-center justify-between">
+                  <span className="text-[14px] font-bold">担当者個人受付 合計</span>
+                  <span className="text-[22px] font-bold">¥{byStaffData.reduce((sum, s) => sum + s.totalSales, 0).toLocaleString()}</span>
+                </div>
+              </div>
+            )}
+          </div>
         ) : viewMode === 'unpaid' ? (
           /* ========================================================
              ★ 未入金一覧モード の表示
