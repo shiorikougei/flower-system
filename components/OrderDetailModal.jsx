@@ -454,7 +454,12 @@ export default function OrderDetailModal({
           const staff = deliveryEntry ? deliveryEntry.staff : '';
           footerActionsHtml = `<div class="check-group"><div class="check-label">配達</div><div class="check-box ${staff ? 'filled' : ''}" style="border-color:#888;">${staff}</div></div>`;
         } else {
-          footerActionsHtml = activeStatuses.slice(0, 6).map(statusLabel => {
+          // [印刷修正] 自動追加された完了系ステータスは署名欄から除外（受領証の方に分かれているため）
+          //   + 最大4個までに制限（横スペースに収めるため）
+          const workflowStatuses = activeStatuses
+            .filter(s => !/完了|引き渡し|発送済/.test(s))
+            .slice(0, 4);
+          footerActionsHtml = workflowStatuses.map(statusLabel => {
             const entry = history.find(h => h.status === statusLabel);
             const staff = entry ? entry.staff : '';
             const shortLabel = statusLabel.length > 4 ? statusLabel.substring(0, 4) : statusLabel;
@@ -611,6 +616,32 @@ export default function OrderDetailModal({
             .check-label { font-size: 6.5pt; color: #666; font-weight: bold; }
             .check-box { border: 0.5pt solid #666; width: 14mm; height: 6mm; display: flex; align-items: center; justify-content: center; font-size: 7pt; font-weight: bold; border-radius: 1px; }
             .check-box.filled { background: #fff; }
+
+            /* ★ [印刷修正] 全要素の長文折り返し強制 - プリンター差・長文での崩れ完全防止 */
+            .slip *, .slip-full *, .info-box *, .items-table * {
+              word-break: break-word !important;
+              overflow-wrap: anywhere !important;
+            }
+            /* 数量・金額セルは折り返しさせない */
+            .qty-cell, .price-cell, .amount-summary td {
+              white-space: nowrap !important;
+              word-break: keep-all !important;
+            }
+            /* 備考・詳細セルは適度に折り返し */
+            .item-detail, .simple-card-text {
+              line-height: 1.4 !important;
+              max-height: 18mm;
+              overflow: hidden;
+            }
+            /* 住所セルが多段になっても枠内で収まる */
+            .info-box .info-sub-bottom {
+              max-height: 16mm;
+              overflow: hidden;
+            }
+            /* slip 内の overflow を厳密に */
+            .slip, .slip-full {
+              overflow: hidden !important;
+            }
           </style>
         </head>
         <body>
