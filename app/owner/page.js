@@ -1757,11 +1757,28 @@ export default function OwnerDashboard() {
                     const billing = tenantBilling[t.id] || {};
                     const fee = calcTenantFee(t);
                     const enabledCount = ALL_FEATURE_KEYS.filter(k => t.features?.[k]).length;
+                    // [料金UI] オーバーライド有無で表示を切り替え
+                    const featureOverrideCount = Object.keys(billing.featurePriceOverrides || {}).length;
+                    const hasBasePriceOverride = billing.basePriceOverride != null && billing.basePriceOverride !== '';
+                    const totalOverrides = featureOverrideCount + (hasBasePriceOverride ? 1 : 0);
                     return (
                       <tr key={t.id} className="border-b border-[#EAEAEA]/50 hover:bg-[#F7F7F7]">
                         <td className="px-4 py-3 text-[#333] font-bold">{t.name}<div className="text-[9px] text-[#999] font-mono">{t.id}</div></td>
                         <td className="px-4 py-3 text-[#555]">{enabledCount}/{ALL_FEATURE_KEYS.length}</td>
-                        <td className="px-4 py-3 text-right text-[#666] font-mono">¥{auto.total.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-right font-mono">
+                          <div className={totalOverrides > 0 ? 'text-amber-500 font-bold' : 'text-[#666]'}>
+                            ¥{auto.total.toLocaleString()}
+                          </div>
+                          {totalOverrides > 0 ? (
+                            <span className="inline-block mt-1 text-[8px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full" title="料金マスターでなく個別単価が使用されています">
+                              ⚙️ 個別単価 {totalOverrides}件
+                            </span>
+                          ) : (
+                            <span className="inline-block mt-1 text-[8px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full" title="料金マスターの値で計算されています">
+                              ✓ マスター反映
+                            </span>
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <input type="number" placeholder="自動計算"
                             value={billing.manualPriceJpy ?? ''}
@@ -1786,6 +1803,19 @@ export default function OwnerDashboard() {
                                   {manualActive && (
                                     <p className="text-[9px] text-amber-500 leading-snug">⚠️ 全体固定額が設定されているため、この値は無視されます。クリアすると有効になります。</p>
                                   )}
+                                  {/* [料金UI] 全部マスターに戻すボタン */}
+                                  {overrideCount > 0 && (
+                                    <button
+                                      onClick={async (e) => {
+                                        e.preventDefault();
+                                        if (!confirm(`「${t.name}」の個別単価設定 ${overrideCount}件を全部削除して、料金マスターを反映します。\n\nよろしいですか？`)) return;
+                                        await saveTenantBilling(t.id, { basePriceOverride: null, featurePriceOverrides: {} });
+                                      }}
+                                      className="w-full py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded text-[9px] font-bold text-amber-700 flex items-center justify-center gap-1"
+                                    >
+                                      ↩ 全部マスターに戻す（{overrideCount}件削除）
+                                    </button>
+                                  )}
                                   <div className="flex items-center gap-1">
                                     <span className="text-[9px] text-[#666] flex-1">基本料金</span>
                                     <span className="text-[9px] text-[#999]">¥</span>
@@ -1793,13 +1823,26 @@ export default function OwnerDashboard() {
                                       value={billing.basePriceOverride ?? ''}
                                       onChange={e => saveTenantBilling(t.id, { basePriceOverride: e.target.value === '' ? null : Number(e.target.value) })}
                                       className="w-16 h-6 px-1 bg-[#FBFAF9] border border-[#D0D0D0] rounded text-[10px] text-[#333] font-mono text-right outline-none"/>
+                                    {hasBasePriceOverride && (
+                                      <button
+                                        onClick={async (e) => {
+                                          e.preventDefault();
+                                          await saveTenantBilling(t.id, { basePriceOverride: null });
+                                        }}
+                                        className="text-[10px] text-red-400 hover:text-red-600 px-1"
+                                        title="この基本料金の個別設定だけ削除"
+                                      >×</button>
+                                    )}
                                   </div>
                                   {ALL_FEATURE_KEYS.filter(k => t.features?.[k]).map(k => {
                                     const featItem = FEATURE_GROUPS.flatMap(g => g.items).find(i => i.key === k);
                                     const ov = billing.featurePriceOverrides?.[k];
+                                    const isOverridden = ov != null && ov !== '';
                                     return (
                                       <div key={k} className="flex items-center gap-1">
-                                        <span className="text-[9px] text-[#666] flex-1 truncate">{featItem?.label || k}</span>
+                                        <span className={`text-[9px] flex-1 truncate ${isOverridden ? 'text-amber-600 font-bold' : 'text-[#666]'}`}>
+                                          {featItem?.label || k}
+                                        </span>
                                         <span className="text-[9px] text-[#999]">¥</span>
                                         <input type="number" placeholder={`既定 ${pricingConfig.featurePrices?.[k] ?? 0}`}
                                           value={ov ?? ''}
@@ -1808,7 +1851,19 @@ export default function OwnerDashboard() {
                                             if (e.target.value === '') delete next[k]; else next[k] = Number(e.target.value);
                                             saveTenantBilling(t.id, { featurePriceOverrides: next });
                                           }}
-                                          className="w-16 h-6 px-1 bg-[#FBFAF9] border border-[#D0D0D0] rounded text-[10px] text-[#333] font-mono text-right outline-none"/>
+                                          className={`w-16 h-6 px-1 border rounded text-[10px] font-mono text-right outline-none ${isOverridden ? 'bg-amber-50 border-amber-400 text-amber-900' : 'bg-[#FBFAF9] border-[#D0D0D0] text-[#333]'}`}/>
+                                        {isOverridden && (
+                                          <button
+                                            onClick={async (e) => {
+                                              e.preventDefault();
+                                              const next = { ...(billing.featurePriceOverrides || {}) };
+                                              delete next[k];
+                                              await saveTenantBilling(t.id, { featurePriceOverrides: next });
+                                            }}
+                                            className="text-[10px] text-red-400 hover:text-red-600 px-0.5"
+                                            title="この機能の個別単価を削除（マスター反映）"
+                                          >×</button>
+                                        )}
                                       </div>
                                     );
                                   })}
