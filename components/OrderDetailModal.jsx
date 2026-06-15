@@ -8,7 +8,7 @@ import {
   Tag, MessageSquare, CreditCard, CheckCircle2, Upload, ImageIcon 
 } from 'lucide-react';
 import TatefudaPreview from '@/components/TatefudaPreview';
-import { ensureOperationAllowed } from '@/utils/staffRole';
+import { ensureOperationAllowed, getCurrentRole, getCurrentStaff } from '@/utils/staffRole';
 import { getTateOptions } from '@/utils/tateMaster';
 
 export default function OrderDetailModal({ 
@@ -32,6 +32,19 @@ export default function OrderDetailModal({
   // ★ 完成写真送信時の納品日確認・編集
   const [completionDeliveryDate, setCompletionDeliveryDate] = useState('');
   const [completionDeliveryTime, setCompletionDeliveryTime] = useState('');
+
+  // [注文-4] 金額訂正モーダル（オーナー権限）
+  const [showAmountCorrection, setShowAmountCorrection] = useState(false);
+  const [correctionItemPrice, setCorrectionItemPrice] = useState('');
+  const [correctionFee, setCorrectionFee] = useState('');
+  const [correctionReason, setCorrectionReason] = useState('');
+  const [correctionNotifyCustomer, setCorrectionNotifyCustomer] = useState(true);
+  const [correctionNotifyStore, setCorrectionNotifyStore] = useState(true);
+  const [isSavingCorrection, setIsSavingCorrection] = useState(false);
+  const isOwner = (() => {
+    if (typeof window === 'undefined') return false;
+    try { return getCurrentRole() === 'owner'; } catch { return false; }
+  })();
 
   // ★ 新規追加：メールテンプレート選択メニューの表示状態
   const [showMailTemplates, setShowMailTemplates] = useState(false);
@@ -948,6 +961,24 @@ export default function OrderDetailModal({
               <Printer size={14} /> <span className="hidden sm:inline">印刷 / PDF出力</span>
             </button>
 
+            {/* [注文-4] 金額訂正ボタン（オーナーのみ） */}
+            {isOwner && (
+              <button
+                onClick={() => {
+                  setCorrectionItemPrice(String(modalData.itemPrice || ''));
+                  setCorrectionFee(String((Number(modalData.calculatedFee) || 0) + (Number(modalData.pickupFee) || 0)));
+                  setCorrectionReason('');
+                  setCorrectionNotifyCustomer(true);
+                  setCorrectionNotifyStore(true);
+                  setShowAmountCorrection(true);
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 border border-amber-300 rounded-xl text-[10px] md:text-[11px] font-bold text-amber-700 hover:bg-amber-100 transition-all"
+                title="注文金額を訂正（オーナー権限）"
+              >
+                💰 <span className="hidden sm:inline">金額訂正</span>
+              </button>
+            )}
+
             {/* [業務-5] 完成写真メール 後から送信ボタン（既に写真がアップロード済みの注文のみ） */}
             {(() => {
               const hasImages = (Array.isArray(modalData.completionImages) && modalData.completionImages.length > 0) || !!modalData.completionImage;
@@ -1718,6 +1749,268 @@ export default function OrderDetailModal({
           </div>
         </div>
       )}
+
+      {/* [注文-4] 金額訂正モーダル（オーナーのみ） */}
+      {showAmountCorrection && (() => {
+        const newItem = Number(correctionItemPrice) || 0;
+        const newFee = Number(correctionFee) || 0;
+        const newSubtotal = newItem + newFee;
+        const newTax = Math.floor(newSubtotal * 0.1);
+        const newTotal = newSubtotal + newTax;
+        const oldTotal = Number(modalData.totalAmount) || 0;
+        const diff = newTotal - oldTotal;
+        const corrections = Array.isArray(modalData.amountCorrections) ? modalData.amountCorrections : [];
+
+        // [入金状況] 訂正前の入金状況判定
+        const jpPS = String(modalData.paymentStatus || '');
+        const dbPS = order?.payment_status;
+        const wasPaid = dbPS === 'paid' || jpPS.includes('前払い済み') || jpPS.includes('入金済み');
+        const paidAmount = wasPaid ? (modalData.paidAmount != null ? Number(modalData.paidAmount) : oldTotal) : 0;
+        const balance = newTotal - paidAmount;
+        let paymentSituation;
+        if (wasPaid) {
+          if (balance === 0) paymentSituation = 'fully_paid';
+          else if (balance > 0) paymentSituation = 'additional_required';
+          else paymentSituation = 'refund_required';
+        } else {
+          paymentSituation = 'unpaid';
+        }
+        const situationConfig = {
+          unpaid: { color: 'red', bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', title: '🔴 未入金 → 訂正後の金額を回収', desc: `お客様へ 訂正後の ¥${newTotal.toLocaleString()} のお支払い案内が送られます。` },
+          fully_paid: { color: 'green', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', title: '✅ 入金済み → 過不足なし', desc: `お支払い済み ¥${paidAmount.toLocaleString()} = 訂正後の合計 ¥${newTotal.toLocaleString()}` },
+          additional_required: { color: 'amber', bg: 'bg-amber-50', border: 'border-amber-300', text: 'text-amber-800', title: `🟡 追加お支払いが必要: +¥${balance.toLocaleString()}`, desc: `既にお支払い済み ¥${paidAmount.toLocaleString()} に対して ¥${balance.toLocaleString()} 追加が必要となります。` },
+          refund_required: { color: 'blue', bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', title: `🔵 返金が必要: ¥${Math.abs(balance).toLocaleString()}`, desc: `お支払い済み ¥${paidAmount.toLocaleString()} - 訂正後 ¥${newTotal.toLocaleString()} = ¥${Math.abs(balance).toLocaleString()} の返金が発生します。` },
+        };
+        const sc = situationConfig[paymentSituation];
+
+        return (
+          <div
+            className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={(e) => { e.stopPropagation(); if (!isSavingCorrection) setShowAmountCorrection(false); }}
+          >
+            <div
+              className="bg-white max-w-xl w-full max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="sticky top-0 bg-white border-b border-[#EAEAEA] px-6 py-4 flex items-center justify-between rounded-t-2xl">
+                <h3 className="text-[15px] font-bold text-amber-700 flex items-center gap-2">
+                  💰 注文金額の訂正
+                </h3>
+                <button
+                  onClick={() => setShowAmountCorrection(false)}
+                  disabled={isSavingCorrection}
+                  className="text-[#999] hover:text-[#111] text-[20px] font-bold disabled:opacity-50"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <p className="text-[12px] text-amber-900 leading-relaxed">
+                    ⚠️ オーナー権限で注文金額を訂正します。<br/>
+                    訂正履歴は監査ログとして残り、お客様への通知も任意で送信できます。
+                  </p>
+                </div>
+
+                {/* 既存の訂正履歴 */}
+                {corrections.length > 0 && (
+                  <details className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg p-3">
+                    <summary className="cursor-pointer text-[11px] font-bold text-[#666]">
+                      📋 訂正履歴 ({corrections.length}件)
+                    </summary>
+                    <div className="mt-3 space-y-2">
+                      {corrections.slice().reverse().map((c, i) => (
+                        <div key={i} className="bg-white p-2 rounded border border-[#EAEAEA] text-[10px]">
+                          <p className="text-[#666]">{new Date(c.at).toLocaleString('ja-JP')} - <strong>{c.operatorName}</strong></p>
+                          <p className="text-[#333]">¥{c.before?.totalAmount?.toLocaleString()} → <strong className="text-amber-700">¥{c.after?.totalAmount?.toLocaleString()}</strong></p>
+                          <p className="text-[#888] mt-1">理由: {c.reason}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+
+                {/* 現在の金額 */}
+                <div className="bg-[#FBFAF9] rounded-lg p-3 border border-[#EAEAEA]">
+                  <p className="text-[10px] text-[#999] mb-1">現在の合計（税込）</p>
+                  <p className="text-[20px] font-bold text-[#2D4B3E]">¥{oldTotal.toLocaleString()}</p>
+                </div>
+
+                {/* 新しい金額入力 */}
+                <div>
+                  <label className="text-[12px] font-bold text-[#555] block mb-1">新しい商品代（税抜） *</label>
+                  <input
+                    type="number"
+                    value={correctionItemPrice}
+                    onChange={(e) => setCorrectionItemPrice(e.target.value)}
+                    disabled={isSavingCorrection}
+                    className="w-full h-11 px-3 bg-white border border-[#EAEAEA] rounded-xl text-[14px] font-bold focus:border-amber-500 outline-none"
+                    placeholder="4000"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[12px] font-bold text-[#555] block mb-1">配送料・手数料（税抜）</label>
+                  <input
+                    type="number"
+                    value={correctionFee}
+                    onChange={(e) => setCorrectionFee(e.target.value)}
+                    disabled={isSavingCorrection}
+                    className="w-full h-11 px-3 bg-white border border-[#EAEAEA] rounded-xl text-[14px] focus:border-amber-500 outline-none"
+                    placeholder="0"
+                  />
+                </div>
+
+                {/* 計算結果プレビュー */}
+                <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
+                  <table className="w-full text-[12px]">
+                    <tbody>
+                      <tr><td className="text-[#666]">商品代</td><td className="text-right font-mono">¥{newItem.toLocaleString()}</td></tr>
+                      <tr><td className="text-[#666]">配送料・手数料</td><td className="text-right font-mono">¥{newFee.toLocaleString()}</td></tr>
+                      <tr><td className="text-[#666]">消費税(10%)</td><td className="text-right font-mono">¥{newTax.toLocaleString()}</td></tr>
+                      <tr className="border-t border-amber-300">
+                        <td className="pt-2 font-bold text-amber-900">新しい合計（税込）</td>
+                        <td className="text-right pt-2 font-bold text-[18px] text-amber-700">¥{newTotal.toLocaleString()}</td>
+                      </tr>
+                      {diff !== 0 && (
+                        <tr>
+                          <td className="text-[#666]">差額</td>
+                          <td className={`text-right font-bold ${diff > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                            {diff > 0 ? '+' : ''}¥{diff.toLocaleString()}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* [入金状況] 訂正による入金状況変化プレビュー */}
+                <div className={`${sc.bg} ${sc.border} border-2 rounded-xl p-4`}>
+                  <p className={`text-[13px] font-bold ${sc.text} mb-2`}>💳 入金状況の変化</p>
+                  <div className="bg-white rounded-lg p-3 mb-2">
+                    <table className="w-full text-[11px]">
+                      <tbody>
+                        <tr><td className="text-[#666]">訂正前の状態</td><td className="text-right">{wasPaid ? `✓ 入金済み (¥${paidAmount.toLocaleString()})` : '🔴 未入金'}</td></tr>
+                        <tr><td className="text-[#666]">訂正後の合計</td><td className="text-right font-bold">¥{newTotal.toLocaleString()}</td></tr>
+                        <tr className="border-t border-[#EAEAEA]">
+                          <td className="text-[#666] pt-2">差引</td>
+                          <td className={`text-right pt-2 font-bold ${balance > 0 ? 'text-red-600' : balance < 0 ? 'text-blue-600' : 'text-emerald-600'}`}>
+                            {balance > 0 ? '不足 +' : balance < 0 ? '過剰 ' : '±'}¥{Math.abs(balance).toLocaleString()}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className={`text-[12px] font-bold ${sc.text}`}>{sc.title}</p>
+                  <p className={`text-[11px] ${sc.text} mt-1 leading-relaxed`}>{sc.desc}</p>
+                </div>
+
+                {/* 訂正理由 */}
+                <div>
+                  <label className="text-[12px] font-bold text-[#555] block mb-1">訂正理由 <span className="text-red-500">*</span></label>
+                  <textarea
+                    value={correctionReason}
+                    onChange={(e) => setCorrectionReason(e.target.value)}
+                    disabled={isSavingCorrection}
+                    rows={3}
+                    className="w-full bg-white border border-[#EAEAEA] rounded-xl px-3 py-2 text-[13px] focus:border-amber-500 outline-none resize-none"
+                    placeholder="例: 商品数量の追加にて金額調整 / 配達エリア変更による送料追加 / 等"
+                  />
+                  <p className="text-[10px] text-[#999] mt-1">監査ログ・お客様へのメール本文にこの理由が含まれます。</p>
+                </div>
+
+                {/* 通知オプション */}
+                <div className="space-y-2 bg-[#FBFAF9] rounded-xl p-3 border border-[#EAEAEA]">
+                  <p className="text-[12px] font-bold text-[#555]">📧 通知設定</p>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={correctionNotifyCustomer}
+                      onChange={(e) => setCorrectionNotifyCustomer(e.target.checked)}
+                      disabled={isSavingCorrection || !modalData.customerInfo?.email}
+                      className="w-4 h-4 accent-amber-600"
+                    />
+                    <span className="text-[12px]">お客様に訂正通知メールを送信 {!modalData.customerInfo?.email && <span className="text-[10px] text-[#999]">(メアド未登録)</span>}</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={correctionNotifyStore}
+                      onChange={(e) => setCorrectionNotifyStore(e.target.checked)}
+                      disabled={isSavingCorrection}
+                      className="w-4 h-4 accent-amber-600"
+                    />
+                    <span className="text-[12px]">店舗の通知メアドにも記録通知</span>
+                  </label>
+                </div>
+
+                <div className="flex gap-2 pt-3 border-t border-[#EAEAEA]">
+                  <button
+                    onClick={() => setShowAmountCorrection(false)}
+                    disabled={isSavingCorrection}
+                    className="flex-1 h-11 bg-white border border-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-xl hover:bg-[#FBFAF9] disabled:opacity-50"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!correctionReason || correctionReason.trim().length < 3) {
+                        alert('訂正理由を3文字以上で入力してください');
+                        return;
+                      }
+                      setIsSavingCorrection(true);
+                      try {
+                        const { data: { session } } = await supabase.auth.getSession();
+                        if (!session) { alert('セッションが切れています'); return; }
+                        const me = getCurrentStaff();
+                        const res = await fetch('/api/orders/correct-amount', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${session.access_token}`,
+                          },
+                          body: JSON.stringify({
+                            orderId: order.id,
+                            newItemPrice: newItem,
+                            newCalculatedFee: newFee,
+                            reason: correctionReason,
+                            notifyCustomer: correctionNotifyCustomer && !!modalData.customerInfo?.email,
+                            notifyStore: correctionNotifyStore,
+                            operatorName: me?.name || 'オーナー',
+                            operatorRole: 'owner',
+                          }),
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.ok) {
+                          alert(`✅ 金額を訂正しました\n新しい合計: ¥${data.newTotal.toLocaleString()}\n差額: ${data.diff > 0 ? '+' : ''}¥${data.diff.toLocaleString()}`);
+                          // 親に反映してリロード
+                          if (onUpdatePayment) {
+                            const updatedData = { ...modalData, itemPrice: newItem, calculatedFee: newFee, totalAmount: newTotal };
+                            await onUpdatePayment(order.id, updatedData, { skipConfirm: true, alreadyUpdated: true });
+                          }
+                          setShowAmountCorrection(false);
+                          onClose && onClose();
+                        } else {
+                          alert(`訂正失敗: ${data.error || '原因不明'}`);
+                        }
+                      } catch (e) {
+                        alert(`訂正失敗: ${e.message}`);
+                      } finally {
+                        setIsSavingCorrection(false);
+                      }
+                    }}
+                    disabled={isSavingCorrection || !correctionReason}
+                    className="flex-1 h-11 bg-amber-600 hover:bg-amber-500 text-white text-[12px] font-bold rounded-xl disabled:opacity-50"
+                  >
+                    {isSavingCorrection ? '保存中...' : '💰 訂正を確定'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ★ 完成写真メール送信前の確認モーダル */}
       {completionMailPreview && (
