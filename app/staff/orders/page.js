@@ -207,10 +207,12 @@ export default function OrdersPage() {
   // ★ 完了/未完了でフィルタ → 次に商品フィルタ
   const baseFilteredOrders = orders.filter(order => {
     const status = order?.order_data?.status || 'new';
+    // [注文-3] 配達完了・引き渡し完了・お渡し完了 もアーカイブ判定（自動でアーカイブに移動）
+    const isCompletedKeyword = /完了|引き渡し|発送済/.test(String(status));
     if (filterMode === '未完了') {
-      return status !== 'completed' && status !== '完了' && status !== 'キャンセル';
+      return status !== 'completed' && status !== '完了' && status !== 'キャンセル' && !isCompletedKeyword;
     } else {
-      return status === 'completed' || status === '完了' || status === 'キャンセル';
+      return status === 'completed' || status === '完了' || status === 'キャンセル' || isCompletedKeyword;
     }
   });
 
@@ -412,10 +414,23 @@ export default function OrdersPage() {
                         </span>
                       )}
 
-                      {/* ★ EC注文の場合のバッジ */}
-                      {d.orderType === 'ec' && (
+                      {/* [注文-1] 注文種別バッジ（EC / 代理入力 / 見積から / カスタム） */}
+                      {d.orderType === 'ec' ? (
                         <span className="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded flex items-center gap-1">
                           🛒 EC注文
+                        </span>
+                      ) : d.fromEstimate ? (
+                        <span className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-1 rounded flex items-center gap-1">
+                          📩 見積から
+                        </span>
+                      ) : d.isStaffEntered ? (
+                        <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1 rounded flex items-center gap-1">
+                          👤 代理入力
+                          {d.staffName && <span className="font-normal opacity-80">({d.staffName})</span>}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 px-2 py-1 rounded flex items-center gap-1">
+                          🌸 カスタム
                         </span>
                       )}
                     </div>
