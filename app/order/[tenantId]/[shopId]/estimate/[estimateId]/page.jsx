@@ -280,6 +280,34 @@ export default function EstimateAcceptPage() {
     );
   }
 
+  // [見積-1] 有効期限チェック
+  const expiresAt = estimate.expires_at ? new Date(estimate.expires_at) : null;
+  const now = new Date();
+  const isExpired = expiresAt && expiresAt < now;
+  const daysUntilExpiry = expiresAt ? Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
+  const isNearExpiry = daysUntilExpiry !== null && daysUntilExpiry > 0 && daysUntilExpiry <= 7;
+
+  if (isExpired) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white p-10 rounded-2xl border-2 border-red-200 text-center space-y-4 shadow-xl">
+          <div className="w-16 h-16 mx-auto bg-red-50 rounded-full flex items-center justify-center">
+            <AlertCircle size={32} className="text-red-600"/>
+          </div>
+          <h1 className="text-[18px] font-bold text-red-700">⏱ このお見積もりは有効期限切れです</h1>
+          <p className="text-[12px] text-[#555] leading-relaxed">
+            有効期限: <strong>{expiresAt.toLocaleDateString('ja-JP')}</strong><br/>
+            お手数ですが、改めてお見積もりをご依頼いただくか、<br/>
+            お電話で店舗までお問い合わせください。
+          </p>
+          <Link href={`/order/${tenantId}/${shopId}/estimate`} className="inline-block px-6 h-12 leading-[48px] bg-red-600 text-white rounded-xl text-[13px] font-bold">
+            再度見積を依頼する
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const tax = Math.floor(estimate.proposed_price * 0.1);
   const total = estimate.proposed_price + tax;
 
@@ -333,6 +361,20 @@ export default function EstimateAcceptPage() {
             <p className="text-[32px] font-bold text-emerald-700">¥{total.toLocaleString()}</p>
             <p className="text-[10px] text-emerald-600 mt-1">税抜 ¥{estimate.proposed_price.toLocaleString()} + 消費税 ¥{tax.toLocaleString()}</p>
           </div>
+          {/* [見積-1] 有効期限バナー */}
+          {expiresAt && (
+            <div className={`rounded-xl p-3 text-center border-2 ${isNearExpiry ? 'bg-amber-50 border-amber-300' : 'bg-blue-50 border-blue-200'}`}>
+              <p className={`text-[11px] font-bold ${isNearExpiry ? 'text-amber-800' : 'text-blue-800'}`}>
+                ⏱ お見積もり有効期限: <strong>{expiresAt.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</strong>
+                {daysUntilExpiry !== null && (
+                  <span className="ml-1">（あと <strong>{daysUntilExpiry}</strong>日）</span>
+                )}
+              </p>
+              {isNearExpiry && (
+                <p className="text-[10px] text-amber-700 mt-1">期限が近いです。お早めにご確定ください🌸</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ご注文者情報 */}

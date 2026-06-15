@@ -443,6 +443,72 @@ export default function EstimatesPage() {
                     </div>
                   )}
 
+                  {/* [見積-4] 期限切れ間近のリマインダー送信ボタン（replied のみ） */}
+                  {est.status === 'replied' && est.expires_at && est.customer_email && (() => {
+                    const expiresAt = new Date(est.expires_at);
+                    const now = new Date();
+                    const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                    const isNear = daysLeft > 0 && daysLeft <= 14;
+                    const isExpired = daysLeft <= 0;
+                    const alreadySent = !!est.expiry_warning_sent_at;
+                    if (isExpired) {
+                      return (
+                        <div className="bg-red-50 border border-red-200 p-3 rounded-lg flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-red-700">⏱ 有効期限が切れました ({expiresAt.toLocaleDateString('ja-JP')})</span>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className={`${isNear ? 'bg-amber-50 border-amber-300' : 'bg-blue-50 border-blue-200'} border p-3 rounded-lg space-y-2`}>
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div>
+                            <p className={`text-[11px] font-bold ${isNear ? 'text-amber-800' : 'text-blue-800'}`}>
+                              ⏱ 有効期限 {expiresAt.toLocaleDateString('ja-JP')}（あと {daysLeft}日）
+                            </p>
+                            {alreadySent && (
+                              <p className="text-[10px] text-[#666] mt-1">
+                                📧 {new Date(est.expiry_warning_sent_at).toLocaleString('ja-JP')} に顧客リマインド送信済
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            onClick={async () => {
+                              const custom = prompt(
+                                '顧客リマインドメールに追記するメッセージ（任意・空欄でOK）:\n\n例: 「いつもありがとうございます。ご検討状況いかがでしょうか？」',
+                                ''
+                              );
+                              if (custom === null) return; // キャンセル
+                              try {
+                                const { data: { session } } = await supabase.auth.getSession();
+                                if (!session) { alert('セッションが切れています'); return; }
+                                const res = await fetch('/api/staff/send-estimate-reminder', {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                    Authorization: `Bearer ${session.access_token}`,
+                                  },
+                                  body: JSON.stringify({ estimateId: est.id, customMessage: custom }),
+                                });
+                                const data = await res.json();
+                                if (res.ok && data.ok) {
+                                  alert(`📧 ${data.sentTo} へリマインドメールを送信しました🌸`);
+                                  loadEstimates && loadEstimates();
+                                } else {
+                                  alert(`送信失敗: ${data.error || '原因不明'}`);
+                                }
+                              } catch (e) {
+                                alert(`送信失敗: ${e.message}`);
+                              }
+                            }}
+                            className={`px-3 h-9 ${isNear ? 'bg-amber-600 hover:bg-amber-500' : 'bg-blue-600 hover:bg-blue-500'} text-white text-[11px] font-bold rounded-lg flex items-center gap-1`}
+                          >
+                            📧 {alreadySent ? '再度' : ''}顧客にリマインド送信
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {est.status === 'pending' && !isEditing && (
                     <div className="flex gap-2 pt-2">
                       <button onClick={() => startEditing(est)}

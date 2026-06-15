@@ -50,6 +50,9 @@ export async function POST(request) {
         .slice(0, 10);
     }
 
+    // [見積-1] 有効期限 = 作成日 + 30日
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
     const insertPayload = {
       tenant_id: String(tenantId).toLowerCase(),
       shop_id: shopId || null,
@@ -60,6 +63,7 @@ export async function POST(request) {
       request_data: requestData || null,
       reference_images: refImgs,
       status: 'pending',
+      expires_at: expiresAt,
     };
 
     const { data, error } = await supabase.from('estimates').insert([insertPayload]).select('id').single();
@@ -228,12 +232,19 @@ export async function PATCH(request) {
 
     if (action === 'reply') {
       // 店舗回答
+      // [見積-1] 回答時に有効期限をリセット（回答日から30日延長）
+      const newExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
       await supabase.from('estimates').update({
         reply_message: String(replyMessage || '').slice(0, 4000),
         proposed_price: Number(proposedPrice) || 0,
         proposed_data: proposedData || null, // ★ 料金内訳を保存
         status: 'replied',
         replied_at: new Date().toISOString(),
+        expires_at: newExpiresAt,
+        // 催促・期限通知履歴をリセット（次フェーズで再通知できるように）
+        reminder_sent_at: null,
+        expiry_warning_sent_at: null,
+        staff_expiry_alert_sent_at: null,
       }).eq('id', id);
 
       // ★ 店舗情報を取得 (送信元・問合せ先のため)

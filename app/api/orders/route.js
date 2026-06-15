@@ -13,7 +13,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe, APP_URL } from '@/utils/stripe';
-import { sendEmail } from '@/utils/email';
+import { sendEmail, noReplyFooter } from '@/utils/email';
 import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatOrderBreakdown, formatRecipientInfo, formatLineAddFriendBlock, escapeHtml } from '@/utils/emailTemplates';
 import { sendLineParallelToEmail } from '@/utils/line';
 import { createMypageMagicUrl } from '@/utils/mypageLink';
@@ -281,6 +281,73 @@ export async function POST(request) {
         console.warn('[/api/orders] estimate mark converted失敗:', e?.message);
       }
     }
+
+    // [見積-2] 注文確定時 スタッフ通知メール（見積経由 or EC注文 or 代理入力 全部対応）
+    (async () => {
+      try {
+        const { data: settingsRow } = await supabaseAdmin.from('app_settings').select('settings_data').eq('id', tenantId).single();
+        const settings = settingsRow?.settings_data || {};
+        const targetShop = settings.shops?.find(s => String(s.id) === String(shopId)) || settings.shops?.[0] || {};
+        const shopEmail = (targetShop.notifyEmail || '').trim() || targetShop.email || settings.generalConfig?.email;
+        const shopName = targetShop.name || settings.generalConfig?.appName || tenantId;
+        const ccEmails = (targetShop.notifyCcEmails || '').split(',').map(s => s.trim()).filter(Boolean);
+        // 通知ON判定（注文専用設定 or 既定）
+        const notifyOnOrder = targetShop.notifyOnOrder !== false;
+        if (!shopEmail || !notifyOnOrder) return;
+        if (isStaffEntered && orderData.sendAutoReply === false) return; // 代理入力で自動返信OFFはスキップ
+
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.noodleflorix.com';
+        const fromEstimate = !!orderData?.fromEstimate;
+        const customerName = orderData.customerInfo?.name || '';
+        const customerEmail = orderData.customerInfo?.email || '';
+        const customerPhone = orderData.customerInfo?.phone || '';
+        const total = (orderData.totalAmount || 0);
+        const receiveMethodLabel = { pickup: '店頭受取', delivery: '自社配達', sagawa: '業者配送' }[orderData.receiveMethod] || orderData.receiveMethod || '未指定';
+
+        const subject = fromEstimate
+          ? `📩 お見積もりが正式注文に確定しました（${customerName}様）`
+          : `🛒 新規ご注文を承りました（${customerName}様）`;
+
+        const html = `
+<div style="font-family: 'Hiragino Kaku Gothic ProN', sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+  <div style="background: #2D4B3E; color: white; padding: 16px 24px; border-radius: 12px 12px 0 0;">
+    <h2 style="margin: 0; font-size: 16px;">${fromEstimate ? '📩 お見積もりが正式注文になりました' : '🛒 新規ご注文'}</h2>
+  </div>
+  <div style="background: #FBFAF9; border: 1px solid #EAEAEA; border-top: none; padding: 20px; border-radius: 0 0 12px 12px;">
+    ${fromEstimate ? `<p style="background: #FEF3C7; padding: 10px; border-radius: 6px; margin: 0 0 16px; color: #92400E; font-size: 13px;"><strong>📌 お見積もり経由のご注文です</strong>（見積ID: ${String(orderData.estimateId).slice(0, 8)}）</p>` : ''}
+
+    <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: #333;">
+      <tr><td style="padding: 6px 0; color: #666;">注文ID</td><td style="padding: 6px 0;"><strong>${String(orderId).slice(0, 8).toUpperCase()}</strong></td></tr>
+      <tr><td style="padding: 6px 0; color: #666;">店舗</td><td style="padding: 6px 0;">${shopName}</td></tr>
+      <tr><td style="padding: 6px 0; color: #666;">お客様</td><td style="padding: 6px 0;"><strong>${customerName}</strong> 様</td></tr>
+      <tr><td style="padding: 6px 0; color: #666;">メール</td><td style="padding: 6px 0;">${customerEmail || '-'}</td></tr>
+      <tr><td style="padding: 6px 0; color: #666;">電話</td><td style="padding: 6px 0;">${customerPhone || '-'}</td></tr>
+      <tr><td style="padding: 6px 0; color: #666;">受取方法</td><td style="padding: 6px 0;">${receiveMethodLabel}</td></tr>
+      <tr><td style="padding: 6px 0; color: #666;">納期</td><td style="padding: 6px 0;">${orderData.selectedDate || '未指定'} ${orderData.selectedTime || ''}</td></tr>
+      <tr><td style="padding: 6px 0; color: #666;">合計</td><td style="padding: 6px 0; font-size: 16px; color: #2D4B3E;"><strong>¥${Number(total).toLocaleString()}</strong> (税込)</td></tr>
+      <tr><td style="padding: 6px 0; color: #666;">支払方法</td><td style="padding: 6px 0;">${orderData.paymentStatus || paymentMethod || '-'}</td></tr>
+    </table>
+
+    <div style="margin-top: 20px; text-align: center;">
+      <a href="${baseUrl}/staff/orders" style="display: inline-block; padding: 12px 24px; background: #2D4B3E; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 13px;">
+        📋 スタッフ画面で確認する
+      </a>
+    </div>
+  </div>
+  <p style="text-align: center; font-size: 11px; color: #999; margin-top: 12px;">${noReplyFooter ? noReplyFooter() : ''}</p>
+</div>`;
+
+        await sendEmail({
+          to: shopEmail,
+          cc: ccEmails.length > 0 ? ccEmails : undefined,
+          subject,
+          html,
+          replyTo: customerEmail || undefined,
+        });
+      } catch (e) {
+        console.warn('[/api/orders] staff notify email failed:', e?.message);
+      }
+    })().catch(e => console.warn('[order staff notify bg]', e?.message));
 
     // ---- お客様向け 注文確認メール送信 ----
     //   テンプレートシステム経由（設定で編集可能、未設定ならプリセット使用）
