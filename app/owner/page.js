@@ -1757,26 +1757,56 @@ export default function OwnerDashboard() {
                     const billing = tenantBilling[t.id] || {};
                     const fee = calcTenantFee(t);
                     const enabledCount = ALL_FEATURE_KEYS.filter(k => t.features?.[k]).length;
-                    // [料金UI] オーバーライド有無で表示を切り替え
-                    const featureOverrideCount = Object.keys(billing.featurePriceOverrides || {}).length;
-                    const hasBasePriceOverride = billing.basePriceOverride != null && billing.basePriceOverride !== '';
-                    const totalOverrides = featureOverrideCount + (hasBasePriceOverride ? 1 : 0);
+                    // [料金UI] オーバーライド判定（マスター値と実際に違うものだけカウント）
+                    const fOvs = billing.featurePriceOverrides || {};
+                    const realFeatureOverrides = Object.entries(fOvs).filter(([k, v]) => {
+                      if (v == null || v === '') return false; // 空欄は実質マスター
+                      const masterPrice = pricingConfig.featurePrices?.[k] ?? 0;
+                      return Number(v) !== Number(masterPrice); // マスターと値が違う場合のみ
+                    });
+                    // 「空欄として残ってるけど無意味」な項目数（クリーンアップ候補）
+                    const danglingFeatureOverrides = Object.entries(fOvs).filter(([k, v]) => v == null || v === '');
+                    const hasRealBasePriceOverride = billing.basePriceOverride != null
+                      && billing.basePriceOverride !== ''
+                      && Number(billing.basePriceOverride) !== Number(pricingConfig.basePrice);
+                    const totalOverrides = realFeatureOverrides.length + (hasRealBasePriceOverride ? 1 : 0);
+                    const totalRawOverrideKeys = Object.keys(fOvs).length + (billing.basePriceOverride != null && billing.basePriceOverride !== '' ? 1 : 0);
+                    // 実質マスター反映なら緑、本当に差異があればオレンジ
+                    const isEffectivelyMaster = totalOverrides === 0;
                     return (
                       <tr key={t.id} className="border-b border-[#EAEAEA]/50 hover:bg-[#F7F7F7]">
                         <td className="px-4 py-3 text-[#333] font-bold">{t.name}<div className="text-[9px] text-[#999] font-mono">{t.id}</div></td>
                         <td className="px-4 py-3 text-[#555]">{enabledCount}/{ALL_FEATURE_KEYS.length}</td>
                         <td className="px-4 py-3 text-right font-mono">
-                          <div className={totalOverrides > 0 ? 'text-amber-500 font-bold' : 'text-[#666]'}>
+                          <div className={isEffectivelyMaster ? 'text-[#666]' : 'text-amber-500 font-bold'}>
                             ¥{auto.total.toLocaleString()}
                           </div>
-                          {totalOverrides > 0 ? (
-                            <span className="inline-block mt-1 text-[8px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full" title="料金マスターでなく個別単価が使用されています">
-                              ⚙️ 個別単価 {totalOverrides}件
-                            </span>
-                          ) : (
+                          {isEffectivelyMaster ? (
                             <span className="inline-block mt-1 text-[8px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full" title="料金マスターの値で計算されています">
                               ✓ マスター反映
                             </span>
+                          ) : (
+                            <span className="inline-block mt-1 text-[8px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full" title="料金マスターと異なる個別単価が使われています">
+                              ⚙️ 個別単価 {totalOverrides}件
+                            </span>
+                          )}
+                          {/* 空欄項目が残ってる場合のクリーンアップ案内 */}
+                          {danglingFeatureOverrides.length > 0 && (
+                            <div className="mt-1">
+                              <button
+                                onClick={async (e) => {
+                                  e.preventDefault();
+                                  if (!confirm(`「${t.name}」の空欄の個別単価設定 ${danglingFeatureOverrides.length}件 を削除します。\n（マスター反映には影響しません）\n\nよろしいですか？`)) return;
+                                  const next = { ...fOvs };
+                                  for (const [k] of danglingFeatureOverrides) delete next[k];
+                                  await saveTenantBilling(t.id, { featurePriceOverrides: next });
+                                }}
+                                className="text-[9px] text-[#999] hover:text-[#666] underline"
+                                title="空の個別設定を削除（表示クリーンアップ）"
+                              >
+                                空項目 {danglingFeatureOverrides.length}件を整理
+                              </button>
+                            </div>
                           )}
                         </td>
                         <td className="px-4 py-3">
