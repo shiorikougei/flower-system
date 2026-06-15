@@ -1,11 +1,14 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase'; 
-import { 
-  X, Printer, Send, Archive, RotateCcw, Trash2, 
-  Store, Truck, Package, ListChecks, ChevronRight, 
-  Calendar as CalendarIcon, User, MapPin, AlertCircle, 
-  Tag, MessageSquare, CreditCard, CheckCircle2, Upload, ImageIcon 
+import {
+  X, Printer, Send, Archive, RotateCcw, Trash2,
+  Store, Truck, Package, ListChecks, ChevronRight,
+  Calendar as CalendarIcon, User, MapPin, AlertCircle,
+  Tag, MessageSquare, CreditCard, CheckCircle2, Upload, ImageIcon,
+  Edit3, ArrowRight, TrendingUp, TrendingDown, FileText, Bell, BellOff,
+  Wallet, RefreshCw, Mail, Camera, Plus, Clock, ShoppingBag, History,
+  Save, ArrowDown
 } from 'lucide-react';
 import TatefudaPreview from '@/components/TatefudaPreview';
 import { ensureOperationAllowed, getCurrentRole, getCurrentStaff } from '@/utils/staffRole';
@@ -976,10 +979,10 @@ export default function OrderDetailModal({
                   setCorrectionMarkAsPaid(false);
                   setShowAmountCorrection(true);
                 }}
-                className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 border border-amber-300 rounded-xl text-[10px] md:text-[11px] font-bold text-amber-700 hover:bg-amber-100 transition-all"
+                className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all"
                 title="注文金額を訂正（オーナー権限）"
               >
-                💰 <span className="hidden sm:inline">金額訂正</span>
+                <Edit3 size={14}/> <span className="hidden sm:inline">金額訂正</span>
               </button>
             )}
 
@@ -1786,27 +1789,27 @@ export default function OrderDetailModal({
         }
         const situationConfig = {
           unpaid: {
-            bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-800',
-            statusIcon: '🔴', statusLabel: '未入金',
-            actionIcon: '📨', actionTitle: '訂正後の金額を回収予定',
+            accent: 'border-l-[#A85A3A] bg-[#FDF6F2]', text: 'text-[#A85A3A]',
+            statusLabel: '未入金',
+            actionTitle: '訂正後の金額を回収予定',
             actionDesc: `お客様へ ¥${newTotal.toLocaleString()} のお支払い案内メールをお送りします。`,
           },
           fully_paid: {
-            bg: 'bg-emerald-50', border: 'border-emerald-300', text: 'text-emerald-800',
-            statusIcon: '✅', statusLabel: '入金済み',
-            actionIcon: '✓', actionTitle: '過不足なし',
-            actionDesc: `お支払い済み額が訂正後の合計と一致するため、追加対応は不要です。`,
+            accent: 'border-l-[#2F6B43] bg-[#F1F9F3]', text: 'text-[#2F6B43]',
+            statusLabel: '入金済み（過不足なし）',
+            actionTitle: '追加対応は不要',
+            actionDesc: `お支払い済み額が訂正後の合計と一致するため、追加振込・返金は発生しません。`,
           },
           additional_required: {
-            bg: 'bg-amber-50', border: 'border-amber-400', text: 'text-amber-900',
-            statusIcon: '⚠️', statusLabel: '追加お支払い',
-            actionIcon: '📨', actionTitle: `追加で ¥${balance.toLocaleString()} のお支払いが必要`,
-            actionDesc: `お客様へ追加振込のご案内をお送りします。差額は ¥${balance.toLocaleString()} です。`,
+            accent: 'border-l-[#A85A3A] bg-[#FDF6F2]', text: 'text-[#A85A3A]',
+            statusLabel: '入金済み（追加お支払いが必要）',
+            actionTitle: `追加で ¥${balance.toLocaleString()} のお支払いが必要`,
+            actionDesc: `既にお支払い済みの額に対して、訂正後の差額をご案内します。`,
           },
           refund_required: {
-            bg: 'bg-blue-50', border: 'border-blue-300', text: 'text-blue-800',
-            statusIcon: '💰', statusLabel: '返金処理',
-            actionIcon: '📨', actionTitle: `¥${Math.abs(balance).toLocaleString()} の返金が必要`,
+            accent: 'border-l-[#3A6BA8] bg-[#F2F6FD]', text: 'text-[#3A6BA8]',
+            statusLabel: '入金済み（返金処理が必要）',
+            actionTitle: `¥${Math.abs(balance).toLocaleString()} の返金が必要`,
             actionDesc: `お客様へ返金のご案内をお送りします（振込先口座のご連絡を依頼）。`,
           },
         };
@@ -1821,169 +1824,190 @@ export default function OrderDetailModal({
               className="bg-white max-w-xl w-full max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="sticky top-0 bg-white border-b border-[#EAEAEA] px-6 py-4 flex items-center justify-between rounded-t-2xl">
-                <h3 className="text-[15px] font-bold text-amber-700 flex items-center gap-2">
-                  💰 注文金額の訂正
+              <div className="sticky top-0 bg-white border-b border-[#EAEAEA] px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+                <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2">
+                  <Edit3 size={16} className="text-[#2D4B3E]"/>
+                  注文金額の訂正
                 </h3>
                 <button
                   onClick={() => setShowAmountCorrection(false)}
                   disabled={isSavingCorrection}
-                  className="text-[#999] hover:text-[#111] text-[20px] font-bold disabled:opacity-50"
+                  className="w-8 h-8 rounded-full hover:bg-[#FBFAF9] flex items-center justify-center text-[#999] hover:text-[#2D4B3E] disabled:opacity-50 transition"
                 >
-                  ✕
+                  <X size={18}/>
                 </button>
               </div>
-              <div className="p-6 space-y-4">
+              <div className="p-6 space-y-5">
 
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                  <p className="text-[12px] text-amber-900 leading-relaxed">
-                    ⚠️ オーナー権限で注文金額を訂正します。<br/>
-                    訂正履歴は監査ログとして残り、お客様への通知も任意で送信できます。
+                <div className="bg-[#FBFAF9] border-l-2 border-[#2D4B3E] px-4 py-3 rounded-r-md">
+                  <p className="text-[11.5px] text-[#555] leading-relaxed">
+                    オーナー権限による金額訂正です。訂正履歴は監査ログに残り、お客様への通知方法も選択できます。
                   </p>
                 </div>
 
                 {/* 既存の訂正履歴 */}
                 {corrections.length > 0 && (
-                  <details className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg p-3">
-                    <summary className="cursor-pointer text-[11px] font-bold text-[#666]">
-                      📋 訂正履歴 ({corrections.length}件)
+                  <details className="border border-[#EAEAEA] rounded-lg">
+                    <summary className="cursor-pointer px-4 py-3 text-[11.5px] font-semibold text-[#555] flex items-center gap-2 hover:bg-[#FBFAF9]">
+                      <History size={13} className="text-[#999]"/>
+                      訂正履歴 ({corrections.length}件)
                     </summary>
-                    <div className="mt-3 space-y-2">
+                    <div className="px-4 pb-4 pt-1 space-y-2 border-t border-[#EAEAEA]">
                       {corrections.slice().reverse().map((c, i) => (
-                        <div key={i} className="bg-white p-2 rounded border border-[#EAEAEA] text-[10px]">
-                          <p className="text-[#666]">{new Date(c.at).toLocaleString('ja-JP')} - <strong>{c.operatorName}</strong></p>
-                          <p className="text-[#333]">¥{c.before?.totalAmount?.toLocaleString()} → <strong className="text-amber-700">¥{c.after?.totalAmount?.toLocaleString()}</strong></p>
-                          <p className="text-[#888] mt-1">理由: {c.reason}</p>
+                        <div key={i} className="py-2 border-b border-[#F0F0F0] last:border-0 text-[10.5px]">
+                          <div className="flex items-center gap-2 text-[#777]">
+                            <Clock size={10}/>
+                            <span>{new Date(c.at).toLocaleString('ja-JP')}</span>
+                            <span className="text-[#444]">•</span>
+                            <span className="text-[#444] font-medium">{c.operatorName}</span>
+                          </div>
+                          <p className="text-[#333] mt-1 font-mono">
+                            ¥{c.before?.totalAmount?.toLocaleString()}
+                            <ArrowRight size={10} className="inline mx-1 text-[#999]"/>
+                            <span className="font-semibold">¥{c.after?.totalAmount?.toLocaleString()}</span>
+                          </p>
+                          <p className="text-[#666] mt-0.5">{c.reason}</p>
                         </div>
                       ))}
                     </div>
                   </details>
                 )}
 
-                {/* 現在の金額 */}
-                <div className="bg-[#FBFAF9] rounded-lg p-3 border border-[#EAEAEA]">
-                  <p className="text-[10px] text-[#999] mb-1">現在の合計（税込）</p>
-                  <p className="text-[20px] font-bold text-[#2D4B3E]">¥{oldTotal.toLocaleString()}</p>
-                </div>
-
-                {/* 新しい金額入力 */}
-                <div>
-                  <label className="text-[12px] font-bold text-[#555] block mb-1">新しい商品代（税抜） *</label>
-                  <input
-                    type="number"
-                    value={correctionItemPrice}
-                    onChange={(e) => setCorrectionItemPrice(e.target.value)}
-                    disabled={isSavingCorrection}
-                    className="w-full h-11 px-3 bg-white border border-[#EAEAEA] rounded-xl text-[14px] font-bold focus:border-amber-500 outline-none"
-                    placeholder="4000"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[12px] font-bold text-[#555] block mb-1">配送料・手数料（税抜）</label>
-                  <input
-                    type="number"
-                    value={correctionFee}
-                    onChange={(e) => setCorrectionFee(e.target.value)}
-                    disabled={isSavingCorrection}
-                    className="w-full h-11 px-3 bg-white border border-[#EAEAEA] rounded-xl text-[14px] focus:border-amber-500 outline-none"
-                    placeholder="0"
-                  />
-                </div>
-
-                {/* 計算結果 - 訂正前 vs 訂正後 並列比較 */}
-                <div>
-                  <p className="text-[12px] font-bold text-[#555] mb-2">📋 訂正内容の確認</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* 訂正前 */}
-                    <div className="bg-[#F5F5F5] border border-[#DDD] rounded-xl p-3">
-                      <p className="text-[10px] font-bold text-[#999] mb-2 tracking-widest">BEFORE 訂正前</p>
-                      <table className="w-full text-[11px]">
-                        <tbody>
-                          <tr><td className="text-[#777]">商品代</td><td className="text-right font-mono text-[#555]">¥{oldItem.toLocaleString()}</td></tr>
-                          <tr><td className="text-[#777]">送料等</td><td className="text-right font-mono text-[#555]">¥{oldFee.toLocaleString()}</td></tr>
-                          <tr><td className="text-[#777]">税</td><td className="text-right font-mono text-[#555]">¥{oldTax.toLocaleString()}</td></tr>
-                          <tr className="border-t border-[#DDD]">
-                            <td className="pt-1 font-bold text-[#555]">合計</td>
-                            <td className="text-right pt-1 font-bold text-[14px] text-[#555]">¥{oldTotal.toLocaleString()}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                    {/* 訂正後 */}
-                    <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-3">
-                      <p className="text-[10px] font-bold text-amber-700 mb-2 tracking-widest">AFTER 訂正後</p>
-                      <table className="w-full text-[11px]">
-                        <tbody>
-                          <tr><td className="text-amber-800">商品代</td><td className="text-right font-mono text-amber-900">¥{newItem.toLocaleString()}</td></tr>
-                          <tr><td className="text-amber-800">送料等</td><td className="text-right font-mono text-amber-900">¥{newFee.toLocaleString()}</td></tr>
-                          <tr><td className="text-amber-800">税</td><td className="text-right font-mono text-amber-900">¥{newTax.toLocaleString()}</td></tr>
-                          <tr className="border-t border-amber-300">
-                            <td className="pt-1 font-bold text-amber-900">合計</td>
-                            <td className="text-right pt-1 font-bold text-[14px] text-amber-700">¥{newTotal.toLocaleString()}</td>
-                          </tr>
-                        </tbody>
-                      </table>
+                {/* 入力フォーム */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[11.5px] font-semibold text-[#444] block mb-1.5">
+                      商品代（税抜） <span className="text-[#C97D60]">*</span>
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] text-[#999]">¥</span>
+                      <input
+                        type="number"
+                        value={correctionItemPrice}
+                        onChange={(e) => setCorrectionItemPrice(e.target.value)}
+                        disabled={isSavingCorrection}
+                        className="w-full h-11 pl-7 pr-3 bg-white border border-[#DDD] rounded-lg text-[14px] font-medium focus:border-[#2D4B3E] outline-none transition"
+                        placeholder="4000"
+                      />
                     </div>
                   </div>
-                  {/* 差額帯 */}
+
+                  <div>
+                    <label className="text-[11.5px] font-semibold text-[#444] block mb-1.5">配送料・手数料（税抜）</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] text-[#999]">¥</span>
+                      <input
+                        type="number"
+                        value={correctionFee}
+                        onChange={(e) => setCorrectionFee(e.target.value)}
+                        disabled={isSavingCorrection}
+                        className="w-full h-11 pl-7 pr-3 bg-white border border-[#DDD] rounded-lg text-[14px] font-medium focus:border-[#2D4B3E] outline-none transition"
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 計算結果 - 訂正前 / 訂正後 比較 */}
+                <div className="border border-[#DDD] rounded-lg overflow-hidden">
+                  <div className="px-4 py-2.5 bg-[#FBFAF9] border-b border-[#DDD] text-[11px] font-semibold text-[#555] flex items-center gap-2">
+                    <FileText size={12} className="text-[#999]"/>
+                    訂正内容
+                  </div>
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-stretch">
+                    {/* 訂正前 */}
+                    <div className="p-4">
+                      <p className="text-[9px] font-bold text-[#999] mb-2 tracking-[0.15em]">BEFORE</p>
+                      <div className="space-y-1 text-[11px]">
+                        <div className="flex justify-between text-[#777]"><span>商品代</span><span className="font-mono">¥{oldItem.toLocaleString()}</span></div>
+                        <div className="flex justify-between text-[#777]"><span>送料等</span><span className="font-mono">¥{oldFee.toLocaleString()}</span></div>
+                        <div className="flex justify-between text-[#777]"><span>消費税</span><span className="font-mono">¥{oldTax.toLocaleString()}</span></div>
+                      </div>
+                      <div className="mt-2 pt-2 border-t border-[#EAEAEA]">
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-[10px] text-[#777]">合計</span>
+                          <span className="text-[15px] font-semibold text-[#555] font-mono">¥{oldTotal.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 矢印 */}
+                    <div className="flex items-center justify-center px-2 border-l border-r border-[#EAEAEA] bg-[#FAFAFA]">
+                      <ArrowRight size={16} className="text-[#999]"/>
+                    </div>
+
+                    {/* 訂正後 */}
+                    <div className="p-4 bg-[#FFFDF9]">
+                      <p className="text-[9px] font-bold text-[#C97D60] mb-2 tracking-[0.15em]">AFTER</p>
+                      <div className="space-y-1 text-[11px]">
+                        <div className="flex justify-between text-[#555]"><span>商品代</span><span className="font-mono">¥{newItem.toLocaleString()}</span></div>
+                        <div className="flex justify-between text-[#555]"><span>送料等</span><span className="font-mono">¥{newFee.toLocaleString()}</span></div>
+                        <div className="flex justify-between text-[#555]"><span>消費税</span><span className="font-mono">¥{newTax.toLocaleString()}</span></div>
+                      </div>
+                      <div className="mt-2 pt-2 border-t border-[#EAEAEA]">
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-[10px] text-[#777]">合計</span>
+                          <span className="text-[15px] font-bold text-[#2D4B3E] font-mono">¥{newTotal.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 差額 */}
                   {diff !== 0 && (
-                    <div className={`mt-2 rounded-lg px-4 py-2 text-center text-[12px] font-bold ${diff > 0 ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
-                      {diff > 0 ? '📈 増額' : '📉 減額'}: {diff > 0 ? '+' : ''}¥{diff.toLocaleString()}
+                    <div className={`flex items-center justify-center gap-1.5 py-2 text-[11px] font-semibold border-t ${diff > 0 ? 'border-[#EFCCC0] bg-[#FDF6F2] text-[#A85A3A]' : 'border-[#C5E0CD] bg-[#F1F9F3] text-[#2F6B43]'}`}>
+                      {diff > 0 ? <TrendingUp size={13}/> : <TrendingDown size={13}/>}
+                      <span>{diff > 0 ? '増額' : '減額'} {diff > 0 ? '+' : ''}¥{diff.toLocaleString()}</span>
                     </div>
                   )}
                 </div>
 
-                {/* [入金状況] お支払いアクションプレビュー */}
-                <div className={`${sc.bg} ${sc.border} border-2 rounded-xl overflow-hidden`}>
-                  <div className={`px-4 py-2 ${sc.bg} border-b ${sc.border}`}>
-                    <p className={`text-[12px] font-bold ${sc.text} flex items-center gap-2`}>
-                      <span>💳</span>
-                      <span>入金状況とお客様への対応</span>
-                    </p>
+                {/* 入金状況とアクション */}
+                <div className="border border-[#DDD] rounded-lg overflow-hidden">
+                  <div className="px-4 py-2.5 bg-[#FBFAF9] border-b border-[#DDD] text-[11px] font-semibold text-[#555] flex items-center gap-2">
+                    <Wallet size={12} className="text-[#999]"/>
+                    入金状況とお客様への対応
                   </div>
-                  <div className="p-4 bg-white space-y-3">
+                  <div className="p-4 space-y-3">
                     {/* 現在の入金状況 */}
-                    <div className="flex items-center justify-between bg-[#F9F9F9] rounded-lg p-3">
+                    <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] text-[#999] mb-1">現在の入金状況</p>
-                        <p className="text-[13px] font-bold flex items-center gap-1.5">
-                          <span>{sc.statusIcon}</span>
-                          <span>{sc.statusLabel}</span>
-                        </p>
+                        <p className="text-[10px] text-[#999] mb-1 tracking-wider">現在の入金状況</p>
+                        <p className={`text-[13px] font-semibold ${sc.text}`}>{sc.statusLabel}</p>
                       </div>
                       {wasPaid && (
                         <div className="text-right">
-                          <p className="text-[10px] text-[#999] mb-1">お支払い済み額</p>
-                          <p className="text-[14px] font-bold text-[#2D4B3E]">¥{paidAmount.toLocaleString()}</p>
+                          <p className="text-[10px] text-[#999] mb-1 tracking-wider">お支払い済み</p>
+                          <p className="text-[14px] font-semibold text-[#2D4B3E] font-mono">¥{paidAmount.toLocaleString()}</p>
                         </div>
                       )}
                     </div>
 
                     {/* 訂正後のアクション */}
-                    <div className={`${sc.bg} border ${sc.border} rounded-lg p-3`}>
-                      <p className={`text-[12px] font-bold ${sc.text} mb-1 flex items-center gap-1.5`}>
-                        <span>{sc.actionIcon}</span>
-                        <span>{sc.actionTitle}</span>
-                      </p>
-                      <p className={`text-[11px] ${sc.text} leading-relaxed`}>{sc.actionDesc}</p>
+                    <div className={`border-l-2 ${sc.accent} px-3 py-2.5 rounded-r-md`}>
+                      <p className={`text-[12px] font-semibold ${sc.text} mb-1`}>{sc.actionTitle}</p>
+                      <p className="text-[11px] text-[#555] leading-relaxed">{sc.actionDesc}</p>
                     </div>
 
                     {/* お支払い済み + 追加/返金の場合のみ差額詳細 */}
                     {wasPaid && balance !== 0 && (
-                      <div className="bg-[#F9F9F9] rounded-lg p-3">
-                        <table className="w-full text-[11px]">
-                          <tbody>
-                            <tr><td className="text-[#666]">既にお支払い済み</td><td className="text-right font-mono">¥{paidAmount.toLocaleString()}</td></tr>
-                            <tr><td className="text-[#666]">訂正後の合計</td><td className="text-right font-mono">¥{newTotal.toLocaleString()}</td></tr>
-                            <tr className="border-t border-[#DDD]">
-                              <td className="pt-2 font-bold text-[#333]">{balance > 0 ? '追加お支払い額' : '返金額'}</td>
-                              <td className={`text-right pt-2 font-bold text-[16px] ${balance > 0 ? 'text-amber-700' : 'text-blue-700'}`}>
-                                ¥{Math.abs(balance).toLocaleString()}
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
+                      <div className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-md p-3">
+                        <div className="space-y-1.5 text-[11px]">
+                          <div className="flex justify-between text-[#666]">
+                            <span>お支払い済み</span>
+                            <span className="font-mono">¥{paidAmount.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between text-[#666]">
+                            <span>訂正後の合計</span>
+                            <span className="font-mono">¥{newTotal.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between items-baseline pt-1.5 border-t border-[#EAEAEA]">
+                            <span className="text-[10.5px] font-semibold text-[#444]">{balance > 0 ? '追加お支払い額' : '返金額'}</span>
+                            <span className={`text-[14px] font-bold font-mono ${balance > 0 ? 'text-[#A85A3A]' : 'text-[#3A6BA8]'}`}>
+                              ¥{Math.abs(balance).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1991,113 +2015,112 @@ export default function OrderDetailModal({
 
                 {/* 訂正理由 */}
                 <div>
-                  <label className="text-[12px] font-bold text-[#555] block mb-1">訂正理由 <span className="text-red-500">*</span></label>
+                  <label className="text-[11.5px] font-semibold text-[#444] block mb-1.5">
+                    訂正理由 <span className="text-[#C97D60]">*</span>
+                  </label>
                   <textarea
                     value={correctionReason}
                     onChange={(e) => setCorrectionReason(e.target.value)}
                     disabled={isSavingCorrection}
                     rows={3}
-                    className="w-full bg-white border border-[#EAEAEA] rounded-xl px-3 py-2 text-[13px] focus:border-amber-500 outline-none resize-none"
-                    placeholder="例: 商品数量の追加にて金額調整 / 配達エリア変更による送料追加 / 等"
+                    className="w-full bg-white border border-[#DDD] rounded-lg px-3 py-2.5 text-[12.5px] focus:border-[#2D4B3E] outline-none resize-none leading-relaxed"
+                    placeholder="例: 商品数量の追加にて金額調整、配達エリア変更による送料追加 など"
                   />
-                  <p className="text-[10px] text-[#999] mt-1">監査ログ・お客様へのメール本文にこの理由が含まれます。</p>
+                  <p className="text-[10px] text-[#999] mt-1">監査ログとお客様へのメール本文にこの理由が含まれます。</p>
                 </div>
 
                 {/* 通知モード 3択 */}
-                <div className="space-y-2">
-                  <p className="text-[12px] font-bold text-[#555]">📧 お客様への通知</p>
-                  <div className="space-y-2">
-                    {/* 訂正通知（詳細） */}
-                    <label className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition ${correctionNotifyMode === 'correction' ? 'bg-amber-50 border-amber-400' : 'bg-white border-[#EAEAEA] hover:border-amber-200'}`}>
+                <div>
+                  <p className="text-[11.5px] font-semibold text-[#444] mb-2 flex items-center gap-2">
+                    <Bell size={12} className="text-[#999]"/>
+                    お客様への通知
+                  </p>
+                  <div className="space-y-1.5">
+                    {/* 訂正通知 */}
+                    <label className={`flex items-start gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition ${correctionNotifyMode === 'correction' ? 'border-[#2D4B3E] bg-[#F7FAF8]' : 'border-[#DDD] hover:border-[#999]'}`}>
                       <input
                         type="radio"
                         name="notifyMode"
                         checked={correctionNotifyMode === 'correction'}
                         onChange={() => setCorrectionNotifyMode('correction')}
                         disabled={isSavingCorrection || !modalData.customerInfo?.email}
-                        className="mt-0.5 w-4 h-4 accent-amber-600"
+                        className="mt-1 w-4 h-4 accent-[#2D4B3E]"
                       />
                       <div className="flex-1">
-                        <p className="text-[12px] font-bold text-[#333]">📨 訂正のお知らせを送る</p>
-                        <p className="text-[10px] text-[#666] leading-relaxed mt-0.5">訂正前後の金額・理由・必要なアクション（追加振込/返金等）の詳細メール</p>
-                        {!modalData.customerInfo?.email && <p className="text-[10px] text-red-500 mt-1">⚠️ メールアドレス未登録のため選択不可</p>}
+                        <p className="text-[12px] font-semibold text-[#333]">訂正のお知らせを送る</p>
+                        <p className="text-[10.5px] text-[#666] leading-relaxed mt-0.5">訂正前後の金額・理由・必要なアクションを詳細にメールで送信</p>
+                        {!modalData.customerInfo?.email && <p className="text-[10px] text-[#A85A3A] mt-1 flex items-center gap-1"><AlertCircle size={10}/> メールアドレス未登録のため選択不可</p>}
                       </div>
                     </label>
 
                     {/* 入金完了通知のみ */}
-                    <label className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition ${correctionNotifyMode === 'payment_received' ? 'bg-emerald-50 border-emerald-400' : 'bg-white border-[#EAEAEA] hover:border-emerald-200'}`}>
+                    <label className={`flex items-start gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition ${correctionNotifyMode === 'payment_received' ? 'border-[#2D4B3E] bg-[#F7FAF8]' : 'border-[#DDD] hover:border-[#999]'}`}>
                       <input
                         type="radio"
                         name="notifyMode"
                         checked={correctionNotifyMode === 'payment_received'}
                         onChange={() => { setCorrectionNotifyMode('payment_received'); setCorrectionMarkAsPaid(true); }}
                         disabled={isSavingCorrection || !modalData.customerInfo?.email}
-                        className="mt-0.5 w-4 h-4 accent-emerald-600"
+                        className="mt-1 w-4 h-4 accent-[#2D4B3E]"
                       />
                       <div className="flex-1">
-                        <p className="text-[12px] font-bold text-[#333]">✓ お支払い完了通知のみ送る</p>
-                        <p className="text-[10px] text-[#666] leading-relaxed mt-0.5">電話・LINE等で訂正案内済み → 「ご入金確認しました」のシンプルメール（訂正の話には触れない）</p>
-                        {!modalData.customerInfo?.email && <p className="text-[10px] text-red-500 mt-1">⚠️ メールアドレス未登録のため選択不可</p>}
+                        <p className="text-[12px] font-semibold text-[#333]">お支払い完了通知のみ送る</p>
+                        <p className="text-[10.5px] text-[#666] leading-relaxed mt-0.5">電話・LINEで案内済みの場合に。訂正の話には触れず、入金確認の通知のみ</p>
+                        {!modalData.customerInfo?.email && <p className="text-[10px] text-[#A85A3A] mt-1 flex items-center gap-1"><AlertCircle size={10}/> メールアドレス未登録のため選択不可</p>}
                       </div>
                     </label>
 
                     {/* 通知しない */}
-                    <label className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition ${correctionNotifyMode === 'none' ? 'bg-[#F5F5F5] border-[#999]' : 'bg-white border-[#EAEAEA] hover:border-[#999]'}`}>
+                    <label className={`flex items-start gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition ${correctionNotifyMode === 'none' ? 'border-[#2D4B3E] bg-[#F7FAF8]' : 'border-[#DDD] hover:border-[#999]'}`}>
                       <input
                         type="radio"
                         name="notifyMode"
                         checked={correctionNotifyMode === 'none'}
                         onChange={() => setCorrectionNotifyMode('none')}
                         disabled={isSavingCorrection}
-                        className="mt-0.5 w-4 h-4 accent-[#666]"
+                        className="mt-1 w-4 h-4 accent-[#2D4B3E]"
                       />
                       <div className="flex-1">
-                        <p className="text-[12px] font-bold text-[#333]">🔇 通知しない</p>
-                        <p className="text-[10px] text-[#666] leading-relaxed mt-0.5">他の手段（電話・LINE・対面等）で連絡済み → メール送信なし。内部記録のみ。</p>
+                        <p className="text-[12px] font-semibold text-[#333]">通知しない</p>
+                        <p className="text-[10.5px] text-[#666] leading-relaxed mt-0.5">他の手段（電話・LINE・対面など）で連絡済みの場合に。内部記録のみ</p>
                       </div>
                     </label>
                   </div>
                 </div>
 
-                {/* 入金済みマーク */}
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
-                  <label className="flex items-start gap-3 cursor-pointer">
+                {/* オプション */}
+                <div className="border-t border-[#EAEAEA] pt-4 space-y-2.5">
+                  <label className="flex items-start gap-2.5 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={correctionMarkAsPaid}
                       onChange={(e) => setCorrectionMarkAsPaid(e.target.checked)}
                       disabled={isSavingCorrection}
-                      className="mt-0.5 w-4 h-4 accent-emerald-600"
+                      className="mt-0.5 w-4 h-4 accent-[#2D4B3E]"
                     />
                     <div className="flex-1">
-                      <p className="text-[12px] font-bold text-emerald-800">💰 訂正と同時に「入金済み」へ更新する</p>
-                      <p className="text-[10px] text-emerald-700 leading-relaxed mt-0.5">
-                        既に入金確認できているお客様や、振込確認後の処理にチェック。<br/>
-                        注文ステータスが入金済みに変わり、過不足なし扱いになります。
-                      </p>
+                      <p className="text-[12px] font-semibold text-[#333]">訂正と同時に「入金済み」へ更新する</p>
+                      <p className="text-[10.5px] text-[#666] leading-relaxed">既に入金確認できているお客様、振込確認後の処理に使用</p>
                     </div>
                   </label>
-                </div>
 
-                {/* 店舗通知 */}
-                <div className="bg-[#FBFAF9] rounded-xl p-3 border border-[#EAEAEA]">
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  <label className="flex items-center gap-2.5 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={correctionNotifyStore}
                       onChange={(e) => setCorrectionNotifyStore(e.target.checked)}
                       disabled={isSavingCorrection}
-                      className="w-4 h-4 accent-amber-600"
+                      className="w-4 h-4 accent-[#2D4B3E]"
                     />
-                    <span className="text-[12px] text-[#555]">📋 店舗の通知メールにも記録通知</span>
+                    <span className="text-[12px] text-[#444]">店舗の通知メールにも記録通知</span>
                   </label>
                 </div>
 
-                <div className="flex gap-2 pt-3 border-t border-[#EAEAEA]">
+                <div className="flex gap-2 pt-4 border-t border-[#EAEAEA]">
                   <button
                     onClick={() => setShowAmountCorrection(false)}
                     disabled={isSavingCorrection}
-                    className="flex-1 h-11 bg-white border border-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-xl hover:bg-[#FBFAF9] disabled:opacity-50"
+                    className="flex-1 h-11 bg-white border border-[#DDD] text-[#555] text-[12.5px] font-semibold rounded-lg hover:bg-[#FBFAF9] disabled:opacity-50 transition"
                   >
                     キャンセル
                   </button>
@@ -2132,7 +2155,7 @@ export default function OrderDetailModal({
                         });
                         const data = await res.json();
                         if (res.ok && data.ok) {
-                          alert(`✅ 金額を訂正しました\n新しい合計: ¥${data.newTotal.toLocaleString()}\n差額: ${data.diff > 0 ? '+' : ''}¥${data.diff.toLocaleString()}`);
+                          alert(`金額を訂正しました\n\n新しい合計: ¥${data.newTotal.toLocaleString()}\n差額: ${data.diff > 0 ? '+' : ''}¥${data.diff.toLocaleString()}`);
                           // 親に反映してリロード
                           if (onUpdatePayment) {
                             const updatedData = { ...modalData, itemPrice: newItem, calculatedFee: newFee, totalAmount: newTotal };
@@ -2150,9 +2173,13 @@ export default function OrderDetailModal({
                       }
                     }}
                     disabled={isSavingCorrection || !correctionReason}
-                    className="flex-1 h-11 bg-amber-600 hover:bg-amber-500 text-white text-[12px] font-bold rounded-xl disabled:opacity-50"
+                    className="flex-1 h-11 bg-[#2D4B3E] hover:bg-[#1f352b] text-white text-[12.5px] font-semibold rounded-lg disabled:opacity-50 transition flex items-center justify-center gap-2"
                   >
-                    {isSavingCorrection ? '保存中...' : '💰 訂正を確定'}
+                    {isSavingCorrection ? (
+                      <>保存中…</>
+                    ) : (
+                      <><Save size={14}/> 訂正を確定</>
+                    )}
                   </button>
                 </div>
               </div>
