@@ -34,11 +34,16 @@ export async function POST(request) {
       newCalculatedFee,
       newPickupFee,
       reason,
-      notifyCustomer = false,
+      // [通知モード] 'correction'(訂正通知) | 'payment_received'(入金完了のみ) | 'none'(通知しない)
+      notifyMode = 'correction',
       notifyStore = false,
+      // [入金状態] 訂正と同時に「入金済み」へマークするか
+      markAsPaid = false,
       operatorName,
       operatorRole,
     } = body;
+    // 後方互換: notifyCustomer 旧キーがあれば notifyMode を解釈
+    const notifyCustomer = notifyMode !== 'none';
 
     if (!orderId) {
       return NextResponse.json({ error: "orderIdが必要です" }, { status: 400 });
@@ -119,9 +124,11 @@ export async function POST(request) {
 
     // [訂正] 訂正後の支払い状況計算
     //   wasPaid=true なら、訂正後に追加振込or返金が必要か判定
-    const balance = newTotal - paidAmount; // 0=ぴったり、+=追加必要、-=返金必要
+    //   markAsPaid=true で「入金済み」マーク時は、それを優先して計算する
+    const effectivePaidAmount = markAsPaid ? newTotal : paidAmount;
+    const balance = newTotal - effectivePaidAmount; // 0=ぴったり、+=追加必要、-=返金必要
     let paymentSituation; // 'fully_paid'|'additional_required'|'refund_required'|'unpaid'
-    if (wasPaid) {
+    if (markAsPaid || wasPaid) {
       if (balance === 0) paymentSituation = 'fully_paid';
       else if (balance > 0) paymentSituation = 'additional_required';
       else paymentSituation = 'refund_required';
@@ -163,12 +170,23 @@ export async function POST(request) {
       totalAmount: newTotal,
       // [訂正] 支払い済みの場合、実際に支払われた金額をスナップショット
       ...(wasPaid && { paidAmount }),
+      // [入金マーク] 訂正と同時に「入金済み」へ
+      ...(markAsPaid && {
+        paymentStatus: '前払い済み（訂正後）',
+        paidAmount: newTotal,
+      }),
       amountCorrections: [...(Array.isArray(od.amountCorrections) ? od.amountCorrections : []), correction],
     };
 
+    const updatePayload = { order_data: updatedOrderData };
+    // [入金マーク] DBの payment_status カラムも更新
+    if (markAsPaid) {
+      updatePayload.payment_status = 'paid';
+    }
+
     const { error: updErr } = await supabase
       .from("orders")
-      .update({ order_data: updatedOrderData })
+      .update(updatePayload)
       .eq("id", orderId);
     if (updErr) {
       return NextResponse.json({ error: `更新失敗: ${updErr.message}` }, { status: 500 });
@@ -242,8 +260,52 @@ export async function POST(request) {
         </div>`;
     }
 
-    // === 顧客への訂正通知メール ===
-    if (notifyCustomer && od.customerInfo?.email) {
+    // === 顧客への通知メール（モードで分岐） ===
+    if (notifyMode === 'payment_received' && od.customerInfo?.email) {
+      // 【パターン2】入金完了通知のみ（訂正には触れない）
+      try {
+        const paymentReceivedHtml = `
+<div style="font-family: 'Hiragino Kaku Gothic ProN', sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+  <div style="background: #047857; color: white; padding: 16px 24px; border-radius: 12px 12px 0 0;">
+    <h2 style="margin: 0; font-size: 16px;">✓ ご入金を確認いたしました</h2>
+  </div>
+  <div style="background: #ECFDF5; border: 1px solid #6EE7B7; border-top: none; padding: 24px; border-radius: 0 0 12px 12px;">
+    <p style="font-size: 14px; color: #333; margin: 0 0 16px;">
+      <strong>${escapeHtml(od.customerInfo?.name || "お客様")}</strong> 様
+    </p>
+    <p style="font-size: 13px; color: #555; line-height: 1.9; margin: 0 0 16px;">
+      この度はご注文ありがとうございます。<br/>
+      お支払いの確認が取れましたので、ご連絡いたします。
+    </p>
+
+    <div style="background: white; border-radius: 8px; padding: 16px; margin: 16px 0; text-align: center;">
+      <p style="font-size: 11px; color: #666; margin: 0 0 4px;">ご注文番号</p>
+      <p style="font-size: 13px; font-weight: bold; color: #047857; margin: 0 0 12px;">${escapeHtml(String(orderId).slice(0, 8))}</p>
+      <div style="background: #ECFDF5; border-radius: 8px; padding: 12px; margin: 8px 0;">
+        <p style="font-size: 11px; color: #047857; margin: 0 0 4px;">ご入金確認額（税込）</p>
+        <p style="font-size: 22px; font-weight: bold; color: #047857; margin: 0;">¥${newTotal.toLocaleString()}</p>
+      </div>
+    </div>
+
+    <p style="font-size: 12px; color: #555; line-height: 1.9; margin: 16px 0;">
+      引き続き、商品のご準備を進めさせていただきます。<br/>
+      ご質問・ご相談がございましたら、お気軽にお問い合わせください。
+    </p>
+    ${shopPhone ? `<p style="text-align: center; font-size: 12px; color: #2D4B3E; font-weight: bold; margin: 12px 0;">📞 ${escapeHtml(shopPhone)}</p>` : ""}
+  </div>
+  <p style="text-align: center; font-size: 11px; color: #999; margin-top: 12px;">${noReplyFooter()}</p>
+</div>`;
+
+        await sendEmail({
+          to: od.customerInfo.email,
+          subject: `✓ ご入金を確認いたしました | ${shopName}`,
+          html: paymentReceivedHtml,
+        });
+      } catch (e) {
+        console.warn("[correct-amount] payment_received email failed:", e?.message);
+      }
+    } else if (notifyMode === 'correction' && od.customerInfo?.email) {
+      // 【パターン1】訂正のお知らせ（詳細メール）
       try {
         const customerHtml = `
 <div style="font-family: 'Hiragino Kaku Gothic ProN', sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
@@ -379,8 +441,10 @@ export async function POST(request) {
       correction,
       paymentSituation,
       balance,
-      paidAmount,
-      wasPaid,
+      paidAmount: effectivePaidAmount,
+      wasPaid: markAsPaid || wasPaid,
+      notifyMode,
+      markedAsPaid: markAsPaid,
     });
   } catch (e) {
     console.error("[correct-amount]", e);

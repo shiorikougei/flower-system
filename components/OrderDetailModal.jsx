@@ -38,8 +38,11 @@ export default function OrderDetailModal({
   const [correctionItemPrice, setCorrectionItemPrice] = useState('');
   const [correctionFee, setCorrectionFee] = useState('');
   const [correctionReason, setCorrectionReason] = useState('');
-  const [correctionNotifyCustomer, setCorrectionNotifyCustomer] = useState(true);
+  // [通知モード] 'correction' | 'payment_received' | 'none'
+  const [correctionNotifyMode, setCorrectionNotifyMode] = useState('correction');
   const [correctionNotifyStore, setCorrectionNotifyStore] = useState(true);
+  // [入金済みマーク] 訂正と同時に入金完了扱いにする
+  const [correctionMarkAsPaid, setCorrectionMarkAsPaid] = useState(false);
   const [isSavingCorrection, setIsSavingCorrection] = useState(false);
   const isOwner = (() => {
     if (typeof window === 'undefined') return false;
@@ -968,8 +971,9 @@ export default function OrderDetailModal({
                   setCorrectionItemPrice(String(modalData.itemPrice || ''));
                   setCorrectionFee(String((Number(modalData.calculatedFee) || 0) + (Number(modalData.pickupFee) || 0)));
                   setCorrectionReason('');
-                  setCorrectionNotifyCustomer(true);
+                  setCorrectionNotifyMode('correction');
                   setCorrectionNotifyStore(true);
+                  setCorrectionMarkAsPaid(false);
                   setShowAmountCorrection(true);
                 }}
                 className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 border border-amber-300 rounded-xl text-[10px] md:text-[11px] font-bold text-amber-700 hover:bg-amber-100 transition-all"
@@ -1999,19 +2003,84 @@ export default function OrderDetailModal({
                   <p className="text-[10px] text-[#999] mt-1">監査ログ・お客様へのメール本文にこの理由が含まれます。</p>
                 </div>
 
-                {/* 通知オプション */}
-                <div className="space-y-2 bg-[#FBFAF9] rounded-xl p-3 border border-[#EAEAEA]">
-                  <p className="text-[12px] font-bold text-[#555]">📧 通知設定</p>
-                  <label className="flex items-center gap-2 cursor-pointer">
+                {/* 通知モード 3択 */}
+                <div className="space-y-2">
+                  <p className="text-[12px] font-bold text-[#555]">📧 お客様への通知</p>
+                  <div className="space-y-2">
+                    {/* 訂正通知（詳細） */}
+                    <label className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition ${correctionNotifyMode === 'correction' ? 'bg-amber-50 border-amber-400' : 'bg-white border-[#EAEAEA] hover:border-amber-200'}`}>
+                      <input
+                        type="radio"
+                        name="notifyMode"
+                        checked={correctionNotifyMode === 'correction'}
+                        onChange={() => setCorrectionNotifyMode('correction')}
+                        disabled={isSavingCorrection || !modalData.customerInfo?.email}
+                        className="mt-0.5 w-4 h-4 accent-amber-600"
+                      />
+                      <div className="flex-1">
+                        <p className="text-[12px] font-bold text-[#333]">📨 訂正のお知らせを送る</p>
+                        <p className="text-[10px] text-[#666] leading-relaxed mt-0.5">訂正前後の金額・理由・必要なアクション（追加振込/返金等）の詳細メール</p>
+                        {!modalData.customerInfo?.email && <p className="text-[10px] text-red-500 mt-1">⚠️ メールアドレス未登録のため選択不可</p>}
+                      </div>
+                    </label>
+
+                    {/* 入金完了通知のみ */}
+                    <label className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition ${correctionNotifyMode === 'payment_received' ? 'bg-emerald-50 border-emerald-400' : 'bg-white border-[#EAEAEA] hover:border-emerald-200'}`}>
+                      <input
+                        type="radio"
+                        name="notifyMode"
+                        checked={correctionNotifyMode === 'payment_received'}
+                        onChange={() => { setCorrectionNotifyMode('payment_received'); setCorrectionMarkAsPaid(true); }}
+                        disabled={isSavingCorrection || !modalData.customerInfo?.email}
+                        className="mt-0.5 w-4 h-4 accent-emerald-600"
+                      />
+                      <div className="flex-1">
+                        <p className="text-[12px] font-bold text-[#333]">✓ お支払い完了通知のみ送る</p>
+                        <p className="text-[10px] text-[#666] leading-relaxed mt-0.5">電話・LINE等で訂正案内済み → 「ご入金確認しました」のシンプルメール（訂正の話には触れない）</p>
+                        {!modalData.customerInfo?.email && <p className="text-[10px] text-red-500 mt-1">⚠️ メールアドレス未登録のため選択不可</p>}
+                      </div>
+                    </label>
+
+                    {/* 通知しない */}
+                    <label className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition ${correctionNotifyMode === 'none' ? 'bg-[#F5F5F5] border-[#999]' : 'bg-white border-[#EAEAEA] hover:border-[#999]'}`}>
+                      <input
+                        type="radio"
+                        name="notifyMode"
+                        checked={correctionNotifyMode === 'none'}
+                        onChange={() => setCorrectionNotifyMode('none')}
+                        disabled={isSavingCorrection}
+                        className="mt-0.5 w-4 h-4 accent-[#666]"
+                      />
+                      <div className="flex-1">
+                        <p className="text-[12px] font-bold text-[#333]">🔇 通知しない</p>
+                        <p className="text-[10px] text-[#666] leading-relaxed mt-0.5">他の手段（電話・LINE・対面等）で連絡済み → メール送信なし。内部記録のみ。</p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* 入金済みマーク */}
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                  <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={correctionNotifyCustomer}
-                      onChange={(e) => setCorrectionNotifyCustomer(e.target.checked)}
-                      disabled={isSavingCorrection || !modalData.customerInfo?.email}
-                      className="w-4 h-4 accent-amber-600"
+                      checked={correctionMarkAsPaid}
+                      onChange={(e) => setCorrectionMarkAsPaid(e.target.checked)}
+                      disabled={isSavingCorrection}
+                      className="mt-0.5 w-4 h-4 accent-emerald-600"
                     />
-                    <span className="text-[12px]">お客様に訂正通知メールを送信 {!modalData.customerInfo?.email && <span className="text-[10px] text-[#999]">(メアド未登録)</span>}</span>
+                    <div className="flex-1">
+                      <p className="text-[12px] font-bold text-emerald-800">💰 訂正と同時に「入金済み」へ更新する</p>
+                      <p className="text-[10px] text-emerald-700 leading-relaxed mt-0.5">
+                        既に入金確認できているお客様や、振込確認後の処理にチェック。<br/>
+                        注文ステータスが入金済みに変わり、過不足なし扱いになります。
+                      </p>
+                    </div>
                   </label>
+                </div>
+
+                {/* 店舗通知 */}
+                <div className="bg-[#FBFAF9] rounded-xl p-3 border border-[#EAEAEA]">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -2020,7 +2089,7 @@ export default function OrderDetailModal({
                       disabled={isSavingCorrection}
                       className="w-4 h-4 accent-amber-600"
                     />
-                    <span className="text-[12px]">店舗の通知メアドにも記録通知</span>
+                    <span className="text-[12px] text-[#555]">📋 店舗の通知メールにも記録通知</span>
                   </label>
                 </div>
 
@@ -2054,8 +2123,9 @@ export default function OrderDetailModal({
                             newItemPrice: newItem,
                             newCalculatedFee: newFee,
                             reason: correctionReason,
-                            notifyCustomer: correctionNotifyCustomer && !!modalData.customerInfo?.email,
+                            notifyMode: !modalData.customerInfo?.email ? 'none' : correctionNotifyMode,
                             notifyStore: correctionNotifyStore,
+                            markAsPaid: correctionMarkAsPaid,
                             operatorName: me?.name || 'オーナー',
                             operatorRole: 'owner',
                           }),
