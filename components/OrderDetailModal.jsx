@@ -1757,7 +1757,12 @@ export default function OrderDetailModal({
         const newSubtotal = newItem + newFee;
         const newTax = Math.floor(newSubtotal * 0.1);
         const newTotal = newSubtotal + newTax;
-        const oldTotal = Number(modalData.totalAmount) || 0;
+        // 訂正前の値も用意（比較表用）
+        const oldItem = Number(modalData.itemPrice) || 0;
+        const oldFee = (Number(modalData.calculatedFee) || 0) + (Number(modalData.pickupFee) || 0);
+        const oldSubtotal = oldItem + oldFee;
+        const oldTax = Math.floor(oldSubtotal * 0.1);
+        const oldTotal = oldSubtotal + oldTax;
         const diff = newTotal - oldTotal;
         const corrections = Array.isArray(modalData.amountCorrections) ? modalData.amountCorrections : [];
 
@@ -1776,10 +1781,30 @@ export default function OrderDetailModal({
           paymentSituation = 'unpaid';
         }
         const situationConfig = {
-          unpaid: { color: 'red', bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', title: '🔴 未入金 → 訂正後の金額を回収', desc: `お客様へ 訂正後の ¥${newTotal.toLocaleString()} のお支払い案内が送られます。` },
-          fully_paid: { color: 'green', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', title: '✅ 入金済み → 過不足なし', desc: `お支払い済み ¥${paidAmount.toLocaleString()} = 訂正後の合計 ¥${newTotal.toLocaleString()}` },
-          additional_required: { color: 'amber', bg: 'bg-amber-50', border: 'border-amber-300', text: 'text-amber-800', title: `🟡 追加お支払いが必要: +¥${balance.toLocaleString()}`, desc: `既にお支払い済み ¥${paidAmount.toLocaleString()} に対して ¥${balance.toLocaleString()} 追加が必要となります。` },
-          refund_required: { color: 'blue', bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', title: `🔵 返金が必要: ¥${Math.abs(balance).toLocaleString()}`, desc: `お支払い済み ¥${paidAmount.toLocaleString()} - 訂正後 ¥${newTotal.toLocaleString()} = ¥${Math.abs(balance).toLocaleString()} の返金が発生します。` },
+          unpaid: {
+            bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-800',
+            statusIcon: '🔴', statusLabel: '未入金',
+            actionIcon: '📨', actionTitle: '訂正後の金額を回収予定',
+            actionDesc: `お客様へ ¥${newTotal.toLocaleString()} のお支払い案内メールをお送りします。`,
+          },
+          fully_paid: {
+            bg: 'bg-emerald-50', border: 'border-emerald-300', text: 'text-emerald-800',
+            statusIcon: '✅', statusLabel: '入金済み',
+            actionIcon: '✓', actionTitle: '過不足なし',
+            actionDesc: `お支払い済み額が訂正後の合計と一致するため、追加対応は不要です。`,
+          },
+          additional_required: {
+            bg: 'bg-amber-50', border: 'border-amber-400', text: 'text-amber-900',
+            statusIcon: '⚠️', statusLabel: '追加お支払い',
+            actionIcon: '📨', actionTitle: `追加で ¥${balance.toLocaleString()} のお支払いが必要`,
+            actionDesc: `お客様へ追加振込のご案内をお送りします。差額は ¥${balance.toLocaleString()} です。`,
+          },
+          refund_required: {
+            bg: 'bg-blue-50', border: 'border-blue-300', text: 'text-blue-800',
+            statusIcon: '💰', statusLabel: '返金処理',
+            actionIcon: '📨', actionTitle: `¥${Math.abs(balance).toLocaleString()} の返金が必要`,
+            actionDesc: `お客様へ返金のご案内をお送りします（振込先口座のご連絡を依頼）。`,
+          },
         };
         const sc = situationConfig[paymentSituation];
 
@@ -1862,48 +1887,102 @@ export default function OrderDetailModal({
                   />
                 </div>
 
-                {/* 計算結果プレビュー */}
-                <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
-                  <table className="w-full text-[12px]">
-                    <tbody>
-                      <tr><td className="text-[#666]">商品代</td><td className="text-right font-mono">¥{newItem.toLocaleString()}</td></tr>
-                      <tr><td className="text-[#666]">配送料・手数料</td><td className="text-right font-mono">¥{newFee.toLocaleString()}</td></tr>
-                      <tr><td className="text-[#666]">消費税(10%)</td><td className="text-right font-mono">¥{newTax.toLocaleString()}</td></tr>
-                      <tr className="border-t border-amber-300">
-                        <td className="pt-2 font-bold text-amber-900">新しい合計（税込）</td>
-                        <td className="text-right pt-2 font-bold text-[18px] text-amber-700">¥{newTotal.toLocaleString()}</td>
-                      </tr>
-                      {diff !== 0 && (
-                        <tr>
-                          <td className="text-[#666]">差額</td>
-                          <td className={`text-right font-bold ${diff > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                            {diff > 0 ? '+' : ''}¥{diff.toLocaleString()}
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                {/* 計算結果 - 訂正前 vs 訂正後 並列比較 */}
+                <div>
+                  <p className="text-[12px] font-bold text-[#555] mb-2">📋 訂正内容の確認</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* 訂正前 */}
+                    <div className="bg-[#F5F5F5] border border-[#DDD] rounded-xl p-3">
+                      <p className="text-[10px] font-bold text-[#999] mb-2 tracking-widest">BEFORE 訂正前</p>
+                      <table className="w-full text-[11px]">
+                        <tbody>
+                          <tr><td className="text-[#777]">商品代</td><td className="text-right font-mono text-[#555]">¥{oldItem.toLocaleString()}</td></tr>
+                          <tr><td className="text-[#777]">送料等</td><td className="text-right font-mono text-[#555]">¥{oldFee.toLocaleString()}</td></tr>
+                          <tr><td className="text-[#777]">税</td><td className="text-right font-mono text-[#555]">¥{oldTax.toLocaleString()}</td></tr>
+                          <tr className="border-t border-[#DDD]">
+                            <td className="pt-1 font-bold text-[#555]">合計</td>
+                            <td className="text-right pt-1 font-bold text-[14px] text-[#555]">¥{oldTotal.toLocaleString()}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    {/* 訂正後 */}
+                    <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-3">
+                      <p className="text-[10px] font-bold text-amber-700 mb-2 tracking-widest">AFTER 訂正後</p>
+                      <table className="w-full text-[11px]">
+                        <tbody>
+                          <tr><td className="text-amber-800">商品代</td><td className="text-right font-mono text-amber-900">¥{newItem.toLocaleString()}</td></tr>
+                          <tr><td className="text-amber-800">送料等</td><td className="text-right font-mono text-amber-900">¥{newFee.toLocaleString()}</td></tr>
+                          <tr><td className="text-amber-800">税</td><td className="text-right font-mono text-amber-900">¥{newTax.toLocaleString()}</td></tr>
+                          <tr className="border-t border-amber-300">
+                            <td className="pt-1 font-bold text-amber-900">合計</td>
+                            <td className="text-right pt-1 font-bold text-[14px] text-amber-700">¥{newTotal.toLocaleString()}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  {/* 差額帯 */}
+                  {diff !== 0 && (
+                    <div className={`mt-2 rounded-lg px-4 py-2 text-center text-[12px] font-bold ${diff > 0 ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+                      {diff > 0 ? '📈 増額' : '📉 減額'}: {diff > 0 ? '+' : ''}¥{diff.toLocaleString()}
+                    </div>
+                  )}
                 </div>
 
-                {/* [入金状況] 訂正による入金状況変化プレビュー */}
-                <div className={`${sc.bg} ${sc.border} border-2 rounded-xl p-4`}>
-                  <p className={`text-[13px] font-bold ${sc.text} mb-2`}>💳 入金状況の変化</p>
-                  <div className="bg-white rounded-lg p-3 mb-2">
-                    <table className="w-full text-[11px]">
-                      <tbody>
-                        <tr><td className="text-[#666]">訂正前の状態</td><td className="text-right">{wasPaid ? `✓ 入金済み (¥${paidAmount.toLocaleString()})` : '🔴 未入金'}</td></tr>
-                        <tr><td className="text-[#666]">訂正後の合計</td><td className="text-right font-bold">¥{newTotal.toLocaleString()}</td></tr>
-                        <tr className="border-t border-[#EAEAEA]">
-                          <td className="text-[#666] pt-2">差引</td>
-                          <td className={`text-right pt-2 font-bold ${balance > 0 ? 'text-red-600' : balance < 0 ? 'text-blue-600' : 'text-emerald-600'}`}>
-                            {balance > 0 ? '不足 +' : balance < 0 ? '過剰 ' : '±'}¥{Math.abs(balance).toLocaleString()}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+                {/* [入金状況] お支払いアクションプレビュー */}
+                <div className={`${sc.bg} ${sc.border} border-2 rounded-xl overflow-hidden`}>
+                  <div className={`px-4 py-2 ${sc.bg} border-b ${sc.border}`}>
+                    <p className={`text-[12px] font-bold ${sc.text} flex items-center gap-2`}>
+                      <span>💳</span>
+                      <span>入金状況とお客様への対応</span>
+                    </p>
                   </div>
-                  <p className={`text-[12px] font-bold ${sc.text}`}>{sc.title}</p>
-                  <p className={`text-[11px] ${sc.text} mt-1 leading-relaxed`}>{sc.desc}</p>
+                  <div className="p-4 bg-white space-y-3">
+                    {/* 現在の入金状況 */}
+                    <div className="flex items-center justify-between bg-[#F9F9F9] rounded-lg p-3">
+                      <div>
+                        <p className="text-[10px] text-[#999] mb-1">現在の入金状況</p>
+                        <p className="text-[13px] font-bold flex items-center gap-1.5">
+                          <span>{sc.statusIcon}</span>
+                          <span>{sc.statusLabel}</span>
+                        </p>
+                      </div>
+                      {wasPaid && (
+                        <div className="text-right">
+                          <p className="text-[10px] text-[#999] mb-1">お支払い済み額</p>
+                          <p className="text-[14px] font-bold text-[#2D4B3E]">¥{paidAmount.toLocaleString()}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 訂正後のアクション */}
+                    <div className={`${sc.bg} border ${sc.border} rounded-lg p-3`}>
+                      <p className={`text-[12px] font-bold ${sc.text} mb-1 flex items-center gap-1.5`}>
+                        <span>{sc.actionIcon}</span>
+                        <span>{sc.actionTitle}</span>
+                      </p>
+                      <p className={`text-[11px] ${sc.text} leading-relaxed`}>{sc.actionDesc}</p>
+                    </div>
+
+                    {/* お支払い済み + 追加/返金の場合のみ差額詳細 */}
+                    {wasPaid && balance !== 0 && (
+                      <div className="bg-[#F9F9F9] rounded-lg p-3">
+                        <table className="w-full text-[11px]">
+                          <tbody>
+                            <tr><td className="text-[#666]">既にお支払い済み</td><td className="text-right font-mono">¥{paidAmount.toLocaleString()}</td></tr>
+                            <tr><td className="text-[#666]">訂正後の合計</td><td className="text-right font-mono">¥{newTotal.toLocaleString()}</td></tr>
+                            <tr className="border-t border-[#DDD]">
+                              <td className="pt-2 font-bold text-[#333]">{balance > 0 ? '追加お支払い額' : '返金額'}</td>
+                              <td className={`text-right pt-2 font-bold text-[16px] ${balance > 0 ? 'text-amber-700' : 'text-blue-700'}`}>
+                                ¥{Math.abs(balance).toLocaleString()}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* 訂正理由 */}
