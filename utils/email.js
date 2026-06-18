@@ -82,7 +82,7 @@ export async function sendEmail({ to, subject, html, from, bcc, cc }) {
  * @param order { id, order_data, payment_status }
  *   payment_status: DBカラム('unpaid'/'processing'/'paid')
  */
-export function buildOrderConfirmationEmail({ order, shopName, bankInfo }) {
+export function buildOrderConfirmationEmail({ order, shopName, bankInfo, staffCardPending = false }) {
   const d = order.order_data || {};
   const dbPaymentStatus = order.payment_status; // 'unpaid' / 'processing' / 'paid'
   const orderId = String(order.id || '').slice(0, 8);
@@ -140,7 +140,19 @@ export function buildOrderConfirmationEmail({ order, shopName, bankInfo }) {
   const isUnpaid = !isActuallyPaid && (dbPaymentStatus === 'unpaid' || !dbPaymentStatus);
   let paymentInfoHtml = '';
 
-  if (isStaffEntered) {
+  if (staffCardPending) {
+    // === スタッフ向け：カード決済処理中の新規注文通知 ===
+    //   お客様用「お支払いがまだ完了していません」を出すと誤解されるので、
+    //   スタッフ向けに「お客様は現在 Stripe で決済中です」と明示する
+    paymentInfoHtml = `
+        <div style="background: #EFF6FF; border: 1px solid #93C5FD; border-radius: 8px; padding: 12px;">
+          <p style="margin: 0; color: #1E40AF; font-weight: bold; font-size: 13px;">💳 お客様は現在クレジットカード決済中です</p>
+          <p style="margin: 6px 0 0; color: #1E3A8A; font-size: 11px; line-height:1.6;">
+            お客様は Stripe Checkout でお支払い手続き中です。決済が完了次第、改めて<strong>【決済完了】通知</strong>をお送りします。<br/>
+            ※もし数分経っても【決済完了】通知が届かない場合、お客様が決済を完了せずに離脱した可能性があります。
+          </p>
+        </div>`;
+  } else if (isStaffEntered) {
     // === スタッフ代理入力 ===
     if (jpPaymentStatus.includes('前払い済み') || isActuallyPaid) {
       paymentInfoHtml = `

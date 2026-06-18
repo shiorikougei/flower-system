@@ -434,7 +434,8 @@ export async function POST(request) {
     }
 
     // ---- ★ 店舗 受注通知メール送信（管理者向け）----
-    async function sendStoreNotificationEmail(eventType = 'order') {
+    async function sendStoreNotificationEmail(eventType = 'order', opts = {}) {
+      const { isCardPending = false } = opts;
       try {
         // 店舗情報・テンプレート取得
         const { data: settingsRow } = await supabaseAdmin
@@ -470,19 +471,26 @@ export async function POST(request) {
           order: { id: orderId, order_data: orderRecord.order_data },
           shopName,
           bankInfo,
+          staffCardPending: isCardPending,
         });
         // ★ [Phase1-③ XSS対策] 顧客入力(customerName)・店舗入力(shopPhone等)を全てescapeHtml
+        const bannerHeadline = isCardPending
+          ? '📥 【新規注文】カード決済中の注文が入りました'
+          : `📥 ${escapeHtml(eventLabel)} 新しい注文が入りました`;
+        const bannerSubtext = isCardPending
+          ? `<span style="font-size:11px; color:#1E40AF;">↓ お客様は現在Stripeで決済処理中です。決済完了後、改めて【決済完了】通知をお送りします ↓</span>`
+          : `<span style="font-size:11px; color:#666;">↓ 以下、お客様への確認メールと同じ内容です ↓</span>`;
         const storeBanner = `
-          <div style="background:#117768; color:white; padding:16px 20px; border-radius:8px 8px 0 0; font-size:14px; font-weight:bold;">
-            📥 ${escapeHtml(eventLabel)} 新しい注文が入りました
+          <div style="background:${isCardPending ? '#1E40AF' : '#117768'}; color:white; padding:16px 20px; border-radius:8px 8px 0 0; font-size:14px; font-weight:bold;">
+            ${bannerHeadline}
           </div>
-          <div style="background:#f4faf8; padding:14px 20px; border-left:4px solid #117768; margin-bottom:16px; font-size:12px; color:#333; line-height:1.6;">
+          <div style="background:${isCardPending ? '#EFF6FF' : '#f4faf8'}; padding:14px 20px; border-left:4px solid ${isCardPending ? '#1E40AF' : '#117768'}; margin-bottom:16px; font-size:12px; color:#333; line-height:1.6;">
             <strong>お客様:</strong> ${escapeHtml(customerName)} 様<br/>
             <strong>注文ID:</strong> ${escapeHtml(shortOrderId)}<br/>
             <strong>合計金額:</strong> ¥${totalAmount.toLocaleString()}（税込）<br/>
             <strong>受付日時:</strong> ${new Date().toLocaleString('ja-JP')}<br/>
             ${shopPhone ? `<strong>店舗TEL:</strong> ${escapeHtml(shopPhone)}<br/>` : ''}
-            <span style="font-size:11px; color:#666;">↓ 以下、お客様への確認メールと同じ内容です ↓</span>
+            ${bannerSubtext}
           </div>
         `;
         const html = storeBanner + customerHtml;
@@ -601,7 +609,9 @@ export async function POST(request) {
 
     // ★ クレカ決済も「注文が入った」段階で店舗通知（決済完了通知は webhook で別途送信）
     //    バックグラウンドで送信 → 即レスポンス
-    sendStoreNotificationEmail('order').catch(e => console.warn('[orders] 店舗通知 bg(card):', e?.message));
+    //    isCardPending=true により、本文の支払い情報を「現在Stripe決済中です」のスタッフ向け文言に差し替え
+    sendStoreNotificationEmail('order', { isCardPending: true })
+      .catch(e => console.warn('[orders] 店舗通知 bg(card):', e?.message));
 
     return NextResponse.json({ orderId, checkoutUrl: session.url });
   } catch (err) {

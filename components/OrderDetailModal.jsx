@@ -1824,49 +1824,61 @@ export default function OrderDetailModal({
               className="bg-white max-w-xl w-full max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="sticky top-0 bg-white border-b border-[#EAEAEA] px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
-                <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2">
-                  <Edit3 size={16} className="text-[#2D4B3E]"/>
-                  注文金額の訂正
-                </h3>
+              <div className="sticky top-0 bg-[#FAF7F2] border-b border-[#E5DED2]/60 px-7 py-5 flex items-start justify-between rounded-t-[20px] z-10">
+                <div>
+                  <p className="text-[10px] tracking-[0.3em] font-medium text-[#7E9279] mb-1" style={{ fontFamily: "var(--font-outfit), system-ui" }}>
+                    AMOUNT CORRECTION
+                  </p>
+                  <h3 className="text-[18px] text-[#2F2F2F]" style={{ fontFamily: "var(--font-shippori), 'Noto Serif JP', serif", fontWeight: 500 }}>
+                    注文金額の訂正
+                  </h3>
+                </div>
                 <button
                   onClick={() => setShowAmountCorrection(false)}
                   disabled={isSavingCorrection}
-                  className="w-8 h-8 rounded-full hover:bg-[#FBFAF9] flex items-center justify-center text-[#999] hover:text-[#2D4B3E] disabled:opacity-50 transition"
+                  className="w-9 h-9 rounded-full bg-white border border-[#E5DED2] hover:border-[#C97D60] flex items-center justify-center text-[#999] hover:text-[#C97D60] disabled:opacity-50 transition"
                 >
-                  <X size={18}/>
+                  <X size={16}/>
                 </button>
               </div>
-              <div className="p-6 space-y-5">
+              <div className="bg-[#FAF7F2] p-7 space-y-6">
 
-                <div className="bg-[#FBFAF9] border-l-2 border-[#2D4B3E] px-4 py-3 rounded-r-md">
-                  <p className="text-[11.5px] text-[#555] leading-relaxed">
-                    オーナー権限による金額訂正です。訂正履歴は監査ログに残り、お客様への通知方法も選択できます。
+                <div className="bg-white border border-[#E5DED2] px-5 py-4 rounded-2xl">
+                  <p className="text-[11.5px] text-[#5B5B5B] leading-[1.9]">
+                    オーナー権限による金額訂正です。訂正履歴は監査ログとして残り、お客様への通知方法も選択できます。
                   </p>
                 </div>
 
                 {/* 既存の訂正履歴 */}
                 {corrections.length > 0 && (
-                  <details className="border border-[#EAEAEA] rounded-lg">
-                    <summary className="cursor-pointer px-4 py-3 text-[11.5px] font-semibold text-[#555] flex items-center gap-2 hover:bg-[#FBFAF9]">
-                      <History size={13} className="text-[#999]"/>
-                      訂正履歴 ({corrections.length}件)
+                  <details className="bg-white border border-[#E5DED2] rounded-2xl overflow-hidden">
+                    <summary className="cursor-pointer px-5 py-4 text-[11.5px] text-[#5B5B5B] flex items-center justify-between hover:bg-[#FAF7F2]/50 transition list-none">
+                      <span className="flex items-center gap-2.5">
+                        <span className="w-7 h-7 rounded-full bg-[#FBE8DF] flex items-center justify-center">
+                          <History size={12} className="text-[#C97D60]"/>
+                        </span>
+                        <span className="font-medium text-[#2F2F2F]">訂正履歴</span>
+                        <span className="text-[10px] tracking-[0.15em] text-[#999]" style={{ fontFamily: "var(--font-outfit)" }}>
+                          {corrections.length} ITEMS
+                        </span>
+                      </span>
+                      <ChevronRight size={14} className="text-[#999]"/>
                     </summary>
-                    <div className="px-4 pb-4 pt-1 space-y-2 border-t border-[#EAEAEA]">
+                    <div className="px-5 pb-5 pt-1 space-y-3 border-t border-[#E5DED2]">
                       {corrections.slice().reverse().map((c, i) => (
-                        <div key={i} className="py-2 border-b border-[#F0F0F0] last:border-0 text-[10.5px]">
-                          <div className="flex items-center gap-2 text-[#777]">
+                        <div key={i} className="py-3 border-b border-[#F0EAE0] last:border-0">
+                          <div className="flex items-center gap-2 text-[10px] text-[#7E9279] mb-1.5" style={{ fontFamily: "var(--font-outfit)" }}>
                             <Clock size={10}/>
                             <span>{new Date(c.at).toLocaleString('ja-JP')}</span>
-                            <span className="text-[#444]">•</span>
-                            <span className="text-[#444] font-medium">{c.operatorName}</span>
+                            <span className="text-[#CCC]">/</span>
+                            <span className="font-medium text-[#5B5B5B]" style={{ fontFamily: "var(--font-zen-kaku)" }}>{c.operatorName}</span>
                           </div>
-                          <p className="text-[#333] mt-1 font-mono">
+                          <p className="text-[12px] font-mono text-[#5B5B5B] mb-1">
                             ¥{c.before?.totalAmount?.toLocaleString()}
-                            <ArrowRight size={10} className="inline mx-1 text-[#999]"/>
-                            <span className="font-semibold">¥{c.after?.totalAmount?.toLocaleString()}</span>
+                            <ArrowRight size={11} className="inline mx-1.5 text-[#C97D60]"/>
+                            <span className="font-semibold text-[#2F2F2F]">¥{c.after?.totalAmount?.toLocaleString()}</span>
                           </p>
-                          <p className="text-[#666] mt-0.5">{c.reason}</p>
+                          <p className="text-[11px] text-[#777] leading-relaxed">{c.reason}</p>
                         </div>
                       ))}
                     </div>
@@ -1874,80 +1886,89 @@ export default function OrderDetailModal({
                 )}
 
                 {/* 入力フォーム */}
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-[11.5px] font-semibold text-[#444] block mb-1.5">
-                      商品代（税抜） <span className="text-[#C97D60]">*</span>
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] text-[#999]">¥</span>
-                      <input
-                        type="number"
-                        value={correctionItemPrice}
-                        onChange={(e) => setCorrectionItemPrice(e.target.value)}
-                        disabled={isSavingCorrection}
-                        className="w-full h-11 pl-7 pr-3 bg-white border border-[#DDD] rounded-lg text-[14px] font-medium focus:border-[#2D4B3E] outline-none transition"
-                        placeholder="4000"
-                      />
+                <div className="bg-white border border-[#E5DED2] rounded-2xl p-5">
+                  <p className="text-[10px] tracking-[0.3em] font-medium text-[#7E9279] mb-4" style={{ fontFamily: "var(--font-outfit)" }}>
+                    NEW AMOUNT
+                  </p>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[11px] text-[#5B5B5B] block mb-2">
+                        商品代（税抜） <span className="text-[#C97D60]">*</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[13px] text-[#999]">¥</span>
+                        <input
+                          type="number"
+                          value={correctionItemPrice}
+                          onChange={(e) => setCorrectionItemPrice(e.target.value)}
+                          disabled={isSavingCorrection}
+                          className="w-full h-12 pl-9 pr-4 bg-[#FAF7F2] border border-[#E5DED2] rounded-xl text-[15px] font-medium text-[#2F2F2F] focus:border-[#C97D60] focus:bg-white outline-none transition"
+                          placeholder="4000"
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  <div>
-                    <label className="text-[11.5px] font-semibold text-[#444] block mb-1.5">配送料・手数料（税抜）</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] text-[#999]">¥</span>
-                      <input
-                        type="number"
-                        value={correctionFee}
-                        onChange={(e) => setCorrectionFee(e.target.value)}
-                        disabled={isSavingCorrection}
-                        className="w-full h-11 pl-7 pr-3 bg-white border border-[#DDD] rounded-lg text-[14px] font-medium focus:border-[#2D4B3E] outline-none transition"
-                        placeholder="0"
-                      />
+                    <div>
+                      <label className="text-[11px] text-[#5B5B5B] block mb-2">配送料・手数料（税抜）</label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[13px] text-[#999]">¥</span>
+                        <input
+                          type="number"
+                          value={correctionFee}
+                          onChange={(e) => setCorrectionFee(e.target.value)}
+                          disabled={isSavingCorrection}
+                          className="w-full h-12 pl-9 pr-4 bg-[#FAF7F2] border border-[#E5DED2] rounded-xl text-[15px] font-medium text-[#2F2F2F] focus:border-[#C97D60] focus:bg-white outline-none transition"
+                          placeholder="0"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 {/* 計算結果 - 訂正前 / 訂正後 比較 */}
-                <div className="border border-[#DDD] rounded-lg overflow-hidden">
-                  <div className="px-4 py-2.5 bg-[#FBFAF9] border-b border-[#DDD] text-[11px] font-semibold text-[#555] flex items-center gap-2">
-                    <FileText size={12} className="text-[#999]"/>
-                    訂正内容
+                <div className="bg-white border border-[#E5DED2] rounded-2xl overflow-hidden">
+                  <div className="px-5 py-3.5 border-b border-[#E5DED2] flex items-center gap-2.5">
+                    <span className="w-7 h-7 rounded-full bg-[#FBE8DF] flex items-center justify-center">
+                      <FileText size={12} className="text-[#C97D60]"/>
+                    </span>
+                    <p className="text-[12px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>訂正内容</p>
                   </div>
                   <div className="grid grid-cols-[1fr_auto_1fr] items-stretch">
                     {/* 訂正前 */}
-                    <div className="p-4">
-                      <p className="text-[9px] font-bold text-[#999] mb-2 tracking-[0.15em]">BEFORE</p>
-                      <div className="space-y-1 text-[11px]">
+                    <div className="p-5">
+                      <p className="text-[9px] tracking-[0.3em] text-[#999] mb-3" style={{ fontFamily: "var(--font-outfit)" }}>BEFORE</p>
+                      <div className="space-y-2 text-[11.5px]">
                         <div className="flex justify-between text-[#777]"><span>商品代</span><span className="font-mono">¥{oldItem.toLocaleString()}</span></div>
                         <div className="flex justify-between text-[#777]"><span>送料等</span><span className="font-mono">¥{oldFee.toLocaleString()}</span></div>
                         <div className="flex justify-between text-[#777]"><span>消費税</span><span className="font-mono">¥{oldTax.toLocaleString()}</span></div>
                       </div>
-                      <div className="mt-2 pt-2 border-t border-[#EAEAEA]">
+                      <div className="mt-3 pt-3 border-t border-[#F0EAE0]">
                         <div className="flex justify-between items-baseline">
-                          <span className="text-[10px] text-[#777]">合計</span>
-                          <span className="text-[15px] font-semibold text-[#555] font-mono">¥{oldTotal.toLocaleString()}</span>
+                          <span className="text-[10px] text-[#999] tracking-wider">TOTAL</span>
+                          <span className="text-[17px] text-[#5B5B5B] font-mono" style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 500 }}>¥{oldTotal.toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* 矢印 */}
-                    <div className="flex items-center justify-center px-2 border-l border-r border-[#EAEAEA] bg-[#FAFAFA]">
-                      <ArrowRight size={16} className="text-[#999]"/>
+                    <div className="flex items-center justify-center px-3 border-l border-r border-[#E5DED2] bg-[#FAF7F2]">
+                      <div className="w-8 h-8 rounded-full bg-white border border-[#E5DED2] flex items-center justify-center">
+                        <ArrowRight size={14} className="text-[#C97D60]"/>
+                      </div>
                     </div>
 
                     {/* 訂正後 */}
-                    <div className="p-4 bg-[#FFFDF9]">
-                      <p className="text-[9px] font-bold text-[#C97D60] mb-2 tracking-[0.15em]">AFTER</p>
-                      <div className="space-y-1 text-[11px]">
-                        <div className="flex justify-between text-[#555]"><span>商品代</span><span className="font-mono">¥{newItem.toLocaleString()}</span></div>
-                        <div className="flex justify-between text-[#555]"><span>送料等</span><span className="font-mono">¥{newFee.toLocaleString()}</span></div>
-                        <div className="flex justify-between text-[#555]"><span>消費税</span><span className="font-mono">¥{newTax.toLocaleString()}</span></div>
+                    <div className="p-5 bg-[#FFFDF9]">
+                      <p className="text-[9px] tracking-[0.3em] text-[#C97D60] mb-3" style={{ fontFamily: "var(--font-outfit)" }}>AFTER</p>
+                      <div className="space-y-2 text-[11.5px]">
+                        <div className="flex justify-between text-[#5B5B5B]"><span>商品代</span><span className="font-mono">¥{newItem.toLocaleString()}</span></div>
+                        <div className="flex justify-between text-[#5B5B5B]"><span>送料等</span><span className="font-mono">¥{newFee.toLocaleString()}</span></div>
+                        <div className="flex justify-between text-[#5B5B5B]"><span>消費税</span><span className="font-mono">¥{newTax.toLocaleString()}</span></div>
                       </div>
-                      <div className="mt-2 pt-2 border-t border-[#EAEAEA]">
+                      <div className="mt-3 pt-3 border-t border-[#F0EAE0]">
                         <div className="flex justify-between items-baseline">
-                          <span className="text-[10px] text-[#777]">合計</span>
-                          <span className="text-[15px] font-bold text-[#2D4B3E] font-mono">¥{newTotal.toLocaleString()}</span>
+                          <span className="text-[10px] text-[#999] tracking-wider">TOTAL</span>
+                          <span className="text-[19px] text-[#C97D60] font-mono" style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}>¥{newTotal.toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
@@ -1955,55 +1976,57 @@ export default function OrderDetailModal({
 
                   {/* 差額 */}
                   {diff !== 0 && (
-                    <div className={`flex items-center justify-center gap-1.5 py-2 text-[11px] font-semibold border-t ${diff > 0 ? 'border-[#EFCCC0] bg-[#FDF6F2] text-[#A85A3A]' : 'border-[#C5E0CD] bg-[#F1F9F3] text-[#2F6B43]'}`}>
+                    <div className={`flex items-center justify-center gap-2 py-3 text-[11.5px] font-medium border-t ${diff > 0 ? 'border-[#EFCCC0] bg-[#FDF6F2] text-[#A85A3A]' : 'border-[#C5E0CD] bg-[#F1F9F3] text-[#2F6B43]'}`} style={{ fontFamily: "var(--font-zen-kaku)" }}>
                       {diff > 0 ? <TrendingUp size={13}/> : <TrendingDown size={13}/>}
-                      <span>{diff > 0 ? '増額' : '減額'} {diff > 0 ? '+' : ''}¥{diff.toLocaleString()}</span>
+                      <span>{diff > 0 ? '増額' : '減額'}　{diff > 0 ? '+' : ''}¥{diff.toLocaleString()}</span>
                     </div>
                   )}
                 </div>
 
                 {/* 入金状況とアクション */}
-                <div className="border border-[#DDD] rounded-lg overflow-hidden">
-                  <div className="px-4 py-2.5 bg-[#FBFAF9] border-b border-[#DDD] text-[11px] font-semibold text-[#555] flex items-center gap-2">
-                    <Wallet size={12} className="text-[#999]"/>
-                    入金状況とお客様への対応
+                <div className="bg-white border border-[#E5DED2] rounded-2xl overflow-hidden">
+                  <div className="px-5 py-3.5 border-b border-[#E5DED2] flex items-center gap-2.5">
+                    <span className="w-7 h-7 rounded-full bg-[#FBE8DF] flex items-center justify-center">
+                      <Wallet size={12} className="text-[#C97D60]"/>
+                    </span>
+                    <p className="text-[12px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>入金状況とお客様への対応</p>
                   </div>
-                  <div className="p-4 space-y-3">
+                  <div className="p-5 space-y-4">
                     {/* 現在の入金状況 */}
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] text-[#999] mb-1 tracking-wider">現在の入金状況</p>
-                        <p className={`text-[13px] font-semibold ${sc.text}`}>{sc.statusLabel}</p>
+                        <p className="text-[9px] tracking-[0.3em] text-[#999] mb-1.5" style={{ fontFamily: "var(--font-outfit)" }}>CURRENT STATUS</p>
+                        <p className={`text-[13.5px] font-medium ${sc.text}`} style={{ fontFamily: "var(--font-zen-kaku)" }}>{sc.statusLabel}</p>
                       </div>
                       {wasPaid && (
                         <div className="text-right">
-                          <p className="text-[10px] text-[#999] mb-1 tracking-wider">お支払い済み</p>
-                          <p className="text-[14px] font-semibold text-[#2D4B3E] font-mono">¥{paidAmount.toLocaleString()}</p>
+                          <p className="text-[9px] tracking-[0.3em] text-[#999] mb-1.5" style={{ fontFamily: "var(--font-outfit)" }}>PAID</p>
+                          <p className="text-[16px] text-[#7E9279] font-mono" style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 500 }}>¥{paidAmount.toLocaleString()}</p>
                         </div>
                       )}
                     </div>
 
                     {/* 訂正後のアクション */}
-                    <div className={`border-l-2 ${sc.accent} px-3 py-2.5 rounded-r-md`}>
-                      <p className={`text-[12px] font-semibold ${sc.text} mb-1`}>{sc.actionTitle}</p>
-                      <p className="text-[11px] text-[#555] leading-relaxed">{sc.actionDesc}</p>
+                    <div className={`border-l-[3px] ${sc.accent} px-4 py-3 rounded-r-lg`}>
+                      <p className={`text-[12.5px] font-medium ${sc.text} mb-1`} style={{ fontFamily: "var(--font-zen-kaku)" }}>{sc.actionTitle}</p>
+                      <p className="text-[11.5px] text-[#5B5B5B] leading-relaxed">{sc.actionDesc}</p>
                     </div>
 
                     {/* お支払い済み + 追加/返金の場合のみ差額詳細 */}
                     {wasPaid && balance !== 0 && (
-                      <div className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-md p-3">
-                        <div className="space-y-1.5 text-[11px]">
-                          <div className="flex justify-between text-[#666]">
+                      <div className="bg-[#FAF7F2] border border-[#E5DED2] rounded-xl p-4">
+                        <div className="space-y-2 text-[11.5px]">
+                          <div className="flex justify-between text-[#777]">
                             <span>お支払い済み</span>
                             <span className="font-mono">¥{paidAmount.toLocaleString()}</span>
                           </div>
-                          <div className="flex justify-between text-[#666]">
+                          <div className="flex justify-between text-[#777]">
                             <span>訂正後の合計</span>
                             <span className="font-mono">¥{newTotal.toLocaleString()}</span>
                           </div>
-                          <div className="flex justify-between items-baseline pt-1.5 border-t border-[#EAEAEA]">
-                            <span className="text-[10.5px] font-semibold text-[#444]">{balance > 0 ? '追加お支払い額' : '返金額'}</span>
-                            <span className={`text-[14px] font-bold font-mono ${balance > 0 ? 'text-[#A85A3A]' : 'text-[#3A6BA8]'}`}>
+                          <div className="flex justify-between items-baseline pt-2 border-t border-[#E5DED2]">
+                            <span className="text-[11px] font-medium text-[#2F2F2F]">{balance > 0 ? '追加お支払い額' : '返金額'}</span>
+                            <span className={`text-[16px] font-mono ${balance > 0 ? 'text-[#A85A3A]' : 'text-[#3A6BA8]'}`} style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}>
                               ¥{Math.abs(balance).toLocaleString()}
                             </span>
                           </div>
@@ -2014,113 +2037,120 @@ export default function OrderDetailModal({
                 </div>
 
                 {/* 訂正理由 */}
-                <div>
-                  <label className="text-[11.5px] font-semibold text-[#444] block mb-1.5">
-                    訂正理由 <span className="text-[#C97D60]">*</span>
-                  </label>
+                <div className="bg-white border border-[#E5DED2] rounded-2xl p-5">
+                  <p className="text-[10px] tracking-[0.3em] font-medium text-[#7E9279] mb-3" style={{ fontFamily: "var(--font-outfit)" }}>
+                    REASON <span className="text-[#C97D60]">*</span>
+                  </p>
                   <textarea
                     value={correctionReason}
                     onChange={(e) => setCorrectionReason(e.target.value)}
                     disabled={isSavingCorrection}
                     rows={3}
-                    className="w-full bg-white border border-[#DDD] rounded-lg px-3 py-2.5 text-[12.5px] focus:border-[#2D4B3E] outline-none resize-none leading-relaxed"
+                    className="w-full bg-[#FAF7F2] border border-[#E5DED2] rounded-xl px-4 py-3 text-[12.5px] text-[#2F2F2F] focus:border-[#C97D60] focus:bg-white outline-none resize-none leading-relaxed transition"
                     placeholder="例: 商品数量の追加にて金額調整、配達エリア変更による送料追加 など"
                   />
-                  <p className="text-[10px] text-[#999] mt-1">監査ログとお客様へのメール本文にこの理由が含まれます。</p>
+                  <p className="text-[10.5px] text-[#999] mt-2 leading-relaxed">監査ログとお客様へのメール本文にこの理由が含まれます。</p>
                 </div>
 
                 {/* 通知モード 3択 */}
-                <div>
-                  <p className="text-[11.5px] font-semibold text-[#444] mb-2 flex items-center gap-2">
-                    <Bell size={12} className="text-[#999]"/>
-                    お客様への通知
-                  </p>
-                  <div className="space-y-1.5">
+                <div className="bg-white border border-[#E5DED2] rounded-2xl p-5">
+                  <div className="flex items-center gap-2.5 mb-4">
+                    <span className="w-7 h-7 rounded-full bg-[#FBE8DF] flex items-center justify-center">
+                      <Bell size={12} className="text-[#C97D60]"/>
+                    </span>
+                    <p className="text-[12px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>お客様への通知</p>
+                  </div>
+                  <div className="space-y-2">
                     {/* 訂正通知 */}
-                    <label className={`flex items-start gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition ${correctionNotifyMode === 'correction' ? 'border-[#2D4B3E] bg-[#F7FAF8]' : 'border-[#DDD] hover:border-[#999]'}`}>
+                    <label className={`flex items-start gap-3 px-4 py-3 rounded-xl border cursor-pointer transition ${correctionNotifyMode === 'correction' ? 'border-[#C97D60] bg-[#FFFDF9]' : 'border-[#E5DED2] hover:border-[#C97D60]/50 bg-[#FAF7F2]/30'}`}>
                       <input
                         type="radio"
                         name="notifyMode"
                         checked={correctionNotifyMode === 'correction'}
                         onChange={() => setCorrectionNotifyMode('correction')}
                         disabled={isSavingCorrection || !modalData.customerInfo?.email}
-                        className="mt-1 w-4 h-4 accent-[#2D4B3E]"
+                        className="mt-1 w-4 h-4 accent-[#C97D60]"
                       />
                       <div className="flex-1">
-                        <p className="text-[12px] font-semibold text-[#333]">訂正のお知らせを送る</p>
-                        <p className="text-[10.5px] text-[#666] leading-relaxed mt-0.5">訂正前後の金額・理由・必要なアクションを詳細にメールで送信</p>
-                        {!modalData.customerInfo?.email && <p className="text-[10px] text-[#A85A3A] mt-1 flex items-center gap-1"><AlertCircle size={10}/> メールアドレス未登録のため選択不可</p>}
+                        <p className="text-[12.5px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>訂正のお知らせを送る</p>
+                        <p className="text-[11px] text-[#777] leading-relaxed mt-1">訂正前後の金額・理由・必要なアクションを詳細にメールで送信</p>
+                        {!modalData.customerInfo?.email && <p className="text-[10.5px] text-[#A85A3A] mt-1.5 flex items-center gap-1.5"><AlertCircle size={11}/> メールアドレス未登録のため選択不可</p>}
                       </div>
                     </label>
 
                     {/* 入金完了通知のみ */}
-                    <label className={`flex items-start gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition ${correctionNotifyMode === 'payment_received' ? 'border-[#2D4B3E] bg-[#F7FAF8]' : 'border-[#DDD] hover:border-[#999]'}`}>
+                    <label className={`flex items-start gap-3 px-4 py-3 rounded-xl border cursor-pointer transition ${correctionNotifyMode === 'payment_received' ? 'border-[#C97D60] bg-[#FFFDF9]' : 'border-[#E5DED2] hover:border-[#C97D60]/50 bg-[#FAF7F2]/30'}`}>
                       <input
                         type="radio"
                         name="notifyMode"
                         checked={correctionNotifyMode === 'payment_received'}
                         onChange={() => { setCorrectionNotifyMode('payment_received'); setCorrectionMarkAsPaid(true); }}
                         disabled={isSavingCorrection || !modalData.customerInfo?.email}
-                        className="mt-1 w-4 h-4 accent-[#2D4B3E]"
+                        className="mt-1 w-4 h-4 accent-[#C97D60]"
                       />
                       <div className="flex-1">
-                        <p className="text-[12px] font-semibold text-[#333]">お支払い完了通知のみ送る</p>
-                        <p className="text-[10.5px] text-[#666] leading-relaxed mt-0.5">電話・LINEで案内済みの場合に。訂正の話には触れず、入金確認の通知のみ</p>
-                        {!modalData.customerInfo?.email && <p className="text-[10px] text-[#A85A3A] mt-1 flex items-center gap-1"><AlertCircle size={10}/> メールアドレス未登録のため選択不可</p>}
+                        <p className="text-[12.5px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>お支払い完了通知のみ送る</p>
+                        <p className="text-[11px] text-[#777] leading-relaxed mt-1">電話・LINEで案内済みの場合に。訂正の話には触れず、入金確認の通知のみ</p>
+                        {!modalData.customerInfo?.email && <p className="text-[10.5px] text-[#A85A3A] mt-1.5 flex items-center gap-1.5"><AlertCircle size={11}/> メールアドレス未登録のため選択不可</p>}
                       </div>
                     </label>
 
                     {/* 通知しない */}
-                    <label className={`flex items-start gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition ${correctionNotifyMode === 'none' ? 'border-[#2D4B3E] bg-[#F7FAF8]' : 'border-[#DDD] hover:border-[#999]'}`}>
+                    <label className={`flex items-start gap-3 px-4 py-3 rounded-xl border cursor-pointer transition ${correctionNotifyMode === 'none' ? 'border-[#C97D60] bg-[#FFFDF9]' : 'border-[#E5DED2] hover:border-[#C97D60]/50 bg-[#FAF7F2]/30'}`}>
                       <input
                         type="radio"
                         name="notifyMode"
                         checked={correctionNotifyMode === 'none'}
                         onChange={() => setCorrectionNotifyMode('none')}
                         disabled={isSavingCorrection}
-                        className="mt-1 w-4 h-4 accent-[#2D4B3E]"
+                        className="mt-1 w-4 h-4 accent-[#C97D60]"
                       />
                       <div className="flex-1">
-                        <p className="text-[12px] font-semibold text-[#333]">通知しない</p>
-                        <p className="text-[10.5px] text-[#666] leading-relaxed mt-0.5">他の手段（電話・LINE・対面など）で連絡済みの場合に。内部記録のみ</p>
+                        <p className="text-[12.5px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>通知しない</p>
+                        <p className="text-[11px] text-[#777] leading-relaxed mt-1">他の手段（電話・LINE・対面など）で連絡済みの場合に。内部記録のみ</p>
                       </div>
                     </label>
                   </div>
                 </div>
 
                 {/* オプション */}
-                <div className="border-t border-[#EAEAEA] pt-4 space-y-2.5">
-                  <label className="flex items-start gap-2.5 cursor-pointer">
+                <div className="bg-white border border-[#E5DED2] rounded-2xl p-5 space-y-3.5">
+                  <p className="text-[10px] tracking-[0.3em] font-medium text-[#7E9279] mb-1" style={{ fontFamily: "var(--font-outfit)" }}>OPTIONS</p>
+
+                  <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={correctionMarkAsPaid}
                       onChange={(e) => setCorrectionMarkAsPaid(e.target.checked)}
                       disabled={isSavingCorrection}
-                      className="mt-0.5 w-4 h-4 accent-[#2D4B3E]"
+                      className="mt-0.5 w-4 h-4 accent-[#C97D60]"
                     />
                     <div className="flex-1">
-                      <p className="text-[12px] font-semibold text-[#333]">訂正と同時に「入金済み」へ更新する</p>
-                      <p className="text-[10.5px] text-[#666] leading-relaxed">既に入金確認できているお客様、振込確認後の処理に使用</p>
+                      <p className="text-[12.5px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>訂正と同時に「入金済み」へ更新する</p>
+                      <p className="text-[11px] text-[#777] leading-relaxed mt-0.5">既に入金確認できているお客様、振込確認後の処理に使用</p>
                     </div>
                   </label>
 
-                  <label className="flex items-center gap-2.5 cursor-pointer">
+                  <div className="border-t border-[#F0EAE0]"></div>
+
+                  <label className="flex items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={correctionNotifyStore}
                       onChange={(e) => setCorrectionNotifyStore(e.target.checked)}
                       disabled={isSavingCorrection}
-                      className="w-4 h-4 accent-[#2D4B3E]"
+                      className="w-4 h-4 accent-[#C97D60]"
                     />
-                    <span className="text-[12px] text-[#444]">店舗の通知メールにも記録通知</span>
+                    <span className="text-[12.5px] text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>店舗の通知メールにも記録通知</span>
                   </label>
                 </div>
 
-                <div className="flex gap-2 pt-4 border-t border-[#EAEAEA]">
+                <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => setShowAmountCorrection(false)}
                     disabled={isSavingCorrection}
-                    className="flex-1 h-11 bg-white border border-[#DDD] text-[#555] text-[12.5px] font-semibold rounded-lg hover:bg-[#FBFAF9] disabled:opacity-50 transition"
+                    className="flex-1 h-12 bg-white border border-[#E5DED2] text-[#5B5B5B] text-[12.5px] font-medium rounded-full hover:border-[#C97D60] hover:text-[#C97D60] disabled:opacity-50 transition"
+                    style={{ fontFamily: "var(--font-zen-kaku)" }}
                   >
                     キャンセル
                   </button>
@@ -2173,7 +2203,8 @@ export default function OrderDetailModal({
                       }
                     }}
                     disabled={isSavingCorrection || !correctionReason}
-                    className="flex-1 h-11 bg-[#2D4B3E] hover:bg-[#1f352b] text-white text-[12.5px] font-semibold rounded-lg disabled:opacity-50 transition flex items-center justify-center gap-2"
+                    className="flex-1 h-12 bg-[#C97D60] hover:bg-[#B36B50] text-white text-[12.5px] font-medium rounded-full disabled:opacity-50 transition flex items-center justify-center gap-2 shadow-sm"
+                    style={{ fontFamily: "var(--font-zen-kaku)" }}
                   >
                     {isSavingCorrection ? (
                       <>保存中…</>
