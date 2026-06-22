@@ -367,12 +367,9 @@ function StaffProductsPageInner() {
                   {!p.is_active && (
                     <div className="absolute top-2 right-2 bg-[#999999] text-white text-[10px] font-bold px-2 py-1 rounded">非公開</div>
                   )}
-                  {/* ★ 再入荷不可バッジ（在庫数で枝分かれ） */}
-                  {!p.restock_allowed && Number(p.stock) === 1 && (
-                    <div className="absolute bottom-2 left-2 bg-amber-100 text-amber-800 text-[9px] font-bold px-2 py-0.5 rounded-full border border-amber-300">一点物</div>
-                  )}
-                  {!p.restock_allowed && Number(p.stock) >= 2 && (
-                    <div className="absolute bottom-2 left-2 bg-purple-100 text-purple-800 text-[9px] font-bold px-2 py-0.5 rounded-full border border-purple-300">限定商品</div>
+                  {/* ★ 再入荷不可（一点もの）バッジ */}
+                  {!p.restock_allowed && (
+                    <div className="absolute bottom-2 left-2 bg-amber-100 text-amber-800 text-[9px] font-bold px-2 py-0.5 rounded-full border border-amber-300">一点もの</div>
                   )}
                 </div>
                 <div className="p-4 space-y-2 flex-1 flex flex-col">
