@@ -72,7 +72,7 @@ export async function POST(request) {
     // 料金プレビュー（オーナー設定があれば取得）
     const { data: ownerRow } = await supabaseAdmin.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
     const pricing = { ...DEFAULT_PRICING, ...(ownerRow?.settings_data?.pricingConfig || {}) };
-    // ★ 手動オーバーライド優先順位: 全体固定 > 機能別 > 自動計算
+    // 手動オーバーライド優先順位: 全体固定 > 機能別 > 自動計算
     const tenantBilling = ownerRow?.settings_data?.tenantBilling?.[tenantId] || {};
     const m = tenantBilling.manualPriceJpy;
     const useManual = m != null && m !== '' && Number(m) >= 0;

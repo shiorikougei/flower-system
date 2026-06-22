@@ -440,7 +440,7 @@ function ShiftPageInner() {
                       }}
                       className="p-3 rounded-xl border border-dashed border-[#117768]/50 bg-[#117768]/5 hover:bg-[#117768]/10 text-left"
                     >
-                      <p className="text-[13px] font-bold text-[#117768]">⏱ カスタム時間</p>
+                      <p className="text-[13px] font-bold text-[#117768]">カスタム時間</p>
                       <p className="text-[10px] text-[#999]">時刻を自由入力</p>
                     </button>
                   </div>
@@ -451,7 +451,7 @@ function ShiftPageInner() {
                 {/* カスタム時間入力 */}
                 <div className="space-y-3">
                   <button onClick={() => setCustomMode(false)} className="text-[10px] text-[#999] hover:text-[#2D4B3E]">← パターン選択に戻る</button>
-                  <p className="text-[11px] font-bold text-[#117768]">⏱ カスタム時間で登録</p>
+                  <p className="text-[11px] font-bold text-[#117768]">カスタム時間で登録</p>
                   <div>
                     <label className="text-[10px] font-bold text-[#999] tracking-widest">名称（任意）</label>
                     <input
@@ -537,7 +537,7 @@ function ShiftPageInner() {
               )}
             </div>
             <p className="text-[10px] text-[#999] leading-relaxed">
-              💡 ロックすると、自動シフト作成（次フェーズで実装予定）で上書きされなくなります
+              ロックすると、自動シフト作成（次フェーズで実装予定）で上書きされなくなります
             </p>
           </div>
         </div>

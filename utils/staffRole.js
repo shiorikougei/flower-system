@@ -11,7 +11,7 @@
 const STORAGE_KEY = 'florix_current_staff';
 const AUTH_CONFIG_KEY = 'florix_auth_config';
 
-// ★ レイアウトから呼ぶ: PIN必須等の設定をlocalStorageに保存
+// レイアウトから呼ぶ: PIN必須等の設定をlocalStorageに保存
 export function setAuthConfig(config) {
   if (typeof window === 'undefined') return;
   try {
@@ -19,7 +19,7 @@ export function setAuthConfig(config) {
   } catch {}
 }
 
-// ★ 操作の事前チェック: PIN必須なのにスタッフ未選択なら拒否
+// 操作の事前チェック: PIN必須なのにスタッフ未選択なら拒否
 export function ensureOperationAllowed(actionLabel = '操作') {
   if (typeof window === 'undefined') return { allowed: true };
   try {

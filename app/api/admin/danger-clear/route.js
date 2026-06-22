@@ -2,7 +2,7 @@
 // POST /api/admin/danger-clear
 // Body: { targets: ['orders'|'customers'|'products'|'staff_attendance'|'all'] }
 //
-// ⚠️ 店舗設定 (app_settings) は一切触らない。テーブル単位のデータのみ削除。
+// 店舗設定 (app_settings) は一切触らない。テーブル単位のデータのみ削除。
 
 import { NextResponse } from 'next/server';
 import { requireOwner } from '@/utils/adminAuth';
@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
   try {
-    // ★ NocoLdeスーパー管理者のみ実行可
+    // NocoLdeスーパー管理者のみ実行可
     const auth = await requireOwner(request);
     if (!auth.ok) return auth.response;
     const supabaseAdmin = auth.supabaseAdmin;
@@ -38,7 +38,7 @@ export async function POST(request) {
         'shift_schedules',
         'shift_holiday_requests',
       ],
-      audit_log: ['audit_log'], // ★ 操作履歴のみ単独削除可能
+      audit_log: ['audit_log'], // 操作履歴のみ単独削除可能
     };
 
     let allTables = [];
@@ -61,7 +61,7 @@ export async function POST(request) {
           .delete({ count: 'exact' })
           .not('id', 'is', null);
         if (error) {
-          // ★ [Phase1-① PII保護] error.messageにDB構造やPIIが含まれる可能性。サーバーログのみ
+          // [Phase1-① PII保護] error.messageにDB構造やPIIが含まれる可能性。サーバーログのみ
           console.error(`[danger-clear] table=${table}:`, error?.code || 'unknown');
           results.push({ table, ok: false, error: 'テーブル削除失敗' });
         } else {

@@ -26,7 +26,7 @@ export function getCartTotal(tenantId) {
   return getCart(tenantId).reduce((sum, item) => sum + Number(item.qty || 0) * Number(item.price || 0), 0);
 }
 
-// ★ オプション加算額の計算
+// オプション加算額の計算
 export function calcOptionsTotal(selectedOptions) {
   if (!selectedOptions) return 0;
   let sum = 0;
@@ -36,7 +36,7 @@ export function calcOptionsTotal(selectedOptions) {
   return sum;
 }
 
-// ★ 同じ商品+同じオプション内容はマージ
+// 同じ商品+同じオプション内容はマージ
 function isSameOptions(a, b) {
   return JSON.stringify(a || null) === JSON.stringify(b || null);
 }
@@ -50,7 +50,7 @@ export function addToCart(tenantId, item, qty = 1) {
     existing.qty = newQty;
   } else {
     cart.push({
-      // ★ オプション違いを区別する一意キー
+      // オプション違いを区別する一意キー
       cartItemId: `${item.id}_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
       id: item.id,
       name: item.name,

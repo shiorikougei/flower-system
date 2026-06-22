@@ -215,7 +215,7 @@ export default function OrderHistoryPage() {
               <p className="text-[11px] text-[#999999] leading-relaxed bg-[#FBFAF9] p-3 rounded-lg">
                 {hasPassword === null
                   ? 'メールアドレスを確認中...'
-                  : '初回ログインです。お送りするメールのリンクからログインしてください。マイページでパスワードを設定すれば次回からはパスワードでログインできます🔑'}
+                  : '初回ログインです。お送りするメールのリンクからログインしてください。マイページでパスワードを設定すれば次回からはパスワードでログインできます。'}
               </p>
               {magicLinkSent ? (
                 <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2 text-green-700">

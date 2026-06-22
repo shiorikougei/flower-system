@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../../utils/supabase';
 import Link from 'next/link';
-import { UserCheck, Ban, Upload, ShieldAlert, ShieldCheck, Plus, CheckCircle, Clock } from 'lucide-react';
+import { UserCheck, Ban, Upload, ShieldAlert, ShieldCheck, Plus, CheckCircle, Clock, Phone } from 'lucide-react';
 
 export default function DriversPage() {
   const [appSettings, setAppSettings] = useState(null);
@@ -224,7 +224,7 @@ export default function DriversPage() {
                     <div className="flex flex-wrap justify-between items-center bg-[#FBFAF9] px-6 py-4 border-b border-[#EAEAEA]">
                       <div className="flex items-center gap-4">
                         <span className="text-[18px] font-bold text-[#111111]">{driver.name}</span>
-                        <span className="text-[12px] text-[#555555]">📞 {driver.phone || '未設定'}</span>
+                        <span className="text-[12px] text-[#555555] flex items-center gap-1"><Phone size={14}/> {driver.phone || '未設定'}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         {driver.status === 'pending' && <span className="flex items-center gap-1 bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-[11px] font-bold"><Clock size={12}/> 承認待ち</span>}

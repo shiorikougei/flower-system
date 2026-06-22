@@ -28,7 +28,7 @@ import { rateLimit, getClientIp } from '@/utils/rateLimit';
 
 export async function POST(request) {
   try {
-    // ★ レート制限（IP, 5件/分, Redis 永続化）
+    // レート制限（IP, 5件/分, Redis 永続化）
     const ip = getClientIp(request);
     const allowed = await rateLimit({ key: `notify:${ip}`, max: 5, windowSec: 60 });
     if (!allowed) {
@@ -38,11 +38,11 @@ export async function POST(request) {
     const payload = await request.json();
     const { type, tenantId, tenantName, subject, body, metadata, _hp } = payload;
 
-    // ★ honeypot: 隠しフィールド _hp に何か入っていれば bot 確定
+    // honeypot: 隠しフィールド _hp に何か入っていれば bot 確定
     if (_hp) {
       return NextResponse.json({ ok: true }); // 攻撃者には成功を装う
     }
-    // ★ 文字数制限（過剰な巨大ペイロード防御）
+    // 文字数制限（過剰な巨大ペイロード防御）
     if ((subject || '').length > 200 || (body || '').length > 5000) {
       return NextResponse.json({ error: '入力が長すぎます' }, { status: 400 });
     }

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
-import { Sparkles, ShoppingBag, ChevronRight, History, User } from 'lucide-react';
+import { Sparkles, ShoppingBag, ChevronRight, History, User, HelpCircle, BookOpen } from 'lucide-react';
 
 // ★ お客様の最初の入口：オーダーメイド / 完成品 の2択
 //   従来の /page.js（カスタム注文フォーム）は /custom/page.js に移動
@@ -155,8 +155,8 @@ export default function OrderEntryPage() {
             className="block p-4 bg-white border border-[#EAEAEA] rounded-2xl hover:border-[#2D4B3E] transition-all group"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#FBFAF9] flex items-center justify-center shrink-0 text-[18px]">
-                ❓
+              <div className="w-10 h-10 rounded-xl bg-[#FBFAF9] flex items-center justify-center shrink-0 text-[#2D4B3E]">
+                <HelpCircle size={18}/>
               </div>
               <div className="flex-1">
                 <p className="text-[13px] font-bold text-[#111]">よくあるご質問</p>
@@ -170,8 +170,8 @@ export default function OrderEntryPage() {
             className="block p-4 bg-white border border-[#EAEAEA] rounded-2xl hover:border-[#2D4B3E] transition-all group"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#FBFAF9] flex items-center justify-center shrink-0 text-[18px]">
-                📖
+              <div className="w-10 h-10 rounded-xl bg-[#FBFAF9] flex items-center justify-center shrink-0 text-[#2D4B3E]">
+                <BookOpen size={18}/>
               </div>
               <div className="flex-1">
                 <p className="text-[13px] font-bold text-[#111]">お花のブログ</p>

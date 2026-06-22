@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/utils/supabase'; 
-import { Calendar, Package, ChevronRight, Store, Truck, AlertCircle, Phone, ShoppingBag, Search, CheckCircle2 } from 'lucide-react';
+import { Calendar, Package, ChevronRight, Store, Truck, AlertCircle, Phone, ShoppingBag, Search, CheckCircle2, Home, Gift, MapPin, Lightbulb, CheckCircle, Edit, Clock, Info, AlertTriangle, Check, Building2, X } from 'lucide-react';
 import Link from 'next/link';
 
 import TatefudaPreview from '@/components/TatefudaPreview';
@@ -1004,7 +1004,7 @@ function OrderFormContent() {
                     }}
                     className="w-full p-6 rounded-2xl bg-[#FBFAF9] border border-[#EAEAEA] font-bold text-[14px] hover:bg-white hover:border-[#2D4B3E] transition-all text-[#555555] hover:text-[#2D4B3E] text-left"
                   >
-                    <div className="text-[15px] font-bold text-[#2D4B3E] mb-1">📦 配達・配送（次にお届け先を入力）</div>
+                    <div className="text-[15px] font-bold text-[#2D4B3E] mb-1 flex items-center gap-1.5"><Package size={14}/> 配達・配送（次にお届け先を入力）</div>
                     <div className="text-[11px] text-[#999]">
                       {selectedItemSettings.canShipping === false
                         ? '※この商品は自社配達のみ対応。エリア外の場合はご来店をご利用ください。'
@@ -1038,7 +1038,7 @@ function OrderFormContent() {
 
             {/* ★ ① ご自分用 / ご贈答用 の選択 */}
             <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-3">
-              <label className="text-[11px] font-bold text-[#999999]">📦 お届け先は？</label>
+              <label className="text-[11px] font-bold text-[#999999] flex items-center gap-1.5"><Package size={12}/> お届け先は？</label>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
@@ -1056,7 +1056,7 @@ function OrderFormContent() {
                   }}
                   className={`p-4 rounded-xl border-2 text-left transition-all ${!isRecipientDifferent ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white shadow-md' : 'bg-white border-[#EAEAEA] text-[#555] hover:border-[#2D4B3E]'}`}
                 >
-                  <div className="text-[13px] font-bold">🏠 ご自分用（注文者と同じ）</div>
+                  <div className="text-[13px] font-bold flex items-center gap-1.5"><Home size={14}/> ご自分用（注文者と同じ）</div>
                   <div className={`text-[10px] mt-1 ${!isRecipientDifferent ? 'text-white/80' : 'text-[#999]'}`}>
                     ご自宅・自分宛のお届け
                   </div>
@@ -1077,7 +1077,7 @@ function OrderFormContent() {
                   }}
                   className={`p-4 rounded-xl border-2 text-left transition-all ${isRecipientDifferent ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white shadow-md' : 'bg-white border-[#EAEAEA] text-[#555] hover:border-[#2D4B3E]'}`}
                 >
-                  <div className="text-[13px] font-bold">🎁 ご贈答用（別の方へ）</div>
+                  <div className="text-[13px] font-bold flex items-center gap-1.5"><Gift size={14}/> ご贈答用（別の方へ）</div>
                   <div className={`text-[10px] mt-1 ${isRecipientDifferent ? 'text-white/80' : 'text-[#999]'}`}>
                     プレゼント・お祝い等
                   </div>
@@ -1087,8 +1087,8 @@ function OrderFormContent() {
 
             {/* ★ ② 住所入力 (選択中の対象に書き込み) */}
             <div className="bg-white p-6 md:p-8 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-4">
-              <label className="text-[11px] font-bold text-[#999999]">
-                📍 {isRecipientDifferent ? 'お届け先' : 'ご自分'} の住所
+              <label className="text-[11px] font-bold text-[#999999] flex items-center gap-1.5">
+                <MapPin size={12}/> {isRecipientDifferent ? 'お届け先' : 'ご自分'} の住所
               </label>
               <input
                 type="text"
@@ -1116,8 +1116,8 @@ function OrderFormContent() {
                 onChange={(e) => setTarget({...target, address2: e.target.value})}
                 className="w-full h-14 px-5 bg-[#FBFAF9] rounded-xl outline-none focus:bg-white focus:border-[#2D4B3E] border border-transparent transition-all text-[14px]"
               />
-              <p className="text-[10px] text-[#999] leading-relaxed">
-                💡 {isRecipientDifferent ? 'お届け先の' : ''}お名前・電話番号は次の画面で入力します
+              <p className="text-[10px] text-[#999] leading-relaxed flex items-center gap-1.5">
+                <Lightbulb size={12}/> {isRecipientDifferent ? 'お届け先の' : ''}お名前・電話番号は次の画面で入力します
               </p>
             </div>
 
@@ -1142,14 +1142,14 @@ function OrderFormContent() {
                     <div className="flex items-start gap-2">
                       <AlertCircle size={18} className="text-red-600 shrink-0 mt-0.5"/>
                       <div className="space-y-1">
-                        <p className="text-[13px] font-bold text-red-700">⚠️ 申し訳ございません</p>
+                        <p className="text-[13px] font-bold text-red-700 flex items-center gap-1.5"><AlertTriangle size={14}/> 申し訳ございません</p>
                         <p className="text-[12px] text-red-800 leading-relaxed">
                           ご入力いただいたお届け先は<strong>配達対応エリア外</strong>です。<br/>
                           配達・配送をお受けすることができません。
                         </p>
                         {selectedItemSettings.canPickup !== false && (
                           <p className="text-[11px] text-red-700 mt-2">
-                            👉 <button onClick={() => { setStep(2); setAreaError(''); }} className="underline font-bold">ご来店受取に変更する</button>
+                            <button onClick={() => { setStep(2); setAreaError(''); }} className="underline font-bold">ご来店受取に変更する</button>
                           </p>
                         )}
                       </div>
@@ -1165,14 +1165,14 @@ function OrderFormContent() {
                     <div className="flex items-start gap-2">
                       <AlertCircle size={18} className="text-red-600 shrink-0 mt-0.5"/>
                       <div className="space-y-1">
-                        <p className="text-[13px] font-bold text-red-700">⚠️ 申し訳ございません</p>
+                        <p className="text-[13px] font-bold text-red-700 flex items-center gap-1.5"><AlertTriangle size={14}/> 申し訳ございません</p>
                         <p className="text-[12px] text-red-800 leading-relaxed">
                           ご入力いただいたお届け先は<strong>自社配達エリア外</strong>です。<br/>
                           こちらの商品は<strong>自社配達のみ対応</strong>のため、配達をお受けすることができません。
                         </p>
                         {selectedItemSettings.canPickup !== false && (
                           <p className="text-[11px] text-red-700 mt-2">
-                            👉 <button onClick={() => { setStep(2); setAreaError(''); }} className="underline font-bold">ご来店受取に変更する</button>
+                            <button onClick={() => { setStep(2); setAreaError(''); }} className="underline font-bold">ご来店受取に変更する</button>
                           </p>
                         )}
                       </div>
@@ -1187,9 +1187,10 @@ function OrderFormContent() {
                   <div className="p-5 bg-blue-50 border-2 border-blue-200 rounded-2xl space-y-2">
                     <div className="flex items-start gap-2">
                       <Truck size={16} className="text-blue-600 shrink-0 mt-0.5"/>
-                      <p className="text-[12px] text-blue-900 leading-relaxed">
-                        📦 <strong>この商品は業者配送（佐川急便）でお届けします。</strong><br/>
-                        <span className="text-[11px] text-blue-700">送料は次の画面のお見積もりで確認できます。</span>
+                      <p className="text-[12px] text-blue-900 leading-relaxed flex items-start gap-1.5">
+                        <Package size={14} className="shrink-0 mt-0.5"/>
+                        <span><strong>この商品は業者配送（佐川急便）でお届けします。</strong><br/>
+                        <span className="text-[11px] text-blue-700">送料は次の画面のお見積もりで確認できます。</span></span>
                       </p>
                     </div>
                     <button
@@ -1197,7 +1198,7 @@ function OrderFormContent() {
                       onClick={() => { setReceiveMethod('sagawa'); setPriorContactAgreed(false); }}
                       className={`w-full p-4 rounded-xl border-2 text-left transition-all mt-2 ${receiveMethod === 'sagawa' ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white' : 'bg-white border-blue-300 text-[#2D4B3E]'}`}
                     >
-                      <div className="text-[13px] font-bold">📦 業者配送 (佐川急便)</div>
+                      <div className="text-[13px] font-bold flex items-center gap-1.5"><Package size={14}/> 業者配送 (佐川急便)</div>
                     </button>
                   </div>
                 );
@@ -1209,9 +1210,10 @@ function OrderFormContent() {
                   <div className="p-5 bg-emerald-50 border-2 border-emerald-200 rounded-2xl space-y-3">
                     <div className="flex items-start gap-2">
                       <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5"/>
-                      <p className="text-[12px] text-emerald-800 leading-relaxed">
-                        ✅ <strong>自社配達対応エリア内です</strong>。<br/>
-                        <span className="text-[11px] text-emerald-700">この商品は自社配達のみ対応です。</span>
+                      <p className="text-[12px] text-emerald-800 leading-relaxed flex items-start gap-1.5">
+                        <CheckCircle size={14} className="shrink-0 mt-0.5"/>
+                        <span><strong>自社配達対応エリア内です</strong>。<br/>
+                        <span className="text-[11px] text-emerald-700">この商品は自社配達のみ対応です。</span></span>
                       </p>
                     </div>
                     <button
@@ -1221,7 +1223,7 @@ function OrderFormContent() {
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="text-[13px] font-bold">🚚 自社配達</div>
+                          <div className="text-[13px] font-bold flex items-center gap-1.5"><Truck size={14}/> 自社配達</div>
                           <div className={`text-[10px] mt-1 ${receiveMethod === 'delivery' ? 'text-white/80' : 'text-[#555]'}`}>
                             直接お届け / 事前電話確認あり
                           </div>
@@ -1233,7 +1235,7 @@ function OrderFormContent() {
                         </div>
                         {feeComparison?.delivery?.fee !== null && (
                           <div className={`text-[20px] font-bold ${receiveMethod === 'delivery' ? 'text-white' : 'text-emerald-700'}`}>
-                            {feeComparison.delivery.fee === 0 ? '送料無料 🎉' : `¥${feeComparison.delivery.fee.toLocaleString()}`}
+                            {feeComparison.delivery.fee === 0 ? '送料無料' : `¥${feeComparison.delivery.fee.toLocaleString()}`}
                           </div>
                         )}
                       </div>
@@ -1248,8 +1250,9 @@ function OrderFormContent() {
                   <div className="p-5 bg-blue-50 border-2 border-blue-200 rounded-2xl space-y-2">
                     <div className="flex items-start gap-2">
                       <Truck size={16} className="text-blue-600 shrink-0 mt-0.5"/>
-                      <p className="text-[12px] text-blue-900 leading-relaxed">
-                        📦 <strong>このお届け先は自社配達エリア外のため、業者配送（佐川急便）でお届けします。</strong>
+                      <p className="text-[12px] text-blue-900 leading-relaxed flex items-start gap-1.5">
+                        <Package size={14} className="shrink-0 mt-0.5"/>
+                        <span><strong>このお届け先は自社配達エリア外のため、業者配送（佐川急便）でお届けします。</strong></span>
                       </p>
                     </div>
                     <button
@@ -1259,7 +1262,7 @@ function OrderFormContent() {
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="text-[13px] font-bold">📦 業者配送 (佐川急便)</div>
+                          <div className="text-[13px] font-bold flex items-center gap-1.5"><Package size={14}/> 業者配送 (佐川急便)</div>
                           {feeComparison?.isEstimate && (
                             <div className={`text-[9px] ${receiveMethod === 'sagawa' ? 'text-white/80' : 'text-[#777]'}`}>
                               ※{(itemPrice || selectedImage?.price || 5000).toLocaleString()}円商品で試算
@@ -1268,7 +1271,7 @@ function OrderFormContent() {
                         </div>
                         {feeComparison?.sagawa?.fee !== null && (
                           <div className={`text-[20px] font-bold ${receiveMethod === 'sagawa' ? 'text-white' : 'text-blue-700'}`}>
-                            {feeComparison.sagawa.fee === 0 ? '送料無料 🎉' : `¥${feeComparison.sagawa.fee.toLocaleString()}`}
+                            {feeComparison.sagawa.fee === 0 ? '送料無料' : `¥${feeComparison.sagawa.fee.toLocaleString()}`}
                           </div>
                         )}
                       </div>
@@ -1283,8 +1286,9 @@ function OrderFormContent() {
                   <div className="p-5 bg-emerald-50 border-2 border-emerald-200 rounded-2xl space-y-3">
                     <div className="flex items-start gap-2">
                       <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5"/>
-                      <p className="text-[12px] text-emerald-800 leading-relaxed">
-                        ✅ <strong>自社配達対応エリア内です</strong>。
+                      <p className="text-[12px] text-emerald-800 leading-relaxed flex items-start gap-1.5">
+                        <CheckCircle size={14} className="shrink-0 mt-0.5"/>
+                        <span><strong>自社配達対応エリア内です</strong>。</span>
                       </p>
                     </div>
                     <button
@@ -1294,13 +1298,13 @@ function OrderFormContent() {
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="text-[13px] font-bold">🚚 自社配達</div>
+                          <div className="text-[13px] font-bold flex items-center gap-1.5"><Truck size={14}/> 自社配達</div>
                           <div className={`text-[10px] mt-1 ${receiveMethod === 'delivery' ? 'text-white/80' : 'text-[#555]'}`}>
                             直接お届け / 事前電話確認あり
                           </div>
                         </div>
                         <div className={`text-[20px] font-bold ${receiveMethod === 'delivery' ? 'text-white' : 'text-emerald-700'}`}>
-                          {feeComparison.delivery.fee === 0 ? '送料無料 🎉' : `¥${feeComparison.delivery.fee.toLocaleString()}`}
+                          {feeComparison.delivery.fee === 0 ? '送料無料' : `¥${feeComparison.delivery.fee.toLocaleString()}`}
                         </div>
                       </div>
                     </button>
@@ -1313,11 +1317,12 @@ function OrderFormContent() {
                 <div className="p-5 bg-emerald-50 border-2 border-emerald-200 rounded-2xl space-y-3">
                   <div className="flex items-start gap-2">
                     <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5"/>
-                    <p className="text-[12px] text-emerald-800 leading-relaxed">
-                      ✅ <strong>自社配達対応エリア内です</strong>。下記の料金を比較してお選びください。<br/>
+                    <p className="text-[12px] text-emerald-800 leading-relaxed flex items-start gap-1.5">
+                      <CheckCircle size={14} className="shrink-0 mt-0.5"/>
+                      <span><strong>自社配達対応エリア内です</strong>。下記の料金を比較してお選びください。<br/>
                       {feeComparison?.isEstimate && (
                         <span className="text-[10px] text-emerald-700">※金額目安（{(itemPrice || selectedImage?.price || 5000).toLocaleString()}円商品で試算）</span>
-                      )}
+                      )}</span>
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -1326,10 +1331,10 @@ function OrderFormContent() {
                       onClick={() => setReceiveMethod('delivery')}
                       className={`p-4 rounded-xl border-2 text-left transition-all ${receiveMethod === 'delivery' ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white shadow-md' : 'bg-white border-emerald-200 text-[#2D4B3E] hover:border-emerald-500'}`}
                     >
-                      <div className="text-[13px] font-bold">🚚 自社配達</div>
+                      <div className="text-[13px] font-bold flex items-center gap-1.5"><Truck size={14}/> 自社配達</div>
                       {feeComparison?.delivery?.fee !== null ? (
                         <div className={`text-[18px] font-bold mt-2 ${receiveMethod === 'delivery' ? 'text-white' : 'text-emerald-700'}`}>
-                          {feeComparison.delivery.fee === 0 ? '送料無料 🎉' : `¥${feeComparison.delivery.fee.toLocaleString()}`}
+                          {feeComparison.delivery.fee === 0 ? '送料無料' : `¥${feeComparison.delivery.fee.toLocaleString()}`}
                         </div>
                       ) : (
                         <div className={`text-[10px] mt-1 ${receiveMethod === 'delivery' ? 'text-white/80' : 'text-red-500'}`}>計算不可</div>
@@ -1343,10 +1348,10 @@ function OrderFormContent() {
                       onClick={() => { setReceiveMethod('sagawa'); setPriorContactAgreed(false); }}
                       className={`p-4 rounded-xl border-2 text-left transition-all ${receiveMethod === 'sagawa' ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white shadow-md' : 'bg-white border-emerald-200 text-[#2D4B3E] hover:border-emerald-500'}`}
                     >
-                      <div className="text-[13px] font-bold">📦 業者配送 (佐川)</div>
+                      <div className="text-[13px] font-bold flex items-center gap-1.5"><Package size={14}/> 業者配送 (佐川)</div>
                       {feeComparison?.sagawa?.fee !== null ? (
                         <div className={`text-[18px] font-bold mt-2 ${receiveMethod === 'sagawa' ? 'text-white' : 'text-emerald-700'}`}>
-                          {feeComparison.sagawa.fee === 0 ? '送料無料 🎉' : `¥${feeComparison.sagawa.fee.toLocaleString()}`}
+                          {feeComparison.sagawa.fee === 0 ? '送料無料' : `¥${feeComparison.sagawa.fee.toLocaleString()}`}
                         </div>
                       ) : (
                         <div className={`text-[10px] mt-1 ${receiveMethod === 'sagawa' ? 'text-white/80' : 'text-red-500'}`}>計算不可</div>
@@ -1357,14 +1362,17 @@ function OrderFormContent() {
                     </button>
                   </div>
                   {feeComparison?.delivery?.fee !== null && feeComparison?.sagawa?.fee !== null && (
-                    <div className="text-[10px] text-emerald-700 bg-white/60 rounded-lg px-3 py-2 leading-relaxed">
+                    <div className="text-[10px] text-emerald-700 bg-white/60 rounded-lg px-3 py-2 leading-relaxed flex items-start gap-1.5">
+                      <Lightbulb size={12} className="shrink-0 mt-0.5"/>
+                      <span>
                       {feeComparison.delivery.fee < feeComparison.sagawa.fee ? (
-                        <>💡 <strong>自社配達のほうが ¥{(feeComparison.sagawa.fee - feeComparison.delivery.fee).toLocaleString()} お得</strong>です</>
+                        <><strong>自社配達のほうが ¥{(feeComparison.sagawa.fee - feeComparison.delivery.fee).toLocaleString()} お得</strong>です</>
                       ) : feeComparison.sagawa.fee < feeComparison.delivery.fee ? (
-                        <>💡 <strong>業者配送のほうが ¥{(feeComparison.delivery.fee - feeComparison.sagawa.fee).toLocaleString()} お得</strong>です</>
+                        <><strong>業者配送のほうが ¥{(feeComparison.delivery.fee - feeComparison.sagawa.fee).toLocaleString()} お得</strong>です</>
                       ) : (
-                        <>💡 どちらも同じ料金です</>
+                        <>どちらも同じ料金です</>
                       )}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -1394,11 +1402,12 @@ function OrderFormContent() {
                 <div className="bg-[#2D4B3E]/5 -mx-8 -mt-8 p-6 pb-8 mb-4 rounded-t-[28px] border-b border-[#EAEAEA] space-y-3">
                    <div className="space-y-1.5">
                      <p className="text-[12px] font-bold text-[#2D4B3E] flex items-center gap-2">
-                        🌸 雰囲気・ボリューム感の参考
+                        雰囲気・ボリューム感の参考
                      </p>
-                     <p className="text-[10.5px] text-[#555] leading-relaxed bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                       ⚠️ <strong>お花は季節によって種類が変わります。</strong>下記は同価格帯で過去にお作りした「雰囲気・サイズ感・ボリューム」の参考例です。<br/>
-                       <span className="text-[#999]">写真と全く同じ花材での再現はできかねますが、選択していただくと近い雰囲気でお作りいたします。</span>
+                     <p className="text-[10.5px] text-[#555] leading-relaxed bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-start gap-1.5">
+                       <AlertTriangle size={14} className="shrink-0 mt-0.5"/>
+                       <span><strong>お花は季節によって種類が変わります。</strong>下記は同価格帯で過去にお作りした「雰囲気・サイズ感・ボリューム」の参考例です。<br/>
+                       <span className="text-[#999]">写真と全く同じ花材での再現はできかねますが、選択していただくと近い雰囲気でお作りいたします。</span></span>
                      </p>
                    </div>
                    <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar">
@@ -1423,14 +1432,14 @@ function OrderFormContent() {
                                </div>
                              )}
                              {/* 拡大バッジ */}
-                             <div className="absolute bottom-1.5 right-1.5 bg-black/50 text-white text-[9px] font-bold px-2 py-0.5 rounded-full pointer-events-none">
-                               🔍 タップで拡大
+                             <div className="absolute bottom-1.5 right-1.5 bg-black/50 text-white text-[9px] font-bold px-2 py-0.5 rounded-full pointer-events-none inline-flex items-center gap-1">
+                               <Search size={10}/> タップで拡大
                              </div>
                              {/* マッチ理由バッジ */}
                              {img._matched && img._matched.length > 0 && selectedImage?.id !== img.id && (
                                <div className="absolute top-1.5 left-1.5 right-1.5 flex flex-wrap gap-1 pointer-events-none">
                                  {img._matched.map((m, i) => (
-                                   <span key={i} className="bg-[#2D4B3E]/90 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">{m}✓</span>
+                                   <span key={i} className="bg-[#2D4B3E]/90 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full inline-flex items-center gap-0.5">{m}<Check size={9}/></span>
                                  ))}
                                </div>
                              )}
@@ -1461,7 +1470,7 @@ function OrderFormContent() {
                 {/* ★ お供え専用項目 */}
                 {isOsonae && (
                   <div className="mt-3 bg-gray-50 border border-gray-300 rounded-xl p-4 space-y-3">
-                    <p className="text-[12px] font-bold text-gray-700">🙏 お供え花 詳細情報</p>
+                    <p className="text-[12px] font-bold text-gray-700">お供え花 詳細情報</p>
                     <div className="grid grid-cols-1 gap-2">
                       <input
                         type="text"
@@ -1547,8 +1556,9 @@ function OrderFormContent() {
               </div>
 
               {selectedImage && (
-                <p className="text-[10px] text-[#999] -mt-2 leading-relaxed">
-                  💡 メインカラー・イメージを変更したい場合は、上の参考画像で <strong>「選択を解除」</strong> を押してください
+                <p className="text-[10px] text-[#999] -mt-2 leading-relaxed flex items-start gap-1.5">
+                  <Lightbulb size={12} className="shrink-0 mt-0.5"/>
+                  <span>メインカラー・イメージを変更したい場合は、上の参考画像で <strong>「選択を解除」</strong> を押してください</span>
                 </p>
               )}
 
@@ -1556,7 +1566,7 @@ function OrderFormContent() {
               <div className="space-y-3">
                 <label className="text-[11px] font-bold text-[#999999]">補足・備考</label>
                 <textarea
-                  placeholder="📝 ご希望やご要望があればお書きください（例: 苦手なお花がある／〇〇の花を入れたい／プレゼントの相手が好きな色など）"
+                  placeholder="ご希望やご要望があればお書きください（例: 苦手なお花がある／〇〇の花を入れたい／プレゼントの相手が好きな色など）"
                   value={purposeNote || ''}
                   onChange={(e) => setPurposeNote(e.target.value)}
                   rows={3}
@@ -1615,7 +1625,7 @@ function OrderFormContent() {
                             rows={2}
                             className="w-full px-4 py-2 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E] resize-y"
                           />
-                          <p className="text-[10px] text-[#999] pl-1">💡 連名: Enterで改行（例: 山田太郎 ↵ 山田花子）</p>
+                          <p className="text-[10px] text-[#999] pl-1 flex items-center gap-1"><Lightbulb size={11}/> 連名: Enterで改行（例: 山田太郎 ↵ 山田花子）</p>
                         </div>
                       )}
                       {tateNeeds.includes('3a') && <input type="text" placeholder="③-1 会社名" value={tateInput3a} onChange={(e) => setTateInput3a(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
@@ -1628,7 +1638,7 @@ function OrderFormContent() {
                             rows={2}
                             className="w-full px-4 py-2 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E] resize-y"
                           />
-                          <p className="text-[10px] text-[#999] pl-1">💡 連名: Enterで改行</p>
+                          <p className="text-[10px] text-[#999] pl-1 flex items-center gap-1"><Lightbulb size={11}/> 連名: Enterで改行</p>
                         </div>
                       )}
                       
@@ -1687,8 +1697,8 @@ function OrderFormContent() {
                   <div className="flex items-center justify-between p-4 bg-[#2D4B3E]/5 border border-[#2D4B3E]/20 rounded-xl">
                     <div className="flex items-center gap-2">
                       <CheckCircle2 size={16} className="text-[#2D4B3E]"/>
-                      <span className="text-[12px] font-bold text-[#2D4B3E]">
-                        {isRecipientDifferent ? '🎁 ご贈答用（別の方へお届け）' : '🏠 ご自分用（注文者と同じ）'}
+                      <span className="text-[12px] font-bold text-[#2D4B3E] inline-flex items-center gap-1.5">
+                        {isRecipientDifferent ? <><Gift size={14}/> ご贈答用（別の方へお届け）</> : <><Home size={14}/> ご自分用（注文者と同じ）</>}
                       </span>
                     </div>
                     <button
@@ -1708,10 +1718,11 @@ function OrderFormContent() {
 
                   {/* ★ 自宅以外配送の事前連絡チェック */}
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-2">
-                    <p className="text-[11px] text-blue-900 leading-relaxed">
-                      🏢 <strong>葬儀場・ホテル・会社・店舗</strong>等、ご自宅以外への配達の場合、<br/>
+                    <p className="text-[11px] text-blue-900 leading-relaxed flex items-start gap-1.5">
+                      <Building2 size={14} className="shrink-0 mt-0.5"/>
+                      <span><strong>葬儀場・ホテル・会社・店舗</strong>等、ご自宅以外への配達の場合、<br/>
                       <strong>お届け先様へ「お花が届く旨」の事前連絡をお願いいたします。</strong><br/>
-                      受取拒否・不在再配達を防ぐためのご協力をお願いします。
+                      受取拒否・不在再配達を防ぐためのご協力をお願いします。</span>
                     </p>
                     <label className="flex items-start gap-2 cursor-pointer pt-1 border-t border-blue-200">
                       <input
@@ -1743,7 +1754,7 @@ function OrderFormContent() {
                   if (!addressEntered) return null;
 
                   const isDelivery = receiveMethod === 'delivery';
-                  const methodLabel = isDelivery ? '🚚 自社配達' : '📦 業者配送 (佐川急便)';
+                  const methodLabel = isDelivery ? '自社配達' : '業者配送 (佐川急便)';
                   const methodDesc = isDelivery
                     ? '直接お届け / 事前にお電話で確認させていただく場合があります'
                     : '追跡可能 / サプライズ配達にもおすすめ';
@@ -1773,33 +1784,33 @@ function OrderFormContent() {
                             <p className={`text-[10px] font-bold mb-1 ${isDelivery ? 'text-emerald-700' : 'text-blue-700'}`}>
                               {hasChoice ? '選択中のお届け方法' : 'お届け方法'}
                             </p>
-                            <p className={`text-[16px] font-bold ${isDelivery ? 'text-emerald-800' : 'text-blue-800'}`}>
-                              {methodLabel}
+                            <p className={`text-[16px] font-bold inline-flex items-center gap-1.5 ${isDelivery ? 'text-emerald-800' : 'text-blue-800'}`}>
+                              {isDelivery ? <Truck size={16}/> : <Package size={16}/>} {methodLabel}
                             </p>
                             {calculatedFee !== null && (
                               <p className={`text-[18px] font-bold mt-1 ${isDelivery ? 'text-emerald-700' : 'text-blue-700'}`}>
-                                {calculatedFee === 0 ? '送料無料 🎉' : `¥${calculatedFee.toLocaleString()}`}
+                                {calculatedFee === 0 ? '送料無料' : `¥${calculatedFee.toLocaleString()}`}
                               </p>
                             )}
                             <p className={`text-[11px] mt-1 ${isDelivery ? 'text-emerald-700' : 'text-blue-700'}`}>
                               {methodDesc}
                             </p>
                             {!hasChoice && onlyOptionReason && (
-                              <p className={`text-[10px] mt-2 italic ${isDelivery ? 'text-emerald-600' : 'text-blue-600'}`}>
-                                ℹ️ {onlyOptionReason}
+                              <p className={`text-[10px] mt-2 italic inline-flex items-center gap-1 ${isDelivery ? 'text-emerald-600' : 'text-blue-600'}`}>
+                                <Info size={11}/> {onlyOptionReason}
                               </p>
                             )}
                             {areaError && hasChoice && (
-                              <p className="text-[11px] mt-2 text-red-600 font-bold">⚠️ {areaError}</p>
+                              <p className="text-[11px] mt-2 text-red-600 font-bold inline-flex items-center gap-1"><AlertTriangle size={12}/> {areaError}</p>
                             )}
                           </div>
                           {hasChoice && (
                             <button
                               type="button"
                               onClick={() => setStep(2.5)}
-                              className="shrink-0 px-3 py-2 text-[11px] font-bold bg-white border border-[#EAEAEA] rounded-lg hover:bg-[#FBFAF9] hover:border-[#2D4B3E] text-[#555]"
+                              className="shrink-0 px-3 py-2 text-[11px] font-bold bg-white border border-[#EAEAEA] rounded-lg hover:bg-[#FBFAF9] hover:border-[#2D4B3E] text-[#555] inline-flex items-center gap-1"
                             >
-                              ✏️ 変更する
+                              <Edit size={11}/> 変更する
                             </button>
                           )}
                         </div>
@@ -1821,8 +1832,9 @@ function OrderFormContent() {
                               <p className="text-[12px] text-amber-900 leading-relaxed">
                                 自社配達では、お届け先のご都合確認のため、<strong>配達前にお届け先様へ直接お電話</strong>させていただく場合がございます。
                               </p>
-                              <p className="text-[11px] text-amber-700 bg-amber-100 rounded-lg px-3 py-2">
-                                🎁 <strong>サプライズでお届けしたい場合</strong>は、上の「変更する」から業者配送をお選びください。
+                              <p className="text-[11px] text-amber-700 bg-amber-100 rounded-lg px-3 py-2 flex items-start gap-1.5">
+                                <Gift size={12} className="shrink-0 mt-0.5"/>
+                                <span><strong>サプライズでお届けしたい場合</strong>は、上の「変更する」から業者配送をお選びください。</span>
                               </p>
                             </div>
                           </div>
@@ -1954,7 +1966,7 @@ function OrderFormContent() {
                 {/* ★ キャンセル・返金不可のご案内 */}
                 <div className="mb-4 bg-red-50 border border-red-300 rounded-xl p-4">
                   <p className="text-[12px] font-bold text-red-700 flex items-center gap-1.5 mb-1.5">
-                    ⚠️ ご入金後のキャンセル・返金について
+                    <AlertTriangle size={14}/> ご入金後のキャンセル・返金について
                   </p>
                   <p className="text-[11px] text-red-900 leading-relaxed">
                     <strong>お客様都合でのご入金後のキャンセル・返金は承っておりません。</strong><br/>
@@ -2017,7 +2029,7 @@ function OrderFormContent() {
                       {/* 制作開始タイミングを大きく強調 */}
                       <div className="bg-[#D97D54] text-white rounded-xl p-5 shadow-md">
                         <p className="text-[18px] font-bold mb-2 flex items-center gap-2">
-                          ⏱️ お支払い確認後から制作開始
+                          <Clock size={18}/> お支払い確認後から制作開始
                         </p>
                         <p className="text-[12px] leading-relaxed opacity-95">
                           銀行振込の場合、<strong className="text-yellow-200 underline">ご入金確認後</strong>から
@@ -2029,7 +2041,7 @@ function OrderFormContent() {
                       {/* 入金予定日（必須）*/}
                       <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 space-y-3">
                         <div className="flex items-center justify-between">
-                          <label className="text-[12px] font-bold text-amber-900">📅 ご入金予定日</label>
+                          <label className="text-[12px] font-bold text-amber-900 flex items-center gap-1.5"><Calendar size={12}/> ご入金予定日</label>
                           <span className="text-[10px] bg-red-50 text-red-600 font-bold px-2 py-0.5 rounded">必須</span>
                         </div>
                         <input
@@ -2045,22 +2057,23 @@ function OrderFormContent() {
                         </p>
                         {scheduleInfo && !scheduleInfo.isLate && (
                           <div className="bg-white border border-amber-300 rounded-lg p-3 space-y-1">
-                            <p className="text-[11px] text-amber-900 leading-relaxed">
-                              ✅ <strong>{paymentScheduledDate}</strong> にご入金いただいた場合、<br/>
-                              <strong>{scheduleInfo.start.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</strong> 以降の制作開始となります。
+                            <p className="text-[11px] text-amber-900 leading-relaxed flex items-start gap-1.5">
+                              <CheckCircle size={12} className="shrink-0 mt-0.5"/>
+                              <span><strong>{paymentScheduledDate}</strong> にご入金いただいた場合、<br/>
+                              <strong>{scheduleInfo.start.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</strong> 以降の制作開始となります。</span>
                             </p>
                           </div>
                         )}
                         {scheduleInfo && scheduleInfo.isLate && (
                           <div className="bg-red-50 border-2 border-red-300 rounded-lg p-3 space-y-2">
-                            <p className="text-[13px] font-bold text-red-700">🚨 お届け希望日に間に合いません</p>
+                            <p className="text-[13px] font-bold text-red-700 flex items-center gap-1.5"><AlertCircle size={14}/> お届け希望日に間に合いません</p>
                             <p className="text-[11px] text-red-900 leading-relaxed">
                               ご入金予定日（<strong>{paymentScheduledDate}</strong>）のご入金確認後、<br/>
                               <strong>{scheduleInfo.start.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })}</strong>以降の制作開始となります。<br/>
                               お届け希望日 <strong>{scheduleInfo.wishDate.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })}</strong> を超えてしまうため、ご希望日にお届けできません。
                             </p>
                             <div className="bg-white border-2 border-red-400 rounded-lg p-3 mt-2">
-                              <p className="text-[12px] font-bold text-red-700">📞 ご注文確定後に必ずお電話ください</p>
+                              <p className="text-[12px] font-bold text-red-700 flex items-center gap-1.5"><Phone size={14}/> ご注文確定後に必ずお電話ください</p>
                               <p className="text-[11px] text-red-900 mt-1 leading-relaxed">
                                 納期の再調整が必要です。<br/>
                                 ・お振込みを前倒し or 受取日変更<br/>
@@ -2081,9 +2094,10 @@ function OrderFormContent() {
                             </label>
                           </div>
                         )}
-                        <p className="text-[10px] text-amber-700 bg-amber-100 rounded-lg px-3 py-2 leading-relaxed">
-                          💡 ご入金のタイミングに関するご相談がある場合は、<strong>ご注文確定後にお電話</strong>にてお問い合わせください。<br/>
-                          <span className="text-[#999]">（お電話番号は注文完了画面・確認メールでご案内します）</span>
+                        <p className="text-[10px] text-amber-700 bg-amber-100 rounded-lg px-3 py-2 leading-relaxed flex items-start gap-1.5">
+                          <Lightbulb size={12} className="shrink-0 mt-0.5"/>
+                          <span>ご入金のタイミングに関するご相談がある場合は、<strong>ご注文確定後にお電話</strong>にてお問い合わせください。<br/>
+                          <span className="text-[#999]">（お電話番号は注文完了画面・確認メールでご案内します）</span></span>
                         </p>
                       </div>
                     </div>
@@ -2178,7 +2192,7 @@ function OrderFormContent() {
             aria-label="閉じる"
             className="absolute top-4 right-4 w-11 h-11 bg-white/95 hover:bg-white rounded-full flex items-center justify-center text-[#111] shadow-lg text-[20px] font-bold"
           >
-            ✕
+            <X size={20}/>
           </button>
           <div
             className="max-w-3xl w-full max-h-[90vh] flex flex-col items-center gap-3"
@@ -2193,8 +2207,8 @@ function OrderFormContent() {
               <p className="text-[14px] font-bold text-[#2D4B3E]">
                 {previewImage.priceHidden ? '金額: お問い合わせ' : `¥${Number(previewImage.price).toLocaleString()}〜 (同価格帯の参考)`}
               </p>
-              <p className="text-[10px] text-[#999]">
-                💡 写真はあくまで雰囲気・サイズ感の参考です。お花は季節によって変わります。
+              <p className="text-[10px] text-[#999] flex items-center justify-center gap-1.5">
+                <Lightbulb size={11}/> 写真はあくまで雰囲気・サイズ感の参考です。お花は季節によって変わります。
               </p>
               {selectedImage?.id !== previewImage.id ? (
                 <button

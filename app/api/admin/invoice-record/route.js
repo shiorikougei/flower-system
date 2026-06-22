@@ -16,7 +16,7 @@ function admin() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-// ★ cron 経由の内部呼出か、Owner Bearer 必須
+// cron 経由の内部呼出か、Owner Bearer 必須
 async function gateOwnerOrCron(request) {
   const isCron = request.headers.get('x-cron-secret') === process.env.CRON_SECRET;
   if (isCron) return { ok: true };

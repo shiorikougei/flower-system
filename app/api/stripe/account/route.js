@@ -54,7 +54,7 @@ export async function GET(request) {
     try {
       const account = await stripe.accounts.retrieve(stripeInfo.accountId);
 
-      // ★ DB側のキャッシュも最新化（注文ページが参照するため）
+      // DB側のキャッシュも最新化（注文ページが参照するため）
       //   Service Role でアップサート（権限の都合）
       const supabaseAdmin = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL,

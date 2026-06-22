@@ -10,7 +10,7 @@ const EMAIL_RE = /^[\w.+-]+@[\w-]+\.[\w.-]+$/;
 
 export async function POST(request) {
   try {
-    // ★ レート制限（IP, 5件/分, Redis 永続化）
+    // レート制限（IP, 5件/分, Redis 永続化）
     const ip = getClientIp(request);
     const allowed = await rateLimit({ key: `stock-notify:${ip}`, max: 5, windowSec: 60 });
     if (!allowed) {
@@ -22,12 +22,12 @@ export async function POST(request) {
       return NextResponse.json({ error: '必須項目が不足しています' }, { status: 400 });
     }
 
-    // ★ email 形式バリデーション
+    // email 形式バリデーション
     if (!EMAIL_RE.test(String(email))) {
       return NextResponse.json({ error: 'メールアドレスの形式が不正です' }, { status: 400 });
     }
 
-    // ★ 文字数制限
+    // 文字数制限
     if (String(email).length > 200 || String(customerName || '').length > 100) {
       return NextResponse.json({ error: '入力が長すぎます' }, { status: 400 });
     }
@@ -37,7 +37,7 @@ export async function POST(request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     );
 
-    // ★ 商品実在チェック（tenantId と productId が両方一致する商品が公開中であること）
+    // 商品実在チェック（tenantId と productId が両方一致する商品が公開中であること）
     const { data: product, error: prodErr } = await supabaseAdmin
       .from('products')
       .select('id, tenant_id, is_active, restock_allowed')

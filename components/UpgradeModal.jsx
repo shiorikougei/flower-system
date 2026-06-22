@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
 import { FEATURE_GROUPS } from '@/utils/features';
 import { DEFAULT_PRICING, calcMonthlyFee, calcWithManualOverride } from '@/utils/subscriptionPricing';
-import { X, CheckCircle2, ExternalLink, Sparkles, AlertCircle } from 'lucide-react';
+import { X, CheckCircle2, ExternalLink, Sparkles, AlertCircle, Lock, FileText } from 'lucide-react';
 
 export default function UpgradeModal({ open, onClose, tenantSettings }) {
   const [selected, setSelected] = useState({});
@@ -95,7 +95,7 @@ export default function UpgradeModal({ open, onClose, tenantSettings }) {
           <div className="w-16 h-16 mx-auto bg-green-50 rounded-full flex items-center justify-center">
             <CheckCircle2 size={36} className="text-green-600"/>
           </div>
-          <h3 className="text-[16px] font-bold text-[#2D4B3E]">🎉 機能を有効化しました</h3>
+          <h3 className="text-[16px] font-bold text-[#2D4B3E]">機能を有効化しました</h3>
           <p className="text-[12px] text-[#555] leading-relaxed">
             {done.enabled.length} 個の機能が <strong>即時利用可能</strong> になりました。<br/>
             当月分はお試し期間として <strong>無料</strong>、料金は翌月分から発生いたします。
@@ -130,7 +130,7 @@ export default function UpgradeModal({ open, onClose, tenantSettings }) {
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {availableUpgrades.length === 0 ? (
             <div className="p-8 text-center">
-              <p className="text-[13px] font-bold text-[#117768]">🎉 全ての機能が既に有効です！</p>
+              <p className="text-[13px] font-bold text-[#117768]">全ての機能が既に有効です！</p>
             </div>
           ) : (
             <>
@@ -157,7 +157,7 @@ export default function UpgradeModal({ open, onClose, tenantSettings }) {
                     <p className="text-[10px] font-bold text-[#999] tracking-widest">— Coming Soon —</p>
                     {comingSoonUpgrades.map(item => (
                       <div key={item.key} className="flex items-start gap-3 p-3 rounded-xl border border-dashed border-[#EAEAEA] bg-[#FBFAF9] opacity-70">
-                        <div className="mt-1 w-5 h-5 rounded bg-[#EAEAEA] flex items-center justify-center text-[10px] text-[#999]">🔒</div>
+                        <div className="mt-1 w-5 h-5 rounded bg-[#EAEAEA] flex items-center justify-center text-[#999]"><Lock size={10}/></div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-baseline justify-between gap-2">
                             <p className="text-[13px] font-bold text-[#777]">{item.label}</p>
@@ -179,7 +179,7 @@ export default function UpgradeModal({ open, onClose, tenantSettings }) {
 
                   {hasManual && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[11px] text-blue-900 leading-relaxed">
-                      📌 お客様は<strong>特別契約（固定料金）</strong>のため、機能を追加しても月額は<strong> ¥{currentFee.total.toLocaleString()}/月 のまま据え置き</strong>です。
+                      お客様は<strong>特別契約（固定料金）</strong>のため、機能を追加しても月額は<strong> ¥{currentFee.total.toLocaleString()}/月 のまま据え置き</strong>です。
                       {billing.manualReason && <><br/><span className="text-[10px] text-blue-700">理由: {billing.manualReason}</span></>}
                     </div>
                   )}
@@ -210,7 +210,7 @@ export default function UpgradeModal({ open, onClose, tenantSettings }) {
               {/* 利用規約同意 */}
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
                 <div className="text-[11px] text-amber-900 leading-relaxed">
-                  <p className="font-bold mb-1">📋 アップグレードの条件</p>
+                  <p className="font-bold mb-1 flex items-center gap-1.5"><FileText size={12}/> アップグレードの条件</p>
                   <ul className="space-y-1 ml-3">
                     <li>・選択した機能は<strong>即時利用可能</strong>になります</li>
                     <li>・<strong>当月分</strong>はお試し期間として<strong>無料</strong>でご利用いただけます</li>

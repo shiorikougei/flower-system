@@ -132,7 +132,7 @@ export default function TwoFactorPage() {
           </div>
         ) : (
           <div className="bg-white border border-[#EAEAEA] rounded-2xl p-5 space-y-3">
-            <h3 className="text-[13px] font-bold text-[#2D4B3E]">✅ 登録済みの認証要素</h3>
+            <h3 className="text-[13px] font-bold text-[#2D4B3E]">登録済みの認証要素</h3>
             {factors.map(f => (
               <div key={f.id} className="flex items-center justify-between p-3 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA]">
                 <div>
@@ -159,7 +159,7 @@ export default function TwoFactorPage() {
 
         {enrollData && (
           <div className="bg-white border-2 border-[#2D4B3E] rounded-2xl p-6 space-y-5">
-            <h3 className="text-[14px] font-bold text-[#2D4B3E] text-center">📲 認証アプリで読み取り</h3>
+            <h3 className="text-[14px] font-bold text-[#2D4B3E] text-center">認証アプリで読み取り</h3>
 
             {enrollData.qr && (
               <div className="bg-white p-4 rounded-xl border border-[#EAEAEA] flex justify-center">

@@ -55,10 +55,10 @@ export async function requireAuthedUser(request) {
  *   - もしくは x-owner-password ヘッダで OWNER_PASSWORD と一致すればOK
  */
 export async function requireOwner(request) {
-  // ★ オーナーパスワード方式 (Supabaseログイン不要)
+  // オーナーパスワード方式 (Supabaseログイン不要)
   const pwHeader = request.headers.get('x-owner-password') || '';
   if (pwHeader) {
-    // ★ ブルートフォース対策: IP単位で30回/分まで（通常操作には充分、攻撃は阻止）
+    // ブルートフォース対策: IP単位で30回/分まで（通常操作には充分、攻撃は阻止）
     const ip = getClientIp(request);
     const allowed = await rateLimit({ key: `owner_auth:${ip}`, max: 30, windowSec: 60 });
     if (!allowed) {
@@ -74,7 +74,7 @@ export async function requireOwner(request) {
     // パスワード一致しないが、ブルートフォース防止のため即エラーは返さずBearer経路へ
   }
 
-  // ★ Bearer トークン方式
+  // Bearer トークン方式
   const auth = await requireAuthedUser(request);
   if (!auth.ok) return auth;
   const email = (auth.user.email || '').toLowerCase();

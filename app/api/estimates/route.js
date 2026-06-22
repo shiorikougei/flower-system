@@ -26,7 +26,7 @@ export async function POST(request) {
     const body = await request.json();
     const { tenantId, shopId, customerName, customerEmail, customerPhone, requestContent, requestData, referenceImages } = body;
 
-    // ★ どの必須項目が欠けてるか明示
+    // どの必須項目が欠けてるか明示
     const missing = [];
     if (!tenantId) missing.push('テナントID');
     if (!customerName) missing.push('お名前');
@@ -41,7 +41,7 @@ export async function POST(request) {
 
     const supabase = admin();
 
-    // ★ 参考画像が text[] スキーマに合わない場合の互換性対応:
+    // 参考画像が text[] スキーマに合わない場合の互換性対応:
     //    URL配列を text[] にキャスト
     let refImgs = null;
     if (Array.isArray(referenceImages) && referenceImages.length > 0) {
@@ -69,7 +69,7 @@ export async function POST(request) {
     const { data, error } = await supabase.from('estimates').insert([insertPayload]).select('id').single();
 
     if (error) {
-      // ★ [Phase1-① PII保護] 詳細エラーは本番でクライアントに返さない（DB構造・PII漏洩リスク）
+      // [Phase1-① PII保護] 詳細エラーは本番でクライアントに返さない（DB構造・PII漏洩リスク）
       console.error('[estimates POST] insert error:', error?.code || 'unknown');
       // payloadのログ出力は廃止（顧客個人情報を含む）
       return NextResponse.json({
@@ -79,21 +79,21 @@ export async function POST(request) {
       }, { status: 500 });
     }
 
-    // ★ 店舗へ通知メール（重い処理なのでバックグラウンドで実行 = フォーム応答を早く返す）
+    // 店舗へ通知メール（重い処理なのでバックグラウンドで実行 = フォーム応答を早く返す）
     //    insert 完了 → 即レスポンス → メール送信は別タスクで実行
     (async () => {
     try {
       const { data: tRow } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
       const settings = tRow?.settings_data || {};
-      // ★ 該当店舗の notifyEmail を優先（なければ旧 email / generalConfig.email にフォールバック）
+      // 該当店舗の notifyEmail を優先（なければ旧 email / generalConfig.email にフォールバック）
       const targetShop = settings.shops?.find(s => String(s.id) === String(shopId)) || settings.shops?.[0] || {};
       const shopEmail = (targetShop.notifyEmail || '').trim()
         || targetShop.email
         || settings.generalConfig?.email;
       const shopName = targetShop.name || settings.generalConfig?.appName || tenantId;
-      // ★ CCメール（カンマ区切り）
+      // CCメール（カンマ区切り）
       const ccEmails = (targetShop.notifyCcEmails || '').split(',').map(s => s.trim()).filter(Boolean);
-      // ★ 通知タイミング OFF ならスキップ
+      // 通知タイミング OFF ならスキップ
       const notifyEnabled = targetShop.notifyOnEstimate !== false;
       if (shopEmail && notifyEnabled) {
         // 構造化データを見やすいHTMLテーブルに整形
@@ -106,7 +106,7 @@ export async function POST(request) {
         if (rd.purpose) rows.push(['ご用途', escHtml(purposeLabel)]);
         if (rd.deliveryMethod) rows.push(['受取方法', escHtml(dmMap[rd.deliveryMethod] || rd.deliveryMethod)]);
         if (rd.desiredDate) rows.push(['ご希望日', escHtml(rd.desiredDate) + (rd.desiredTime ? ` ${escHtml(rd.desiredTime)}` : '')]);
-        // ★ 新フォーム: 郵便番号+住所1+住所2を組み合わせ。旧: deliveryAddress
+        // 新フォーム: 郵便番号+住所1+住所2を組み合わせ。旧: deliveryAddress
         const addrParts = [];
         if (rd.deliveryZip) addrParts.push(`〒${rd.deliveryZip}`);
         if (rd.deliveryAddress1) addrParts.push(rd.deliveryAddress1);
@@ -174,9 +174,9 @@ export async function POST(request) {
         });
       }
     } catch (e) { console.warn('[estimate notify mail]', e?.message); }
-    })().catch(e => console.warn('[estimate notify bg]', e?.message)); // ★ バックグラウンド実行のエラーをキャッチ
+    })().catch(e => console.warn('[estimate notify bg]', e?.message)); // バックグラウンド実行のエラーをキャッチ
 
-    // ★ insert が成功した時点で即レスポンス（メール送信完了を待たない）
+    // insert が成功した時点で即レスポンス（メール送信完了を待たない）
     return NextResponse.json({ ok: true, estimateId: data.id });
   } catch (err) {
     console.error('[estimates POST]', err);
@@ -237,7 +237,7 @@ export async function PATCH(request) {
       await supabase.from('estimates').update({
         reply_message: String(replyMessage || '').slice(0, 4000),
         proposed_price: Number(proposedPrice) || 0,
-        proposed_data: proposedData || null, // ★ 料金内訳を保存
+        proposed_data: proposedData || null, // 料金内訳を保存
         status: 'replied',
         replied_at: new Date().toISOString(),
         expires_at: newExpiresAt,
@@ -247,7 +247,7 @@ export async function PATCH(request) {
         staff_expiry_alert_sent_at: null,
       }).eq('id', id);
 
-      // ★ 店舗情報を取得 (送信元・問合せ先のため)
+      // 店舗情報を取得 (送信元・問合せ先のため)
       const { data: tRow2 } = await supabase.from('app_settings').select('settings_data').eq('id', cur.tenant_id).single();
       const settings2 = tRow2?.settings_data || {};
       const shop2 = settings2.shops?.find(s => String(s.id) === String(cur.shop_id)) || settings2.shops?.[0] || {};
@@ -256,7 +256,7 @@ export async function PATCH(request) {
       const shopPhone2 = shop2.phone || settings2.generalConfig?.phone || '';
       const lineUrl2 = settings2.lineConfig?.addFriendUrl || '';
 
-      // ★ LINE preference を尊重: 'line_only' ならメール送信スキップ
+      // LINE preference を尊重: 'line_only' ならメール送信スキップ
       let preference2 = 'both';
       let isLineLinked = false;
       try {
@@ -272,7 +272,7 @@ export async function PATCH(request) {
         if (link?.is_active) isLineLinked = true;
       } catch {}
 
-      // ★ LINE未連携のお客様向け招待ブロック（LINE機能ON & 未連携の場合のみ）
+      // LINE未連携のお客様向け招待ブロック（LINE機能ON & 未連携の場合のみ）
       const lineInviteBlock = (!isLineLinked && settings2.lineConfig?.enabled && lineUrl2) ? `
         <div style="margin:24px 0; background:#06C755; padding:2px; border-radius:14px;">
           <div style="background:white; padding:20px; border-radius:12px;">
@@ -337,7 +337,7 @@ export async function PATCH(request) {
         } catch (e) { console.warn(e); }
       }
 
-      // ★ LINE併送 (line_only or both で連携あり時のみ)
+      // LINE併送 (line_only or both で連携あり時のみ)
       try {
         const { sendLineParallelToEmail } = await import('@/utils/line');
         await sendLineParallelToEmail({
@@ -386,7 +386,7 @@ export async function PATCH(request) {
           shopId: cur.shop_id,
           fromEstimate: true,
           estimateId: id,
-          // ★ お客様情報 (見積依頼の情報＋確定時の追加情報)
+          // お客様情報 (見積依頼の情報＋確定時の追加情報)
           customerInfo: {
             name: cur.customer_name,
             email: cur.customer_email,
@@ -396,23 +396,23 @@ export async function PATCH(request) {
             address2: cxd.address2 || '',
           },
           paymentScheduledDate: cxd.paymentScheduledDate || null,
-          // ★ お届け先 (異なる場合のみ)
+          // お届け先 (異なる場合のみ)
           isRecipientDifferent: !!recipientInfo,
           recipientInfo: recipientInfo,
           receiveMethod,
-          // ★ 商品情報 (見積依頼の構造化データを反映)
+          // 商品情報 (見積依頼の構造化データを反映)
           flowerType: rd.flowerType || '',
           flowerPurpose: rd.purpose === 'その他' ? rd.purposeOther : (rd.purpose || ''),
           flowerColor: rd.colorPreference || '',
           flowerVibe: '',
           purposeNote: rd.otherNotes || rd.countSpec || '',
-          // ★ 配達希望日時
+          // 配達希望日時
           selectedDate: rd.desiredDate || '',
           selectedTime: rd.desiredTime || '',
-          // ★ メッセージカード・立札
+          // メッセージカード・立札
           cardType: rd.cardType === 'message' ? 'メッセージカード' : (rd.cardType === 'tatefuda' ? '立札' : 'なし'),
           cardMessage: rd.cardType === 'message' ? (rd.cardContent || '') : '',
-          // ★ 金額情報 - calculatedFee は配送料+箱代+クール代+その他全て含む
+          // 金額情報 - calculatedFee は配送料+箱代+クール代+その他全て含む
           //   (OrderDetailModal の getTotals は item + calculatedFee + pickup で計算するため)
           itemPrice: Number(pd.productPrice) || proposedSub,
           calculatedFee: (Number(pd.selfDeliveryFee) || 0)
@@ -428,7 +428,7 @@ export async function PATCH(request) {
           },
           pickupFee: 0,
           totalAmount: proposedSub + tax,
-          // ★ 見積データの参照
+          // 見積データの参照
           note: `お見積もり依頼から確定 (見積ID: ${String(id).slice(0,8)})\n\n${cur.reply_message || ''}`,
           status: 'new',
           paymentMethod: 'bank_transfer',

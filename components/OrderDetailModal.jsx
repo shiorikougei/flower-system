@@ -8,7 +8,7 @@ import {
   Tag, MessageSquare, CreditCard, CheckCircle2, Upload, ImageIcon,
   Edit3, ArrowRight, TrendingUp, TrendingDown, FileText, Bell, BellOff,
   Wallet, RefreshCw, Mail, Camera, Plus, Clock, ShoppingBag, History,
-  Save, ArrowDown
+  Save, ArrowDown, Gift, Pen, Lightbulb
 } from 'lucide-react';
 import TatefudaPreview from '@/components/TatefudaPreview';
 import { ensureOperationAllowed, getCurrentRole, getCurrentStaff } from '@/utils/staffRole';
@@ -225,7 +225,7 @@ export default function OrderDetailModal({
         setCompletionDeliveryTime(modalData.selectedTime || '');
         setCompletionMailPreview({ images: allImages, customerEmail });
       } else {
-        alert('完成写真をアップロードしました 🎉\n（お客様のメアドが登録されてないため、メール送信はスキップされます）');
+        alert('完成写真をアップロードしました\n（お客様のメアドが登録されてないため、メール送信はスキップされます）');
       }
 
     } catch (error) {
@@ -279,13 +279,13 @@ export default function OrderDetailModal({
       });
       const data = await res.json();
       if (res.ok && data.sent) {
-        alert(`📧 お客様（${completionMailPreview.customerEmail}）に完成写真メールを送信しました🎉`);
+        alert(`お客様（${completionMailPreview.customerEmail}）に完成写真メールを送信しました`);
         setCompletionMailPreview(null);
       } else {
-        alert(`⚠️ メール送信できませんでした: ${data.error || '原因不明'}`);
+        alert(`メール送信できませんでした: ${data.error || '原因不明'}`);
       }
     } catch (e) {
-      alert(`⚠️ メール送信に失敗: ${e.message}`);
+      alert(`メール送信に失敗: ${e.message}`);
     } finally {
       setIsSendingMail(false);
     }
@@ -798,7 +798,7 @@ export default function OrderDetailModal({
       }
 
       setShowPaymentConfirmModal(false);
-      alert('入金済みに更新し、お客様にメールを送信しました ✉️');
+      alert('入金済みに更新し、お客様にメールを送信しました');
     } catch (err) {
       console.error(err);
       alert(`処理に失敗しました: ${err.message}`);
@@ -878,7 +878,7 @@ export default function OrderDetailModal({
         await onUpdatePayment(order.id, updatedData, { skipConfirm: true, alreadyUpdated: true });
       }
       setShowEditModal(false);
-      alert('注文内容を更新しました ✅');
+      alert('注文内容を更新しました');
     } catch (err) {
       console.error(err);
       alert(`更新に失敗しました: ${err.message}`);
@@ -914,7 +914,7 @@ export default function OrderDetailModal({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '送信に失敗しました');
-      alert('メールを送信しました ✉️');
+      alert('メールを送信しました');
     } catch (err) {
       alert(`メール送信に失敗しました: ${err.message}`);
     }
@@ -1060,7 +1060,7 @@ export default function OrderDetailModal({
 
             {/* ★ 注文内容・日程の編集ボタン */}
             <button onClick={openEditModal} className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-[10px] md:text-[11px] font-bold text-amber-700 hover:bg-amber-100 transition-all shadow-sm">
-              ✏️ <span className="hidden sm:inline">内容を編集</span>
+              <Edit3 size={14}/> <span className="hidden sm:inline">内容を編集</span>
             </button>
 
             <button onClick={() => onArchive(order.id, modalData.status !== 'completed' && modalData.status !== '完了')} className={`flex items-center gap-1.5 px-3 py-2 text-[10px] md:text-[11px] font-bold rounded-xl transition-all shadow-sm ${modalData.status === 'completed' || modalData.status === '完了' ? 'bg-white border border-[#EAEAEA] text-[#555555]' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b]'}`}>
@@ -1131,7 +1131,7 @@ export default function OrderDetailModal({
                   let trackingNo = '';
                   if (completionInfo.trigger === 'status_shipping_done') {
                     trackingNo = window.prompt(
-                      `📦 佐川急便のお問い合わせ番号 (任意)\n\n` +
+                      `佐川急便のお問い合わせ番号 (任意)\n\n` +
                       `入力した場合、追跡URLが自動でメール本文に含まれます。\n` +
                       `わからない・後で送る場合は空欄のままOKしてください。\n\n` +
                       `お問い合わせ番号:`,
@@ -1143,7 +1143,7 @@ export default function OrderDetailModal({
                   }
 
                   const trackingInfoLine = trackingNo
-                    ? `\n📦 佐川追跡番号: ${trackingNo}（メール本文に追跡URLも自動挿入）`
+                    ? `\n佐川追跡番号: ${trackingNo}（メール本文に追跡URLも自動挿入）`
                     : '';
                   const sendMail = window.confirm(
                     `ステータスを「${completionInfo.label}」に更新します。\n\n` +
@@ -1171,7 +1171,7 @@ export default function OrderDetailModal({
                       });
                       const result = await res.json();
                       if (res.ok) {
-                        alert(`📧 ${completionInfo.label}のお知らせメールを送信しました${trackingNo ? '\n（佐川追跡番号も同送）' : ''}`);
+                        alert(`${completionInfo.label}のお知らせメールを送信しました${trackingNo ? '\n（佐川追跡番号も同送）' : ''}`);
                       } else {
                         alert('メール送信失敗: ' + (result.error || '不明なエラー'));
                       }
@@ -1336,7 +1336,7 @@ export default function OrderDetailModal({
                 {modalData.orderType === 'ec' && Array.isArray(modalData.cartItems) && modalData.cartItems.length > 0 ? (
                   <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA] space-y-3">
                     <div className="flex items-center gap-2 pb-2 border-b border-[#EAEAEA]">
-                      <span className="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded">🛒 EC注文</span>
+                      <span className="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded inline-flex items-center gap-1"><ShoppingBag size={10}/> EC注文</span>
                       <span className="text-[10px] text-[#999999]">{modalData.cartItems.length} 商品 / 合計 {modalData.cartItems.reduce((s, c) => s + (Number(c.qty) || 0), 0)} 点</span>
                     </div>
                     <div className="space-y-3">
@@ -1367,18 +1367,18 @@ export default function OrderDetailModal({
                             {(opt.wrapping || opt.messageCard || opt.textInsertion) && (
                               <div className="ml-[68px] bg-pink-50 rounded-lg p-2 space-y-1 border border-pink-100">
                                 {opt.wrapping && (
-                                  <p className="text-[10px] text-pink-900 font-bold">🎁 ラッピング (+¥{(Number(opt.wrapping.price)||0).toLocaleString()})</p>
+                                  <p className="text-[10px] text-pink-900 font-bold flex items-center gap-1"><Gift size={10}/> ラッピング (+¥{(Number(opt.wrapping.price)||0).toLocaleString()})</p>
                                 )}
                                 {opt.messageCard && (
                                   <div className="text-[10px] text-pink-900">
-                                    <p className="font-bold">💌 メッセージカード {Number(opt.messageCard.price) > 0 ? `(+¥${Number(opt.messageCard.price).toLocaleString()})` : '(無料)'}</p>
+                                    <p className="font-bold flex items-center gap-1"><Mail size={10}/> メッセージカード {Number(opt.messageCard.price) > 0 ? `(+¥${Number(opt.messageCard.price).toLocaleString()})` : '(無料)'}</p>
                                     {opt.messageCard.text && (
                                       <p className="ml-3 text-[10px] text-[#555555] whitespace-pre-wrap mt-0.5">「{opt.messageCard.text}」</p>
                                     )}
                                   </div>
                                 )}
                                 {opt.textInsertion && (
-                                  <p className="text-[10px] text-pink-900 font-bold">✍️ 文字入れ「{opt.textInsertion.text}」({opt.textInsertion.position}) (+¥{(Number(opt.textInsertion.price)||0).toLocaleString()})</p>
+                                  <p className="text-[10px] text-pink-900 font-bold flex items-center gap-1"><Pen size={10}/> 文字入れ「{opt.textInsertion.text}」({opt.textInsertion.position}) (+¥{(Number(opt.textInsertion.price)||0).toLocaleString()})</p>
                                 )}
                               </div>
                             )}
@@ -1589,8 +1589,9 @@ export default function OrderDetailModal({
               </div>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-5 text-[11px] text-blue-900 leading-relaxed">
-              ✉️ 確定すると、お客様に「入金確認・納品日のお知らせ」メールが自動送信されます
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-5 text-[11px] text-blue-900 leading-relaxed flex items-start gap-1.5">
+              <Mail size={12} className="shrink-0 mt-0.5"/>
+              <span>確定すると、お客様に「入金確認・納品日のお知らせ」メールが自動送信されます</span>
             </div>
 
             <div className="flex gap-2">
@@ -1624,18 +1625,19 @@ export default function OrderDetailModal({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="sticky top-0 bg-white border-b border-[#EAEAEA] px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
-              <h3 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2">✏️ 注文内容の編集</h3>
+              <h3 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2"><Pen size={16}/> 注文内容の編集</h3>
               <button onClick={() => !isSavingEdit && setShowEditModal(false)} className="text-[#999] hover:text-[#111] text-[20px] font-bold">✕</button>
             </div>
 
             <div className="p-6 space-y-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[11px] text-blue-900">
-                💡 日程変更・内容変更は電話受付前提。変更内容は対応履歴に記録されます。
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[11px] text-blue-900 flex items-start gap-1.5">
+                <Lightbulb size={12} className="shrink-0 mt-0.5"/>
+                <span>日程変更・内容変更は電話受付前提。変更内容は対応履歴に記録されます。</span>
               </div>
 
               {/* 納品日・時間 */}
               <div className="space-y-3">
-                <h4 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2">📅 納品日・時間</h4>
+                <h4 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2 flex items-center gap-1.5"><CalendarIcon size={14}/> 納品日・時間</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-[11px] font-bold text-[#555] block mb-1">納品日</label>
@@ -1650,7 +1652,7 @@ export default function OrderDetailModal({
 
               {/* お花の種類・用途・色・イメージ */}
               <div className="space-y-3">
-                <h4 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2">🌸 お花の種類・用途・色・イメージ</h4>
+                <h4 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2">お花の種類・用途・色・イメージ</h4>
                 <div>
                   <label className="text-[11px] font-bold text-[#555] block mb-1">お花の種類</label>
                   <input type="text" value={editForm.flowerType} onChange={(e) => setEditForm({...editForm, flowerType: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
@@ -1681,7 +1683,7 @@ export default function OrderDetailModal({
 
               {/* 立札・カード */}
               <div className="space-y-3">
-                <h4 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2">🎴 立札・カード</h4>
+                <h4 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2">立札・カード</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-[11px] font-bold text-[#555] block mb-1">カードタイプ</label>
@@ -1709,7 +1711,7 @@ export default function OrderDetailModal({
 
               {/* 受取方法・配送先 */}
               <div className="space-y-3">
-                <h4 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2">📦 受取方法・配送先</h4>
+                <h4 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2 flex items-center gap-1.5"><Package size={14}/> 受取方法・配送先</h4>
                 <div>
                   <label className="text-[11px] font-bold text-[#555] block mb-1">受取方法</label>
                   <select value={editForm.receiveMethod} onChange={(e) => setEditForm({...editForm, receiveMethod: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]">
@@ -1742,7 +1744,7 @@ export default function OrderDetailModal({
 
               {/* 社内メモ */}
               <div className="space-y-2">
-                <h4 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2">📝 社内メモ</h4>
+                <h4 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2 flex items-center gap-1.5"><FileText size={14}/> 社内メモ</h4>
                 <textarea value={editForm.note} onChange={(e) => setEditForm({...editForm, note: e.target.value})} rows={3} placeholder="変更内容のメモ等" className="w-full px-3 py-2 bg-yellow-50 border border-yellow-300 rounded-lg text-[13px] outline-none focus:border-yellow-500"/>
               </div>
             </div>
@@ -2230,7 +2232,7 @@ export default function OrderDetailModal({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="sticky top-0 bg-white border-b border-[#EAEAEA] px-6 py-4 flex items-center justify-between rounded-t-2xl">
-              <h3 className="text-[15px] font-bold text-[#2D4B3E]">📧 完成写真メールの送信確認</h3>
+              <h3 className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-1.5"><Mail size={15}/> 完成写真メールの送信確認</h3>
               <button
                 onClick={() => setCompletionMailPreview(null)}
                 className="text-[#999] hover:text-[#111] text-[20px] font-bold"
@@ -2240,16 +2242,17 @@ export default function OrderDetailModal({
             </div>
             <div className="p-6 space-y-4">
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <p className="text-[12px] text-amber-900 leading-relaxed">
-                  ⚠️ 下記の内容で <strong>{completionMailPreview.customerEmail}</strong> 宛にメールを送信します。<br/>
-                  写真の内容に問題ないか、ご確認の上「送信する」を押してください。
+                <p className="text-[12px] text-amber-900 leading-relaxed flex items-start gap-1.5">
+                  <AlertCircle size={13} className="shrink-0 mt-0.5"/>
+                  <span>下記の内容で <strong>{completionMailPreview.customerEmail}</strong> 宛にメールを送信します。<br/>
+                  写真の内容に問題ないか、ご確認の上「送信する」を押してください。</span>
                 </p>
               </div>
 
               {/* 写真プレビュー（削除・差し替え・追加可能） */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[11px] font-bold text-[#999]">📷 送信される完成写真 ({completionMailPreview.images.length}枚)</p>
+                  <p className="text-[11px] font-bold text-[#999] flex items-center gap-1"><Camera size={11}/> 送信される完成写真 ({completionMailPreview.images.length}枚)</p>
                   {/* 追加ボタン */}
                   <label className={`text-[10px] font-bold px-3 py-1.5 rounded-lg cursor-pointer transition ${isUploading ? 'bg-gray-100 text-gray-400' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b]'}`}>
                     {isUploading ? 'アップロード中...' : '＋ 写真追加'}
@@ -2303,7 +2306,7 @@ export default function OrderDetailModal({
                       <div className="absolute top-1 right-1 flex gap-1">
                         {/* 差し替えボタン */}
                         <label className={`w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition ${isUploading ? 'bg-gray-300 text-gray-500' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-md'}`} title="この写真を差し替える">
-                          <span className="text-[10px]">📷</span>
+                          <Camera size={10}/>
                           <input
                             type="file"
                             accept="image/*"
@@ -2368,8 +2371,9 @@ export default function OrderDetailModal({
                     </div>
                   ))}
                 </div>
-                <p className="text-[10px] text-[#999] mt-2 leading-relaxed">
-                  💡 各写真の右上で <strong>📷 差し替え</strong> / <strong>× 削除</strong> ができます。「＋ 写真追加」で複数枚一気に追加もOK。
+                <p className="text-[10px] text-[#999] mt-2 leading-relaxed flex items-start gap-1">
+                  <Lightbulb size={11} className="shrink-0 mt-0.5"/>
+                  <span>各写真の右上で <strong>差し替え</strong> / <strong>× 削除</strong> ができます。「＋ 写真追加」で複数枚一気に追加もOK。</span>
                 </p>
               </div>
 
@@ -2377,7 +2381,7 @@ export default function OrderDetailModal({
               <div className="bg-[#FBFAF9] rounded-xl p-4 border border-[#EAEAEA] space-y-3">
                 <div className="flex items-center gap-2">
                   <CalendarIcon size={16} className="text-[#2D4B3E]"/>
-                  <p className="text-[12px] font-bold text-[#2D4B3E]">📅 お届け予定日（メール本文に反映されます）</p>
+                  <p className="text-[12px] font-bold text-[#2D4B3E]">お届け予定日（メール本文に反映されます）</p>
                 </div>
                 <div className="text-[11px] text-[#777] bg-white p-2 rounded border border-[#EAEAEA]">
                   現在の納品予定日: <span className="font-bold text-[#111]">{modalData.selectedDate || '未指定'} {modalData.selectedTime || ''}</span>
@@ -2406,10 +2410,10 @@ export default function OrderDetailModal({
 
               {/* メール本文のサマリー */}
               <div className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg p-3">
-                <p className="text-[10px] font-bold text-[#999] mb-1">📝 メール本文の概要</p>
+                <p className="text-[10px] font-bold text-[#999] mb-1 flex items-center gap-1"><FileText size={10}/> メール本文の概要</p>
                 <p className="text-[12px] text-[#222] leading-relaxed">
                   完成のご案内 + 上の写真と注文情報を記載。<br/>
-                  <strong className="text-[#2D4B3E]">📅 お届け日程のご案内＋日程変更のご相談はお電話で</strong>もご案内します。<br/>
+                  <strong className="text-[#2D4B3E]">お届け日程のご案内＋日程変更のご相談はお電話で</strong>もご案内します。<br/>
                   <span className="text-[10px] text-[#999]">※本文の詳細はオーナーページ → 案内文管理 → 「完成写真のお知らせ」でカスタマイズできます</span>
                 </p>
               </div>
@@ -2417,20 +2421,21 @@ export default function OrderDetailModal({
               <div className="flex gap-2 pt-3 border-t border-[#EAEAEA]">
                 <button
                   onClick={() => setCompletionMailPreview(null)}
-                  className="flex-1 h-11 bg-white border border-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-xl hover:bg-[#FBFAF9]"
+                  className="flex-1 h-11 bg-white border border-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-xl hover:bg-[#FBFAF9] flex items-center justify-center gap-1.5"
                 >
-                  🕒 後で送る
+                  <Clock size={13}/> 後で送る
                 </button>
                 <button
                   onClick={sendCompletionPhotoMail}
                   disabled={isSendingMail}
                   className="flex-1 h-11 bg-[#117768] text-white text-[12px] font-bold rounded-xl hover:bg-[#0f6358] disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
-                  {isSendingMail ? '送信中...' : <>📧 今すぐ送信</>}
+                  {isSendingMail ? '送信中...' : <><Mail size={13}/> 今すぐ送信</>}
                 </button>
               </div>
-              <p className="text-[10px] text-[#999] text-center -mt-1">
-                💡「後で送る」を選んでも、注文詳細の <strong>「完成写真メール送信」ボタン</strong> から、いつでも再度送信できます
+              <p className="text-[10px] text-[#999] text-center -mt-1 flex items-start justify-center gap-1">
+                <Lightbulb size={11} className="shrink-0 mt-0.5"/>
+                <span>「後で送る」を選んでも、注文詳細の <strong>「完成写真メール送信」ボタン</strong> から、いつでも再度送信できます</span>
               </p>
             </div>
           </div>

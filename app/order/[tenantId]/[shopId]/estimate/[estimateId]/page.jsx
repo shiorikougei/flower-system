@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
-import { CheckCircle2, AlertCircle, ChevronLeft, CreditCard, Banknote } from 'lucide-react';
+import { CheckCircle2, AlertCircle, ChevronLeft, CreditCard, Banknote, Clock, Calendar, Lightbulb, FileText, ClipboardList, Mail } from 'lucide-react';
 import TatefudaPreview from '@/components/TatefudaPreview';
 
 export default function EstimateAcceptPage() {
@@ -227,11 +227,11 @@ export default function EstimateAcceptPage() {
           <div className="w-16 h-16 mx-auto bg-emerald-50 rounded-full flex items-center justify-center">
             <CheckCircle2 size={32} className="text-emerald-600"/>
           </div>
-          <h1 className="text-[18px] font-bold text-[#2D4B3E]">🎉 ご注文を確定しました</h1>
-          <p className="text-[12px] text-[#555] leading-relaxed">
-            お見積もりの内容で正式なご注文を承りました。<br/>
-            ご注文番号: <span className="font-mono">{String(done.orderId || '').slice(0, 8)}</span><br/><br/>
-            お振込先などのご案内は、ご登録のメールアドレスへ別途お送りします📩
+          <h1 className="text-[18px] font-bold text-[#2D4B3E]">ご注文を確定しました</h1>
+          <p className="text-[12px] text-[#555] leading-relaxed flex flex-col items-center gap-1">
+            <span>お見積もりの内容で正式なご注文を承りました。</span>
+            <span>ご注文番号: <span className="font-mono">{String(done.orderId || '').slice(0, 8)}</span></span>
+            <span className="flex items-center gap-1 mt-2"><Mail size={12}/> お振込先などのご案内は、ご登録のメールアドレスへ別途お送りします</span>
           </p>
           <Link href={`/order/${tenantId}/${shopId}`} className="inline-block px-6 h-12 leading-[48px] bg-[#2D4B3E] text-white rounded-xl text-[13px] font-bold">
             トップに戻る
@@ -248,7 +248,7 @@ export default function EstimateAcceptPage() {
           <div className="w-16 h-16 mx-auto bg-emerald-50 rounded-full flex items-center justify-center">
             <CheckCircle2 size={32} className="text-emerald-600"/>
           </div>
-          <h1 className="text-[18px] font-bold text-emerald-700">✅ このお見積もりは確定済みです</h1>
+          <h1 className="text-[18px] font-bold text-emerald-700 flex items-center justify-center gap-1"><CheckCircle2 size={18}/> このお見積もりは確定済みです</h1>
           <p className="text-[12px] text-[#555] leading-relaxed">
             既に正式注文に変換されています。<br/>
             重複してのご注文はできません。
@@ -294,7 +294,7 @@ export default function EstimateAcceptPage() {
           <div className="w-16 h-16 mx-auto bg-red-50 rounded-full flex items-center justify-center">
             <AlertCircle size={32} className="text-red-600"/>
           </div>
-          <h1 className="text-[18px] font-bold text-red-700">⏱ このお見積もりは有効期限切れです</h1>
+          <h1 className="text-[18px] font-bold text-red-700 flex items-center justify-center gap-1"><Clock size={18}/> このお見積もりは有効期限切れです</h1>
           <p className="text-[12px] text-[#555] leading-relaxed">
             有効期限: <strong>{expiresAt.toLocaleDateString('ja-JP')}</strong><br/>
             お手数ですが、改めてお見積もりをご依頼いただくか、<br/>
@@ -324,12 +324,12 @@ export default function EstimateAcceptPage() {
       <main className="max-w-[700px] mx-auto px-6 py-10 space-y-6">
         <div>
           <h1 className="text-[22px] font-bold text-[#2D4B3E]">お見積もりのご確認・確定</h1>
-          <p className="text-[11px] text-[#999] mt-1">内容にご納得いただけましたら、下記の情報を入力してご注文を確定してください🌸</p>
+          <p className="text-[11px] text-[#999] mt-1">内容にご納得いただけましたら、下記の情報を入力してご注文を確定してください。</p>
         </div>
 
         {/* 店舗からの確定見積 */}
         <div className="bg-white p-6 rounded-2xl border-2 border-emerald-200 space-y-4">
-          <p className="text-[11px] font-bold text-emerald-700">💐 店舗からの確定見積</p>
+          <p className="text-[11px] font-bold text-emerald-700">店舗からの確定見積</p>
           {estimate.reply_message && (
             <pre className="text-[12px] text-[#222] bg-emerald-50 p-4 rounded-xl whitespace-pre-wrap font-sans leading-relaxed">{estimate.reply_message}</pre>
           )}
@@ -344,7 +344,7 @@ export default function EstimateAcceptPage() {
             if (rows.length === 0) return null;
             return (
               <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-1.5">
-                <p className="text-[11px] font-bold text-emerald-700 mb-2">📋 料金内訳</p>
+                <p className="text-[11px] font-bold text-emerald-700 mb-2 flex items-center gap-1"><ClipboardList size={11}/> 料金内訳</p>
                 {rows.map(([label, amount], i) => (
                   <div key={i} className="flex justify-between text-[12px] text-emerald-900">
                     <span>{label}</span><span className="font-bold">¥{Number(amount).toLocaleString()}</span>
@@ -364,14 +364,14 @@ export default function EstimateAcceptPage() {
           {/* [見積-1] 有効期限バナー */}
           {expiresAt && (
             <div className={`rounded-xl p-3 text-center border-2 ${isNearExpiry ? 'bg-amber-50 border-amber-300' : 'bg-blue-50 border-blue-200'}`}>
-              <p className={`text-[11px] font-bold ${isNearExpiry ? 'text-amber-800' : 'text-blue-800'}`}>
-                ⏱ お見積もり有効期限: <strong>{expiresAt.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</strong>
+              <p className={`text-[11px] font-bold flex items-center justify-center gap-1 ${isNearExpiry ? 'text-amber-800' : 'text-blue-800'}`}>
+                <Clock size={11}/> お見積もり有効期限: <strong>{expiresAt.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</strong>
                 {daysUntilExpiry !== null && (
                   <span className="ml-1">（あと <strong>{daysUntilExpiry}</strong>日）</span>
                 )}
               </p>
               {isNearExpiry && (
-                <p className="text-[10px] text-amber-700 mt-1">期限が近いです。お早めにご確定ください🌸</p>
+                <p className="text-[10px] text-amber-700 mt-1">期限が近いです。お早めにご確定ください。</p>
               )}
             </div>
           )}
@@ -379,7 +379,7 @@ export default function EstimateAcceptPage() {
 
         {/* ご注文者情報 */}
         <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-4">
-          <p className="text-[13px] font-bold text-[#2D4B3E]">📝 ご注文者情報</p>
+          <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-1"><FileText size={13}/> ご注文者情報</p>
           <div className="space-y-2">
             <label className="text-[11px] font-bold text-[#555]">郵便番号 <span className="text-red-500">*</span></label>
             <input
@@ -404,7 +404,7 @@ export default function EstimateAcceptPage() {
         {/* ★ お供え情報 (用途がお供えの場合) */}
         {isOsonae && (
           <div className="bg-gray-50 p-6 rounded-2xl border-2 border-gray-300 space-y-4">
-            <p className="text-[13px] font-bold text-gray-700">🙏 お供え花 詳細情報</p>
+            <p className="text-[13px] font-bold text-gray-700">お供え花 詳細情報</p>
             <p className="text-[11px] text-gray-600">立札や手配に使用させていただきます。</p>
             <input type="text" placeholder="故人さまのお名前 *"
               value={orderForm.osonaeInfo.deceasedName}
@@ -432,7 +432,7 @@ export default function EstimateAcceptPage() {
         {/* ★ 立札詳細 (cardType=tatefuda の場合) */}
         {needsTatefuda && (
           <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-4">
-            <p className="text-[13px] font-bold text-[#2D4B3E]">📋 立札の詳細</p>
+            <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-1"><ClipboardList size={13}/> 立札の詳細</p>
             <div className="space-y-2">
               <label className="text-[11px] font-bold text-[#555]">レイアウト <span className="text-red-500">*</span></label>
               <select value={orderForm.tatePattern}
@@ -449,14 +449,14 @@ export default function EstimateAcceptPage() {
                 {selectedPattern.needs.includes('3') && (
                   <div className="space-y-1">
                     <textarea placeholder={"③ 贈り主 (例: 株式会社〇〇)\n※連名はEnterで改行"} value={orderForm.tateInput3} onChange={e => setOrderForm({...orderForm, tateInput3: e.target.value})} rows={2} className="w-full px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E] resize-y"/>
-                    <p className="text-[10px] text-[#999] pl-1">💡 連名: Enterで改行</p>
+                    <p className="text-[10px] text-[#999] pl-1 flex items-center gap-1"><Lightbulb size={10}/> 連名: Enterで改行</p>
                   </div>
                 )}
                 {selectedPattern.needs.includes('3a') && <input type="text" placeholder="③-1 会社名" value={orderForm.tateInput3a} onChange={e => setOrderForm({...orderForm, tateInput3a: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>}
                 {selectedPattern.needs.includes('3b') && (
                   <div className="space-y-1">
                     <textarea placeholder={"③-2 役職・氏名\n※連名はEnterで改行"} value={orderForm.tateInput3b} onChange={e => setOrderForm({...orderForm, tateInput3b: e.target.value})} rows={2} className="w-full px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E] resize-y"/>
-                    <p className="text-[10px] text-[#999] pl-1">💡 連名: Enterで改行</p>
+                    <p className="text-[10px] text-[#999] pl-1 flex items-center gap-1"><Lightbulb size={10}/> 連名: Enterで改行</p>
                   </div>
                 )}
 
@@ -480,7 +480,7 @@ export default function EstimateAcceptPage() {
         {/* ★ 自社配達の事前連絡同意 */}
         {isDelivery && (
           <div className="bg-amber-50 p-5 rounded-2xl border-2 border-amber-200 space-y-3">
-            <p className="text-[12px] font-bold text-amber-900">⚠️ 自社配達のご案内</p>
+            <p className="text-[12px] font-bold text-amber-900 flex items-center gap-1"><AlertCircle size={13}/> 自社配達のご案内</p>
             <p className="text-[11px] text-amber-800 leading-relaxed">
               自社配達では、お届け先のご都合確認のため、<strong>配達前にお届け先様へ直接お電話</strong>させていただく場合がございます。<br/>
               ご同意いただけない場合は、業者配送（佐川急便）でお受けすることもできますので、店舗までご相談ください。
@@ -496,12 +496,12 @@ export default function EstimateAcceptPage() {
 
         {/* お支払い方法 */}
         <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-4">
-          <p className="text-[13px] font-bold text-[#2D4B3E]">💳 お支払い方法</p>
+          <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-1"><CreditCard size={13}/> お支払い方法</p>
 
           {/* ★ キャンセル・返金不可のご案内 */}
           <div className="bg-red-50 border border-red-300 rounded-xl p-4">
             <p className="text-[12px] font-bold text-red-700 flex items-center gap-1.5 mb-1.5">
-              ⚠️ ご入金後のキャンセル・返金について
+              <AlertCircle size={13}/> ご入金後のキャンセル・返金について
             </p>
             <p className="text-[11px] text-red-900 leading-relaxed">
               <strong>お客様都合でのご入金後のキャンセル・返金は承っておりません。</strong><br/>
@@ -514,14 +514,14 @@ export default function EstimateAcceptPage() {
             <button type="button"
               onClick={() => setOrderForm({...orderForm, paymentMethod: 'bank_transfer'})}
               className={`p-4 rounded-xl border-2 text-left transition-all ${orderForm.paymentMethod === 'bank_transfer' ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white shadow-md' : 'bg-white border-[#EAEAEA] text-[#555]'}`}>
-              <div className="flex items-center gap-2 mb-1"><Banknote size={18}/><span className="text-[13px] font-bold">🏦 銀行振込</span></div>
+              <div className="flex items-center gap-2 mb-1"><Banknote size={18}/><span className="text-[13px] font-bold">銀行振込</span></div>
               <p className={`text-[10px] ${orderForm.paymentMethod === 'bank_transfer' ? 'text-white/80' : 'text-[#999]'}`}>ご注文確定後、振込先をメールでお送りします。<strong>お支払い確認後から制作を開始</strong>いたします。</p>
             </button>
             <button type="button"
               onClick={() => stripeEnabled && setOrderForm({...orderForm, paymentMethod: 'card'})}
               disabled={!stripeEnabled}
               className={`p-4 rounded-xl border-2 text-left transition-all ${orderForm.paymentMethod === 'card' ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white shadow-md' : 'bg-white border-[#EAEAEA] text-[#555]'} ${!stripeEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
-              <div className="flex items-center gap-2 mb-1"><CreditCard size={18}/><span className="text-[13px] font-bold">💳 クレジットカード</span></div>
+              <div className="flex items-center gap-2 mb-1"><CreditCard size={18}/><span className="text-[13px] font-bold">クレジットカード</span></div>
               <p className={`text-[10px] ${orderForm.paymentMethod === 'card' ? 'text-white/80' : 'text-[#999]'}`}>{stripeEnabled ? 'Stripeで安全に決済' : '※この店舗では利用不可'}</p>
             </button>
           </div>
@@ -532,7 +532,7 @@ export default function EstimateAcceptPage() {
               {/* 制作開始タイミング強調 */}
               <div className="bg-[#D97D54] text-white rounded-xl p-5 shadow-md">
                 <p className="text-[16px] font-bold mb-2 flex items-center gap-2">
-                  ⏱️ お支払い確認後から制作開始
+                  <Clock size={16}/> お支払い確認後から制作開始
                 </p>
                 <p className="text-[11px] leading-relaxed opacity-95">
                   銀行振込の場合、<strong className="text-yellow-200 underline">ご入金確認後</strong>からお花の仕入れ・制作を開始いたします。<br/>
@@ -543,7 +543,7 @@ export default function EstimateAcceptPage() {
               {/* 入金予定日（必須）＋電話案内 */}
               <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-[12px] font-bold text-amber-900">📅 ご入金予定日</label>
+                  <label className="text-[12px] font-bold text-amber-900 flex items-center gap-1"><Calendar size={13}/> ご入金予定日</label>
                   <span className="text-[10px] bg-red-50 text-red-600 font-bold px-2 py-0.5 rounded">必須</span>
                 </div>
                 <input
@@ -556,17 +556,19 @@ export default function EstimateAcceptPage() {
                 />
                 <p className="text-[10px] text-amber-700">※ お振込み予定の日付を選択してください</p>
 
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-[11px] text-yellow-900 leading-relaxed">
-                  💡 ご入金のタイミングに関するご相談がある場合は、<strong>ご注文確定後にお電話</strong>にてお問い合わせください。<br/>
-                  <span className="text-[10px] text-yellow-700">（お電話番号は注文完了画面・確認メールでご案内します）</span>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-[11px] text-yellow-900 leading-relaxed flex items-start gap-1">
+                  <Lightbulb size={12} className="mt-0.5 shrink-0"/>
+                  <span>ご入金のタイミングに関するご相談がある場合は、<strong>ご注文確定後にお電話</strong>にてお問い合わせください。<br/>
+                  <span className="text-[10px] text-yellow-700">（お電話番号は注文完了画面・確認メールでご案内します）</span></span>
                 </div>
               </div>
             </div>
           )}
 
           {orderForm.paymentMethod === 'card' && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-[11px] text-blue-900">
-              💡 「決済へ進む」を押すと、安全なStripe決済ページへ移動します。
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-[11px] text-blue-900 flex items-start gap-1">
+              <Lightbulb size={12} className="mt-0.5 shrink-0"/>
+              <span>「決済へ進む」を押すと、安全なStripe決済ページへ移動します。</span>
             </div>
           )}
         </div>
@@ -583,8 +585,8 @@ export default function EstimateAcceptPage() {
         </label>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-[12px] text-red-700 font-bold">
-            ⚠️ {error}
+          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-[12px] text-red-700 font-bold flex items-center gap-1">
+            <AlertCircle size={13}/> {error}
           </div>
         )}
 

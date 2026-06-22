@@ -36,7 +36,7 @@ export async function GET(request) {
 
     const supabase = admin();
 
-    // ★ 過去の注文から同じ電話番号を持つレコードを検索
+    // 過去の注文から同じ電話番号を持つレコードを検索
     // order_data.customerInfo.phone を中で照合する必要がある (jsonb)
     const { data: orders, error } = await supabase
       .from('orders')

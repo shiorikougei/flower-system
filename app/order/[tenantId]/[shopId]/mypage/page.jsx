@@ -6,7 +6,8 @@ import { supabase } from '@/utils/supabase';
 import {
   ChevronLeft, Package, AlertCircle, CheckCircle2, Mail,
   Calendar, Plus, Trash2, FileText, RotateCcw, Heart,
-  Lock, KeyRound, Eye, EyeOff, AtSign, MessageCircle, Unlink
+  Lock, KeyRound, Eye, EyeOff, AtSign, MessageCircle, Unlink,
+  Lightbulb, ShoppingCart, Smartphone, Inbox
 } from 'lucide-react';
 
 function MyPageContent() {
@@ -119,7 +120,7 @@ function MyPageContent() {
       setHasPassword(true);
       setShowPasswordForm(false);
       setPwForm({ password: '', confirm: '' });
-      alert('パスワードを設定しました 🔒\n次回からメアド + パスワードでログイン可能です。');
+      alert('パスワードを設定しました。\n次回からメアド + パスワードでログイン可能です。');
     } catch (e) {
       alert('設定に失敗しました: ' + e.message);
     } finally {
@@ -372,7 +373,7 @@ function MyPageContent() {
       // ★ LINEブラウザ等で window.open() がブロックされた場合のフォールバック
       //   ユーザーに外部ブラウザで開くよう案内
       alert(
-        '⚠️ 領収書を発行できませんでした。\n\n' +
+        '領収書を発行できませんでした。\n\n' +
         'LINEアプリ内ブラウザでは正しく表示できない場合があります。\n\n' +
         '【対処方法】\n' +
         '右上の「︙」メニューから\n' +
@@ -511,10 +512,11 @@ function MyPageContent() {
               <h2 className="text-[18px] font-bold text-[#2D4B3E] mb-4">ご注文履歴 ({data.orders.length}件)</h2>
               {/* LINEブラウザでの領収書表示問題のヒント */}
               {data.orders.some(o => paymentBadge(o).text === '入金済') && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 text-[11px] text-blue-900 leading-relaxed">
-                  💡 <strong>領収書がうまく開かない場合</strong><br/>
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 text-[11px] text-blue-900 leading-relaxed flex items-start gap-1.5">
+                  <Lightbulb size={13} className="mt-0.5 shrink-0"/>
+                  <span><strong>領収書がうまく開かない場合</strong><br/>
                   LINE内ブラウザでは PDF表示できないことがあります。<br/>
-                  画面右上「︙」メニュー →「他のブラウザで開く」を選択してから領収書ボタンを押してください。
+                  画面右上「︙」メニュー →「他のブラウザで開く」を選択してから領収書ボタンを押してください。</span>
                 </div>
               )}
               {data.orders.length === 0 ? (
@@ -536,7 +538,7 @@ function MyPageContent() {
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${badge.cls}`}>{badge.label}</span>
-                          {d.orderType === 'ec' && <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">🛒 EC注文</span>}
+                          {d.orderType === 'ec' && <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1"><ShoppingCart size={10}/> EC注文</span>}
                           {d.status === 'completed' && <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-[#FBFAF9] text-[#555555] border border-[#EAEAEA]">手配完了</span>}
                         </div>
                         <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA] space-y-1 text-[12px]">
@@ -610,9 +612,10 @@ function MyPageContent() {
                     placeholder="new-email@example.com"
                     className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"
                   />
-                  <div className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 leading-relaxed">
-                    ⚠️ 確認リンクをクリックして変更完了するまで、現在のメールアドレスは有効です。<br/>
-                    旧メールアドレス宛にも変更通知メールが送信されます。
+                  <div className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 leading-relaxed flex items-start gap-1">
+                    <AlertCircle size={11} className="mt-0.5 shrink-0"/>
+                    <span>確認リンクをクリックして変更完了するまで、現在のメールアドレスは有効です。<br/>
+                    旧メールアドレス宛にも変更通知メールが送信されます。</span>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -672,7 +675,7 @@ function MyPageContent() {
                   <p className="text-[11px] text-[#999] leading-relaxed">
                     {hasPassword
                       ? 'メールアドレス + パスワードでログインできます。万一忘れた場合はMagic Linkで再設定可能です。'
-                      : '未設定の場合は毎回「メールで届くリンク」でログインしていただきます。パスワードを設定すると、メールを開かずにマイページへ素早くアクセスできます🔑'}
+                      : '未設定の場合は毎回「メールで届くリンク」でログインしていただきます。パスワードを設定すると、メールを開かずにマイページへ素早くアクセスできます。'}
                   </p>
                 ) : (
                   <div className="space-y-3">
@@ -740,13 +743,13 @@ function MyPageContent() {
                 {lineLinks.filter(l => l.is_active).length === 0 ? (
                   <>
                     <div className="bg-[#06C755]/5 border border-[#06C755]/30 rounded-xl p-3 space-y-2">
-                      <p className="text-[12px] font-bold text-[#2D4B3E]">📱 LINE通知の登録手順</p>
+                      <p className="text-[12px] font-bold text-[#2D4B3E] flex items-center gap-1"><Smartphone size={12}/> LINE通知の登録手順</p>
                       <ol className="text-[11px] text-[#555] leading-relaxed space-y-1.5 list-decimal pl-4">
                         <li>下のボタンから当店公式LINEを友達追加</li>
-                        <li>LINEのリッチメニューの <strong>「📧 LINE連携」</strong> ボタンをタップ</li>
+                        <li>LINEのリッチメニューの <strong>「LINE連携」</strong> ボタンをタップ</li>
                         <li>FLORIXからメールアドレス送信のご案内が届きます</li>
                         <li>このマイページにご登録の <strong>{data?.email || 'メールアドレス'}</strong> をLINEトークに送信</li>
-                        <li>連携完了🎉</li>
+                        <li>連携完了</li>
                       </ol>
                     </div>
                     {lineAddFriendUrl ? (
@@ -754,9 +757,9 @@ function MyPageContent() {
                         href={lineAddFriendUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block w-full h-12 leading-[48px] text-center bg-[#06C755] text-white rounded-xl font-bold text-[13px] hover:bg-[#05a548] transition-all"
+                        className="flex items-center justify-center gap-2 w-full h-12 text-center bg-[#06C755] text-white rounded-xl font-bold text-[13px] hover:bg-[#05a548] transition-all"
                       >
-                        💬 LINEで通知を受け取る（友達追加）
+                        <MessageCircle size={14}/> LINEで通知を受け取る（友達追加）
                       </a>
                     ) : (
                       <p className="text-[11px] text-[#999] italic">※この店舗はまだLINE通知に対応していません</p>
@@ -798,20 +801,21 @@ function MyPageContent() {
                     )}
                   </>
                 )}
-                <div className="text-[10px] text-[#999] leading-relaxed bg-[#FBFAF9] p-2.5 rounded-lg mt-2">
-                  💡 LINEを機種変更した場合は、新しいLINEで友達追加 → メールアドレス送信で、自動的に新アカウントに切り替わります。
+                <div className="text-[10px] text-[#999] leading-relaxed bg-[#FBFAF9] p-2.5 rounded-lg mt-2 flex items-start gap-1">
+                  <Lightbulb size={11} className="mt-0.5 shrink-0"/>
+                  <span>LINEを機種変更した場合は、新しいLINEで友達追加 → メールアドレス送信で、自動的に新アカウントに切り替わります。</span>
                 </div>
 
                 {/* ★ 通知方法の選択 (LINE連携あり時のみ表示) */}
                 {lineLinks.filter(l => l.is_active).length > 0 && (
                   <div className="border-t border-[#EAEAEA] pt-4 mt-2 space-y-2">
-                    <p className="text-[12px] font-bold text-[#2D4B3E]">📨 通知の受け取り方法</p>
+                    <p className="text-[12px] font-bold text-[#2D4B3E] flex items-center gap-1"><Inbox size={12}/> 通知の受け取り方法</p>
                     <p className="text-[10px] text-[#999]">ご注文進捗・完成写真などをどちらで受け取るかを選べます。</p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       {[
-                        { value: 'both', icon: '📧💬', label: 'メール + LINE', desc: 'どちらにも届く' },
-                        { value: 'line_only', icon: '💬', label: 'LINE のみ', desc: 'メール送信なし' },
-                        { value: 'email_only', icon: '📧', label: 'メールのみ', desc: 'LINE送信なし' },
+                        { value: 'both', Icon: Mail, Icon2: MessageCircle, label: 'メール + LINE', desc: 'どちらにも届く' },
+                        { value: 'line_only', Icon: MessageCircle, label: 'LINE のみ', desc: 'メール送信なし' },
+                        { value: 'email_only', Icon: Mail, label: 'メールのみ', desc: 'LINE送信なし' },
                       ].map(opt => (
                         <button
                           key={opt.value}
@@ -823,7 +827,10 @@ function MyPageContent() {
                               : 'bg-white border-[#EAEAEA] text-[#555] hover:border-[#06C755]'
                           } disabled:opacity-50`}
                         >
-                          <div className="text-[14px] mb-0.5">{opt.icon}</div>
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <opt.Icon size={14}/>
+                            {opt.Icon2 && <opt.Icon2 size={14}/>}
+                          </div>
                           <div className="text-[12px] font-bold">{opt.label}</div>
                           <div className={`text-[10px] mt-0.5 ${notificationPref === opt.value ? 'text-white/80' : 'text-[#999]'}`}>
                             {opt.desc}
@@ -850,7 +857,7 @@ function MyPageContent() {
               </div>
               <div className="p-5 space-y-2">
                 <p className="text-[11px] text-[#999] leading-relaxed mb-3">
-                  記念日（誕生日・結婚記念日・月命日など）を登録すると、1週間前にメールでお知らせいたします💐
+                  記念日（誕生日・結婚記念日・月命日など）を登録すると、1週間前にメールでお知らせいたします。
                 </p>
                 {anniversaries.length === 0 && !showAnnivForm ? (
                   <p className="text-[12px] text-[#999] py-4 text-center">まだ登録された記念日はありません</p>

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
-import { ChevronLeft, Send, CheckCircle2, ImagePlus, X, Loader2 } from 'lucide-react';
+import { ChevronLeft, Send, CheckCircle2, ImagePlus, X, Loader2, AlertCircle, Truck, MapPin, Lightbulb, MessageCircle, Mail, Smartphone, ClipboardList, Link as LinkIcon } from 'lucide-react';
 import { validateImageFile } from '@/utils/fileValidation';
 
 // ★ ヒアリング選択肢
@@ -224,18 +224,18 @@ export default function EstimatePage() {
     const raw = String(address).replace(/[\s　]+/g, '');
     // 札幌北区フリーエリア
     const free = ['23','24','25','26','27'].some(n => ['3','4','5'].some(w => raw.includes(`北${n}条西${w}`)));
-    if (free) return { area: 'free', label: '🎉 配送無料エリア' };
+    if (free) return { area: 'free', label: '配送無料エリア' };
     // 店舗設定のエリア
     const areas = appSettings?.deliveryAreas || [];
     for (const a of areas) {
       const keys = (a.name||'').split(',').map(k => k.trim()).filter(k => k);
-      if (keys.some(k => raw.includes(k))) return { area: 'in', label: `🚚 配達対応エリア (¥${Number(a.fee).toLocaleString()})` };
+      if (keys.some(k => raw.includes(k))) return { area: 'in', label: `配達対応エリア (¥${Number(a.fee).toLocaleString()})` };
     }
     // デフォルト判定
-    if (/厚別区|清田区|南区/.test(raw)) return { area: 'in', label: '🚚 配達対応エリア (¥1,000)' };
-    if (/白石区|豊平区|手稲区|石狩市/.test(raw)) return { area: 'in', label: '🚚 配達対応エリア (¥800)' };
-    if (/北区|中央区|東区|西区/.test(raw)) return { area: 'in', label: '🚚 配達対応エリア (¥500)' };
-    return { area: 'out', label: '⚠️ 自社配達対応エリア外' };
+    if (/厚別区|清田区|南区/.test(raw)) return { area: 'in', label: '配達対応エリア (¥1,000)' };
+    if (/白石区|豊平区|手稲区|石狩市/.test(raw)) return { area: 'in', label: '配達対応エリア (¥800)' };
+    if (/北区|中央区|東区|西区/.test(raw)) return { area: 'in', label: '配達対応エリア (¥500)' };
+    return { area: 'out', label: '自社配達対応エリア外' };
   }
   const areaJudgement = isDelivery && form.deliveryAddress1 ? judgeDeliveryArea(form.deliveryAddress1 + form.deliveryAddress2) : null;
 
@@ -342,7 +342,7 @@ export default function EstimatePage() {
             <h1 className="text-[18px] font-bold text-[#2D4B3E]">お見積もりのご依頼を受け付けました</h1>
             <p className="text-[12px] text-[#555] leading-relaxed">
               内容を確認の上、お見積もり結果をご登録のメールアドレス宛にお送りいたします。<br/>
-              通常 1〜2営業日以内にご連絡いたします🌸
+              通常 1〜2営業日以内にご連絡いたします。
             </p>
           </div>
 
@@ -350,25 +350,25 @@ export default function EstimatePage() {
           {appSettings?.lineConfig?.enabled && appSettings?.lineConfig?.addFriendUrl && (
             <div className="bg-[#06C755]/5 border-2 border-[#06C755]/30 rounded-2xl p-5 space-y-3 mt-4">
               <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2">
-                💬 LINEでも受け取り可能です
+                <MessageCircle size={14}/> LINEでも受け取り可能です
               </p>
               <p className="text-[11px] text-[#555] leading-relaxed">
                 公式LINEを友達追加していただくと、お見積もり結果や注文後の進捗・完成写真を
-                <strong className="text-[#06C755]">LINEのトーク</strong>でもお届けできます🌸<br/>
+                <strong className="text-[#06C755]">LINEのトーク</strong>でもお届けできます。<br/>
                 メール受信より気付きやすいのでおすすめです！
               </p>
               <div className="bg-white rounded-lg p-3 space-y-2">
-                <p className="text-[11px] font-bold text-[#2D4B3E]">📱 登録手順</p>
+                <p className="text-[11px] font-bold text-[#2D4B3E] flex items-center gap-1"><Smartphone size={12}/> 登録手順</p>
                 <ol className="text-[11px] text-[#555] leading-relaxed pl-4 list-decimal space-y-1">
                   <li>下のボタンから公式LINEを友達追加</li>
-                  <li>リッチメニュー「📧 LINE連携する」をタップ</li>
+                  <li>リッチメニュー「LINE連携する」をタップ</li>
                   <li>ご入力のメアド <strong>{form.customerEmail}</strong> を送信</li>
-                  <li>連携完了🎉</li>
+                  <li>連携完了</li>
                 </ol>
               </div>
               <a href={appSettings.lineConfig.addFriendUrl} target="_blank" rel="noopener noreferrer"
-                className="block w-full h-12 leading-[48px] text-center bg-[#06C755] hover:bg-[#05a548] text-white rounded-xl font-bold text-[13px]">
-                💬 当店公式LINEを友達追加する
+                className="flex items-center justify-center gap-2 w-full h-12 text-center bg-[#06C755] hover:bg-[#05a548] text-white rounded-xl font-bold text-[13px]">
+                <MessageCircle size={14}/> 当店公式LINEを友達追加する
               </a>
             </div>
           )}
@@ -476,7 +476,7 @@ export default function EstimatePage() {
 
           {isDelivery && (
             <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 space-y-3">
-              <p className="text-[11px] font-bold text-blue-900">📍 お届け先情報</p>
+              <p className="text-[11px] font-bold text-blue-900 flex items-center gap-1"><MapPin size={12}/> お届け先情報</p>
 
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-blue-900">郵便番号 (7桁・ハイフンなし)</label>
@@ -525,7 +525,7 @@ export default function EstimatePage() {
                   {areaJudgement.area === 'out' ? (
                     <p>
                       ご入力いただいたお届け先は<strong>自社配達対応エリア外</strong>となりますが、
-                      配達状況によってはお受けできる場合もございます🌸<br/>
+                      配達状況によってはお受けできる場合もございます。<br/>
                       お見積もりと合わせて相談させていただきますので、このまま送信してください。
                     </p>
                   ) : (
@@ -671,8 +671,8 @@ export default function EstimatePage() {
           )}
 
           {form.referenceImages.length === 10 && (
-            <p className="text-[10px] text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">
-              ⚠️ 最大枚数 (10枚) に達しました。追加するには既存画像を削除してください。
+            <p className="text-[10px] text-amber-700 bg-amber-50 px-3 py-2 rounded-lg flex items-center gap-1">
+              <AlertCircle size={11}/> 最大枚数 (10枚) に達しました。追加するには既存画像を削除してください。
             </p>
           )}
         </div>
@@ -686,7 +686,7 @@ export default function EstimatePage() {
 
           {/* 管理番号 */}
           <div className="space-y-2">
-            <label className={labelCls}>📋 管理番号 <span className="text-[10px] text-[#999]">（複数の場合は改行で区切り）</span></label>
+            <label className={labelCls + " flex items-center gap-1"}><ClipboardList size={11}/> 管理番号 <span className="text-[10px] text-[#999]">（複数の場合は改行で区切り）</span></label>
             <textarea
               rows={2}
               placeholder={'例:\n20260514-001\n20260520-003'}
@@ -694,14 +694,15 @@ export default function EstimatePage() {
               onChange={e => setForm({...form, instagramManagementNos: e.target.value})}
               className="w-full px-4 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] text-[#111] font-mono outline-none focus:border-[#117768] resize-none leading-relaxed"
             />
-            <p className="text-[10px] text-[#999]">
-              💡 管理番号は当店のInstagram投稿のキャプション冒頭に <code className="bg-[#FBFAF9] px-1 rounded">📋 ◯◯◯◯◯◯◯◯-◯◯◯</code> の形式で記載されています
+            <p className="text-[10px] text-[#999] flex items-start gap-1">
+              <Lightbulb size={11} className="mt-0.5 shrink-0"/>
+              <span>管理番号は当店のInstagram投稿のキャプション冒頭に <code className="bg-[#FBFAF9] px-1 rounded">◯◯◯◯◯◯◯◯-◯◯◯</code> の形式で記載されています</span>
             </p>
           </div>
 
           {/* URL */}
           <div className="space-y-2">
-            <label className={labelCls}>🔗 投稿URL <span className="text-[10px] text-[#999]">（管理番号がない場合・複数の場合は改行で区切り）</span></label>
+            <label className={labelCls + " flex items-center gap-1"}><LinkIcon size={11}/> 投稿URL <span className="text-[10px] text-[#999]">（管理番号がない場合・複数の場合は改行で区切り）</span></label>
             <textarea
               rows={2}
               placeholder={'例:\nhttps://www.instagram.com/p/XXXXXXX/'}
@@ -714,7 +715,7 @@ export default function EstimatePage() {
           {/* URL 取得方法のヒント */}
           <details className="bg-blue-50 border border-blue-200 rounded-xl p-3 group">
             <summary className="cursor-pointer text-[11px] font-bold text-blue-900 list-none flex items-center justify-between">
-              <span>📱 Instagram投稿URLの取得方法</span>
+              <span className="flex items-center gap-1"><Smartphone size={12}/> Instagram投稿URLの取得方法</span>
               <span className="text-[10px] text-blue-600 group-open:rotate-180 transition-transform">▼</span>
             </summary>
             <div className="mt-3 space-y-2 text-[11px] text-blue-900 leading-relaxed">
@@ -731,8 +732,9 @@ export default function EstimatePage() {
                 <li>ブラウザ上部のアドレスバーのURLをコピー</li>
                 <li>↑の入力欄に貼り付け</li>
               </ol>
-              <p className="text-[10px] text-blue-700 bg-blue-100 rounded px-2 py-1.5 mt-2">
-                💡 URL例: <code className="bg-white px-1 rounded">https://www.instagram.com/p/XXXXXXX/</code> の形式（公開投稿のみ）
+              <p className="text-[10px] text-blue-700 bg-blue-100 rounded px-2 py-1.5 mt-2 flex items-start gap-1">
+                <Lightbulb size={11} className="mt-0.5 shrink-0"/>
+                <span>URL例: <code className="bg-white px-1 rounded">https://www.instagram.com/p/XXXXXXX/</code> の形式（公開投稿のみ）</span>
               </p>
             </div>
           </details>
@@ -756,9 +758,10 @@ export default function EstimatePage() {
           </button>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-[11px] text-blue-900 leading-relaxed">
-          💡 通常 1〜2 営業日以内にメールでお見積もり結果をご連絡いたします。<br/>
-          内容にご納得いただいてから正式注文への変換が可能です。
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-[11px] text-blue-900 leading-relaxed flex items-start gap-1.5">
+          <Lightbulb size={13} className="mt-0.5 shrink-0"/>
+          <span>通常 1〜2 営業日以内にメールでお見積もり結果をご連絡いたします。<br/>
+          内容にご納得いただいてから正式注文への変換が可能です。</span>
         </div>
 
         {/* LINE案内は依頼完了後の画面に表示するので、ここでは非表示 */}
@@ -766,9 +769,9 @@ export default function EstimatePage() {
           <div className="bg-[#06C755]/5 border-2 border-[#06C755]/30 rounded-2xl p-5 space-y-3">
             <a href={appSettings?.lineConfig?.addFriendUrl}
               target="_blank" rel="noopener noreferrer"
-              className="block w-full h-12 leading-[48px] text-center bg-[#06C755] hover:bg-[#05a548] text-white rounded-xl font-bold text-[13px]"
+              className="flex items-center justify-center gap-2 w-full h-12 text-center bg-[#06C755] hover:bg-[#05a548] text-white rounded-xl font-bold text-[13px]"
             >
-              💬 当店公式LINEを友達追加する
+              <MessageCircle size={14}/> 当店公式LINEを友達追加する
             </a>
           </div>
         )}

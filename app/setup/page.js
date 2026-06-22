@@ -2,7 +2,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../../utils/supabase'; // パスは適宜調整してください
-import { Store, Lock, Mail, ArrowRight, Sparkles, Key, CheckCircle2, Copy } from 'lucide-react';
+import { Store, Lock, Mail, ArrowRight, Sparkles, Key, CheckCircle2, Copy, AlertTriangle } from 'lucide-react';
 
 // 6桁の数字パスワード生成（覚えやすさ重視）
 function generateSystemPassword() {
@@ -103,14 +103,14 @@ function SetupContent() {
               <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto text-emerald-600">
                 <CheckCircle2 size={32}/>
               </div>
-              <h2 className="text-[18px] font-bold text-[#2D4B3E]">🎉 初期設定が完了しました</h2>
+              <h2 className="text-[18px] font-bold text-[#2D4B3E]">初期設定が完了しました</h2>
               <p className="text-[12px] text-[#555] leading-relaxed">
                 ログイン情報を {completed.email} 宛にお送りしました。
               </p>
             </div>
 
             <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-5 space-y-2">
-              <p className="text-[11px] font-bold text-amber-900 tracking-widest">🔑 設定画面ロック解除パスワード（重要）</p>
+              <p className="text-[11px] font-bold text-amber-900 tracking-widest flex items-center gap-1.5"><Key size={12}/> 設定画面ロック解除パスワード（重要）</p>
               <div className="flex items-center gap-2">
                 <div className="flex-1 bg-white border border-amber-300 rounded-lg px-4 py-3 font-mono text-[24px] font-bold text-amber-900 text-center tracking-[0.3em]">
                   {completed.systemPassword}
@@ -123,10 +123,11 @@ function SetupContent() {
                   <Copy size={16}/>
                 </button>
               </div>
-              <p className="text-[10px] text-amber-800 leading-relaxed">
-                ⚠️ このパスワードは設定画面（料金・スタッフ・店舗情報等）の編集時に必要です。<br/>
+              <p className="text-[10px] text-amber-800 leading-relaxed flex items-start gap-1">
+                <AlertTriangle size={12} className="shrink-0 mt-0.5"/>
+                <span>このパスワードは設定画面（料金・スタッフ・店舗情報等）の編集時に必要です。<br/>
                 必ず控えておくか、登録メアドに届いたメールを保存してください。<br/>
-                設定画面のスタッフ管理から変更も可能です。
+                設定画面のスタッフ管理から変更も可能です。</span>
               </p>
             </div>
 

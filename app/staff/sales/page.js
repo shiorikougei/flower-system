@@ -285,7 +285,7 @@ function SalesPageInner() {
       // 3. ローカル State 反映
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o));
       setPaymentModalOrder(null);
-      alert('入金済みに更新し、お客様にメール/LINEを送信しました ✉️');
+      alert('入金済みに更新し、お客様にメール/LINEを送信しました');
     } catch (err) {
       console.error(err);
       alert(`処理に失敗しました: ${err.message}`);
@@ -523,8 +523,8 @@ function SalesPageInner() {
             </div>
 
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-[11px] text-blue-900 leading-relaxed">
-              📊 受付区分が「担当者個人受付」の注文のみを担当者ごとに集計しています。<br/>
-              💡 電話受付・店頭受付は含まれません。担当者が個人で獲得した売上のみが対象です。
+              受付区分が「担当者個人受付」の注文のみを担当者ごとに集計しています。<br/>
+              電話受付・店頭受付は含まれません。担当者が個人で獲得した売上のみが対象です。
             </div>
 
             {byStaffData.length === 0 ? (
@@ -537,7 +537,7 @@ function SalesPageInner() {
                 {byStaffData.map((s, idx) => {
                   const rank = idx + 1;
                   const isTop3 = rank <= 3;
-                  const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
+                  const medal = rank === 1 ? '1' : rank === 2 ? '2' : rank === 3 ? '3' : '';
                   return (
                     <div key={s.staffName} className={`bg-white rounded-2xl p-5 border ${isTop3 ? 'border-[#D97D54] shadow-md' : 'border-[#EAEAEA]'} flex items-center gap-4`}>
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#FBE8DF] to-[#F4D4C4] flex items-center justify-center shrink-0 text-[20px] font-bold text-[#C97D60]">
@@ -578,7 +578,7 @@ function SalesPageInner() {
             {unpaidOrders.length === 0 ? (
               <div className="bg-white rounded-3xl border border-dashed border-[#CCC] p-20 text-center shadow-sm">
                 <div className="flex justify-center mb-4 text-green-500"><CheckCircle2 size={40} /></div>
-                <p className="text-[14px] font-bold text-[#2D4B3E]">未入金のオーダーはありません！素晴らしいです👏</p>
+                <p className="text-[14px] font-bold text-[#2D4B3E]">未入金のオーダーはありません！素晴らしいです</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4">
@@ -755,7 +755,7 @@ function SalesPageInner() {
             </div>
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-5 text-[11px] text-blue-900 leading-relaxed">
-              ✉️ 確定すると、お客様に「入金確認・納品日のお知らせ」メール／LINEが自動送信されます
+              確定すると、お客様に「入金確認・納品日のお知らせ」メール／LINEが自動送信されます
             </div>
 
             <div className="flex gap-2">

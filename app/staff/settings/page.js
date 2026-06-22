@@ -371,7 +371,7 @@ export default function SettingsPage() {
 
         {/* ★ 領収書の印影設定 */}
         <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
-          <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2">🧾 領収書の印影</h3>
+          <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2">領収書の印影</h3>
           <p className="text-[11px] text-[#999] leading-relaxed">
             お客様マイページから発行される領収書PDFの印影を設定します。日本の法律上「印影は必須ではない」ため、印影なしでも有効です。
           </p>
@@ -386,8 +386,8 @@ export default function SettingsPage() {
                 <p className="text-[13px] font-bold text-[#111]">A. 印影なし（テキストのみ）</p>
                 <p className="text-[11px] text-[#555] mt-1">
                   領収書には印影を表示しません。<br/>
-                  💡 <strong>メリット:</strong> 不正利用リスクゼロ・法的にもOK<br/>
-                  💡 <strong>デメリット:</strong> 「公式っぽくない」と感じるお客様も
+                  <strong>メリット:</strong> 不正利用リスクゼロ・法的にもOK<br/>
+                  <strong>デメリット:</strong> 「公式っぽくない」と感じるお客様も
                 </p>
               </div>
             </label>
@@ -401,7 +401,7 @@ export default function SettingsPage() {
                 <p className="text-[13px] font-bold text-[#111]">B. 自動生成印影 <span className="text-[10px] text-[#117768] ml-2">推奨</span></p>
                 <p className="text-[11px] text-[#555] mt-1">
                   店舗名から自動生成される赤い丸印を表示します（実印影ではないデザイン）。<br/>
-                  💡 <strong>メリット:</strong> 安全（不正コピーされても被害がない）・店舗ごとに自動生成
+                  <strong>メリット:</strong> 安全（不正コピーされても被害がない）・店舗ごとに自動生成
                 </p>
                 {/* プレビュー */}
                 <div className="mt-3 inline-flex items-center justify-center w-20 h-20 border-2 border-red-600 rounded-full text-red-600 text-[8px] font-bold opacity-60 leading-tight text-center">
@@ -419,8 +419,8 @@ export default function SettingsPage() {
                 <p className="text-[13px] font-bold text-[#111]">C. 画像アップロード（実印影）</p>
                 <p className="text-[11px] text-[#555] mt-1 leading-relaxed">
                   実際の店舗印を画像（透過PNG推奨）でアップロードして表示します。<br/>
-                  💡 <strong>メリット:</strong> 一番リアル<br/>
-                  ⚠️ <strong>注意:</strong> 領収書PDFから画像を抜き取って悪用されるリスクがあります（実害は限定的だが、認印の使用を推奨）
+                  <strong>メリット:</strong> 一番リアル<br/>
+                  <strong>注意:</strong> 領収書PDFから画像を抜き取って悪用されるリスクがあります（実害は限定的だが、認印の使用を推奨）
                 </p>
 
                 {(generalConfig.receiptStamp?.mode || 'auto') === 'image' && (
@@ -429,8 +429,8 @@ export default function SettingsPage() {
                       <>
                         <input type="file" accept="image/png,image/jpeg" onChange={handleStampImg} className="block w-full text-[11px]"/>
                         <p className="text-[10px] text-[#999] leading-relaxed">
-                          📌 推奨: 透過PNG（背景なし）・正方形・1MB以下<br/>
-                          📌 印影以外（背景）が透過されていないと、領収書上で目立つ白枠が出ます
+                          推奨: 透過PNG（背景なし）・正方形・1MB以下<br/>
+                          印影以外（背景）が透過されていないと、領収書上で目立つ白枠が出ます
                         </p>
                       </>
                     ) : (
@@ -464,11 +464,11 @@ export default function SettingsPage() {
               </div>
               {(generalConfig.systemPassword === '7777' || !generalConfig.systemPassword) && (
                 <div className="mt-3 bg-amber-50 border-2 border-amber-300 rounded-lg p-3 text-[11px] text-amber-900 leading-relaxed">
-                  ⚠️ <strong>初期パスワード「7777」のままです。</strong> セキュリティのため、推測されにくいパスワードに変更して「変更を保存」を押してください。
+                  <strong>初期パスワード「7777」のままです。</strong> セキュリティのため、推測されにくいパスワードに変更して「変更を保存」を押してください。
                 </div>
               )}
               <p className="text-[10px] text-red-700 mt-2">
-                💡 忘れた場合は管理者（NocoLde）に連絡すれば、登録メアド宛に再発行メールを送ります。
+                忘れた場合は管理者（NocoLde）に連絡すれば、登録メアド宛に再発行メールを送ります。
               </p>
             </div>
           </div>
@@ -498,7 +498,7 @@ export default function SettingsPage() {
             <li>・業者配送の注文 → <strong>「配送業者引き渡し完了」</strong> が自動で選択肢に表示</li>
           </ul>
           <p className="text-[10px] text-emerald-600 pt-1 border-t border-emerald-200">
-            💡 注文詳細画面のステータス更新ドロップダウンに、受取方法に該当するもののみ表示されます。
+            注文詳細画面のステータス更新ドロップダウンに、受取方法に該当するもののみ表示されます。
           </p>
         </div>
 
@@ -514,7 +514,7 @@ export default function SettingsPage() {
           {/* 標準モード時の案内 */}
           {statusConfig.type === 'template' && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-[11px] text-blue-900 leading-relaxed">
-              💡 <strong>標準モードは編集できません</strong>（このまま使用されます）。<br/>
+              <strong>標準モードは編集できません</strong>（このまま使用されます）。<br/>
               ステータスを <strong>追加・編集・並び替え</strong> したい場合は、<strong>「カスタム」タブ</strong>に切り替えてください。
             </div>
           )}
@@ -531,7 +531,7 @@ export default function SettingsPage() {
 
         {/* ② 花の種類別 個別ステータス */}
         <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-4">
-          <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2">🌷 花の種類別 個別ステータス</h2>
+          <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2">花の種類別 個別ステータス</h2>
           <p className="text-[11px] text-[#999] leading-relaxed">
             花の種類ごとに専用ステータスを定義できます。<br/>
             設定しない種類は共通ステータスが使われます。
@@ -599,7 +599,7 @@ export default function SettingsPage() {
 
         {/* ③ EC共通ステータス */}
         <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-4">
-          <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2">🛒 EC商品 共通ステータス</h2>
+          <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2">EC商品 共通ステータス</h2>
           <p className="text-[11px] text-[#999]">EC（完成品販売）のステータス。EC商品はすべてこの共通ステータスが適用されます。</p>
           <div className="space-y-2">
             {(statusConfig.ecLabels || []).map((l, i) => (
@@ -623,7 +623,7 @@ export default function SettingsPage() {
 
         {/* ④ 配達管理ステータス */}
         <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-4">
-          <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2">🚚 配達管理 ステータス</h2>
+          <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2">配達管理 ステータス</h2>
           <p className="text-[11px] text-[#999]">配達画面で使用するステータス。配達中・配達完了・不在など、配達状況を管理する用です。</p>
           <div className="space-y-2">
             {(statusConfig.deliveryLabels || []).map((l, i) => (
@@ -771,25 +771,25 @@ export default function SettingsPage() {
               <input type="number" step="0.0000001" value={shop.longitude || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, longitude:e.target.value === '' ? null : Number(e.target.value)}:s))} placeholder="139.7673068" className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/>
             </div>
             <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-xl p-3 text-[11px] text-blue-900 leading-relaxed">
-              📍 <strong>緯度経度の取得方法</strong>:
+              <strong>緯度経度の取得方法</strong>:
               <a href="https://www.google.co.jp/maps" target="_blank" rel="noopener" className="underline font-bold">Google マップ</a> で店舗住所を検索 →
               店舗ピンを<strong>右クリック</strong> → 一番上の数字（例: 35.6809591, 139.7673068）をコピー →
               緯度（最初の数字）と経度（次の数字）をそれぞれの欄に貼り付け。
-              <br/>📌 Google マップでの店舗表示精度UP + LocalBusiness Schema強化に効果絶大。
+              <br/>Google マップでの店舗表示精度UP + LocalBusiness Schema強化に効果絶大。
             </div>
           </div>
 
           {/* ★ [SEO-#12] 店舗紹介文（SEO・お客様向け） */}
           <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
-            <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2">🌸 店舗紹介文（SEO対策）</h3>
+            <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2">店舗紹介文（SEO対策）</h3>
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] font-bold text-amber-900 leading-relaxed">
-              ⚠️ <strong>SEOで一番重要な項目です。</strong><br/>
+              <strong>SEOで一番重要な項目です。</strong><br/>
               テンプレ文章は Google に「重複コンテンツ」と判定されて評価が下がります。<br/>
               <strong>各店舗の独自性を出した文章を必ず手入力</strong>してください。
             </div>
             <div className="space-y-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">📜 店舗紹介・店主の想い <span className="text-red-500">（推奨: 200文字以上）</span></label>
+                <label className="text-[10px] font-bold text-[#999999]">店舗紹介・店主の想い <span className="text-red-500">（推奨: 200文字以上）</span></label>
                 <textarea
                   value={shop.shopIntroduction || ''}
                   onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, shopIntroduction: e.target.value } : s))}
@@ -801,7 +801,7 @@ export default function SettingsPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">💪 こだわり・強み <span className="text-red-500">（推奨: 3点以上を箇条書きで）</span></label>
+                <label className="text-[10px] font-bold text-[#999999]">こだわり・強み <span className="text-red-500">（推奨: 3点以上を箇条書きで）</span></label>
                 <textarea
                   value={shop.shopStrengths || ''}
                   onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, shopStrengths: e.target.value } : s))}
@@ -813,7 +813,7 @@ export default function SettingsPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-[#999999]">📅 創業年</label>
+                  <label className="text-[10px] font-bold text-[#999999]">創業年</label>
                   <input
                     type="number"
                     value={shop.foundedYear || ''}
@@ -825,7 +825,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-[#999999]">👤 代表者・店主名</label>
+                  <label className="text-[10px] font-bold text-[#999999]">代表者・店主名</label>
                   <input
                     type="text"
                     value={shop.ownerName || ''}
@@ -837,7 +837,7 @@ export default function SettingsPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">🏆 受賞歴・資格・専門分野</label>
+                <label className="text-[10px] font-bold text-[#999999]">受賞歴・資格・専門分野</label>
                 <textarea
                   value={shop.shopCredentials || ''}
                   onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, shopCredentials: e.target.value } : s))}
@@ -848,7 +848,7 @@ export default function SettingsPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">🎯 主な対応シーン・用途</label>
+                <label className="text-[10px] font-bold text-[#999999]">主な対応シーン・用途</label>
                 <input
                   type="text"
                   value={shop.shopServices || ''}
@@ -866,7 +866,7 @@ export default function SettingsPage() {
             <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Mail size={16}/> 受注通知メール設定</h3>
             <p className="text-[11px] text-[#999999]">注文・決済・見積依頼が入った時に、店舗のメールアドレスに通知メールを送信します。</p>
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] font-bold text-amber-900 leading-relaxed">
-              ⚠️ 通知メアドが間違っていると、お客様の個人情報が他人に届いてしまいます。<br/>
+              通知メアドが間違っていると、お客様の個人情報が他人に届いてしまいます。<br/>
               新しいメアドを入力したら、<strong>必ず「テスト送信」</strong>で実際に届くか確認してください。
             </div>
             <div className="space-y-3">
@@ -912,14 +912,14 @@ export default function SettingsPage() {
                     });
                     const data = await res.json();
                     if (!res.ok) throw new Error(data.error || '送信失敗');
-                    alert(`✅ テストメールを送信しました\n\n送信先: ${data.sentTo}${data.cc?.length > 0 ? `\nCC: ${data.cc.join(', ')}` : ''}\n\n数分以内にメールが届いているか確認してください。\n届かない場合はメアドが間違っている可能性があります。`);
+                    alert(`テストメールを送信しました\n\n送信先: ${data.sentTo}${data.cc?.length > 0 ? `\nCC: ${data.cc.join(', ')}` : ''}\n\n数分以内にメールが届いているか確認してください。\n届かない場合はメアドが間違っている可能性があります。`);
                   } catch (e) {
-                    alert(`❌ テスト送信に失敗しました\n\n${e.message}`);
+                    alert(`テスト送信に失敗しました\n\n${e.message}`);
                   }
                 }}
                 className="w-full h-10 bg-amber-600 text-white rounded-xl text-[12px] font-bold hover:bg-amber-700 flex items-center justify-center gap-2"
               >
-                ✉️ このメアドにテスト送信して確認する
+                このメアドにテスト送信して確認する
               </button>
               <div className="bg-[#FBFAF9] p-3 rounded-xl space-y-2">
                 <p className="text-[11px] font-bold text-[#2D4B3E] mb-1">通知タイミング（ON/OFF）</p>
@@ -930,7 +930,7 @@ export default function SettingsPage() {
                     onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, notifyOnOrder: e.target.checked } : s))}
                     className="w-4 h-4 accent-[#2D4B3E]"
                   />
-                  <span className="text-[12px] font-bold text-[#555]">📥 お客様から注文が入った時</span>
+                  <span className="text-[12px] font-bold text-[#555]">お客様から注文が入った時</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -939,7 +939,7 @@ export default function SettingsPage() {
                     onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, notifyOnPayment: e.target.checked } : s))}
                     className="w-4 h-4 accent-[#2D4B3E]"
                   />
-                  <span className="text-[12px] font-bold text-[#555]">💳 クレカ決済が完了した時</span>
+                  <span className="text-[12px] font-bold text-[#555]">クレカ決済が完了した時</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -948,7 +948,7 @@ export default function SettingsPage() {
                     onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, notifyOnEstimate: e.target.checked } : s))}
                     className="w-4 h-4 accent-[#2D4B3E]"
                   />
-                  <span className="text-[12px] font-bold text-[#555]">📝 見積依頼が入った時</span>
+                  <span className="text-[12px] font-bold text-[#555]">見積依頼が入った時</span>
                 </label>
               </div>
             </div>
@@ -1100,7 +1100,7 @@ export default function SettingsPage() {
                 />
                 <div className="flex-1">
                   <p className={`text-[13px] font-bold ${item.staffOnly ? 'text-orange-700' : 'text-[#2D4B3E]'}`}>
-                    🏪 店舗注文受付のみ表示
+                    店舗注文受付のみ表示
                   </p>
                   <p className="text-[10px] text-[#999999] leading-tight mt-1">
                     ONにすると、お客様のオンライン注文画面では表示されず、<strong>スタッフの店舗注文受付ページからのみ</strong>選択できるようになります。<br/>
@@ -1214,7 +1214,7 @@ export default function SettingsPage() {
 
         {/* ★ EC専用 箱サイズ別 箱代マスター（業者配送のサイズマスタと連動） */}
         <div className="bg-orange-50 p-5 rounded-xl border-2 border-orange-200 space-y-3">
-          <h3 className="text-[13px] font-bold text-orange-900 flex items-center gap-2">🛒 EC専用 箱サイズ別 箱代</h3>
+          <h3 className="text-[13px] font-bold text-orange-900 flex items-center gap-2">EC専用 箱サイズ別 箱代</h3>
           <p className="text-[10px] text-orange-800 leading-relaxed">
             EC商品の梱包代。商品登録時に選んだ箱サイズに応じて加算されます（カート内の最大サイズで計算）。<br/>
             <strong>業者配送のサイズマスタ（下の「業者配送 サイズ・地域マスタ」のサイズ）と連動します</strong>。サイズを追加・削除すると自動で反映されます。
@@ -1356,7 +1356,7 @@ export default function SettingsPage() {
       : `https://noodleflorix.com/api/line/webhook/${currentTenantId || 'default'}`;
     return (
       <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-6 animate-in fade-in text-left max-w-[800px]">
-        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2">💬 LINE公式アカウント連携 <HelpTooltip articleId="line_setup"/></h2>
+        <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2">LINE公式アカウント連携 <HelpTooltip articleId="line_setup"/></h2>
         <p className="text-[12px] text-[#555555] leading-relaxed">
           LINE Messaging API と連携すると、注文確認・完成写真・入金確認等の通知を
           <strong className="text-[#117768]"> メール + LINE 両方</strong>でお客様にお届けできます。
@@ -1420,7 +1420,7 @@ export default function SettingsPage() {
 
         {/* Webhook URL（コピペ用） */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2">
-          <p className="text-[12px] font-bold text-blue-900">📡 LINE Developers に設定する Webhook URL</p>
+          <p className="text-[12px] font-bold text-blue-900">LINE Developers に設定する Webhook URL</p>
           <div className="flex items-center gap-2">
             <code className="flex-1 bg-white px-3 py-2 rounded-lg text-[11px] font-mono text-blue-900 break-all border border-blue-200">{webhookUrl}</code>
             <button
@@ -1435,7 +1435,7 @@ export default function SettingsPage() {
 
         {/* 連携手順 */}
         <details className="border border-[#EAEAEA] rounded-xl">
-          <summary className="cursor-pointer p-4 text-[12px] font-bold text-[#2D4B3E] hover:bg-[#FBFAF9]">📖 LINE連携の手順を見る</summary>
+          <summary className="cursor-pointer p-4 text-[12px] font-bold text-[#2D4B3E] hover:bg-[#FBFAF9]">LINE連携の手順を見る</summary>
           <div className="p-4 pt-0 text-[11px] text-[#555] leading-relaxed space-y-2">
             <p><strong>1.</strong> <a href="https://developers.line.biz/console/" target="_blank" rel="noopener noreferrer" className="text-[#117768] underline">LINE Developers Console</a> にログイン</p>
             <p><strong>2.</strong> プロバイダーを作成 → 「Messaging API」のチャネルを作成</p>
@@ -1535,13 +1535,13 @@ export default function SettingsPage() {
             </div>
           </div>
           <p className="text-[10px] text-[#999] bg-[#FBFAF9] p-2 rounded-lg leading-relaxed">
-            💡 〆切日を過ぎても受付けるが、自動シフト作成時の優先度が下がる仕様です。
+            〆切日を過ぎても受付けるが、自動シフト作成時の優先度が下がる仕様です。
           </p>
         </div>
 
         {/* ★ 給与計算設定 */}
         <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-4">
-          <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2">💰 給与計算（控除率・残業） <HelpTooltip articleId="payroll_setup"/></h2>
+          <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2">給与計算（控除率・残業） <HelpTooltip articleId="payroll_setup"/></h2>
           <p className="text-[11px] text-[#999] leading-relaxed">
             勤怠記録と時給から、設定した料率通りに給与計算します。<strong className="text-amber-600">最終チェックは社会保険労務士にご依頼ください。</strong>
           </p>
@@ -1623,22 +1623,22 @@ export default function SettingsPage() {
       {/* 権限の凡例 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px]">
         <div className="bg-[#2D4B3E]/5 border border-[#2D4B3E]/20 rounded-xl p-3">
-          <p className="font-bold text-[#2D4B3E] mb-1">🟢 オーナー</p>
+          <p className="font-bold text-[#2D4B3E] mb-1">オーナー</p>
           <p className="text-[#555] leading-relaxed">全機能・設定変更・売上・スタッフ管理</p>
         </div>
         <div className="bg-[#117768]/5 border border-[#117768]/20 rounded-xl p-3">
-          <p className="font-bold text-[#117768] mb-1">🔵 スタッフ</p>
+          <p className="font-bold text-[#117768] mb-1">スタッフ</p>
           <p className="text-[#555] leading-relaxed">注文管理・売上閲覧・顧客管理(設定×)</p>
         </div>
         <div className="bg-[#D97D54]/5 border border-[#D97D54]/20 rounded-xl p-3">
-          <p className="font-bold text-[#D97D54] mb-1">🟠 バイト</p>
+          <p className="font-bold text-[#D97D54] mb-1">バイト</p>
           <p className="text-[#555] leading-relaxed">注文一覧・対応のみ(売上・設定×)</p>
         </div>
       </div>
 
       {/* ★ PIN認証設定 */}
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
-        <p className="text-[13px] font-bold text-amber-900">🔐 スタッフ切替時のPIN認証 <HelpTooltip articleId="pin_lock"/></p>
+        <p className="text-[13px] font-bold text-amber-900">スタッフ切替時のPIN認証 <HelpTooltip articleId="pin_lock"/></p>
         <label className="flex items-start gap-3 cursor-pointer">
           <input type="checkbox" checked={Boolean(staffAuthConfig.requirePin)}
             onChange={(e) => setStaffAuthConfig({...staffAuthConfig, requirePin: e.target.checked})}
@@ -1704,9 +1704,9 @@ export default function SettingsPage() {
                 'border-[#D97D54]/40 text-[#D97D54]'
               }`}
             >
-              <option value="owner">🟢 オーナー</option>
-              <option value="staff">🔵 スタッフ</option>
-              <option value="parttime">🟠 バイト</option>
+              <option value="owner">オーナー</option>
+              <option value="staff">スタッフ</option>
+              <option value="parttime">バイト</option>
             </select>
             <button onClick={()=>setStaffList(staffList.filter((_,idx)=>idx!==i))} className="text-red-300 hover:text-red-500 p-2"><Trash2 size={16}/></button>
             </div>
@@ -1747,7 +1747,7 @@ export default function SettingsPage() {
             {payrollConfig.enabled && (
               <div className="pt-2 border-t border-[#EAEAEA] space-y-2">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <span className="text-[10px] font-bold text-[#117768] tracking-widest">💰 給与:</span>
+                  <span className="text-[10px] font-bold text-[#117768] tracking-widest">給与:</span>
                   <label className="flex items-center gap-1.5 text-[11px] font-bold cursor-pointer">
                     <input type="checkbox" checked={Boolean(s.payrollEnabled)}
                       onChange={(e) => { const next = [...staffList]; next[i] = {...next[i], payrollEnabled: e.target.checked}; setStaffList(next); }}
@@ -1848,7 +1848,7 @@ export default function SettingsPage() {
             }}
             className="text-[11px] bg-white border border-[#2D4B3E] text-[#2D4B3E] px-4 py-2 rounded-full font-bold transition-all hover:bg-[#2D4B3E]/5"
           >
-            📥 プリセット読み込み
+            プリセット読み込み
           </button>
           <button onClick={() => setAutoReplyTemplates([...autoReplyTemplates, { id: `t_${Date.now()}`, trigger: 'custom', targetShops: 'all', enabled: true, subject: '新しいテンプレート', body: '' }])} className="text-[11px] bg-[#2D4B3E] text-white px-4 py-2 rounded-full font-bold shadow-sm transition-all hover:bg-[#1f352b]">+ 追加</button>
         </div>
@@ -1867,7 +1867,7 @@ export default function SettingsPage() {
                 <div className="flex items-start justify-between gap-3 pr-12 pb-3 border-b border-[#EAEAEA]">
                   <div className="flex-1 min-w-0">
                     <p className="text-[12px] font-bold text-[#2D4B3E]">
-                      {triggerInfo.auto ? '🤖 自動送信' : '✋ 手動送信'} ／ {triggerInfo.label}
+                      {triggerInfo.auto ? '自動送信' : '手動送信'} ／ {triggerInfo.label}
                     </p>
                     <p className="text-[10px] text-[#999999] leading-relaxed mt-1">{triggerInfo.description}</p>
                   </div>
@@ -2203,7 +2203,7 @@ export default function SettingsPage() {
               </button>
             </div>
             <p className="text-[10px] text-[#999] text-center leading-relaxed">
-              💡 「保存」ボタンで全体設定を保存するまでDBには反映されません
+              「保存」ボタンで全体設定を保存するまでDBには反映されません
             </p>
           </div>
         </div>

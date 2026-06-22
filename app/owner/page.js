@@ -4,7 +4,8 @@ import { supabase } from '@/utils/supabase';
 import {
   Building2, Mail, ArrowUpCircle, Bot, Lock, Unlock,
   CheckCircle, XCircle, RefreshCw, Save, Sparkles, Store,
-  MessageSquare, Trash2, AlertTriangle, Wand2, X, FileText, ToggleLeft, ToggleRight, CreditCard, Send
+  MessageSquare, Trash2, AlertTriangle, Wand2, X, FileText, ToggleLeft, ToggleRight, CreditCard, Send,
+  Key, Image as ImageIcon, Pin, Lightbulb, Settings, Landmark, ClipboardList, Users, ShoppingCart, Clock, ScrollText, Flower2, FolderOpen, Check
 } from 'lucide-react';
 import { FEATURE_GROUPS, ALL_FEATURE_KEYS } from '@/utils/features';
 import { DEFAULT_PRICING, calcMonthlyFee, calcWithManualOverride } from '@/utils/subscriptionPricing';
@@ -784,7 +785,7 @@ export default function OwnerDashboard() {
       updateTenantCaptionPrompt(sampleModalTenant.id, data.prompt);
       setSampleModalTenant(null);
       setSampleText('');
-      alert('プロンプトを自動生成しました ✨\n忘れずに「SAVE ALL PROMPTS」で保存してください！');
+      alert('プロンプトを自動生成しました\n忘れずに「SAVE ALL PROMPTS」で保存してください！');
     } catch (err) {
       alert(`生成に失敗しました: ${err.message}`);
     } finally {
@@ -857,7 +858,7 @@ export default function OwnerDashboard() {
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error);
-      alert(`✅ 再発行完了\n新パスワード: ${newPassword}\n${toEmail} 宛に送信しました。`);
+      alert(`再発行完了\n新パスワード: ${newPassword}\n${toEmail} 宛に送信しました。`);
     } catch (e) {
       console.error(e);
       alert('再発行失敗: ' + e.message);
@@ -1080,7 +1081,7 @@ export default function OwnerDashboard() {
                               className="p-2 rounded-lg text-[#777] hover:bg-amber-900/30 hover:text-amber-400 transition-all border border-transparent hover:border-amber-700/50"
                               title="設定パスワード再発行（登録メアド宛に送付）"
                             >
-                              🔑
+                              <Key size={16}/>
                             </button>
                             <button
                               onClick={() => handleDeleteTenant(t.id)}
@@ -1195,7 +1196,7 @@ export default function OwnerDashboard() {
             <section className="space-y-6">
               <header className="space-y-2">
                 <h3 className="text-[16px] font-bold text-amber-400 flex items-center gap-2"><Wand2 size={18}/> 店舗別 SNSキャプション生成プロンプト</h3>
-                <p className="text-[12px] text-[#777] leading-relaxed">投稿用キャプション自動生成のAI指示文。過去キャプションを取り込むと、その店舗のトーンを真似した指示文を自動構築できます ✨</p>
+                <p className="text-[12px] text-[#777] leading-relaxed">投稿用キャプション自動生成のAI指示文。過去キャプションを取り込むと、その店舗のトーンを真似した指示文を自動構築できます</p>
               </header>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {tenants.map(t => (
@@ -1254,7 +1255,7 @@ export default function OwnerDashboard() {
                 <div>
                   <h3 className="text-emerald-400 font-bold text-[16px] flex items-center gap-2"><Sparkles size={18}/> 機能ON/OFF</h3>
                   <p className="text-[11px] text-[#777] mt-1">対象: <span className="text-[#2D4B3E] font-bold">{featureModalTenant.name}</span></p>
-                  <p className="text-[10px] text-emerald-400/70 mt-1">💡 トグル切替で自動保存されます</p>
+                  <p className="text-[10px] text-emerald-400/70 mt-1 flex items-center gap-1"><Lightbulb size={11}/> トグル切替で自動保存されます</p>
                 </div>
                 <button onClick={() => setFeatureModalTenant(null)} className="text-[#777] hover:text-[#2D4B3E]"><X size={20}/></button>
               </div>
@@ -1340,7 +1341,7 @@ export default function OwnerDashboard() {
               </div>
               <div className="p-6 space-y-4">
                 <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 text-[11px] text-amber-200 leading-relaxed">
-                  💡 過去のInstagram投稿キャプションを5〜10件、下のテキストエリアに貼り付けてください。<br/>
+                  <Lightbulb size={12} className="inline mr-1 align-text-bottom"/> 過去のInstagram投稿キャプションを5〜10件、下のテキストエリアに貼り付けてください。<br/>
                   複数件は <code className="bg-gray-100 px-1.5 rounded">空行3つ</code> または <code className="bg-gray-100 px-1.5 rounded">---</code> で区切ってください。
                 </div>
                 <textarea
@@ -1465,7 +1466,7 @@ export default function OwnerDashboard() {
             </div>
 
             <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-xl p-4 text-[11px] text-cyan-200 leading-relaxed">
-              💡 計測対象: キャプション生成 + プロンプト自動生成 の合計回数。<br/>
+              <Lightbulb size={12} className="inline mr-1 align-text-bottom"/> 計測対象: キャプション生成 + プロンプト自動生成 の合計回数。<br/>
               月をまたぐと自動でカウントがリセットされ、過去月のデータは保持されます。
             </div>
           </div>
@@ -1523,7 +1524,7 @@ export default function OwnerDashboard() {
             <div className="bg-white border border-[#EAEAEA] rounded-2xl p-6 shadow-xl space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <h4 className="text-[#2D4B3E] font-bold text-[13px] tracking-widest">🌸 LP（トップページ）表示料金</h4>
+                  <h4 className="text-[#2D4B3E] font-bold text-[13px] tracking-widest flex items-center gap-1.5"><Flower2 size={14}/> LP（トップページ）表示料金</h4>
                   <p className="text-[10px] text-[#777] mt-1">www.noodleflorix.com の料金セクションに表示される内容。営業用・公開向け。</p>
                 </div>
                 <div className="flex gap-2">
@@ -1628,7 +1629,7 @@ export default function OwnerDashboard() {
               </div>
 
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-[11px] text-yellow-900">
-                ⚠️ <strong>反映タイミング</strong>: 保存後、トップページ（/）に反映されるまで最大1時間かかります（キャッシュ）。すぐ確認したい場合はVercelダッシュボードからキャッシュを手動クリアできます。
+                <AlertTriangle size={12} className="inline mr-1 align-text-bottom"/> <strong>反映タイミング</strong>: 保存後、トップページ（/）に反映されるまで最大1時間かかります（キャッシュ）。すぐ確認したい場合はVercelダッシュボードからキャッシュを手動クリアできます。
               </div>
             </div>
 
@@ -1636,7 +1637,7 @@ export default function OwnerDashboard() {
             <div className="bg-white border border-[#EAEAEA] rounded-2xl p-6 shadow-xl space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <h4 className="text-[#2D4B3E] font-bold text-[13px] tracking-widest">🖼️ LP（トップページ）画像</h4>
+                  <h4 className="text-[#2D4B3E] font-bold text-[13px] tracking-widest flex items-center gap-1.5"><ImageIcon size={14}/> LP（トップページ）画像</h4>
                   <p className="text-[10px] text-[#777] mt-1">www.noodleflorix.com に表示される画像。アップロード or URL貼り付けで差し替え。</p>
                 </div>
                 <div className="flex gap-2">
@@ -1650,7 +1651,7 @@ export default function OwnerDashboard() {
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[11px] text-blue-900 leading-relaxed">
-                📌 <strong>使い方</strong>:
+                <Pin size={12} className="inline mr-1 align-text-bottom"/> <strong>使い方</strong>:
                 ①「アップロード」で画像ファイル選択（JPG/PNG/WebP・10MB以下）<br/>
                 ② または右側にURL貼り付け（Supabase Storage・自社サーバ等）<br/>
                 ③「LP画像保存」で確定 → トップページに反映（最大1時間・即時化はVercel Redeploy）
@@ -1691,7 +1692,7 @@ export default function OwnerDashboard() {
                       <div className="mt-3 space-y-2">
                         {/* アップロード */}
                         <label className={`block w-full text-center py-2 rounded-lg text-[11px] font-bold cursor-pointer transition ${isUploading ? 'bg-gray-100 text-gray-400' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b]'}`}>
-                          {isUploading ? 'アップロード中...' : '📁 画像をアップロード'}
+                          {isUploading ? 'アップロード中...' : (<span className="inline-flex items-center justify-center gap-1.5"><FolderOpen size={12}/> 画像をアップロード</span>)}
                           <input
                             type="file"
                             accept="image/*"
@@ -1726,7 +1727,7 @@ export default function OwnerDashboard() {
               </div>
 
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-[11px] text-yellow-900">
-                💡 <strong>画像のコツ</strong>:
+                <Lightbulb size={12} className="inline mr-1 align-text-bottom"/> <strong>画像のコツ</strong>:
                 花仕事の手元・店舗陳列・パソコン作業など、<strong>「FLORIXを使う花屋さん」の世界観</strong>が伝わる写真を選ぶと効果的です。<br/>
                 Apple/Notionレベルの高品質写真を使用すると、ブランド価値が大幅に上がります。
               </div>
@@ -1782,12 +1783,12 @@ export default function OwnerDashboard() {
                             ¥{auto.total.toLocaleString()}
                           </div>
                           {isEffectivelyMaster ? (
-                            <span className="inline-block mt-1 text-[8px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full" title="料金マスターの値で計算されています">
-                              ✓ マスター反映
+                            <span className="inline-flex items-center gap-0.5 mt-1 text-[8px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full" title="料金マスターの値で計算されています">
+                              <Check size={9}/> マスター反映
                             </span>
                           ) : (
-                            <span className="inline-block mt-1 text-[8px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full" title="料金マスターと異なる個別単価が使われています">
-                              ⚙️ 個別単価 {totalOverrides}件
+                            <span className="inline-flex items-center gap-0.5 mt-1 text-[8px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full" title="料金マスターと異なる個別単価が使われています">
+                              <Settings size={9}/> 個別単価 {totalOverrides}件
                             </span>
                           )}
                           {/* 空欄項目が残ってる場合のクリーンアップ案内 */}
@@ -1826,12 +1827,12 @@ export default function OwnerDashboard() {
                               + Object.keys(billing.featurePriceOverrides || {}).length;
                             return (
                               <details className="mt-1" open={overrideCount > 0 && !manualActive}>
-                                <summary className={`cursor-pointer text-[9px] ${overrideCount > 0 ? 'text-cyan-400 font-bold' : 'text-[#777]'} hover:text-cyan-300`}>
-                                  ⚙️ 機能別の単価調整 {overrideCount > 0 && `(${overrideCount}件設定中)`}
+                                <summary className={`cursor-pointer text-[9px] inline-flex items-center gap-1 ${overrideCount > 0 ? 'text-cyan-400 font-bold' : 'text-[#777]'} hover:text-cyan-300`}>
+                                  <Settings size={10}/> 機能別の単価調整 {overrideCount > 0 && `(${overrideCount}件設定中)`}
                                 </summary>
                                 <div className={`mt-2 p-2 bg-[#F7F7F7] border border-[#EAEAEA] rounded space-y-1.5 w-64 ${manualActive ? 'opacity-40' : ''}`}>
                                   {manualActive && (
-                                    <p className="text-[9px] text-amber-500 leading-snug">⚠️ 全体固定額が設定されているため、この値は無視されます。クリアすると有効になります。</p>
+                                    <p className="text-[9px] text-amber-500 leading-snug flex items-start gap-1"><AlertTriangle size={10} className="mt-0.5 shrink-0"/> 全体固定額が設定されているため、この値は無視されます。クリアすると有効になります。</p>
                                   )}
                                   {/* [料金UI] 全部マスターに戻すボタン */}
                                   {overrideCount > 0 && (
@@ -1914,8 +1915,8 @@ export default function OwnerDashboard() {
                           <select value={billing.paymentMethod || 'bank_transfer'}
                             onChange={e => saveTenantBilling(t.id, { paymentMethod: e.target.value })}
                             className="h-8 px-2 bg-[#FBFAF9] border border-[#D0D0D0] rounded text-[11px] text-[#333] outline-none">
-                            <option value="bank_transfer">🏦 銀行振込</option>
-                            <option value="card" disabled>💳 クレカ（準備中）</option>
+                            <option value="bank_transfer">銀行振込</option>
+                            <option value="card" disabled>クレカ（準備中）</option>
                           </select>
                         </td>
                         <td className="px-4 py-3">
@@ -1951,7 +1952,7 @@ export default function OwnerDashboard() {
             </div>
 
             <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-xl p-4 text-[11px] text-cyan-200 leading-relaxed">
-              💡 毎月1日に翌月分の請求書が「請求先メール」に自動送信されます（Cronで実行）。
+              <Lightbulb size={12} className="inline mr-1 align-text-bottom"/> 毎月1日に翌月分の請求書が「請求先メール」に自動送信されます（Cronで実行）。
               モデル店舗は手動オーバーライドで <strong>0円</strong> も設定可能です。送信履歴は「請求・入金管理」タブで確認できます。
             </div>
           </div>
@@ -2068,9 +2069,9 @@ export default function OwnerDashboard() {
                         </td>
                         <td className="px-4 py-3">
                           {inv.paymentMethod === 'card' ? (
-                            <span className="text-[10px] text-blue-400">💳 クレカ</span>
+                            <span className="text-[10px] text-blue-400 inline-flex items-center gap-1"><CreditCard size={10}/> クレカ</span>
                           ) : (
-                            <span className="text-[10px] text-[#666]">🏦 銀行振込</span>
+                            <span className="text-[10px] text-[#666] inline-flex items-center gap-1"><Landmark size={10}/> 銀行振込</span>
                           )}
                           {inv.stripeInvoiceUrl && (
                             <a href={inv.stripeInvoiceUrl} target="_blank" rel="noopener noreferrer" className="block text-[9px] text-blue-400 underline mt-0.5">Stripe請求書</a>
@@ -2115,7 +2116,7 @@ export default function OwnerDashboard() {
               </div>
 
               <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-xl p-4 text-[11px] text-cyan-200 leading-relaxed">
-                💡 月初の自動送信時に履歴が追加されます。「サブスク管理」タブの<strong>発行</strong>ボタンからの手動送信も自動で記録されます。<br/>
+                <Lightbulb size={12} className="inline mr-1 align-text-bottom"/> 月初の自動送信時に履歴が追加されます。「サブスク管理」タブの<strong>発行</strong>ボタンからの手動送信も自動で記録されます。<br/>
                 銀行振込テナントは入金確認後、<strong>「入金記録」</strong>を押してください。クレカ(Stripe)テナントは Stripe ダッシュボードで入金状況を確認できます。
               </div>
             </div>
@@ -2137,8 +2138,8 @@ export default function OwnerDashboard() {
               });
               const data = await res.json();
               if (!res.ok) throw new Error(data.error);
-              const summary = (data.results || []).map(r => `${r.table}: ${r.ok ? `✓ ${r.deleted}件` : `✗ ${r.error}`}`).join('\n');
-              alert(`✅ 削除完了\n\n${summary}\n\n※ ${data.note || ''}`);
+              const summary = (data.results || []).map(r => `${r.table}: ${r.ok ? `OK ${r.deleted}件` : `NG ${r.error}`}`).join('\n');
+              alert(`削除完了\n\n${summary}\n\n※ ${data.note || ''}`);
             } catch (e) {
               alert('エラー: ' + e.message);
             }
@@ -2158,7 +2159,7 @@ export default function OwnerDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-red-50 p-6 rounded-2xl border border-red-900/50 space-y-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-[24px]">📋</span>
+                    <ClipboardList size={24} className="text-[#2D4B3E]"/>
                     <h4 className="text-[#2D4B3E] font-bold text-[13px]">注文データ</h4>
                   </div>
                   <p className="text-[11px] text-[#666] leading-relaxed">orders テーブル全件（履歴・伝票・進捗等）</p>
@@ -2169,7 +2170,7 @@ export default function OwnerDashboard() {
 
                 <div className="bg-red-50 p-6 rounded-2xl border border-red-900/50 space-y-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-[24px]">👥</span>
+                    <Users size={24} className="text-[#2D4B3E]"/>
                     <h4 className="text-[#2D4B3E] font-bold text-[13px]">顧客データ</h4>
                   </div>
                   <p className="text-[11px] text-[#666] leading-relaxed">顧客カルテ・記念日・LINE連携・マイページPW・セッション・メアド変更履歴</p>
@@ -2180,7 +2181,7 @@ export default function OwnerDashboard() {
 
                 <div className="bg-red-50 p-6 rounded-2xl border border-red-900/50 space-y-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-[24px]">🛒</span>
+                    <ShoppingCart size={24} className="text-[#2D4B3E]"/>
                     <h4 className="text-[#2D4B3E] font-bold text-[13px]">商品データ (EC)</h4>
                   </div>
                   <p className="text-[11px] text-[#666] leading-relaxed">products・stock_notifications</p>
@@ -2191,7 +2192,7 @@ export default function OwnerDashboard() {
 
                 <div className="bg-red-50 p-6 rounded-2xl border border-red-900/50 space-y-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-[24px]">⏰</span>
+                    <Clock size={24} className="text-[#2D4B3E]"/>
                     <h4 className="text-[#2D4B3E] font-bold text-[13px]">勤怠・シフト</h4>
                   </div>
                   <p className="text-[11px] text-[#666] leading-relaxed">staff_attendance, shift_schedules, shift_holiday_requests</p>
@@ -2202,7 +2203,7 @@ export default function OwnerDashboard() {
 
                 <div className="bg-red-50 p-6 rounded-2xl border border-red-900/50 space-y-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-[24px]">📜</span>
+                    <ScrollText size={24} className="text-[#2D4B3E]"/>
                     <h4 className="text-[#2D4B3E] font-bold text-[13px]">操作履歴のみ</h4>
                   </div>
                   <p className="text-[11px] text-[#666] leading-relaxed">audit_log テーブル全件（テスト操作ログ）</p>

@@ -122,7 +122,7 @@ export default function StaffBlogPage() {
       <div className="max-w-[1000px] mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-[24px] font-bold text-[#2D4B3E]">📖 ブログ管理</h1>
+            <h1 className="text-[24px] font-bold text-[#2D4B3E]">ブログ管理</h1>
             <p className="text-[12px] text-[#666] mt-1">SEO対策の月1運用。記事を書くだけでGoogle検索流入が増えます。</p>
           </div>
           <div className="flex gap-2">
@@ -130,7 +130,7 @@ export default function StaffBlogPage() {
               onClick={() => setShowHelp(true)}
               className="px-4 h-10 bg-white border border-[#EAEAEA] text-[#666] rounded-xl text-[12px] font-bold hover:bg-[#FBFAF9]"
             >
-              💡 書き方ガイド
+              書き方ガイド
             </button>
             <button
               onClick={() => setEditing({ new: true, tags: [], is_published: false })}
@@ -212,12 +212,12 @@ export default function StaffBlogPage() {
           <div className="bg-white rounded-2xl max-w-[600px] w-full max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-[18px] font-bold text-[#2D4B3E]">💡 ブログ記事の書き方ガイド</h2>
+                <h2 className="text-[18px] font-bold text-[#2D4B3E]">ブログ記事の書き方ガイド</h2>
                 <button onClick={() => setShowHelp(false)}><X size={18} /></button>
               </div>
               <div className="space-y-4 text-[13px] leading-relaxed text-[#444]">
                 <div>
-                  <p className="font-bold text-[#2D4B3E]">🎯 SEOで効く書き方</p>
+                  <p className="font-bold text-[#2D4B3E]">SEOで効く書き方</p>
                   <ul className="ml-5 list-disc space-y-1 mt-1">
                     <li>タイトルは <strong>32文字以内</strong> + <strong>地域名 or 用途</strong> を含む</li>
                     <li>例: 「札幌で人気の母の日ブーケ5選｜FLORIX」</li>
@@ -226,7 +226,7 @@ export default function StaffBlogPage() {
                   </ul>
                 </div>
                 <div>
-                  <p className="font-bold text-[#2D4B3E]">📝 Markdown記法</p>
+                  <p className="font-bold text-[#2D4B3E]">Markdown記法</p>
                   <pre className="bg-[#F5F2EE] p-3 rounded-lg text-[11px] mt-1 whitespace-pre-wrap">{`## 見出し2
 ### 見出し3
 **太字** *斜体*
@@ -237,7 +237,7 @@ export default function StaffBlogPage() {
 > 引用文`}</pre>
                 </div>
                 <div>
-                  <p className="font-bold text-[#2D4B3E]">📅 ネタの探し方</p>
+                  <p className="font-bold text-[#2D4B3E]">ネタの探し方</p>
                   <ul className="ml-5 list-disc space-y-1 mt-1">
                     <li>季節イベント（バレンタイン・母の日・敬老の日・クリスマス）</li>
                     <li>お花の手入れ方法（「ブーケの長持ちさせ方」等）</li>
@@ -246,7 +246,7 @@ export default function StaffBlogPage() {
                   </ul>
                 </div>
                 <div>
-                  <p className="font-bold text-[#2D4B3E]">🔁 公開頻度</p>
+                  <p className="font-bold text-[#2D4B3E]">公開頻度</p>
                   <p>月1記事でOK。続けることが何より大事。</p>
                 </div>
               </div>
@@ -419,7 +419,7 @@ function EditModal({ post, onClose, onSave }) {
                 className="w-4 h-4"
               />
               <label htmlFor="is_published" className="text-[13px] font-bold cursor-pointer">
-                ✅ 公開する（チェックを外すと下書き）
+                公開する（チェックを外すと下書き）
               </label>
             </div>
           </div>

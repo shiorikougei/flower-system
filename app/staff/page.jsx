@@ -325,7 +325,7 @@ export default function DashboardPage() {
                     </div>
                     <span className="text-[11px] font-bold text-[#111]">{a.staff_name}</span>
                     <span className="text-[9px] text-[#999]">{new Date(a.clock_in_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}〜</span>
-                    {a.break_start_at && <span className="text-[9px] font-bold text-amber-600">☕休憩中</span>}
+                    {a.break_start_at && <span className="text-[9px] font-bold text-amber-600 flex items-center gap-0.5"><Coffee size={10}/>休憩中</span>}
                   </div>
                 ))}
               </div>
@@ -338,15 +338,13 @@ export default function DashboardPage() {
           <div onClick={() => router.push('/staff/estimates')} className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 cursor-pointer hover:bg-amber-100 transition-all animate-in slide-in-from-top-2">
             <div className="flex items-start gap-3">
               <div className="w-12 h-12 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0 animate-pulse text-[22px]">
-                💰
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-bold text-amber-900">💰 未回答のお見積もり依頼 {pendingEstimates.length}件</p>
+                <p className="text-[14px] font-bold text-amber-900">未回答のお見積もり依頼 {pendingEstimates.length}件</p>
                 <p className="text-[11px] text-amber-700 mt-1">お客様が金額の見積もりを待っています。回答してください。</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {pendingEstimates.slice(0, 3).map(e => (
                     <div key={e.id} className="bg-white px-3 py-1.5 rounded-lg border border-amber-200 text-[11px]">
-                      <span className="font-bold mr-1">📋</span>
                       {e.customer_name || 'お客様'} - {(() => {
                         const diff = Math.round((Date.now() - new Date(e.created_at)) / 60000);
                         if (diff < 60) return `${diff}分前`;
@@ -373,7 +371,7 @@ export default function DashboardPage() {
                 <Bell size={20}/>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-bold text-blue-900">📩 新規注文 {recentNewOrders.length}件</p>
+                <p className="text-[14px] font-bold text-blue-900">新規注文 {recentNewOrders.length}件</p>
                 <p className="text-[11px] text-blue-700 mt-1">直近1時間以内に入った未対応の注文です。確認してください。</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {recentNewOrders.slice(0, 3).map(o => {
@@ -381,7 +379,7 @@ export default function DashboardPage() {
                     const isEc = d.orderType === 'ec';
                     return (
                       <div key={o.id} className="bg-white px-3 py-1.5 rounded-lg border border-blue-200 text-[11px]">
-                        <span className="font-bold mr-1">{isEc ? '🛒EC' : '📝カスタム'}</span>
+                        <span className="font-bold mr-1">{isEc ? 'EC' : 'カスタム'}</span>
                         {d.customerInfo?.name || 'お客様'} - {Math.round((Date.now() - new Date(o.created_at)) / 60000)}分前
                       </div>
                     );
@@ -404,7 +402,7 @@ export default function DashboardPage() {
                 <AlertCircle size={20}/>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-bold text-red-900">⚠️ 進捗が遅れている注文 {delayedOrders.length}件</p>
+                <p className="text-[14px] font-bold text-red-900">進捗が遅れている注文 {delayedOrders.length}件</p>
                 <p className="text-[11px] text-red-700 mt-1">納品予定が3日以内なのに未着手です。早めの対応を！</p>
                 <div className="mt-2 space-y-1">
                   {delayedOrders.slice(0, 3).map(o => {

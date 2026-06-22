@@ -56,16 +56,16 @@ export async function GET(request) {
     let sent = 0;
     let skipped = 0;
     const errors = [];
-    const newInvoiceRecords = []; // ★ 送信履歴用
+    const newInvoiceRecords = []; // 送信履歴用
 
-    // ★ AI使用量も統合
+    // AI使用量も統合
     const aiPricingCfg = ownerData.aiPricingConfig || { freeQuotaPerMonth: 100, pricePerExtraJpy: 5 };
     const currentMonthKey = new Date().toISOString().slice(0,7);
 
     for (const t of tenants) {
       try {
         const billing = tenantBilling[t.id] || {};
-        // ★ 優先順位: (1)固定額 manualPriceJpy → (2)機能別オーバーライド → (3)自動計算
+        // 優先順位: (1)固定額 manualPriceJpy → (2)機能別オーバーライド → (3)自動計算
         const m = billing.manualPriceJpy;
         const useManual = m != null && m !== '' && Number(m) >= 0;
         const hasFeatureOverrides = (billing.basePriceOverride != null && billing.basePriceOverride !== '') ||
@@ -78,7 +78,7 @@ export async function GET(request) {
               hasFeatureOverrides ? { basePrice: billing.basePriceOverride, featurePrices: billing.featurePriceOverrides } : null
             );
 
-        // ★ AI使用料計算
+        // AI使用料計算
         const { data: tRow } = await supabaseAdmin.from('app_settings').select('settings_data').eq('id', t.id).single();
         const monthUsage = tRow?.settings_data?.aiUsage?.[currentMonthKey] || { total: 0 };
         const aiOverage = Math.max(0, (monthUsage.total || 0) - aiPricingCfg.freeQuotaPerMonth);
@@ -96,7 +96,7 @@ export async function GET(request) {
         const to = billing.billingEmail;
         if (!to || !to.includes('@')) { skipped++; continue; }
 
-        // ★ Stripe Invoice 作成（クレカ希望テナント）
+        // Stripe Invoice 作成（クレカ希望テナント）
         let stripeInvoiceUrl = '';
         if (billing.paymentMethod === 'card' && process.env.STRIPE_SECRET_KEY) {
           try {
@@ -186,7 +186,7 @@ export async function GET(request) {
           errors.push({ tenant: t.id, error: result.error });
         } else {
           sent++;
-          // ★ 請求履歴に追加（管理ページの請求・入金管理タブで参照）
+          // 請求履歴に追加（管理ページの請求・入金管理タブで参照）
           newInvoiceRecords.push({
             id: `inv_${t.id}_${targetMonth}_${Date.now()}`,
             tenantId: t.id,
@@ -209,7 +209,7 @@ export async function GET(request) {
       }
     }
 
-    // ★ 請求履歴を nocolde_owner に追記保存
+    // 請求履歴を nocolde_owner に追記保存
     if (newInvoiceRecords.length > 0) {
       try {
         const existing = ownerData.invoices || [];

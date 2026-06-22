@@ -23,7 +23,7 @@ const stripe = process.env.STRIPE_SECRET_KEY
 
 export async function POST(request) {
   try {
-    // ★ NocoLdeスーパー管理者のみ実行可（cronからの内部呼出はCRON_SECRETでバイパス）
+    // NocoLdeスーパー管理者のみ実行可（cronからの内部呼出はCRON_SECRETでバイパス）
     const isCron = request.headers.get('x-cron-secret') === process.env.CRON_SECRET;
     if (!isCron) {
       const auth = await requireOwner(request);

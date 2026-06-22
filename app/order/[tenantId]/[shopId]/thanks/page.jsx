@@ -2,7 +2,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Phone } from 'lucide-react';
 
 function ThanksContent() {
   const params = useParams();
@@ -150,7 +150,7 @@ function ThanksContent() {
                 </div>
                 <p className="text-[10px] text-[#999999] text-center">※お振込手数料はお客様負担となります。</p>
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-3">
-                  <p className="text-[11px] text-amber-900 font-bold mb-1">⚠️ ご注意</p>
+                  <p className="text-[11px] text-amber-900 font-bold mb-1 flex items-center gap-1"><AlertCircle size={12}/> ご注意</p>
                   <p className="text-[11px] text-amber-900 leading-relaxed">
                     お振込みのご確認が取れ次第、<strong>制作・発送</strong>させていただきます。
                   </p>
@@ -158,7 +158,7 @@ function ThanksContent() {
                 {/* ★ 入金タイミング相談用の電話番号案内 */}
                 {shopPhone && (
                   <div className="bg-[#2D4B3E]/5 border-2 border-[#2D4B3E]/20 rounded-xl p-4 mt-3 text-center space-y-2">
-                    <p className="text-[12px] font-bold text-[#2D4B3E]">📞 ご入金に関するご相談</p>
+                    <p className="text-[12px] font-bold text-[#2D4B3E] flex items-center justify-center gap-1"><Phone size={13}/> ご入金に関するご相談</p>
                     <p className="text-[11px] text-[#555] leading-relaxed">
                       ご入金のタイミングに関するご相談・ご質問は<br/>下記までお電話ください
                     </p>

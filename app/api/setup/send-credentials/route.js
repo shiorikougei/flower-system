@@ -19,12 +19,12 @@ export async function POST(request) {
       return NextResponse.json({ error: 'email/systemPassword必須' }, { status: 400 });
     }
 
-    // ★ 再発行は NocoLde スーパー管理者のみ
+    // 再発行は NocoLde スーパー管理者のみ
     if (isReissue) {
       const auth = await requireOwner(request);
       if (!auth.ok) return auth.response;
     } else {
-      // ★ 初回 setup: 招待トークンを DB の nocolde_owner.invitations で実値検証
+      // 初回 setup: 招待トークンを DB の nocolde_owner.invitations で実値検証
       const setupToken = request.headers.get('x-setup-token') || '';
       if (!setupToken || setupToken.length < 6) {
         return NextResponse.json({ error: 'setupToken が必要です' }, { status: 401 });

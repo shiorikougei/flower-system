@@ -117,7 +117,7 @@ export default function QrPrintPage() {
           <Link href="/staff/products" className="flex items-center gap-1 text-[12px] font-bold text-[#555] hover:text-[#2D4B3E]">
             <ChevronLeft size={16}/> 商品管理に戻る
           </Link>
-          <h1 className="text-[18px] font-bold text-[#2D4B3E]">📱 QRコード印刷</h1>
+          <h1 className="text-[18px] font-bold text-[#2D4B3E]">QRコード印刷</h1>
         </div>
         {selectedIds.size > 0 && (
           <div className="flex items-center gap-2">
@@ -202,7 +202,7 @@ export default function QrPrintPage() {
 
             {printMode === 'sheet' && (
               <div className="bg-white p-4 print:p-0">
-                <h2 className="text-[12px] font-bold text-[#999] mb-3 print:hidden">📄 プレビュー（A4シート一括）</h2>
+                <h2 className="text-[12px] font-bold text-[#999] mb-3 print:hidden">プレビュー（A4シート一括）</h2>
                 <div className="grid grid-cols-5 gap-2 print:gap-1">
                   {selectedProducts.map(p => (
                     <div key={p.id} className="aspect-square bg-white border border-[#EAEAEA] p-1 flex flex-col items-center justify-center print:border-dashed">
@@ -220,7 +220,7 @@ export default function QrPrintPage() {
 
             {printMode === 'tag' && (
               <div className="bg-white p-4 print:p-0">
-                <h2 className="text-[12px] font-bold text-[#999] mb-3 print:hidden">📄 プレビュー（商品タグ付き）</h2>
+                <h2 className="text-[12px] font-bold text-[#999] mb-3 print:hidden">プレビュー（商品タグ付き）</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   {selectedProducts.map(p => (
                     <div key={p.id} className="border-2 border-[#2D4B3E] rounded-xl p-3 bg-white print:break-inside-avoid">
@@ -249,7 +249,7 @@ export default function QrPrintPage() {
 
             {printMode === 'individual' && (
               <div className="bg-white p-4">
-                <h2 className="text-[12px] font-bold text-[#999] mb-3">📥 個別ダウンロード</h2>
+                <h2 className="text-[12px] font-bold text-[#999] mb-3">個別ダウンロード</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   {selectedProducts.map(p => (
                     <div key={p.id} className="bg-white border border-[#EAEAEA] rounded-xl p-3 flex flex-col items-center">
@@ -275,14 +275,14 @@ export default function QrPrintPage() {
 
         {/* 説明 */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-[11px] text-blue-900 leading-relaxed print:hidden">
-          <p className="font-bold mb-2">📌 使い方ガイド</p>
+          <p className="font-bold mb-2">使い方ガイド</p>
           <ul className="space-y-1 ml-4 list-disc">
             <li><strong>A4シート</strong>: コクヨ等のラベルシール用紙に印刷→切って貼る</li>
             <li><strong>商品タグ付き</strong>: 厚紙印刷して紐穴を空けて値札タグとして使用</li>
             <li><strong>個別DL</strong>: SVGをテプラ等のシールプリンターに転送して印刷</li>
-            <li>📱 <strong>誰でもスキャン可能</strong>: 在庫数をスマホでサクッと確認できます</li>
-            <li>🔒 <strong>在庫変更はPIN必須</strong>: スタッフのみ「在庫を減らす」操作可。4桁PIN入力で本人確認</li>
-            <li>📋 監査ログに「誰が・いつ・何を・何個」自動記録</li>
+            <li><strong>誰でもスキャン可能</strong>: 在庫数をスマホでサクッと確認できます</li>
+            <li><strong>在庫変更はPIN必須</strong>: スタッフのみ「在庫を減らす」操作可。4桁PIN入力で本人確認</li>
+            <li>監査ログに「誰が・いつ・何を・何個」自動記録</li>
           </ul>
         </div>
       </div>

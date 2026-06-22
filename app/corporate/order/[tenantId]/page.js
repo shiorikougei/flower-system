@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/utils/supabase'; 
-import { Calendar, Package, ChevronRight, Store, Truck, Building2, AlertCircle } from 'lucide-react';
+import { Calendar, Package, ChevronRight, Store, Truck, Building2, AlertCircle, Lightbulb } from 'lucide-react';
 import TatefudaPreview from '@/components/TatefudaPreview';
 import { getTateOptions } from '@/utils/tateMaster';
 
@@ -547,7 +547,7 @@ export default function CorporateOrderPage() {
               {matchingImages.length > 0 && (
                 <div className="bg-[#2D4B3E]/5 -mx-8 -mt-8 p-6 pb-8 mb-6 border-b border-[#EAEAEA] space-y-4">
                    <p className="text-[11px] font-bold text-[#2D4B3E] tracking-widest flex items-center gap-2">
-                     ✨ 制作例からオーダー内容を自動入力
+                     制作例からオーダー内容を自動入力
                    </p>
                    <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar">
                      {matchingImages.map(img => (
@@ -655,14 +655,14 @@ export default function CorporateOrderPage() {
                       {tateNeeds.includes('3') && (
                         <div className="space-y-1">
                           <textarea placeholder={"③ 贈り主 (例: 株式会社〇〇)\n※連名はEnterで改行"} value={tateInput3} onChange={(e) => setTateInput3(e.target.value)} rows={2} className="w-full px-4 py-2 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E] resize-y" />
-                          <p className="text-[10px] text-[#999] pl-1">💡 連名: Enterで改行</p>
+                          <p className="text-[10px] text-[#999] pl-1 flex items-center gap-1"><Lightbulb size={10}/> 連名: Enterで改行</p>
                         </div>
                       )}
                       {tateNeeds.includes('3a') && <input type="text" placeholder="③-1 会社名" value={tateInput3a} onChange={(e) => setTateInput3a(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />}
                       {tateNeeds.includes('3b') && (
                         <div className="space-y-1">
                           <textarea placeholder={"③-2 役職・氏名\n※連名はEnterで改行"} value={tateInput3b} onChange={(e) => setTateInput3b(e.target.value)} rows={2} className="w-full px-4 py-2 border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E] resize-y" />
-                          <p className="text-[10px] text-[#999] pl-1">💡 連名: Enterで改行</p>
+                          <p className="text-[10px] text-[#999] pl-1 flex items-center gap-1"><Lightbulb size={10}/> 連名: Enterで改行</p>
                         </div>
                       )}
                       

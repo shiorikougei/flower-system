@@ -8,7 +8,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
 import {
-  Plus, Minus, AlertCircle, CheckCircle2, Loader2,
+  Plus, Minus, AlertCircle, AlertTriangle, CheckCircle2, Loader2,
   Tag, Lock, X, RefreshCw, Package,
 } from 'lucide-react';
 
@@ -96,7 +96,7 @@ export default function ScanPage() {
       }
       setMessage({
         type: 'success',
-        text: `✅ ${data.staffName}が ${data.productName}を ${data.decrementedQty}個 販売しました\n残り在庫: ${data.newStock}個`,
+        text: `${data.staffName}が ${data.productName}を ${data.decrementedQty}個 販売しました\n残り在庫: ${data.newStock}個`,
       });
       // 在庫表示を更新
       setProduct({ ...product, stock: data.newStock });
@@ -191,7 +191,7 @@ export default function ScanPage() {
                 'text-red-700'
               }`}>{product.stock}<span className="text-[16px] font-normal ml-1">個</span></p>
               {stockColor === 'amber' && (
-                <p className="text-[10px] text-amber-600 mt-2">⚠️ 在庫わずか</p>
+                <p className="text-[10px] text-amber-600 mt-2 flex items-center justify-center gap-1"><AlertTriangle size={10}/> 在庫わずか</p>
               )}
               {isOutOfStock && product.restock_allowed && (
                 <p className="text-[10px] text-red-600 mt-2">再入荷待ち</p>

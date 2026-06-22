@@ -36,7 +36,7 @@ function comparePin(inputPin, storedValue) {
 
 export async function POST(request) {
   try {
-    // ★ IPベースのレートリミット: 1IPあたり 10回/分
+    // IPベースのレートリミット: 1IPあたり 10回/分
     const ip = getClientIp(request);
     const allowed = await rateLimit({ key: `pin_verify:${ip}`, max: 10, windowSec: 60 });
     if (!allowed) {
@@ -82,7 +82,7 @@ export async function POST(request) {
     if (!staff) return NextResponse.json({ ok: false, error: 'スタッフが見つかりません' }, { status: 404 });
     if (!staff.pin) return NextResponse.json({ ok: false, error: 'PIN未設定です' }, { status: 400 });
 
-    // ★ サーバー側でPIN比較
+    // サーバー側でPIN比較
     const matched = comparePin(pin, staff.pin);
     if (!matched) {
       // 失敗を監査ログに記録（fire-and-forget）
@@ -97,7 +97,7 @@ export async function POST(request) {
       return NextResponse.json({ ok: false, error: 'PINが違います' }, { status: 401 });
     }
 
-    // ★ 認証成功
+    // 認証成功
     return NextResponse.json({
       ok: true,
       role: staff.role || 'staff',

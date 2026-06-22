@@ -84,7 +84,7 @@ export async function POST(request) {
       bank_transfer: '銀行振込',
     };
 
-    // ★ 配送追跡情報: スタッフが入力した追跡番号 (extraVars.shippingTrackingNumber) があれば
+    // 配送追跡情報: スタッフが入力した追跡番号 (extraVars.shippingTrackingNumber) があれば
     //   佐川の追跡URLを生成
     const trackingNo = String(extraVars?.shippingTrackingNumber || '').trim();
     const trackingUrl = trackingNo
@@ -104,9 +104,9 @@ export async function POST(request) {
       paymentMethod: paymentLabelMap[od.paymentMethod] || od.paymentMethod || '',
       bankInfo: bankInfo ? `【お振込先】\n${bankInfo}` : '',
       deliveryDate: od.selectedDate ? `${od.selectedDate} ${od.selectedTime || ''}`.trim() : '',
-      // ★ 発送日 (sagawa の場合は order_data.shippingDate, それ以外は今日の日付)
+      // 発送日 (sagawa の場合は order_data.shippingDate, それ以外は今日の日付)
       shippingDate: od.shippingDate || new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }),
-      // ★ 配送追跡情報
+      // 配送追跡情報
       shippingTrackingNumber: trackingNo,
       shippingTrackingUrl: trackingUrl,
       shippingInfo: shippingInfoBlock,
@@ -121,7 +121,7 @@ export async function POST(request) {
     const html = bodyToHtml(body, { shopName, shopEmail: shop.email || settings.generalConfig?.email || '', shopPhone, lineAddFriendUrl: settings.lineConfig?.addFriendUrl || '' });
     const from = `${shopName} <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
 
-    // ★ お客様の通知設定を取得
+    // お客様の通知設定を取得
     const pref = await getNotificationPreference(supabaseAdmin, tenantId, customerEmail);
     // 'line_only' なら メール送信スキップ (LINE側のみ送信)
     let emailResult = { skipped: true, reason: 'preference_line_only' };
@@ -133,7 +133,7 @@ export async function POST(request) {
       }
     }
 
-    // ★ LINE連携が有効ならLINEにも送信（preference='email_only'時はsendLineParallelToEmail内でスキップ）
+    // LINE連携が有効ならLINEにも送信（preference='email_only'時はsendLineParallelToEmail内でスキップ）
     const lineResult = await sendLineParallelToEmail({
       supabaseAdmin,
       tenantSettings: settings,

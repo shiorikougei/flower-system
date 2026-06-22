@@ -179,8 +179,8 @@ function MyShiftPageInner() {
         <div className={`p-4 rounded-2xl border ${deadlinePassed ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'} text-[12px] leading-relaxed`}>
           <p className="font-bold mb-1">
             {deadlinePassed
-              ? '⚠️ 提出〆切を過ぎているため、優先度が下がる可能性があります'
-              : `📅 ${month}月分の希望休を提出してください（毎月${deadlineDay}日まで）`}
+              ? '提出〆切を過ぎているため、優先度が下がる可能性があります'
+              : `${month}月分の希望休を提出してください（毎月${deadlineDay}日まで）`}
           </p>
           <p className="text-[11px] opacity-80">
             日付をクリックで休み希望を登録/解除できます。確定シフトが表示されている日は変更できません。
@@ -230,7 +230,7 @@ function MyShiftPageInner() {
                     </div>
                   ) : hr ? (
                     <span className="text-[8px] font-bold text-amber-700 mt-auto">
-                      {hr.start_time ? `🕒 ${hr.start_time}-${hr.end_time}` : '🌙 終日休'}
+                      {hr.start_time ? `${hr.start_time}-${hr.end_time}` : '終日休'}
                     </span>
                   ) : isFixedOff ? (
                     <span className="text-[8px] text-[#D97D54]/60 mt-auto">固休</span>
@@ -268,11 +268,11 @@ function MyShiftPageInner() {
             <div className="space-y-2">
               <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer ${holidayForm.allDay ? 'bg-[#D97D54]/10 border-[#D97D54]/40' : 'bg-[#FBFAF9] border-[#EAEAEA]'}`}>
                 <input type="radio" checked={holidayForm.allDay} onChange={() => setHolidayForm({...holidayForm, allDay: true})} className="w-4 h-4 accent-[#D97D54]"/>
-                <span className="text-[13px] font-bold">🌙 終日休み</span>
+                <span className="text-[13px] font-bold">終日休み</span>
               </label>
               <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer ${!holidayForm.allDay ? 'bg-amber-50 border-amber-300' : 'bg-[#FBFAF9] border-[#EAEAEA]'}`}>
                 <input type="radio" checked={!holidayForm.allDay} onChange={() => setHolidayForm({...holidayForm, allDay: false})} className="w-4 h-4 accent-amber-500"/>
-                <span className="text-[13px] font-bold">🕒 時間指定</span>
+                <span className="text-[13px] font-bold">時間指定</span>
               </label>
               {!holidayForm.allDay && (
                 <div className="flex items-center gap-2 mt-2 ml-6">

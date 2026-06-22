@@ -28,7 +28,7 @@ export default function PaymentTab() {
       u.searchParams.delete('stripe_return');
       window.history.replaceState({}, '', u.toString());
     } else if (u.searchParams.get('stripe_connected')) {
-      setMessage({ type: 'success', text: 'Stripeアカウントを連携しました 🎉' });
+      setMessage({ type: 'success', text: 'Stripeアカウントを連携しました' });
       u.searchParams.delete('stripe_connected');
       window.history.replaceState({}, '', u.toString());
     } else if (u.searchParams.get('stripe_error')) {
@@ -285,8 +285,8 @@ function StatusCell({ label, ok }) {
   return (
     <div className={`p-3 rounded-xl border ${ok ? 'bg-green-50 border-green-200' : 'bg-[#FBFAF9] border-[#EAEAEA]'}`}>
       <p className="text-[10px] font-bold text-[#999999] mb-1">{label}</p>
-      <p className={`text-[12px] font-bold ${ok ? 'text-green-700' : 'text-[#999999]'}`}>
-        {ok ? '✓ 完了' : '未完了'}
+      <p className={`text-[12px] font-bold ${ok ? 'text-green-700' : 'text-[#999999]'} flex items-center justify-center gap-1`}>
+        {ok ? <><Check size={12}/> 完了</> : '未完了'}
       </p>
     </div>
   );

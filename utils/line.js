@@ -17,7 +17,7 @@ const LINE_PUSH_URL = 'https://api.line.me/v2/bot/message/push';
  * テナントの LINE 設定を取得
  *   { enabled, channelAccessToken, channelSecret, channelId, addFriendUrl }
  *
- * ★サブスク機能 `lineIntegration` がOFFのテナントは強制的に enabled=false にする
+ * サブスク機能 `lineIntegration` がOFFのテナントは強制的に enabled=false にする
  *   （既存のlineConfig.enabledチェック箇所を改修せずにゲーティングできる）
  */
 export function getLineConfig(settings) {
@@ -173,7 +173,7 @@ export async function sendLineParallelToEmail({
   const lineUserId = await findLineUserId(supabaseAdmin, tenantId, customerEmail);
   if (!lineUserId) return { skipped: true, reason: 'not_linked' };
 
-  // ★ お客様の通知設定で「email_only」が選ばれている場合はLINEを送らない
+  // お客様の通知設定で「email_only」が選ばれている場合はLINEを送らない
   const pref = await getNotificationPreference(supabaseAdmin, tenantId, customerEmail);
   if (pref === 'email_only') {
     return { skipped: true, reason: 'preference_email_only' };

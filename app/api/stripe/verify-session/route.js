@@ -62,7 +62,7 @@ export async function POST(request) {
     }
 
     // StripeからCheckoutセッションを取得
-    // ★ retrieve は (id, params, options) の3引数構造。ConnectのstripeAccountは第3引数
+    // retrieve は (id, params, options) の3引数構造。ConnectのstripeAccountは第3引数
     const session = await stripe.checkout.sessions.retrieve(
       order.stripe_checkout_session_id,
       undefined,
@@ -85,7 +85,7 @@ export async function POST(request) {
         })
         .eq('id', orderId);
 
-      // ★ EC注文の場合は在庫減算（Webhookが届かなかった時の保険、RPC関数で原子的に）
+      // EC注文の場合は在庫減算（Webhookが届かなかった時の保険、RPC関数で原子的に）
       const cartItems = order.order_data?.cartItems;
       if (Array.isArray(cartItems) && cartItems.length > 0) {
         console.log('[verify-session] EC注文 在庫減算開始:', cartItems.map(c => ({ id: c.productId, qty: c.qty })));

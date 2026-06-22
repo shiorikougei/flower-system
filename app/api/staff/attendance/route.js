@@ -134,7 +134,7 @@ export async function POST(request) {
     }
 
     if (action === 'manual_insert') {
-      // ★ 手動挿入: 出勤忘れ・退勤忘れの後追い記録
+      // 手動挿入: 出勤忘れ・退勤忘れの後追い記録
       const { clockInAt, clockOutAt, notes } = await (async () => {
         // すでにrequestを消費しているので回避
         return { clockInAt: null, clockOutAt: null, notes: null };
@@ -150,7 +150,7 @@ export async function POST(request) {
   }
 }
 
-// ★ 編集（手動修正）+ 手動挿入
+// 編集（手動修正）+ 手動挿入
 // PUT /api/staff/attendance
 // Body: { id?, staffName, clockInAt, clockOutAt?, notes? }
 //   id があれば更新、なければ新規挿入

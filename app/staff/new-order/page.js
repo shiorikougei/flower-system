@@ -542,7 +542,7 @@ export default function StaffNewOrderPage() {
     if (!customerInfo.name) warnings.push('・注文者のお名前');
 
     if (warnings.length > 0) {
-      const isConfirmed = window.confirm("⚠️ 以下の未入力・確認事項があります：\n\n" + warnings.join("\n") + "\n\nこのまま注文を強制的に登録してもよろしいですか？");
+      const isConfirmed = window.confirm("以下の未入力・確認事項があります：\n\n" + warnings.join("\n") + "\n\nこのまま注文を強制的に登録してもよろしいですか？");
       if (!isConfirmed) return;
     }
     
@@ -646,7 +646,7 @@ export default function StaffNewOrderPage() {
                 </div>
                 {receptionType === 'personal' && (
                   <p className="text-[10px] text-[#C97D60] font-bold flex items-center gap-1">
-                    👤 この注文の売上は <strong>{staffName || 'ログイン中のスタッフ'}</strong> に帰属します
+                    この注文の売上は <strong>{staffName || 'ログイン中のスタッフ'}</strong> に帰属します
                   </p>
                 )}
               </div>
@@ -713,14 +713,14 @@ export default function StaffNewOrderPage() {
                 return (
                 <div className="md:col-span-2 bg-emerald-50 border border-emerald-300 rounded-xl p-4 space-y-3 animate-in fade-in mt-2">
                   <label className="text-[12px] font-bold text-emerald-900 flex items-center gap-1.5">
-                    📍 お届け先住所（エリア＆料金確認用）
+                    お届け先住所（エリア＆料金確認用）
                   </label>
                   <p className="text-[10px] text-emerald-700">
                     {isRecipientDifferent ? (
-                      <>✅ <strong>お届け先情報</strong>に保存されます（注文者と別住所）<br/>
+                      <><strong>お届け先情報</strong>に保存されます（注文者と別住所）<br/>
                       住所を入力するとエリア判定＆送料を自動計算します。</>
                     ) : (
-                      <>📝 <strong>注文者情報</strong>に保存されます（注文者本人にお届け）<br/>
+                      <><strong>注文者情報</strong>に保存されます（注文者本人にお届け）<br/>
                       別の住所にお届けする場合は「お届け先情報」欄の <strong>「お届け先が注文者と異なる」</strong> にチェックしてください。</>
                     )}
                   </p>
@@ -770,7 +770,7 @@ export default function StaffNewOrderPage() {
                     /* [業務-2] 郵便番号わからないモード: 住所→正規化 */
                     <div className="space-y-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
                       <p className="text-[11px] font-bold text-amber-900 flex items-center gap-1">
-                        🔍 郵便番号がわからない場合
+                        郵便番号がわからない場合
                       </p>
                       <p className="text-[10px] text-amber-700 leading-relaxed">
                         住所だけを入力して「住所を確認」を押してください。<br/>
@@ -845,7 +845,7 @@ export default function StaffNewOrderPage() {
                         <div className={`p-2 rounded text-[11px] ${zipSearchResult.ok ? 'bg-emerald-100 text-emerald-900' : 'bg-red-100 text-red-900'}`}>
                           {zipSearchResult.ok && zipSearchResult.best ? (
                             <div>
-                              ✅ 確認できました: <strong>{zipSearchResult.best.full}</strong>
+                              確認できました: <strong>{zipSearchResult.best.full}</strong>
                               {zipSearchResult.candidates.length > 1 && (
                                 <details className="mt-1">
                                   <summary className="cursor-pointer text-[10px]">他の候補 ({zipSearchResult.candidates.length - 1}件)</summary>
@@ -872,7 +872,7 @@ export default function StaffNewOrderPage() {
                               )}
                             </div>
                           ) : (
-                            <div>⚠️ {zipSearchResult.error || '住所が見つかりませんでした'}</div>
+                            <div>{zipSearchResult.error || '住所が見つかりませんでした'}</div>
                           )}
                         </div>
                       )}
@@ -909,7 +909,7 @@ export default function StaffNewOrderPage() {
                     }}
                     className="text-[10px] text-emerald-700 hover:text-emerald-900 underline self-start mt-1"
                   >
-                    {zipUnknownMode ? '↩ 郵便番号入力モードに戻る' : '🔍 郵便番号がわからない場合はこちら'}
+                    {zipUnknownMode ? '↩ 郵便番号入力モードに戻る' : '郵便番号がわからない場合はこちら'}
                   </button>
 
                   {/* 料金比較カード */}
@@ -928,7 +928,7 @@ export default function StaffNewOrderPage() {
                               : 'bg-white border-emerald-200 text-emerald-800 hover:border-emerald-500'
                         }`}
                       >
-                        <div className="text-[11px] font-bold flex items-center gap-1">🚚 自社配達</div>
+                        <div className="text-[11px] font-bold flex items-center gap-1">自社配達</div>
                         {feeComparison.delivery.fee !== null ? (
                           <div className={`text-[18px] font-bold mt-1 ${receiveMethod === 'delivery' ? 'text-white' : 'text-emerald-700'}`}>
                             {feeComparison.delivery.fee === 0 ? '送料無料' : `¥${feeComparison.delivery.fee.toLocaleString()}`}
@@ -950,7 +950,7 @@ export default function StaffNewOrderPage() {
                               : 'bg-white border-emerald-200 text-emerald-800 hover:border-emerald-500'
                         }`}
                       >
-                        <div className="text-[11px] font-bold flex items-center gap-1">📦 業者配送 (佐川)</div>
+                        <div className="text-[11px] font-bold flex items-center gap-1">業者配送 (佐川)</div>
                         {feeComparison.sagawa.fee !== null ? (
                           <div className={`text-[18px] font-bold mt-1 ${receiveMethod === 'sagawa' ? 'text-white' : 'text-blue-700'}`}>
                             {feeComparison.sagawa.fee === 0 ? '送料無料' : `¥${feeComparison.sagawa.fee.toLocaleString()}`}
@@ -966,11 +966,11 @@ export default function StaffNewOrderPage() {
                   {target.address1 && feeComparison && feeComparison.delivery.fee !== null && feeComparison.sagawa.fee !== null && (
                     <div className="text-[10px] text-emerald-700 bg-white/60 rounded px-2 py-1.5">
                       {feeComparison.delivery.fee < feeComparison.sagawa.fee ? (
-                        <>💡 自社配達のほうが ¥{(feeComparison.sagawa.fee - feeComparison.delivery.fee).toLocaleString()} お得</>
+                        <>自社配達のほうが ¥{(feeComparison.sagawa.fee - feeComparison.delivery.fee).toLocaleString()} お得</>
                       ) : feeComparison.sagawa.fee < feeComparison.delivery.fee ? (
-                        <>💡 業者配送のほうが ¥{(feeComparison.delivery.fee - feeComparison.sagawa.fee).toLocaleString()} お得</>
+                        <>業者配送のほうが ¥{(feeComparison.delivery.fee - feeComparison.sagawa.fee).toLocaleString()} お得</>
                       ) : (
-                        <>💡 どちらも同じ料金</>
+                        <>どちらも同じ料金</>
                       )}
                       {feeComparison.isEstimate && <span className="ml-2 text-[#999]">※ 5,000円商品で試算</span>}
                     </div>
@@ -995,7 +995,7 @@ export default function StaffNewOrderPage() {
 
             {/* ★ 通知送信オプション */}
             <div className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-3 space-y-2">
-              <p className="text-[11px] font-bold text-[#555]">📤 ご注文確認の通知</p>
+              <p className="text-[11px] font-bold text-[#555]">ご注文確認の通知</p>
               <div className="flex flex-wrap gap-3">
                 <label className="flex items-center gap-2 text-[12px] cursor-pointer">
                   <input
@@ -1004,7 +1004,7 @@ export default function StaffNewOrderPage() {
                     onChange={(e) => setSendAutoReply(e.target.checked)}
                     className="w-4 h-4 accent-[#2D4B3E]"
                   />
-                  <span>📧 メールで送る</span>
+                  <span>メールで送る</span>
                   <span className="text-[10px] text-[#999]">（メアド必要）</span>
                 </label>
                 <label className="flex items-center gap-2 text-[12px] cursor-pointer">
@@ -1014,7 +1014,7 @@ export default function StaffNewOrderPage() {
                     onChange={(e) => setSendLineNotification(e.target.checked)}
                     className="w-4 h-4 accent-[#06c755]"
                   />
-                  <span>💬 LINEで送る</span>
+                  <span>LINEで送る</span>
                   {lookupResult?.lineLink?.active ? (
                     <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold">連携あり</span>
                   ) : (
@@ -1023,7 +1023,7 @@ export default function StaffNewOrderPage() {
                 </label>
               </div>
               <p className="text-[10px] text-[#999] leading-relaxed">
-                💡 電話受付でメアド不明でも、過去注文があれば LINE 経由で確認を送れます（要LINE連携）
+                電話受付でメアド不明でも、過去注文があれば LINE 経由で確認を送れます（要LINE連携）
               </p>
             </div>
 
@@ -1069,25 +1069,25 @@ export default function StaffNewOrderPage() {
                   disabled={!customerInfo.phone || lookupLoading}
                   className="h-12 px-4 bg-[#2D4B3E] text-white rounded-xl text-[11px] font-bold hover:bg-[#1f352b] disabled:opacity-50 whitespace-nowrap"
                 >
-                  {lookupLoading ? '検索中...' : '🔍 過去注文検索'}
+                  {lookupLoading ? '検索中...' : '過去注文検索'}
                 </button>
               </div>
               {lookupResult && (
                 <div className={`p-3 rounded-xl text-[11px] leading-relaxed ${lookupResult.found ? 'bg-emerald-50 border border-emerald-200 text-emerald-900' : 'bg-amber-50 border border-amber-200 text-amber-900'}`}>
                   {lookupResult.found ? (
                     <>
-                      ✅ <strong>{lookupResult.customer.name} 様</strong> ({lookupResult.orderCount}回ご注文) の情報を自動入力しました。<br/>
-                      {lookupResult.customer.email && <>📧 {lookupResult.customer.email}<br/></>}
+                      <strong>{lookupResult.customer.name} 様</strong> ({lookupResult.orderCount}回ご注文) の情報を自動入力しました。<br/>
+                      {lookupResult.customer.email && <>{lookupResult.customer.email}<br/></>}
                       {lookupResult.lineLink?.active ? (
                         <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded inline-block mt-1">
-                          💬 LINE連携済み{lookupResult.lineLink.displayName ? ` (${lookupResult.lineLink.displayName})` : ''}
+                          LINE連携済み{lookupResult.lineLink.displayName ? ` (${lookupResult.lineLink.displayName})` : ''}
                         </span>
                       ) : (
                         <span className="text-[10px] text-amber-700">※ LINE未連携</span>
                       )}
                     </>
                   ) : (
-                    <>⚠️ この電話番号での過去注文は見つかりませんでした。</>
+                    <>この電話番号での過去注文は見つかりませんでした。</>
                   )}
                 </div>
               )}
@@ -1250,7 +1250,7 @@ export default function StaffNewOrderPage() {
               </div>
               {/* ★ 社内メモ/要望 をメインカラーの下に移動 (旧 section 5 から移設) */}
               <div className="space-y-2 col-span-2">
-                <label className="text-[11px] font-bold text-[#999999]">📝 社内メモ / 要望</label>
+                <label className="text-[11px] font-bold text-[#999999]">社内メモ / 要望</label>
                 <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="例：予算オーバーだけどサービスでバラ増量 / アレルギー：百合NG" className="w-full h-24 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-4 text-[13px] resize-none focus:border-[#2D4B3E] outline-none"></textarea>
               </div>
             </div>
@@ -1314,14 +1314,14 @@ export default function StaffNewOrderPage() {
                     {tateNeeds.includes('3') && (
                       <div className="space-y-1">
                         <textarea placeholder={"③ 贈り主 (例: 株式会社〇〇)\n※連名はEnterで改行"} value={tateInput3} onChange={(e) => setTateInput3(e.target.value)} rows={2} className="w-full px-4 py-2 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none resize-y" />
-                        <p className="text-[10px] text-[#999] pl-1">💡 連名: Enterで改行</p>
+                        <p className="text-[10px] text-[#999] pl-1">連名: Enterで改行</p>
                       </div>
                     )}
                     {tateNeeds.includes('3a') && <input type="text" placeholder="③-1 会社名" value={tateInput3a} onChange={(e) => setTateInput3a(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
                     {tateNeeds.includes('3b') && (
                       <div className="space-y-1">
                         <textarea placeholder={"③-2 役職・氏名\n※連名はEnterで改行"} value={tateInput3b} onChange={(e) => setTateInput3b(e.target.value)} rows={2} className="w-full px-4 py-2 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none resize-y" />
-                        <p className="text-[10px] text-[#999] pl-1">💡 連名: Enterで改行</p>
+                        <p className="text-[10px] text-[#999] pl-1">連名: Enterで改行</p>
                       </div>
                     )}
                     
@@ -1349,7 +1349,7 @@ export default function StaffNewOrderPage() {
 
             {/* ★ 通知送信オプション */}
             <div className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-3 space-y-2">
-              <p className="text-[11px] font-bold text-[#555]">📤 ご注文確認の通知</p>
+              <p className="text-[11px] font-bold text-[#555]">ご注文確認の通知</p>
               <div className="flex flex-wrap gap-3">
                 <label className="flex items-center gap-2 text-[12px] cursor-pointer">
                   <input
@@ -1358,7 +1358,7 @@ export default function StaffNewOrderPage() {
                     onChange={(e) => setSendAutoReply(e.target.checked)}
                     className="w-4 h-4 accent-[#2D4B3E]"
                   />
-                  <span>📧 メールで送る</span>
+                  <span>メールで送る</span>
                   <span className="text-[10px] text-[#999]">（メアド必要）</span>
                 </label>
                 <label className="flex items-center gap-2 text-[12px] cursor-pointer">
@@ -1368,7 +1368,7 @@ export default function StaffNewOrderPage() {
                     onChange={(e) => setSendLineNotification(e.target.checked)}
                     className="w-4 h-4 accent-[#06c755]"
                   />
-                  <span>💬 LINEで送る</span>
+                  <span>LINEで送る</span>
                   {lookupResult?.lineLink?.active ? (
                     <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold">連携あり</span>
                   ) : (
@@ -1377,7 +1377,7 @@ export default function StaffNewOrderPage() {
                 </label>
               </div>
               <p className="text-[10px] text-[#999] leading-relaxed">
-                💡 電話受付でメアド不明でも、過去注文があれば LINE 経由で確認を送れます（要LINE連携）
+                電話受付でメアド不明でも、過去注文があれば LINE 経由で確認を送れます（要LINE連携）
               </p>
             </div>
 
@@ -1424,7 +1424,7 @@ export default function StaffNewOrderPage() {
                   disabled={!customerInfo.phone || lookupLoading}
                   className="h-12 px-4 bg-[#2D4B3E] text-white rounded-xl text-[11px] font-bold hover:bg-[#1f352b] disabled:opacity-50 whitespace-nowrap"
                 >
-                  {lookupLoading ? '検索中...' : '🔍 過去注文検索'}
+                  {lookupLoading ? '検索中...' : '過去注文検索'}
                 </button>
               </div>
               {/* 検索結果バナー */}
@@ -1432,18 +1432,18 @@ export default function StaffNewOrderPage() {
                 <div className={`p-3 rounded-xl text-[11px] leading-relaxed ${lookupResult.found ? 'bg-emerald-50 border border-emerald-200 text-emerald-900' : 'bg-amber-50 border border-amber-200 text-amber-900'}`}>
                   {lookupResult.found ? (
                     <>
-                      ✅ <strong>{lookupResult.customer.name} 様</strong> ({lookupResult.orderCount}回ご注文) の情報を自動入力しました。<br/>
-                      {lookupResult.customer.email && <>📧 {lookupResult.customer.email}<br/></>}
+                      <strong>{lookupResult.customer.name} 様</strong> ({lookupResult.orderCount}回ご注文) の情報を自動入力しました。<br/>
+                      {lookupResult.customer.email && <>{lookupResult.customer.email}<br/></>}
                       {lookupResult.lineLink?.active ? (
                         <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded inline-block mt-1">
-                          💬 LINE連携済み{lookupResult.lineLink.displayName ? ` (${lookupResult.lineLink.displayName})` : ''}
+                          LINE連携済み{lookupResult.lineLink.displayName ? ` (${lookupResult.lineLink.displayName})` : ''}
                         </span>
                       ) : (
                         <span className="text-[10px] text-amber-700">※ LINE未連携</span>
                       )}
                     </>
                   ) : (
-                    <>⚠️ この電話番号での過去注文は見つかりませんでした。</>
+                    <>この電話番号での過去注文は見つかりませんでした。</>
                   )}
                 </div>
               )}
@@ -1578,7 +1578,7 @@ export default function StaffNewOrderPage() {
                 <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl flex items-start gap-2 animate-in fade-in">
                   <AlertCircle size={16} className="text-orange-600 shrink-0 mt-0.5" />
                   <p className="text-[11px] font-bold text-orange-700 leading-relaxed">
-                    ⚠️ お届け先が注文者と異なる + 引き取り時支払い：<br/>
+                    お届け先が注文者と異なる + 引き取り時支払い：<br/>
                     お届け先様で支払いが発生する形になります。注文者様にご確認ください。
                   </p>
                 </div>
@@ -1606,7 +1606,7 @@ export default function StaffNewOrderPage() {
               )}
               {/* ★ ③ 入金メモ（自由記入の備考） */}
               <div className="space-y-2 p-4 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA]">
-                <label className="text-[11px] font-bold text-[#999999]">📝 入金メモ（備考）</label>
+                <label className="text-[11px] font-bold text-[#999999]">入金メモ（備考）</label>
                 <textarea
                   value={paymentMemo || ''}
                   onChange={(e) => setPaymentMemo(e.target.value)}

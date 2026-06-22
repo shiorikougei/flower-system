@@ -359,7 +359,7 @@ export default function StaffLayout({ children }) {
                 </div>
                 <div className="text-left min-w-0">
                   <p className={`text-[11px] font-bold truncate ${currentStaff ? 'text-[#111]' : 'text-red-600'}`}>
-                    {currentStaff?.name || (staffAuthConfig.requirePin ? '⚠️ 未選択（操作不可）' : '未選択')}
+                    {currentStaff?.name || (staffAuthConfig.requirePin ? '未選択（操作不可）' : '未選択')}
                   </p>
                   <p className={`text-[9px] truncate ${currentStaff ? 'text-[#999]' : (staffAuthConfig.requirePin ? 'text-red-500 font-bold' : 'text-[#999]')}`}>
                     {currentStaff?.role

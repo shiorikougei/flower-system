@@ -4,7 +4,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronDown, HelpCircle, Search } from "lucide-react";
+import { ChevronLeft, ChevronDown, HelpCircle, Search, Pin, Phone, MessageCircle, ShoppingBag, Sparkles, Home } from "lucide-react";
 
 export default function FaqClient({ grouped, shop, tenantId, shopId }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -113,8 +113,8 @@ export default function FaqClient({ grouped, shop, tenantId, shopId }) {
         {/* FAQ リスト（カテゴリ別） */}
         {filtered.map((group, groupIdx) => (
           <section key={group.category} className="mb-8">
-            <h2 className="text-[16px] md:text-[18px] font-bold text-[#2D4B3E] border-b-2 border-[#2D4B3E] pb-2 mb-3">
-              📌 {group.category}
+            <h2 className="text-[16px] md:text-[18px] font-bold text-[#2D4B3E] border-b-2 border-[#2D4B3E] pb-2 mb-3 flex items-center gap-2">
+              <Pin size={16}/> {group.category}
             </h2>
             <div className="space-y-2">
               {group.items.map((item, itemIdx) => {
@@ -179,16 +179,16 @@ export default function FaqClient({ grouped, shop, tenantId, shopId }) {
             {shop.phone && (
               <a
                 href={`tel:${shop.phone}`}
-                className="inline-block px-6 py-3 bg-white text-[#2D4B3E] rounded-xl text-[13px] font-bold hover:bg-[#FBFAF9]"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-[#2D4B3E] rounded-xl text-[13px] font-bold hover:bg-[#FBFAF9]"
               >
-                📞 {shop.phone}
+                <Phone size={14}/> {shop.phone}
               </a>
             )}
             <Link
               href={`/order/${tenantId}/${shopId}/estimate`}
-              className="inline-block px-6 py-3 bg-amber-600 text-white rounded-xl text-[13px] font-bold hover:bg-amber-700"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-xl text-[13px] font-bold hover:bg-amber-700"
             >
-              💬 お見積もり相談
+              <MessageCircle size={14}/> お見積もり相談
             </Link>
           </div>
         </div>
@@ -199,19 +199,19 @@ export default function FaqClient({ grouped, shop, tenantId, shopId }) {
             href={`/order/${tenantId}/${shopId}/shop`}
             className="block p-4 bg-white border border-[#EAEAEA] rounded-xl hover:border-[#2D4B3E] text-center"
           >
-            <p className="text-[12px] font-bold text-[#2D4B3E]">🛍️ 商品一覧</p>
+            <p className="text-[12px] font-bold text-[#2D4B3E] flex items-center justify-center gap-1"><ShoppingBag size={13}/> 商品一覧</p>
           </Link>
           <Link
             href={`/order/${tenantId}/${shopId}/custom`}
             className="block p-4 bg-white border border-[#EAEAEA] rounded-xl hover:border-[#2D4B3E] text-center"
           >
-            <p className="text-[12px] font-bold text-[#2D4B3E]">✨ カスタム注文</p>
+            <p className="text-[12px] font-bold text-[#2D4B3E] flex items-center justify-center gap-1"><Sparkles size={13}/> カスタム注文</p>
           </Link>
           <Link
             href={`/order/${tenantId}/${shopId}`}
             className="block p-4 bg-white border border-[#EAEAEA] rounded-xl hover:border-[#2D4B3E] text-center"
           >
-            <p className="text-[12px] font-bold text-[#2D4B3E]">🏠 店舗トップ</p>
+            <p className="text-[12px] font-bold text-[#2D4B3E] flex items-center justify-center gap-1"><Home size={13}/> 店舗トップ</p>
           </Link>
         </nav>
       </div>

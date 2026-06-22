@@ -130,7 +130,7 @@ export async function POST(request) {
       for (const s of staffList) {
         if (lockedKeys.has(`${s.name}__${d.dateStr}`)) { skippedLocked++; continue; }
         const isOff = !chosenNames.has(s.name);
-        // ★ スタッフ個別の基本出勤時間 > パターンの順で優先
+        // スタッフ個別の基本出勤時間 > パターンの順で優先
         const startTime = (!isOff && s.defaultStartTime) ? s.defaultStartTime : (isOff ? null : pattern.startTime);
         const endTime = (!isOff && s.defaultEndTime) ? s.defaultEndTime : (isOff ? null : pattern.endTime);
         const patternName = (!isOff && s.defaultStartTime) ? `${startTime}-${endTime}` : (isOff ? null : pattern.name);

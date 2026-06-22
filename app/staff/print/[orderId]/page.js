@@ -349,7 +349,7 @@ export default function PrintSlipPage() {
       <div className="max-w-[1000px] mx-auto bg-white p-5 rounded-xl shadow-lg mb-8 print-hidden border border-gray-200 sticky top-4 z-50">
         <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
           <div className="text-sm font-bold text-gray-700 flex items-center gap-2">
-            🖨️ 伝票・立札 印刷センター
+            伝票・立札 印刷センター
             <span className="bg-gray-100 text-gray-500 text-[10px] px-2 py-1 rounded-md">A4サイズ / 100%倍率推奨</span>
           </div>
           {/* [印刷-2] 印刷ボタン群: モバイル対応で代替手段を併設 */}
@@ -364,7 +364,7 @@ export default function PrintSlipPage() {
               }}
               className="px-5 py-3 bg-[#2D4B3E] text-white font-bold rounded-lg shadow-md hover:bg-[#1f352b] transition-all flex items-center gap-2 active:scale-95 text-sm"
             >
-              🖨️ 印刷ダイアログを開く
+              印刷ダイアログを開く
             </button>
             <button
               onClick={async () => {
@@ -391,7 +391,7 @@ export default function PrintSlipPage() {
               }}
               className="px-5 py-3 bg-white border-2 border-[#2D4B3E] text-[#2D4B3E] font-bold rounded-lg hover:bg-[#FBFAF9] transition-all text-sm"
             >
-              📄 PDF保存の手順
+              PDF保存の手順
             </button>
           </div>
         </div>
@@ -399,17 +399,17 @@ export default function PrintSlipPage() {
         {/* モード切替ボタン */}
         <div className="flex flex-wrap gap-3 bg-gray-50 p-2 rounded-lg border border-gray-200">
           <button onClick={() => setPrintMode('all')} className={`flex-1 py-2.5 text-xs font-bold rounded-md transition-all ${printMode === 'all' ? 'bg-white shadow-sm border border-gray-300 text-[#2D4B3E]' : 'text-gray-500 hover:bg-gray-200'}`}>
-            📋 伝票フルセット (4面印刷)
+            伝票フルセット (4面印刷)
           </button>
           <button onClick={() => setPrintMode('customer')} className={`flex-1 py-2.5 text-xs font-bold rounded-md transition-all ${printMode === 'customer' ? 'bg-white shadow-sm border border-gray-300 text-[#1565c0]' : 'text-gray-500 hover:bg-gray-200'}`}>
-            📧 お客様控え のみ
+            お客様控え のみ
           </button>
           <button onClick={() => setPrintMode('delivery')} className={`flex-1 py-2.5 text-xs font-bold rounded-md transition-all ${printMode === 'delivery' ? 'bg-white shadow-sm border border-gray-300 text-[#f57f17]' : 'text-gray-500 hover:bg-gray-200'}`}>
-            🚚 納品・受領書 のみ
+            納品・受領書 のみ
           </button>
           {!isEcOrder && (
             <button onClick={() => setPrintMode('card')} className={`flex-1 py-2.5 text-xs font-bold rounded-md transition-all ${printMode === 'card' ? 'bg-white shadow-sm border border-[#c62828] text-[#c62828]' : 'text-[#c62828] hover:bg-red-50 border border-transparent'}`}>
-              🏷️ 本番用 立札・カード印刷
+              本番用 立札・カード印刷
             </button>
           )}
         </div>

@@ -262,7 +262,7 @@ function StaffProductsPageInner() {
             });
             const result = await res.json();
             if (result.sent > 0) {
-              autoNotifyMsg = ` / 📧 入荷通知を自動送信しました (${result.sent}件)`;
+              autoNotifyMsg = ` / 入荷通知を自動送信しました (${result.sent}件)`;
             }
           } catch (e) {
             console.warn('入荷通知自動送信失敗:', e);
@@ -321,7 +321,7 @@ function StaffProductsPageInner() {
             href="/staff/products/qr-print"
             className="flex items-center gap-2 px-4 h-11 bg-white border border-[#EAEAEA] text-[#2D4B3E] rounded-xl font-bold text-[12px] hover:border-[#2D4B3E] transition-all"
           >
-            📱 QRコード印刷
+            QRコード印刷
           </a>
           <button
             onClick={openNew}
@@ -509,7 +509,7 @@ function StaffProductsPageInner() {
                     );
                   })}
                 </div>
-                <p className="text-[10px] text-[#999999]">📸 商品の角度違い・サイズ感・ディテール写真など、お客様の購買判断に役立つ画像を追加できます。</p>
+                <p className="text-[10px] text-[#999999]">商品の角度違い・サイズ感・ディテール写真など、お客様の購買判断に役立つ画像を追加できます。</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -554,16 +554,16 @@ function StaffProductsPageInner() {
                 </div>
               </div>
 
-              {/* ★ [SEO-#10] 星評価（AggregateRating）- SEO検索結果に⭐⭐⭐⭐⭐表示 */}
+              {/* ★ [SEO-#10] 星評価（AggregateRating）- SEO検索結果に星評価表示 */}
               <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 space-y-3">
-                <h3 className="text-[13px] font-bold text-yellow-900 flex items-center gap-2">⭐ 商品レビュー評価（SEO効果大）</h3>
+                <h3 className="text-[13px] font-bold text-yellow-900 flex items-center gap-2">商品レビュー評価（SEO効果大）</h3>
                 <p className="text-[10px] text-yellow-800 leading-relaxed">
-                  Google検索結果に <strong>⭐⭐⭐⭐⭐ 4.5 (123件)</strong> のような表示が出るようになります。<br/>
-                  クリック率が <strong>3〜5倍</strong> アップする最強のSEO効果📈
+                  Google検索結果に <strong>4.5 (123件)</strong> のような表示が出るようになります。<br/>
+                  クリック率が <strong>3〜5倍</strong> アップする最強のSEO効果
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-yellow-900">⭐ 平均評価（1.0〜5.0）</label>
+                    <label className="text-[10px] font-bold text-yellow-900">平均評価（1.0〜5.0）</label>
                     <input
                       type="number"
                       value={editTarget.rating_value ?? ''}
@@ -576,7 +576,7 @@ function StaffProductsPageInner() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-yellow-900">📊 レビュー件数</label>
+                    <label className="text-[10px] font-bold text-yellow-900">レビュー件数</label>
                     <input
                       type="number"
                       value={editTarget.rating_count ?? ''}
@@ -588,7 +588,7 @@ function StaffProductsPageInner() {
                   </div>
                 </div>
                 <div className="bg-white rounded-lg p-3 border border-yellow-200">
-                  <p className="text-[10px] font-bold text-yellow-900 mb-2">📌 入力例（Googleレビュー・Instagram・お客様の声から集計）</p>
+                  <p className="text-[10px] font-bold text-yellow-900 mb-2">入力例（Googleレビュー・Instagram・お客様の声から集計）</p>
                   <ul className="text-[10px] text-yellow-800 space-y-0.5">
                     <li>• Googleマップのレビュー平均</li>
                     <li>• Instagramでハッシュタグ付き投稿数</li>
@@ -596,7 +596,7 @@ function StaffProductsPageInner() {
                     <li>• 過去の販売実績数（推定）</li>
                   </ul>
                   <p className="text-[10px] text-red-600 font-bold mt-2">
-                    ⚠️ 虚偽の評価はGoogleガイドライン違反になりペナルティの対象です。実態に即した数値を入れてください。
+                    虚偽の評価はGoogleガイドライン違反になりペナルティの対象です。実態に即した数値を入れてください。
                   </p>
                 </div>
               </div>
@@ -627,7 +627,7 @@ function StaffProductsPageInner() {
 
               {/* ★ 箱サイズ（業者配送マスタ連動） */}
               <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
-                <label className="text-[13px] font-bold text-orange-900 block mb-2">📦 箱サイズ（梱包代+送料計算用）</label>
+                <label className="text-[13px] font-bold text-orange-900 block mb-2">箱サイズ（梱包代+送料計算用）</label>
                 {shippingSizes.length === 0 ? (
                   <p className="text-[11px] text-orange-700 italic">設定 → 商品・配送 → 配送・時間枠 → 業者配送 サイズ・地域マスタ でサイズを登録してください。</p>
                 ) : (
@@ -655,7 +655,7 @@ function StaffProductsPageInner() {
 
               {/* ★ オプション設定 */}
               <div className="bg-pink-50 border border-pink-200 rounded-xl p-4 space-y-4">
-                <label className="text-[13px] font-bold text-pink-900 block">🎀 オプション設定（この商品で選択可能なオプション）</label>
+                <label className="text-[13px] font-bold text-pink-900 block">オプション設定（この商品で選択可能なオプション）</label>
 
                 {/* ラッピング */}
                 <div className="bg-white rounded-lg p-3 border border-pink-100">
@@ -673,7 +673,7 @@ function StaffProductsPageInner() {
                       className="mt-0.5 w-5 h-5 accent-pink-600"
                     />
                     <div className="flex-1">
-                      <p className="text-[13px] font-bold text-[#111111]">🎁 ラッピング</p>
+                      <p className="text-[13px] font-bold text-[#111111]">ラッピング</p>
                     </div>
                   </label>
                   {editTarget.options?.wrapping?.enabled && (
@@ -712,7 +712,7 @@ function StaffProductsPageInner() {
                       className="mt-0.5 w-5 h-5 accent-pink-600"
                     />
                     <div className="flex-1">
-                      <p className="text-[13px] font-bold text-[#111111]">💌 メッセージカード（紙）</p>
+                      <p className="text-[13px] font-bold text-[#111111]">メッセージカード（紙）</p>
                     </div>
                   </label>
                   {editTarget.options?.messageCard?.enabled && (
@@ -751,7 +751,7 @@ function StaffProductsPageInner() {
                       className="mt-0.5 w-5 h-5 accent-pink-600"
                     />
                     <div className="flex-1">
-                      <p className="text-[13px] font-bold text-[#111111]">✍️ 文字入れ（ガラス面等）</p>
+                      <p className="text-[13px] font-bold text-[#111111]">文字入れ（ガラス面等）</p>
                     </div>
                   </label>
                   {editTarget.options?.textInsertion?.enabled && (

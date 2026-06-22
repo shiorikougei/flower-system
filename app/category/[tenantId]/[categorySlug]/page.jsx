@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 import Breadcrumbs from "@/components/Breadcrumbs";
+import { Package } from "lucide-react";
 
 export const revalidate = 3600;
 
@@ -194,7 +195,7 @@ export default async function CategoryPage({ params }) {
                           loading="lazy"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[#CCC]">📦</div>
+                        <div className="w-full h-full flex items-center justify-center text-[#CCC]"><Package size={32} /></div>
                       )}
                       {isOutOfStock && (
                         <div className="absolute top-3 left-3 bg-[#111]/80 text-white text-[10px] font-bold px-2 py-1 rounded">在庫切れ</div>
@@ -213,7 +214,7 @@ export default async function CategoryPage({ params }) {
 
           {/* [SEO-#20] 関連カテゴリへの内部リンク */}
           <div className="mt-12 pt-8 border-t border-[#EAEAEA]">
-            <h2 className="text-[14px] font-bold text-[#2D4B3E] mb-4">📌 他のカテゴリも見る</h2>
+            <h2 className="text-[14px] font-bold text-[#2D4B3E] mb-4">他のカテゴリも見る</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {Object.entries(CATEGORY_LABELS)
                 .filter(([slug]) => slug !== categorySlug)

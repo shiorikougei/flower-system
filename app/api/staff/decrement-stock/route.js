@@ -74,7 +74,7 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // ★ 在庫減算（既存のRPC関数を流用：原子的）
+    // 在庫減算（既存のRPC関数を流用：原子的）
     const { data: rpcResult, error: rpcErr } = await supabaseAdmin.rpc('decrement_stock', {
       p_product_id: productId,
       p_qty: decrementQty,
@@ -90,7 +90,7 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // ★ 監査ログ記録（誰が・いつ・何を・何個 + 任意メモ）
+    // 監査ログ記録（誰が・いつ・何を・何個 + 任意メモ）
     try {
       await supabaseAdmin.from('audit_log').insert({
         tenant_id: tenantId,

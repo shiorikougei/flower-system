@@ -204,7 +204,7 @@ export default function EstimatesPage() {
     const totalTax = Math.floor(total * 1.1);
 
     let msg = `${est.customer_name} 様\n\n`;
-    msg += `ご依頼ありがとうございます🌸\n`;
+    msg += `ご依頼ありがとうございます\n`;
     msg += `下記の内容でお見積もりさせていただきます。\n\n`;
 
     // 内容サマリー
@@ -245,8 +245,8 @@ export default function EstimatesPage() {
       msg += `${replyForm.staffComment.trim()}\n\n`;
     }
 
-    msg += `内容にご納得いただけましたら、メール記載のURLから正式注文へお進みください💐\n\n`;
-    msg += `ご質問・修正のご希望等ございましたら、お気軽にご返信ください🌷`;
+    msg += `内容にご納得いただけましたら、メール記載のURLから正式注文へお進みください\n\n`;
+    msg += `ご質問・修正のご希望等ございましたら、お気軽にご返信ください`;
     return msg;
   }
 
@@ -281,7 +281,7 @@ export default function EstimatesPage() {
         sagawaFee: '', boxFee: '', coolFee: '', otherFees: [], staffComment: '', message: '',
       });
       loadEstimates();
-      alert('お客様にお見積もりメールを送信しました🎉');
+      alert('お客様にお見積もりメールを送信しました');
     } catch (e) { alert('エラー: ' + e.message); }
   }
 
@@ -301,7 +301,7 @@ export default function EstimatesPage() {
     // 確定済み（注文に転送済み）の場合は警告強化
     let confirmMsg = 'このお見積もり依頼を完全に削除しますか？\nこの操作は取り消せません。';
     if (est?.status === 'converted' && est?.order_id) {
-      confirmMsg = `⚠️ この見積は正式注文に確定済みです（注文ID: ${String(est.order_id).slice(0,8)}）\n\n見積データのみ削除されます（注文データは残ります）。\n本当に削除しますか？`;
+      confirmMsg = `この見積は正式注文に確定済みです（注文ID: ${String(est.order_id).slice(0,8)}）\n\n見積データのみ削除されます（注文データは残ります）。\n本当に削除しますか？`;
     }
     if (!confirm(confirmMsg)) return;
     try {
@@ -329,7 +329,7 @@ export default function EstimatesPage() {
     <div className="min-h-screen bg-[#FBFAF9] pb-32">
       <header className="bg-white border-b border-[#EAEAEA] sticky top-0 z-10">
         <div className="max-w-[1000px] mx-auto px-6 h-16 flex items-center justify-between">
-          <h1 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2">💰 お見積もり依頼管理</h1>
+          <h1 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2">お見積もり依頼管理</h1>
           <button onClick={loadEstimates} className="p-2 hover:bg-[#FBFAF9] rounded-lg"><RefreshCw size={16} className={loading ? 'animate-spin' : ''}/></button>
         </div>
       </header>
@@ -339,10 +339,10 @@ export default function EstimatesPage() {
         <div className="flex gap-2 flex-wrap">
           {[
             { id: 'all', label: 'すべて' },
-            { id: 'pending', label: '🟡 未回答' },
-            { id: 'replied', label: '🔵 回答済' },
-            { id: 'converted', label: '✅ 確定済' },
-            { id: 'rejected', label: '❌ 却下' },
+            { id: 'pending', label: '未回答' },
+            { id: 'replied', label: '回答済' },
+            { id: 'converted', label: '確定済' },
+            { id: 'rejected', label: '却下' },
           ].map(f => (
             <button key={f.id} onClick={() => setFilter(f.id)}
               className={`px-4 py-2 rounded-full text-[12px] font-bold ${filter === f.id ? 'bg-[#2D4B3E] text-white' : 'bg-white border border-[#EAEAEA] text-[#555]'}`}>
@@ -422,13 +422,13 @@ export default function EstimatesPage() {
                   {/* ★ 参考画像のサムネイル表示 */}
                   {Array.isArray(est.reference_images) && est.reference_images.length > 0 && (
                     <div className="bg-[#FBFAF9] p-3 rounded-lg">
-                      <p className="text-[10px] font-bold text-[#999] mb-2">📷 参考画像 ({est.reference_images.length}枚)</p>
+                      <p className="text-[10px] font-bold text-[#999] mb-2">参考画像 ({est.reference_images.length}枚)</p>
                       <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
                         {est.reference_images.map((url, idx) => (
                           <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="relative aspect-square bg-white rounded-lg overflow-hidden border border-[#EAEAEA] hover:shadow-md transition-all group">
                             <img src={url} alt={`参考画像${idx + 1}`} className="w-full h-full object-cover"/>
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
-                              <span className="opacity-0 group-hover:opacity-100 text-white text-[10px] font-bold">🔍 拡大</span>
+                              <span className="opacity-0 group-hover:opacity-100 text-white text-[10px] font-bold">拡大</span>
                             </div>
                           </a>
                         ))}
@@ -454,7 +454,7 @@ export default function EstimatesPage() {
                     if (isExpired) {
                       return (
                         <div className="bg-red-50 border border-red-200 p-3 rounded-lg flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-red-700">⏱ 有効期限が切れました ({expiresAt.toLocaleDateString('ja-JP')})</span>
+                          <span className="text-[11px] font-bold text-red-700">有効期限が切れました ({expiresAt.toLocaleDateString('ja-JP')})</span>
                         </div>
                       );
                     }
@@ -463,11 +463,11 @@ export default function EstimatesPage() {
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <div>
                             <p className={`text-[11px] font-bold ${isNear ? 'text-amber-800' : 'text-blue-800'}`}>
-                              ⏱ 有効期限 {expiresAt.toLocaleDateString('ja-JP')}（あと {daysLeft}日）
+                              有効期限 {expiresAt.toLocaleDateString('ja-JP')}（あと {daysLeft}日）
                             </p>
                             {alreadySent && (
                               <p className="text-[10px] text-[#666] mt-1">
-                                📧 {new Date(est.expiry_warning_sent_at).toLocaleString('ja-JP')} に顧客リマインド送信済
+                                {new Date(est.expiry_warning_sent_at).toLocaleString('ja-JP')} に顧客リマインド送信済
                               </p>
                             )}
                           </div>
@@ -491,7 +491,7 @@ export default function EstimatesPage() {
                                 });
                                 const data = await res.json();
                                 if (res.ok && data.ok) {
-                                  alert(`📧 ${data.sentTo} へリマインドメールを送信しました🌸`);
+                                  alert(`${data.sentTo} へリマインドメールを送信しました`);
                                   loadEstimates && loadEstimates();
                                 } else {
                                   alert(`送信失敗: ${data.error || '原因不明'}`);
@@ -502,7 +502,7 @@ export default function EstimatesPage() {
                             }}
                             className={`px-3 h-9 ${isNear ? 'bg-amber-600 hover:bg-amber-500' : 'bg-blue-600 hover:bg-blue-500'} text-white text-[11px] font-bold rounded-lg flex items-center gap-1`}
                           >
-                            📧 {alreadySent ? '再度' : ''}顧客にリマインド送信
+                            {alreadySent ? '再度' : ''}顧客にリマインド送信
                           </button>
                         </div>
                       </div>
@@ -531,7 +531,7 @@ export default function EstimatesPage() {
                     return (
                     <div className="space-y-4 pt-3 border-t border-[#EAEAEA] bg-[#FBFAF9] -mx-6 px-6 py-4 rounded-b-2xl">
                       <div className="flex items-center justify-between">
-                        <p className="text-[12px] font-bold text-[#117768]">💰 お見積もり料金 内訳</p>
+                        <p className="text-[12px] font-bold text-[#117768]">お見積もり料金 内訳</p>
                         <button
                           type="button"
                           onClick={() => {
@@ -548,7 +548,7 @@ export default function EstimatesPage() {
                           }}
                           className="text-[10px] bg-[#117768]/10 text-[#117768] px-3 py-1 rounded-full font-bold hover:bg-[#117768] hover:text-white"
                         >
-                          🔄 商品代から再計算
+                          商品代から再計算
                         </button>
                       </div>
                       <p className="text-[10px] text-[#999] -mt-2">※ 配送料・箱代・クール代は住所と希望日から自動算出済み。変更可能です。</p>
@@ -568,17 +568,17 @@ export default function EstimatesPage() {
                       {/* 自社配達対応可否 (お客様が delivery希望時のみ表示) */}
                       {wantsSelfDelivery && (
                         <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 space-y-2">
-                          <p className="text-[11px] font-bold text-emerald-900">🚚 自社配達のご希望あり - 対応可否を選択</p>
+                          <p className="text-[11px] font-bold text-emerald-900">自社配達のご希望あり - 対応可否を選択</p>
                           <div className="grid grid-cols-2 gap-2">
                             <button type="button"
                               onClick={() => setReplyForm({...replyForm, selfDeliveryAccepted: 'yes', sagawaFee: ''})}
                               className={`p-2.5 rounded-lg border-2 text-[11px] font-bold ${replyForm.selfDeliveryAccepted === 'yes' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-emerald-200 text-emerald-700'}`}>
-                              ✅ 対応可能
+                              対応可能
                             </button>
                             <button type="button"
                               onClick={() => setReplyForm({...replyForm, selfDeliveryAccepted: 'no', selfDeliveryFee: ''})}
                               className={`p-2.5 rounded-lg border-2 text-[11px] font-bold ${replyForm.selfDeliveryAccepted === 'no' ? 'bg-amber-600 border-amber-600 text-white' : 'bg-white border-amber-200 text-amber-700'}`}>
-                              ⚠️ 対応不可 (業者配送に切替)
+                              対応不可 (業者配送に切替)
                             </button>
                           </div>
                         </div>
@@ -587,7 +587,7 @@ export default function EstimatesPage() {
                       {/* 自社配達料 */}
                       {(replyForm.selfDeliveryAccepted === 'yes' || (!wantsSelfDelivery && rd.deliveryMethod !== 'pickup')) && (
                         <div>
-                          <label className="text-[10px] font-bold text-[#555]">🚚 自社配達料 (税抜)</label>
+                          <label className="text-[10px] font-bold text-[#555]">自社配達料 (税抜)</label>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="font-bold">¥</span>
                             <input type="number" value={replyForm.selfDeliveryFee}
@@ -601,7 +601,7 @@ export default function EstimatesPage() {
                       {/* 業者配送料 */}
                       {(replyForm.selfDeliveryAccepted === 'no' || rd.deliveryMethod === 'shipping' || (!wantsSelfDelivery && rd.deliveryMethod !== 'pickup')) && (
                         <div>
-                          <label className="text-[10px] font-bold text-[#555]">📦 業者配送料 (税抜)</label>
+                          <label className="text-[10px] font-bold text-[#555]">業者配送料 (税抜)</label>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="font-bold">¥</span>
                             <input type="number" value={replyForm.sagawaFee}
@@ -615,14 +615,14 @@ export default function EstimatesPage() {
                       {/* 箱代 */}
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="text-[10px] font-bold text-[#555]">📦 箱代 (任意)</label>
+                          <label className="text-[10px] font-bold text-[#555]">箱代 (任意)</label>
                           <input type="number" value={replyForm.boxFee}
                             onChange={e => setReplyForm({...replyForm, boxFee: e.target.value})}
                             placeholder="例: 300"
                             className="w-full h-11 px-3 mt-1 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#117768]"/>
                         </div>
                         <div>
-                          <label className="text-[10px] font-bold text-[#555]">❄️ クール便代 (任意)</label>
+                          <label className="text-[10px] font-bold text-[#555]">クール便代 (任意)</label>
                           <input type="number" value={replyForm.coolFee}
                             onChange={e => setReplyForm({...replyForm, coolFee: e.target.value})}
                             placeholder="例: 220"
@@ -633,7 +633,7 @@ export default function EstimatesPage() {
                       {/* ★ その他料金 (複数追加可能) */}
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <label className="text-[10px] font-bold text-[#555]">📝 その他料金 (任意・複数追加可)</label>
+                          <label className="text-[10px] font-bold text-[#555]">その他料金 (任意・複数追加可)</label>
                           <button
                             type="button"
                             onClick={() => setReplyForm({
@@ -687,10 +687,10 @@ export default function EstimatesPage() {
 
                       {/* ★ 店舗からの追加コメント (自動生成と合体) */}
                       <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
-                        <label className="text-[11px] font-bold text-amber-900">📝 店舗からの追加コメント (任意)</label>
+                        <label className="text-[11px] font-bold text-amber-900">店舗からの追加コメント (任意)</label>
                         <p className="text-[10px] text-amber-700">
                           お客様への質問・補足説明があればこちらに記入してください。<br/>
-                          下の「✨自動生成」ボタンを押すと、料金内訳と合わせてメッセージに反映されます。
+                          下の「自動生成」ボタンを押すと、料金内訳と合わせてメッセージに反映されます。
                         </p>
                         <textarea value={replyForm.staffComment}
                           onChange={e => setReplyForm({...replyForm, staffComment: e.target.value})}
@@ -702,18 +702,18 @@ export default function EstimatesPage() {
                       {/* 自動生成ボタン + メッセージ */}
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <label className="text-[10px] font-bold text-[#555]">💬 回答メッセージ (お客様に送信される内容)</label>
+                          <label className="text-[10px] font-bold text-[#555]">回答メッセージ (お客様に送信される内容)</label>
                           <button type="button"
                             onClick={() => setReplyForm({...replyForm, message: generateMessage(est)})}
                             disabled={total <= 0}
                             className="text-[10px] bg-[#117768]/10 text-[#117768] px-3 py-1 rounded-full font-bold hover:bg-[#117768] hover:text-white disabled:opacity-50">
-                            ✨ 内容＋追加コメントから自動生成
+                            内容＋追加コメントから自動生成
                           </button>
                         </div>
                         <textarea value={replyForm.message}
                           onChange={e => setReplyForm({...replyForm, message: e.target.value})}
                           rows={10}
-                          placeholder="先に料金と追加コメントを入力して「✨ 自動生成」を押してください。"
+                          placeholder="先に料金と追加コメントを入力して「自動生成」を押してください。"
                           className="w-full px-3 py-2 bg-white border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#117768] resize-none leading-relaxed"/>
                       </div>
 
@@ -731,7 +731,7 @@ export default function EstimatesPage() {
 
                   {est.status === 'converted' && est.order_id && (
                     <div className="bg-emerald-50 p-3 rounded-lg text-[11px] text-emerald-700">
-                      ✅ <strong>正式注文に確定済み</strong> (注文ID: {String(est.order_id).slice(0, 8)})
+                      <strong>正式注文に確定済み</strong> (注文ID: {String(est.order_id).slice(0, 8)})
                     </div>
                   )}
 

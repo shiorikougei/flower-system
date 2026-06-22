@@ -1,5 +1,5 @@
 // サーバー側専用 Stripe クライアント初期化
-// ⚠️ このファイルは API Route からのみ import すること
+// このファイルは API Route からのみ import すること
 // （Stripe Secret Key を含むので、クライアントコードでは絶対に使わない）
 
 import Stripe from 'stripe';

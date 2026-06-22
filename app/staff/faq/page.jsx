@@ -138,7 +138,7 @@ export default function StaffFaqPage() {
       <div className="max-w-[1000px] mx-auto">
         <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
           <div>
-            <h1 className="text-[24px] font-bold text-[#2D4B3E]">❓ よくあるご質問 管理</h1>
+            <h1 className="text-[24px] font-bold text-[#2D4B3E]">よくあるご質問 管理</h1>
             <p className="text-[12px] text-[#666] mt-1">お客様向け FAQ ページの内容を編集します。Google検索のリッチリザルトにも反映されます。</p>
           </div>
           <div className="flex gap-2">
@@ -170,7 +170,7 @@ export default function StaffFaqPage() {
           <p className="text-[11px] text-blue-900 leading-relaxed flex items-start gap-2">
             <HelpCircle size={14} className="mt-0.5 shrink-0"/>
             <span>
-              <strong>💡 SEO効果UPのコツ</strong>: 質問は「お客様が検索しそうな自然な言葉」で。回答は <strong>2〜4文</strong> で要点を絞る。
+              <strong>SEO効果UPのコツ</strong>: 質問は「お客様が検索しそうな自然な言葉」で。回答は <strong>2〜4文</strong> で要点を絞る。
               この内容は <strong>FAQPage構造化データ</strong>として Googleの検索結果カードに直接表示されます。
             </span>
           </p>

@@ -169,7 +169,7 @@ function PortfolioPageInner() {
         // ★ 管理番号があれば、キャプションの先頭に自動挿入
         const mn = (newImage.managementNo || '').trim();
         const finalCaption = mn
-          ? `📋 ${mn}\n\n${data.caption}`
+          ? `${mn}\n\n${data.caption}`
           : data.caption;
         setNewImage({ ...newImage, caption: finalCaption });
       }
@@ -177,7 +177,7 @@ function PortfolioPageInner() {
       // ★ 月の無料枠を超えた場合はメッセージ表示
       if (data.usage && data.usage.overage > 0) {
         alert(
-          `⚠️ 今月のAI生成回数が無料枠（${data.usage.freeQuota}回）を超えました。\n` +
+          `今月のAI生成回数が無料枠（${data.usage.freeQuota}回）を超えました。\n` +
           `超過: ${data.usage.overage}回 / 追加料金: ¥${data.usage.overageJpy.toLocaleString()}\n` +
           `※請求は月末にまとめて発生します`
         );
@@ -336,7 +336,7 @@ function PortfolioPageInner() {
     if (errCount > 0) {
       alert(`${results.length}件取得、${errCount}件失敗\n失敗は非公開投稿・ログイン要・形式不一致などが原因です。`);
     } else {
-      alert(`${results.length}件のURLから画像を取得しました🎉\n下のリストで内容を確認し、作品として登録してください。`);
+      alert(`${results.length}件のURLから画像を取得しました\n下のリストで内容を確認し、作品として登録してください。`);
     }
   };
 
@@ -412,7 +412,7 @@ function PortfolioPageInner() {
       setImages(updatedImages);
       // 登録したものを取込リストから削除
       setExtractedItems(items => items.filter(it => !it.selected));
-      alert(`${selected.length}件を作品として登録しました🎉`);
+      alert(`${selected.length}件を作品として登録しました`);
       setActiveTab('list');
     } catch (err) {
       console.error(err);
@@ -496,14 +496,14 @@ function PortfolioPageInner() {
                       </div>
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all flex items-center justify-center">
                         <span className="opacity-0 group-hover:opacity-100 bg-white/95 backdrop-blur px-4 py-2 rounded-full text-[11px] font-bold text-[#2D4B3E] shadow-md">
-                          🔍 詳細を見る
+                          詳細を見る
                         </span>
                       </div>
                     </div>
                     <div className="p-5 flex flex-col flex-1">
                       {img.managementNo && (
                         <p className="text-[10px] font-mono text-[#2D4B3E] bg-[#2D4B3E]/10 px-2 py-1 rounded mb-2 w-fit">
-                          📋 {img.managementNo}
+                          {img.managementNo}
                         </p>
                       )}
                       <div className="flex flex-wrap gap-1.5 mb-3">
@@ -621,13 +621,13 @@ function PortfolioPageInner() {
                   {/* ★ 差し替えバッジ（写真がある時のみ） */}
                   {newImage.url && (
                     <div className="absolute bottom-2 left-2 right-2 bg-white/95 backdrop-blur text-[10px] font-bold text-[#2D4B3E] text-center py-1.5 rounded-lg shadow-sm pointer-events-none">
-                      📷 クリックで写真を差し替え
+                      クリックで写真を差し替え
                     </div>
                   )}
                 </div>
                 {newImage.uploadFile === 'from_order' && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-[10px] text-amber-900 leading-relaxed">
-                    💡 <strong>完成写真がセットされています。</strong><br/>
+                    <strong>完成写真がセットされています。</strong><br/>
                     メッセージカード等が写り込んでいる場合は、写真エリアをクリックして別の写真に差し替えできます。SNS掲載に不適切な要素が映ったままにならないようにご注意ください。
                   </div>
                 )}
@@ -704,17 +704,17 @@ function PortfolioPageInner() {
 
                 {/* ★ 管理番号（キャプション先頭にも自動反映） */}
                 <div>
-                  <label className="text-[11px] font-bold text-[#999999]">📋 管理番号 <span className="text-[10px] text-[#bbb]">(注文から自動引き継ぎ・キャプション先頭にも反映)</span></label>
+                  <label className="text-[11px] font-bold text-[#999999]">管理番号 <span className="text-[10px] text-[#bbb]">(注文から自動引き継ぎ・キャプション先頭にも反映)</span></label>
                   <input
                     type="text"
                     value={newImage.managementNo || ''}
                     onChange={e => {
                       const newMn = e.target.value;
-                      // キャプション先頭の「📋 xxx\n\n」を新しい管理番号で置換 or 追加
+                      // キャプション先頭の管理番号行を新しい管理番号で置換 or 追加
                       const cap = newImage.caption || '';
-                      const stripped = cap.replace(/^📋\s+\S+\n+/, ''); // 既存の管理番号行を削除
+                      const stripped = cap.replace(/^\S+\n+/, ''); // 既存の管理番号行を削除
                       const newCap = newMn.trim()
-                        ? `📋 ${newMn.trim()}\n\n${stripped}`
+                        ? `${newMn.trim()}\n\n${stripped}`
                         : stripped;
                       setNewImage({ ...newImage, managementNo: newMn, caption: newCap });
                     }}
@@ -765,7 +765,7 @@ function PortfolioPageInner() {
 
               {/* 一括設定 */}
               <div className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-4 space-y-3">
-                <p className="text-[11px] font-bold text-[#2D4B3E]">📌 全アイテムに一括適用する初期値（後から個別変更可能）</p>
+                <p className="text-[11px] font-bold text-[#2D4B3E]">全アイテムに一括適用する初期値（後から個別変更可能）</p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div>
                     <label className="text-[10px] font-bold text-[#999]">お花の種類</label>
@@ -800,7 +800,7 @@ function PortfolioPageInner() {
                 </div>
                 <label className="flex items-center gap-2 cursor-pointer text-[11px] font-bold text-[#555] pt-2">
                   <input type="checkbox" checked={bulkApply.priceHidden} onChange={e => setBulkApply({...bulkApply, priceHidden: e.target.checked})} className="w-4 h-4 accent-[#2D4B3E]"/>
-                  💰 金額を非公開にする（過去投稿用 / お客様画面では「お問い合わせください」と表示）
+                  金額を非公開にする（過去投稿用 / お客様画面では「お問い合わせください」と表示）
                 </label>
               </div>
 
@@ -826,12 +826,12 @@ function PortfolioPageInner() {
               <div className="bg-white p-6 md:p-8 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-5">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <h3 className="text-[14px] font-bold text-[#2D4B3E]">
-                    📷 取込結果 ({extractedItems.length}件 / 選択中: {extractedItems.filter(it => it.selected).length}件)
+                    取込結果 ({extractedItems.length}件 / 選択中: {extractedItems.filter(it => it.selected).length}件)
                   </h3>
                   <div className="flex gap-2">
                     <button onClick={() => toggleSelectAll(true)} className="text-[10px] font-bold text-[#555] bg-[#FBFAF9] border border-[#EAEAEA] px-3 py-1.5 rounded-lg hover:bg-white">すべて選択</button>
                     <button onClick={() => toggleSelectAll(false)} className="text-[10px] font-bold text-[#555] bg-[#FBFAF9] border border-[#EAEAEA] px-3 py-1.5 rounded-lg hover:bg-white">すべて解除</button>
-                    <button onClick={applyBulkToAll} className="text-[10px] font-bold text-white bg-[#117768] px-3 py-1.5 rounded-lg hover:bg-[#0d5e54]">📌 一括設定を全件に再適用</button>
+                    <button onClick={applyBulkToAll} className="text-[10px] font-bold text-white bg-[#117768] px-3 py-1.5 rounded-lg hover:bg-[#0d5e54]">一括設定を全件に再適用</button>
                   </div>
                 </div>
 
@@ -946,7 +946,7 @@ function PortfolioPageInner() {
                 <img src={detailImage.url} alt="" className="w-full h-full object-cover" />
                 {detailImage.priceHidden ? (
                   <div className="absolute top-4 right-4 bg-white/95 backdrop-blur px-4 py-2 rounded-full text-[14px] font-bold text-[#2D4B3E] shadow-md">
-                    💰 金額: お問い合わせ
+                    金額: お問い合わせ
                   </div>
                 ) : (
                   <div className="absolute top-4 right-4 bg-[#2D4B3E] text-white px-4 py-2 rounded-full text-[16px] font-bold shadow-md">
@@ -960,7 +960,7 @@ function PortfolioPageInner() {
               <div className="p-6 space-y-4">
                 {detailImage.managementNo && (
                   <div className="bg-[#2D4B3E]/10 px-3 py-2 rounded-lg">
-                    <p className="text-[10px] font-bold text-[#999]">📋 管理番号</p>
+                    <p className="text-[10px] font-bold text-[#999]">管理番号</p>
                     <p className="text-[14px] font-mono font-bold text-[#2D4B3E]">{detailImage.managementNo}</p>
                   </div>
                 )}
@@ -1009,7 +1009,7 @@ function PortfolioPageInner() {
 
                 {/* キャプション */}
                 <div className="space-y-2">
-                  <p className="text-[10px] font-bold text-[#999]">📝 キャプション全文</p>
+                  <p className="text-[10px] font-bold text-[#999]">キャプション全文</p>
                   <div className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg p-3 max-h-48 overflow-y-auto">
                     <p className="text-[12px] text-[#222] whitespace-pre-wrap leading-relaxed">
                       {detailImage.caption || '（キャプションなし）'}
@@ -1044,7 +1044,7 @@ function PortfolioPageInner() {
                     onClick={() => { handleDelete(detailImage.id); setDetailImage(null); }}
                     className="w-full py-2 text-[11px] font-bold text-red-500 hover:bg-red-50 rounded-lg"
                   >
-                    🗑️ 作品を削除
+                    作品を削除
                   </button>
                 </div>
               </div>

@@ -65,7 +65,7 @@ export async function POST(request) {
           .eq('id', orderId)
           .single();
 
-        // ★ 二重処理防止: 既に paid 済みなら何もしない
+        // 二重処理防止: 既に paid 済みなら何もしない
         if (orderRow?.payment_status === 'paid') {
           console.log('[webhook] 既に決済済みのためスキップ:', orderId);
           break;
@@ -88,7 +88,7 @@ export async function POST(request) {
 
         if (error) console.error('orders更新失敗:', error);
 
-        // ★ クレカ決済成功メール送信（テンプレートシステム経由）
+        // クレカ決済成功メール送信（テンプレートシステム経由）
         try {
           const customerEmail = orderRow?.order_data?.customerInfo?.email;
           const tenantId = session.metadata?.tenant_id;
@@ -113,7 +113,7 @@ export async function POST(request) {
               const pickup = Number(od.pickupFee) || 0;
               const total = (item + fee + pickup) + Math.floor((item + fee + pickup) * 0.1);
 
-              // ★ マイページURL（Magic Link）発行
+              // マイページURL（Magic Link）発行
               const mypageUrl = await createMypageMagicUrl({
                 supabaseAdmin,
                 tenantId,
@@ -142,12 +142,12 @@ export async function POST(request) {
               await sendEmail({ to: customerEmail, subject, html, from });
               console.log('[webhook] 注文確認メール送信完了:', customerEmail);
 
-              // ★ 店舗向け 決済完了通知メール
+              // 店舗向け 決済完了通知メール
               try {
                 const notifyEmail = (shop.notifyEmail || '').trim();
                 if (notifyEmail && shop.notifyOnPayment !== false) {
                   const ccEmails = (shop.notifyCcEmails || '').split(',').map(s => s.trim()).filter(Boolean);
-                  // ★ [Phase1-③ XSS対策] 顧客入力・店舗入力を全てescapeHtml
+                  // [Phase1-③ XSS対策] 顧客入力・店舗入力を全てescapeHtml
                   const storeBanner = `
                     <div style="background:#117768; color:white; padding:16px 20px; border-radius:8px 8px 0 0; font-size:14px; font-weight:bold;">
                       💳 【決済完了】クレジットカード決済が完了しました
@@ -176,7 +176,7 @@ export async function POST(request) {
                 console.warn('[webhook] 店舗決済完了通知メール送信失敗:', storeNotifyErr.message);
               }
 
-              // ★ LINE併送（有効時のみ）
+              // LINE併送（有効時のみ）
               await sendLineParallelToEmail({
                 supabaseAdmin,
                 tenantSettings: settings,
@@ -190,7 +190,7 @@ export async function POST(request) {
           console.warn('[webhook] 注文確認メール送信失敗:', mailErr.message);
         }
 
-        // ★ EC注文の場合は在庫を減算（RPC関数で原子的に）
+        // EC注文の場合は在庫を減算（RPC関数で原子的に）
         const cartItems = orderRow?.order_data?.cartItems;
         if (Array.isArray(cartItems) && cartItems.length > 0) {
           console.log('[webhook] EC注文(クレカ) 在庫減算開始:', cartItems.map(c => ({ id: c.productId, qty: c.qty })));

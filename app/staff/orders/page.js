@@ -329,13 +329,13 @@ export default function OrdersPage() {
             onClick={() => setSortMode('納期順')}
             className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all ${sortMode === '納期順' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-white text-[#555] border-[#EAEAEA] hover:border-[#2D4B3E]'}`}
           >
-            📅 納期順（近い順）
+            納期順（近い順）
           </button>
           <button
             onClick={() => setSortMode('登録順')}
             className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all ${sortMode === '登録順' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-white text-[#555] border-[#EAEAEA] hover:border-[#2D4B3E]'}`}
           >
-            🆕 登録順（新しい順）
+            登録順（新しい順）
           </button>
         </div>
 
@@ -417,20 +417,20 @@ export default function OrdersPage() {
                       {/* [注文-1] 注文種別バッジ（EC / 代理入力 / 見積から / カスタム） */}
                       {d.orderType === 'ec' ? (
                         <span className="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded flex items-center gap-1">
-                          🛒 EC注文
+                          EC注文
                         </span>
                       ) : d.fromEstimate ? (
                         <span className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-1 rounded flex items-center gap-1">
-                          📩 見積から
+                          見積から
                         </span>
                       ) : d.isStaffEntered ? (
                         <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1 rounded flex items-center gap-1">
-                          👤 代理入力
+                          代理入力
                           {d.staffName && <span className="font-normal opacity-80">({d.staffName})</span>}
                         </span>
                       ) : (
                         <span className="text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 px-2 py-1 rounded flex items-center gap-1">
-                          🌸 カスタム
+                          カスタム
                         </span>
                       )}
                     </div>
@@ -452,22 +452,22 @@ export default function OrdersPage() {
                       const purpose = d.flowerPurpose || d.otherPurpose;
                       const color = d.flowerColor;
                       const vibe = d.flowerVibe || d.otherVibe;
-                      if (purpose) chips.push({ icon: '🎀', label: '用途', value: purpose, bg: 'bg-pink-50', border: 'border-pink-200', text: 'text-pink-900' });
-                      if (color) chips.push({ icon: '🎨', label: 'カラー', value: color, bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-900' });
-                      if (vibe) chips.push({ icon: '✨', label: 'イメージ', value: vibe, bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-900' });
+                      if (purpose) chips.push({ icon: '', label: '用途', value: purpose, bg: 'bg-pink-50', border: 'border-pink-200', text: 'text-pink-900' });
+                      if (color) chips.push({ icon: '', label: 'カラー', value: color, bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-900' });
+                      if (vibe) chips.push({ icon: '', label: 'イメージ', value: vibe, bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-900' });
 
                       // 立札・カード
                       const tateText = [d.tatePattern, d.tateInput1, d.tateInput2, d.tateInput3]
                         .filter(Boolean).join(' / ');
                       if (d.cardType === '立札' && tateText) {
-                        chips.push({ icon: '🎴', label: '立札', value: tateText, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-900' });
+                        chips.push({ icon: '', label: '立札', value: tateText, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-900' });
                       } else if (d.cardType === 'メッセージカード' && d.cardMessage) {
-                        chips.push({ icon: '💌', label: 'カード', value: d.cardMessage.slice(0, 30) + (d.cardMessage.length > 30 ? '…' : ''), bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-900' });
+                        chips.push({ icon: '', label: 'カード', value: d.cardMessage.slice(0, 30) + (d.cardMessage.length > 30 ? '…' : ''), bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-900' });
                       }
 
                       // お届け先（別住所のときだけ）
                       if (d.isRecipientDifferent && d.recipientInfo?.name) {
-                        chips.push({ icon: '📍', label: 'お届け先', value: `${d.recipientInfo.name} 様`, bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-900' });
+                        chips.push({ icon: '', label: 'お届け先', value: `${d.recipientInfo.name} 様`, bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-900' });
                       }
 
                       if (chips.length === 0) return null;
@@ -488,7 +488,7 @@ export default function OrdersPage() {
                     {d.note && (
                       <div className="mt-2 bg-yellow-50 border border-yellow-300 border-l-4 border-l-yellow-500 rounded-md px-3 py-2 shadow-sm">
                         <div className="flex items-start gap-1.5">
-                          <span className="text-[14px] leading-none mt-0.5">📝</span>
+                          <span className="text-[14px] leading-none mt-0.5"></span>
                           <div className="flex-1 min-w-0">
                             <div className="text-[10px] font-bold text-yellow-700 mb-0.5">社内メモ</div>
                             <p className="text-[12px] font-bold text-yellow-900 whitespace-pre-wrap leading-snug line-clamp-3">

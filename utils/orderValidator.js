@@ -18,7 +18,7 @@ export function validateOrderData(orderData) {
     return { ok: false, error: 'orderData が不正です' };
   }
 
-  // ★ サイズ上限チェック（DoS防止）
+  // サイズ上限チェック（DoS防止）
   try {
     const size = JSON.stringify(orderData).length;
     if (size > MAX_ORDER_DATA_SIZE) {
@@ -28,7 +28,7 @@ export function validateOrderData(orderData) {
     return { ok: false, error: 'orderData のシリアライズに失敗' };
   }
 
-  // ★ customerInfo 検証
+  // customerInfo 検証
   const ci = orderData.customerInfo;
   if (!ci || typeof ci !== 'object') {
     return { ok: false, error: 'お客様情報が必要です' };
@@ -36,7 +36,7 @@ export function validateOrderData(orderData) {
   if (!ci.name || String(ci.name).length > 100) {
     return { ok: false, error: 'お名前は1〜100文字で入力してください' };
   }
-  // ★ スタッフ代理入力の場合、email/phoneは任意 (電話受付の顧客等)
+  // スタッフ代理入力の場合、email/phoneは任意 (電話受付の顧客等)
   const isStaffEntered = !!orderData.isStaffEntered;
   if (!isStaffEntered) {
     if (!ci.email || !EMAIL_RE.test(String(ci.email)) || String(ci.email).length > 200) {
@@ -64,7 +64,7 @@ export function validateOrderData(orderData) {
     return { ok: false, error: '建物名等が長すぎます' };
   }
 
-  // ★ お届け先（オプション）
+  // お届け先（オプション）
   if (orderData.isRecipientDifferent && orderData.recipientInfo) {
     const ri = orderData.recipientInfo;
     if (ri.name && String(ri.name).length > 100) {
@@ -75,7 +75,7 @@ export function validateOrderData(orderData) {
     }
   }
 
-  // ★ cartItems 検証（EC注文）
+  // cartItems 検証（EC注文）
   if (Array.isArray(orderData.cartItems)) {
     if (orderData.cartItems.length > 50) {
       return { ok: false, error: 'カート内商品が多すぎます (50点まで)' };
@@ -92,7 +92,7 @@ export function validateOrderData(orderData) {
     }
   }
 
-  // ★ itemPrice 範囲チェック
+  // itemPrice 範囲チェック
   if (orderData.itemPrice != null) {
     const ip = Number(orderData.itemPrice);
     if (!Number.isFinite(ip) || ip < 0 || ip > 10000000) {
@@ -100,7 +100,7 @@ export function validateOrderData(orderData) {
     }
   }
 
-  // ★ メッセージ / メモの文字数制限
+  // メッセージ / メモの文字数制限
   if (orderData.cardMessage && String(orderData.cardMessage).length > 500) {
     return { ok: false, error: 'カードメッセージは500文字以内で' };
   }

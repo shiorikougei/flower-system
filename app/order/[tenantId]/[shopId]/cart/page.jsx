@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
-import { ShoppingCart, Plus, Minus, Trash2, ChevronLeft, Package, AlertCircle } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, ChevronLeft, Package, AlertCircle, Gift, Mail, Pen } from 'lucide-react';
 import { getCart, updateQty, removeFromCart, getCartTotal, calcOptionsTotal } from '@/utils/cart';
 
 export default function CartPage() {
@@ -241,13 +241,13 @@ export default function CartPage() {
                       {(opt.wrapping || opt.messageCard || opt.textInsertion) && (
                         <div className="bg-pink-50 rounded-lg p-2 space-y-1">
                           {opt.wrapping && (
-                            <p className="text-[10px] text-pink-900">🎁 ラッピング (+¥{(opt.wrapping.price||0).toLocaleString()})</p>
+                            <p className="text-[10px] text-pink-900 flex items-center gap-1"><Gift size={11}/> ラッピング (+¥{(opt.wrapping.price||0).toLocaleString()})</p>
                           )}
                           {opt.messageCard && (
-                            <p className="text-[10px] text-pink-900">💌 メッセージカード{opt.messageCard.text ? ` 「${opt.messageCard.text.slice(0,15)}${opt.messageCard.text.length>15?'…':''}」` : ''} {opt.messageCard.price > 0 ? `(+¥${(opt.messageCard.price||0).toLocaleString()})` : '(無料)'}</p>
+                            <p className="text-[10px] text-pink-900 flex items-center gap-1"><Mail size={11}/> メッセージカード{opt.messageCard.text ? ` 「${opt.messageCard.text.slice(0,15)}${opt.messageCard.text.length>15?'…':''}」` : ''} {opt.messageCard.price > 0 ? `(+¥${(opt.messageCard.price||0).toLocaleString()})` : '(無料)'}</p>
                           )}
                           {opt.textInsertion && (
-                            <p className="text-[10px] text-pink-900">✍️ 文字入れ「{opt.textInsertion.text}」({opt.textInsertion.position}) (+¥{(opt.textInsertion.price||0).toLocaleString()})</p>
+                            <p className="text-[10px] text-pink-900 flex items-center gap-1"><Pen size={11}/> 文字入れ「{opt.textInsertion.text}」({opt.textInsertion.position}) (+¥{(opt.textInsertion.price||0).toLocaleString()})</p>
                           )}
                         </div>
                       )}
@@ -328,7 +328,7 @@ export default function CartPage() {
                   <input type="text" placeholder="住所（自動入力）" value={recipientInfo.address1} readOnly className="w-full h-12 px-4 bg-[#EAEAEA]/30 rounded-xl text-[13px] text-[#999999] outline-none"/>
                   <input type="text" placeholder="番地・建物名" value={recipientInfo.address2} onChange={(e) => setRecipientInfo({...recipientInfo, address2: e.target.value})} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"/>
                   <div className="text-[11px] text-[#117768] bg-[#117768]/5 border border-[#117768]/20 rounded-lg p-3 leading-relaxed">
-                    💐 プレゼント設定の場合、お届け物には金額が記載された納品書は同梱されません。<br/>
+                    プレゼント設定の場合、お届け物には金額が記載された納品書は同梱されません。<br/>
                     お買い上げ明細はご依頼主様のメールアドレスにお送りします。
                   </div>
                 </div>

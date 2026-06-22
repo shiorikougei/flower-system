@@ -99,14 +99,14 @@ export default async function BlogIndexPage({ params }) {
           />
 
           <div className="mb-10">
-            <h1 className="text-[28px] md:text-[36px] font-bold text-[#2D4B3E] mb-2">📖 お花のブログ</h1>
+            <h1 className="text-[28px] md:text-[36px] font-bold text-[#2D4B3E] mb-2">お花のブログ</h1>
             <p className="text-[13px] text-[#555]">季節の花・贈り物のヒント・お手入れ方法など、{shopName}が綴るお役立ち情報です。</p>
           </div>
 
           {posts.length === 0 ? (
             <div className="bg-white border border-dashed border-[#EAEAEA] rounded-2xl p-12 text-center">
               <p className="text-[14px] font-bold text-[#999]">まだ記事がありません</p>
-              <p className="text-[11px] text-[#CCC] mt-2">近日公開予定です。お楽しみに🌸</p>
+              <p className="text-[11px] text-[#CCC] mt-2">近日公開予定です。お楽しみに。</p>
             </div>
           ) : (
             <div className="space-y-6">

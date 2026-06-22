@@ -238,19 +238,19 @@ export default async function BlogPostPage({ params }) {
               href={`/order/${tenantId}/${shopId}/shop`}
               className="block p-4 bg-white border border-[#EAEAEA] rounded-xl hover:border-[#2D4B3E] transition-all text-center"
             >
-              <p className="text-[13px] font-bold text-[#2D4B3E]">🌸 商品を見る</p>
+              <p className="text-[13px] font-bold text-[#2D4B3E]">商品を見る</p>
             </Link>
             <Link
               href={`/order/${tenantId}/${shopId}/custom`}
               className="block p-4 bg-white border border-[#EAEAEA] rounded-xl hover:border-[#2D4B3E] transition-all text-center"
             >
-              <p className="text-[13px] font-bold text-[#2D4B3E]">✨ カスタム注文</p>
+              <p className="text-[13px] font-bold text-[#2D4B3E]">カスタム注文</p>
             </Link>
             <Link
               href={`/blog/${tenantId}`}
               className="block p-4 bg-white border border-[#EAEAEA] rounded-xl hover:border-[#2D4B3E] transition-all text-center"
             >
-              <p className="text-[13px] font-bold text-[#2D4B3E]">📖 他の記事も読む</p>
+              <p className="text-[13px] font-bold text-[#2D4B3E]">他の記事も読む</p>
             </Link>
           </div>
         </article>

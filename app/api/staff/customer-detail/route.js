@@ -59,7 +59,7 @@ export async function GET(request) {
       .eq('customer_email', email)
       .order('linked_at', { ascending: false });
 
-    // ★ [Phase1-① PII保護] 他顧客のメールアドレスは返さない（移動候補は表示名・IDのみ）
+    // [Phase1-① PII保護] 他顧客のメールアドレスは返さない（移動候補は表示名・IDのみ）
     //    customer_email を含めると一覧で他顧客のメアドが見える状態になっていた
     const { data: allLineLinksInTenant } = await supabaseAdmin
       .from('customer_line_links')

@@ -22,7 +22,7 @@ export async function POST(request) {
   try {
     const ip = getClientIp(request);
 
-    // ★ 厳しめのレートリミット（PIN総当たり攻撃対策）: 1IPあたり 10回/分
+    // 厳しめのレートリミット（PIN総当たり攻撃対策）: 1IPあたり 10回/分
     const allowed = await rateLimit({ key: `scan_pin:${ip}`, max: 10, windowSec: 60 });
     if (!allowed) {
       return NextResponse.json({ ok: false, error: '試行回数が多すぎます。1分後に再度お試しください。' }, { status: 429 });
@@ -69,7 +69,7 @@ export async function POST(request) {
       .single();
     const staffList = settingsRow?.settings_data?.staffList || [];
 
-    // ★ PIN照合（一致するスタッフを探す）
+    // PIN照合（一致するスタッフを探す）
     const matchedStaff = staffList.find(s => s.pin && comparePin(pin, s.pin));
     if (!matchedStaff) {
       // 失敗を監査ログに記録
@@ -94,7 +94,7 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // ★ 在庫減算（既存のRPC関数を流用：原子的）
+    // 在庫減算（既存のRPC関数を流用：原子的）
     const { data: rpcResult, error: rpcErr } = await supabaseAdmin.rpc('decrement_stock', {
       p_product_id: productId,
       p_qty: decrementQty,

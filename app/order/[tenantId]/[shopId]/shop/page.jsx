@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
-import { ShoppingCart, Plus, Minus, Package, X, ChevronLeft, Search, Sparkles, Bell, CheckCircle2 } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Package, X, ChevronLeft, Search, Sparkles, Bell, CheckCircle2, Flower2, Flower, Cake, Leaf, Heart, Gift, Mail, Pen, AlertCircle, HelpCircle, BookOpen, MessageCircle } from 'lucide-react';
 import { getCart, addToCart, getCartCount } from '@/utils/cart';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
@@ -142,22 +142,22 @@ export default function ShopCatalogPage() {
 
         {/* [SEO-#16/#20] カテゴリから探す（カテゴリ専用ページへ） */}
         <div>
-          <h2 className="text-[13px] font-bold text-[#2D4B3E] mb-3">🌸 カテゴリから探す</h2>
+          <h2 className="text-[13px] font-bold text-[#2D4B3E] mb-3">カテゴリから探す</h2>
           <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3">
             {[
-              { slug: 'bouquet', label: '花束・ブーケ', icon: '💐' },
-              { slug: 'arrangement', label: 'アレンジメント', icon: '🌷' },
-              { slug: 'stand', label: 'スタンド花', icon: '🎉' },
-              { slug: 'orchid', label: '胡蝶蘭・鉢物', icon: '🪴' },
-              { slug: 'preserved', label: 'プリザーブド', icon: '🌹' },
-              { slug: 'funeral', label: 'お供え花', icon: '🕊️' },
+              { slug: 'bouquet', label: '花束・ブーケ', Icon: Flower2 },
+              { slug: 'arrangement', label: 'アレンジメント', Icon: Flower },
+              { slug: 'stand', label: 'スタンド花', Icon: Cake },
+              { slug: 'orchid', label: '胡蝶蘭・鉢物', Icon: Leaf },
+              { slug: 'preserved', label: 'プリザーブド', Icon: Heart },
+              { slug: 'funeral', label: 'お供え花', Icon: Leaf },
             ].map(c => (
               <Link
                 key={c.slug}
                 href={`/category/${tenantId}/${c.slug}`}
                 className="block p-3 bg-white border border-[#EAEAEA] rounded-xl hover:border-[#2D4B3E] hover:shadow-sm transition-all text-center"
               >
-                <div className="text-[24px] mb-1">{c.icon}</div>
+                <div className="mb-1 flex justify-center text-[#2D4B3E]"><c.Icon size={24}/></div>
                 <p className="text-[10px] md:text-[11px] font-bold text-[#2D4B3E]">{c.label}</p>
               </Link>
             ))}
@@ -246,7 +246,7 @@ export default function ShopCatalogPage() {
             href={`/order/${tenantId}/${shopId}/faq`}
             className="p-4 bg-white border border-[#EAEAEA] rounded-2xl hover:border-[#2D4B3E] transition-all text-center"
           >
-            <div className="text-[24px] mb-1">❓</div>
+            <div className="mb-1 flex justify-center text-[#2D4B3E]"><HelpCircle size={24}/></div>
             <p className="text-[12px] font-bold text-[#2D4B3E]">よくあるご質問</p>
             <p className="text-[10px] text-[#999] mt-0.5">配達・支払い等</p>
           </Link>
@@ -254,7 +254,7 @@ export default function ShopCatalogPage() {
             href={`/blog/${tenantId}`}
             className="p-4 bg-white border border-[#EAEAEA] rounded-2xl hover:border-[#2D4B3E] transition-all text-center"
           >
-            <div className="text-[24px] mb-1">📖</div>
+            <div className="mb-1 flex justify-center text-[#2D4B3E]"><BookOpen size={24}/></div>
             <p className="text-[12px] font-bold text-[#2D4B3E]">お花のブログ</p>
             <p className="text-[10px] text-[#999] mt-0.5">お役立ち情報</p>
           </Link>
@@ -262,7 +262,7 @@ export default function ShopCatalogPage() {
             href={`/order/${tenantId}/${shopId}/estimate`}
             className="p-4 bg-white border border-[#EAEAEA] rounded-2xl hover:border-[#2D4B3E] transition-all text-center"
           >
-            <div className="text-[24px] mb-1">💬</div>
+            <div className="mb-1 flex justify-center text-[#2D4B3E]"><MessageCircle size={24}/></div>
             <p className="text-[12px] font-bold text-[#2D4B3E]">お見積もり</p>
             <p className="text-[10px] text-[#999] mt-0.5">特別な相談</p>
           </Link>
@@ -398,13 +398,13 @@ function ProductDetailModal({ product, onClose, onAddToCart }) {
           {/* ★ オプション選択 */}
           {(opts.wrapping?.enabled || opts.messageCard?.enabled || opts.textInsertion?.enabled) && (
             <div className="bg-pink-50 border border-pink-200 rounded-2xl p-5 space-y-4">
-              <p className="text-[13px] font-bold text-pink-900">🎀 オプション</p>
+              <p className="text-[13px] font-bold text-pink-900">オプション</p>
 
               {opts.wrapping?.enabled && (
                 <label className="flex items-start gap-3 cursor-pointer bg-white p-3 rounded-lg border border-pink-100">
                   <input type="checkbox" checked={wrappingOn} onChange={(e) => setWrappingOn(e.target.checked)} className="mt-0.5 w-5 h-5 accent-pink-600" />
                   <div className="flex-1 flex items-center justify-between">
-                    <span className="text-[13px] font-bold text-[#111111]">🎁 ラッピング</span>
+                    <span className="text-[13px] font-bold text-[#111111] flex items-center gap-1"><Gift size={13}/> ラッピング</span>
                     <span className="text-[12px] font-bold text-pink-700">+¥{(Number(opts.wrapping?.price)||0).toLocaleString()}</span>
                   </div>
                 </label>
@@ -415,7 +415,7 @@ function ProductDetailModal({ product, onClose, onAddToCart }) {
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input type="checkbox" checked={messageCardOn} onChange={(e) => setMessageCardOn(e.target.checked)} className="mt-0.5 w-5 h-5 accent-pink-600" />
                     <div className="flex-1 flex items-center justify-between">
-                      <span className="text-[13px] font-bold text-[#111111]">💌 メッセージカード（紙）</span>
+                      <span className="text-[13px] font-bold text-[#111111] flex items-center gap-1"><Mail size={13}/> メッセージカード（紙）</span>
                       <span className="text-[12px] font-bold text-pink-700">{(Number(opts.messageCard?.price)||0) === 0 ? '無料' : `+¥${(Number(opts.messageCard?.price)||0).toLocaleString()}`}</span>
                     </div>
                   </label>
@@ -437,7 +437,7 @@ function ProductDetailModal({ product, onClose, onAddToCart }) {
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input type="checkbox" checked={textInsertionOn} onChange={(e) => setTextInsertionOn(e.target.checked)} className="mt-0.5 w-5 h-5 accent-pink-600" />
                     <div className="flex-1 flex items-center justify-between">
-                      <span className="text-[13px] font-bold text-[#111111]">✍️ 文字入れ</span>
+                      <span className="text-[13px] font-bold text-[#111111] flex items-center gap-1"><Pen size={13}/> 文字入れ</span>
                       <span className="text-[12px] font-bold text-pink-700">+¥{(Number(opts.textInsertion?.price)||0).toLocaleString()}</span>
                     </div>
                   </label>
@@ -473,7 +473,7 @@ function ProductDetailModal({ product, onClose, onAddToCart }) {
                         </div>
                       </div>
                       {tiError && (
-                        <p className="text-[11px] font-bold text-red-600">⚠️ {tiError}</p>
+                        <p className="text-[11px] font-bold text-red-600 flex items-center gap-1"><AlertCircle size={12}/> {tiError}</p>
                       )}
                     </div>
                   )}

@@ -164,7 +164,7 @@ function ArticleCard({ article, isOpen, onToggle }) {
           )}
           {article.tip && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-900 leading-relaxed">
-              💡 <strong>ヒント:</strong> {article.tip}
+              <strong>ヒント:</strong> {article.tip}
             </div>
           )}
         </div>

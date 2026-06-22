@@ -1,7 +1,7 @@
 // [SEO-#8] 商品個別ページのOG画像を動的生成
 // 1200x630 でSNSシェア時の見栄えを最適化
 //
-// ⚠️ runtime: "nodejs" を使用（edge runtimeは Supabase JS client が動かないため）
+// 注意: runtime: "nodejs" を使用（edge runtimeは Supabase JS client が動かないため）
 
 import { ImageResponse } from "next/og";
 import { createClient } from "@supabase/supabase-js";
@@ -83,7 +83,7 @@ export default async function ProductOgImage({ params }: { params: Promise<{ ten
               style={{ maxWidth: "90%", maxHeight: "90%", objectFit: "contain", borderRadius: 12 }}
             />
           ) : (
-            <div style={{ fontSize: 40, color: "#CCC" }}>🌸</div>
+            <div style={{ fontSize: 40, color: "#CCC" }}>FLORIX</div>
           )}
         </div>
         {/* 右半分: テキスト */}
