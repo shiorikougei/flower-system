@@ -954,6 +954,56 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          {/* ★ [注文-7] 未入金の内訳設定（受注一覧での細分化用） */}
+          <div className="space-y-3 pt-6 border-t border-[#EAEAEA]">
+            <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={16}/> 未入金の内訳（受注一覧で表示）</h3>
+            <p className="text-[10px] text-[#999999] leading-relaxed">
+              代理入力で「未入金」を選んだとき、内訳を選べるようになります。<br/>
+              例：「未入金（引き取り時支払い）」「未入金（請求書発行）」のように受注一覧に表示されます。
+            </p>
+            <div className="bg-[#FBFAF9] p-3 rounded-xl space-y-2">
+              {((shop.unpaidSubStatuses && shop.unpaidSubStatuses.length > 0) ? shop.unpaidSubStatuses : ['引き取り時支払い', '請求書発行', '後日振込']).map((sub, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <span className="text-[10px] text-[#999] w-6">{idx + 1}</span>
+                  <input
+                    type="text"
+                    value={sub}
+                    onChange={(e) => {
+                      const current = (shop.unpaidSubStatuses && shop.unpaidSubStatuses.length > 0) ? [...shop.unpaidSubStatuses] : ['引き取り時支払い', '請求書発行', '後日振込'];
+                      current[idx] = e.target.value;
+                      setShops(shops.map(s => s.id === shop.id ? { ...s, unpaidSubStatuses: current } : s));
+                    }}
+                    className="flex-1 h-9 bg-white border rounded-lg px-3 text-[12px] outline-none focus:border-[#2D4B3E]"
+                    placeholder="例: 引き取り時支払い"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const current = (shop.unpaidSubStatuses && shop.unpaidSubStatuses.length > 0) ? [...shop.unpaidSubStatuses] : ['引き取り時支払い', '請求書発行', '後日振込'];
+                      current.splice(idx, 1);
+                      setShops(shops.map(s => s.id === shop.id ? { ...s, unpaidSubStatuses: current.length > 0 ? current : ['引き取り時支払い'] } : s));
+                    }}
+                    className="w-8 h-8 flex items-center justify-center text-[#D97D54] hover:bg-[#D97D54]/10 rounded-lg"
+                    title="削除"
+                  >
+                    <X size={14}/>
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  const current = (shop.unpaidSubStatuses && shop.unpaidSubStatuses.length > 0) ? [...shop.unpaidSubStatuses] : ['引き取り時支払い', '請求書発行', '後日振込'];
+                  current.push('');
+                  setShops(shops.map(s => s.id === shop.id ? { ...s, unpaidSubStatuses: current } : s));
+                }}
+                className="w-full py-2 bg-white border-dashed border border-[#EAEAEA] rounded-lg text-[11px] font-bold text-[#999999] hover:text-[#2D4B3E] hover:border-[#2D4B3E]/50 transition-all"
+              >
+                + 内訳を追加
+              </button>
+            </div>
+          </div>
+
           <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
             <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={16}/> 振込先口座情報 (法人請求書等用)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
