@@ -1560,14 +1560,14 @@ export default function StaffNewOrderPage() {
                     onClick={() => setPaymentMethod('前払い済み')}
                     className={`p-4 rounded-xl border text-[13px] font-bold transition-all ${paymentMethod === '前払い済み' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] shadow-md' : 'bg-white border-[#EAEAEA] text-[#555555] hover:border-[#2D4B3E]/50'}`}
                   >
-                    前払い済み
+                    済
                   </button>
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('引き取り時に支払い')}
                     className={`p-4 rounded-xl border text-[13px] font-bold transition-all ${paymentMethod === '引き取り時に支払い' ? 'bg-[#D97D54] text-white border-[#D97D54] shadow-md' : 'bg-white border-[#EAEAEA] text-[#555555] hover:border-[#D97D54]/50'}`}
                   >
-                    引き取り時に支払い
+                    未入金
                   </button>
                 </div>
                 <p className="text-[10px] text-[#999999] mt-1">受注一覧の入金ステータスに反映されます</p>
