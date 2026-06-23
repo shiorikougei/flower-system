@@ -57,6 +57,8 @@ export default function StaffNewOrderPage() {
   const [prepaymentSubType, setPrepaymentSubType] = useState('現金');
   // ★ 業者配送(sagawa) + 引き取り時に支払いの確認チェック
   const [sagawaPaymentLaterConfirmed, setSagawaPaymentLaterConfirmed] = useState(false);
+  // ★ [注文-7] 未入金の内訳サブステータス（店舗ごと設定）
+  const [unpaidSubStatus, setUnpaidSubStatus] = useState('引き取り時支払い');
   // ★ ③ 入金メモ（備考）
   const [paymentMemo, setPaymentMemo] = useState('');
 
@@ -95,6 +97,22 @@ export default function StaffNewOrderPage() {
     vibes: ['おまかせ (用途に合わせる)', 'かわいい', '豪華', '大人っぽい', '元気', '華やか・豪華', '上品・落ち着いた雰囲気']
   };
   const designOptions = appSettings?.designOptions || defaultDesignOptions;
+
+  // ★ [注文-7] 現在選択中の店舗の未入金サブステータスリスト
+  const currentUnpaidSubs = useMemo(() => {
+    const currentShop = appSettings?.shops?.find(s => String(s.id) === String(shopId));
+    const list = (currentShop?.unpaidSubStatuses && currentShop.unpaidSubStatuses.length > 0)
+      ? currentShop.unpaidSubStatuses.filter(s => s && String(s).trim().length > 0)
+      : ['引き取り時支払い', '請求書発行', '後日振込'];
+    return list.length > 0 ? list : ['引き取り時支払い'];
+  }, [appSettings, shopId]);
+
+  // ★ [注文-7] 店舗切替などでリストが変わった時、選択中の値がリストになければ先頭にリセット
+  useEffect(() => {
+    if (currentUnpaidSubs.length > 0 && !currentUnpaidSubs.includes(unpaidSubStatus)) {
+      setUnpaidSubStatus(currentUnpaidSubs[0]);
+    }
+  }, [currentUnpaidSubs, unpaidSubStatus]);
 
   useEffect(() => {
     let isFirstLoad = true;
@@ -576,9 +594,10 @@ export default function StaffNewOrderPage() {
         sendLineNotification, // ★ LINE併送ON/OFF (LINE連携済みの顧客のみ有効)
         // ★ 入金状況: 「前払い済み」→入金済扱い / 「引き取り時に支払い」→未入金扱い
         //    受注一覧の判定は paymentStatus に「未」が含まれているかで分岐
+        //    [注文-7] 未入金の内訳サブステータスを店舗ごとに細分化
         paymentStatus: paymentMethod === '前払い済み'
           ? '前払い済み'
-          : '未入金（引き取り時）',
+          : `未入金（${unpaidSubStatus || '引き取り時支払い'}）`,
         referenceImage: selectedImage ? selectedImage.url : null,
         status: 'new',
         isStaffEntered: true
@@ -1571,6 +1590,23 @@ export default function StaffNewOrderPage() {
                   </button>
                 </div>
                 <p className="text-[10px] text-[#999999] mt-1">受注一覧の入金ステータスに反映されます</p>
+
+                {/* ★ [注文-7] 未入金の内訳サブステータス（店舗ごと設定） */}
+                {paymentMethod === '引き取り時に支払い' && (
+                  <div className="mt-3 p-3 bg-[#D97D54]/5 border border-[#D97D54]/20 rounded-xl space-y-2">
+                    <label className="text-[11px] font-bold text-[#D97D54]">未入金の内訳</label>
+                    <select
+                      value={unpaidSubStatus}
+                      onChange={(e) => setUnpaidSubStatus(e.target.value)}
+                      className="w-full h-10 bg-white border border-[#D97D54]/30 rounded-lg px-3 text-[12px] font-bold text-[#555] outline-none focus:border-[#D97D54]"
+                    >
+                      {currentUnpaidSubs.map((sub, idx) => (
+                        <option key={idx} value={sub}>{sub}</option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-[#999]">受注一覧では「未入金（{unpaidSubStatus}）」のように表示されます。内訳は店舗設定で編集できます。</p>
+                  </div>
+                )}
               </div>
 
               {/* ★ 引き取り時支払い + 自社配達 + 届け先異なる の場合の注意書き */}
