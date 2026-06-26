@@ -1854,7 +1854,7 @@ export default function OwnerDashboard() {
                                       value={billing.basePriceOverride ?? ''}
                                       onChange={e => saveTenantBilling(t.id, { basePriceOverride: e.target.value === '' ? null : Number(e.target.value) })}
                                       className="w-16 h-6 px-1 bg-[#FBFAF9] border border-[#D0D0D0] rounded text-[10px] text-[#333] font-mono text-right outline-none"/>
-                                    {hasBasePriceOverride && (
+                                    {hasRealBasePriceOverride && (
                                       <button
                                         onClick={async (e) => {
                                           e.preventDefault();
