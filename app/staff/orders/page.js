@@ -291,13 +291,15 @@ export default function OrdersPage() {
   };
 
   const getTotals = (orderData) => {
-    if (!orderData || typeof orderData !== 'object') return { item: 0, fee: 0, pickup: 0, subTotal: 0, tax: 0, total: 0 };
+    if (!orderData || typeof orderData !== 'object') return { item: 0, fee: 0, pickup: 0, ecBoxFee: 0, subTotal: 0, tax: 0, total: 0 };
     const item = Number(orderData.itemPrice) || 0;
     const fee = Number(orderData.calculatedFee) || 0;
     const pickup = Number(orderData.pickupFee) || 0;
-    const subTotal = item + fee + pickup;
+    // ★ [BUGFIX] EC箱代 (ecBoxFee) が抜けていたため追加
+    const ecBoxFee = Number(orderData.ecBoxFee) || 0;
+    const subTotal = item + fee + pickup + ecBoxFee;
     const tax = Math.floor(subTotal * 0.1);
-    return { item, fee, pickup, subTotal, tax, total: subTotal + tax };
+    return { item, fee, pickup, ecBoxFee, subTotal, tax, total: subTotal + tax };
   };
 
   return (

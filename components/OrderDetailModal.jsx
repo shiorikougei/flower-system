@@ -135,13 +135,16 @@ export default function OrderDetailModal({
   };
 
   const getTotals = (orderData) => {
-    if (!orderData || typeof orderData !== 'object') return { item: 0, fee: 0, pickup: 0, subTotal: 0, tax: 0, total: 0 };
+    if (!orderData || typeof orderData !== 'object') return { item: 0, fee: 0, pickup: 0, ecBoxFee: 0, subTotal: 0, tax: 0, total: 0 };
     const item = Number(orderData.itemPrice) || 0;
     const fee = Number(orderData.calculatedFee) || 0;
     const pickup = Number(orderData.pickupFee) || 0;
-    const subTotal = item + fee + pickup;
+    // ★ [BUGFIX] EC箱代 (ecBoxFee) が合計計算から抜けていたため追加
+    //    これまで表示の「合計（税込）」が箱代分だけ少なく出ていた
+    const ecBoxFee = Number(orderData.ecBoxFee) || 0;
+    const subTotal = item + fee + pickup + ecBoxFee;
     const tax = Math.floor(subTotal * 0.1);
-    return { item, fee, pickup, subTotal, tax, total: subTotal + tax };
+    return { item, fee, pickup, ecBoxFee, subTotal, tax, total: subTotal + tax };
   };
 
   const getStatusOptions = () => {
@@ -1464,7 +1467,11 @@ export default function OrderDetailModal({
                     )}
                   </>
                 ) : (
-                  getTotals(modalData).fee > 0 && <div className="flex justify-between items-center text-blue-600"><span>配送料:</span><span className="font-bold text-[16px]">¥{getTotals(modalData).fee.toLocaleString()}</span></div>
+                  <>
+                    {getTotals(modalData).fee > 0 && <div className="flex justify-between items-center text-blue-600"><span>配送料:</span><span className="font-bold text-[16px]">¥{getTotals(modalData).fee.toLocaleString()}</span></div>}
+                    {/* ★ [BUGFIX] EC注文の箱代を表示（これまで合計に含まれていなかった） */}
+                    {getTotals(modalData).ecBoxFee > 0 && <div className="flex justify-between items-center text-blue-600"><span>梱包代:</span><span className="font-bold text-[16px]">¥{getTotals(modalData).ecBoxFee.toLocaleString()}</span></div>}
+                  </>
                 )}
                 {getTotals(modalData).pickup > 0 && <div className="flex justify-between items-center text-orange-600"><span>器回収・返却費:</span><span className="font-bold text-[16px]">¥{getTotals(modalData).pickup.toLocaleString()}</span></div>}
                 <div className="flex justify-between items-center border-t border-[#EAEAEA] pt-3 text-[#2D4B3E]"><span>消費税 (10%):</span><span className="font-bold text-[16px]">¥{getTotals(modalData).tax.toLocaleString()}</span></div>

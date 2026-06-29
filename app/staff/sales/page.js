@@ -141,7 +141,9 @@ function SalesPageInner() {
       const itemPrice = Number(d.itemPrice) || 0;
       const fee = Number(d.calculatedFee) || 0;
       const pickup = Number(d.pickupFee) || 0;
-      const subTotal = itemPrice + fee + pickup;
+      // ★ [BUGFIX] EC箱代 (ecBoxFee) が抜けていたため追加
+      const ecBoxFee = Number(d.ecBoxFee) || 0;
+      const subTotal = itemPrice + fee + pickup + ecBoxFee;
       const total = subTotal + Math.floor(subTotal * 0.1);
       return { ...o, computedTotal: total };
     });

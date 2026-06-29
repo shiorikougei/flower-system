@@ -201,6 +201,29 @@ export async function POST(request) {
     const tax = Math.floor(subTotal * 0.1);
     const totalAmount = subTotal + tax;
 
+    // ★ [BUGFIX] EC注文の Stripe line_items に「送料(fee)」「ピックアップ料(pickup)」が抜けていたため追加
+    //    これまで Stripe 課金額 < アプリ表示の totalAmount となり差額が発生していた
+    if (isEcOrder && fee > 0) {
+      lineItemsForStripe.push({
+        price_data: {
+          currency: 'jpy',
+          product_data: { name: '配送料' },
+          unit_amount: fee,
+        },
+        quantity: 1,
+      });
+    }
+    if (isEcOrder && pickup > 0) {
+      lineItemsForStripe.push({
+        price_data: {
+          currency: 'jpy',
+          product_data: { name: '受取手数料' },
+          unit_amount: pickup,
+        },
+        quantity: 1,
+      });
+    }
+
     // 税込分のline_item を追加（カート注文の場合）
     if (isEcOrder && tax > 0) {
       lineItemsForStripe.push({

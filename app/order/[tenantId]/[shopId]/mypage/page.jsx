@@ -221,7 +221,9 @@ function MyPageContent() {
     const item = Number(d.itemPrice) || 0;
     const fee = Number(d.calculatedFee) || 0;
     const pickup = Number(d.pickupFee) || 0;
-    const sub = item + fee + pickup;
+    // ★ [BUGFIX] EC箱代 (ecBoxFee) が抜けていたため追加
+    const ecBoxFee = Number(d.ecBoxFee) || 0;
+    const sub = item + fee + pickup + ecBoxFee;
     return sub + Math.floor(sub * 0.1);
   }
 

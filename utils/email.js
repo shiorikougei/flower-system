@@ -92,7 +92,9 @@ export function buildOrderConfirmationEmail({ order, shopName, bankInfo, staffCa
   const item = Number(d.itemPrice) || 0;
   const fee = Number(d.calculatedFee) || 0;
   const pickup = Number(d.pickupFee) || 0;
-  const subTotal = item + fee + pickup;
+  // ★ [BUGFIX] EC箱代 (ecBoxFee) が抜けていたため追加
+  const ecBoxFee = Number(d.ecBoxFee) || 0;
+  const subTotal = item + fee + pickup + ecBoxFee;
   const tax = Math.floor(subTotal * 0.1);
   const total = subTotal + tax;
 
@@ -248,6 +250,7 @@ export function buildOrderConfirmationEmail({ order, shopName, bankInfo, staffCa
         <tr><td>商品代（税抜）</td><td style="text-align: right;">¥${item.toLocaleString()}</td></tr>
         ${fee > 0 ? `<tr><td>配送料</td><td style="text-align: right;">¥${fee.toLocaleString()}</td></tr>` : ''}
         ${pickup > 0 ? `<tr><td>後日回収費</td><td style="text-align: right;">¥${pickup.toLocaleString()}</td></tr>` : ''}
+        ${ecBoxFee > 0 ? `<tr><td>梱包代</td><td style="text-align: right;">¥${ecBoxFee.toLocaleString()}</td></tr>` : ''}
         <tr><td>消費税（10%）</td><td style="text-align: right;">¥${tax.toLocaleString()}</td></tr>
         <tr><td colspan="2"><hr style="border: none; border-top: 1px solid #EAEAEA; margin: 8px 0;"></td></tr>
         <tr style="font-size: 14px; font-weight: bold; color: #2D4B3E;">
