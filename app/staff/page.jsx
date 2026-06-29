@@ -128,8 +128,12 @@ export default function DashboardPage() {
         setOrders(fetchedOrders);
 
         // ★ 未回答の見積依頼を取得 (失敗してもダッシュボード自体は表示)
+        // ★ [セキュリティ] /api/estimates GET は認証必須化済みのため Bearer 必須
         try {
-          const estRes = await fetch(`/api/estimates?tenantId=${encodeURIComponent(tId)}&status=pending`);
+          const { data: { session: estSession } } = await supabase.auth.getSession();
+          const estRes = await fetch(`/api/estimates?tenantId=${encodeURIComponent(tId)}&status=pending`, {
+            headers: { Authorization: `Bearer ${estSession?.access_token || ''}` },
+          });
           if (estRes.ok) {
             const estData = await estRes.json();
             setPendingEstimates(estData.estimates || []);

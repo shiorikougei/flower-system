@@ -1,15 +1,20 @@
 // オーナー: 全テナント横断の出勤中スタッフ一覧
 // GET /api/owner/attendance-overview
-// 簡易認証: NocoLde owner page でログイン済の前提（X-Owner-Auth ヘッダで簡易check）
+// ★ [セキュリティ] requireOwner 必須化（以前は認証ゼロで全テナントスタッフ漏洩リスク）
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireOwner } from '@/utils/adminAuth';
 
 export const runtime = 'nodejs';
 
 export async function GET(request) {
   try {
-    const supabaseAdmin = createClient(
+    // ★ [セキュリティ] NocoLde オーナー（whitelist メアド or OWNER_PASSWORD）必須
+    const auth = await requireOwner(request);
+    if (!auth.ok) return auth.response;
+
+    const supabaseAdmin = auth.supabaseAdmin || createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );

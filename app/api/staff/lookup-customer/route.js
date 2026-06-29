@@ -4,6 +4,8 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireTenantStaff } from '@/utils/adminAuth';
+import { rateLimit, getClientIp } from '@/utils/rateLimit';
 
 export const runtime = 'nodejs';
 
@@ -27,6 +29,18 @@ export async function GET(request) {
 
     if (!phone || !tenantId) {
       return NextResponse.json({ error: 'phone と tenantId が必要です' }, { status: 400 });
+    }
+
+    // ★ [セキュリティ] 認証必須 + 自テナントの顧客のみ検索可能
+    //    これまで未認証で電話番号スキャンによる顧客 PII 漏洩リスクがあった
+    const auth = await requireTenantStaff(request, tenantId);
+    if (!auth.ok) return auth.response;
+
+    // ★ [セキュリティ] レート制限: 同一スタッフでも 30回/分 まで（通常業務には充分）
+    const ip = getClientIp(request);
+    const allowed = await rateLimit({ key: `lookup_customer:${ip}`, max: 30, windowSec: 60 });
+    if (!allowed) {
+      return NextResponse.json({ error: '検索回数が多すぎます。しばらくしてから再度お試しください。' }, { status: 429 });
     }
 
     const normalized = normalizePhone(phone);

@@ -19,7 +19,12 @@ export async function GET(request) {
   try {
     const authHeader = request.headers.get('authorization') || '';
     const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    // ★ [セキュリティ] fail-close: CRON_SECRET 未設定なら必ず拒否
+    if (!cronSecret) {
+      console.error('[cron] CRON_SECRET 未設定のため実行を拒否');
+      return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 503 });
+    }
+    if (authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 

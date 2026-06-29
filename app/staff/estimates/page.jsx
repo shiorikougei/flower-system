@@ -178,7 +178,11 @@ export default function EstimatesPage() {
   async function loadEstimates() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/estimates?tenantId=${tenantId}`);
+      // ★ [セキュリティ] /api/estimates GET は認証必須化済み
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/estimates?tenantId=${tenantId}`, {
+        headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+      });
       const data = await res.json();
       setEstimates(data.estimates || []);
     } catch (e) { console.error(e); }
@@ -254,9 +258,11 @@ export default function EstimatesPage() {
     if (!replyForm.message) { alert('回答メッセージを入力してください'); return; }
     if (calcTotal() <= 0) { alert('金額を入力してください'); return; }
     try {
+      // ★ [セキュリティ] /api/estimates PATCH (reply) は認証必須化済み
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/estimates', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
         body: JSON.stringify({
           id, action: 'reply',
           replyMessage: replyForm.message,
@@ -288,9 +294,11 @@ export default function EstimatesPage() {
   async function handleReject(id) {
     if (!confirm('このお見積もり依頼を却下しますか？')) return;
     try {
+      // ★ [セキュリティ] /api/estimates PATCH (reject) は認証必須化済み
+      const { data: { session } } = await supabase.auth.getSession();
       await fetch('/api/estimates', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
         body: JSON.stringify({ id, action: 'reject' }),
       });
       loadEstimates();

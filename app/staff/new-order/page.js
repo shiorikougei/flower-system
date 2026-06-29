@@ -1065,7 +1065,11 @@ export default function StaffNewOrderPage() {
                     setLookupLoading(true);
                     setLookupResult(null);
                     try {
-                      const res = await fetch(`/api/staff/lookup-customer?phone=${encodeURIComponent(customerInfo.phone)}&tenantId=${encodeURIComponent(currentTenantId)}`);
+                      // ★ [セキュリティ] /api/staff/lookup-customer は認証必須化済み
+                      const { data: { session: luSession } } = await supabase.auth.getSession();
+                      const res = await fetch(`/api/staff/lookup-customer?phone=${encodeURIComponent(customerInfo.phone)}&tenantId=${encodeURIComponent(currentTenantId)}`, {
+                        headers: { Authorization: `Bearer ${luSession?.access_token || ''}` },
+                      });
                       const data = await res.json();
                       setLookupResult(data);
                       if (data.found && data.customer) {
@@ -1419,7 +1423,11 @@ export default function StaffNewOrderPage() {
                     setLookupLoading(true);
                     setLookupResult(null);
                     try {
-                      const res = await fetch(`/api/staff/lookup-customer?phone=${encodeURIComponent(customerInfo.phone)}&tenantId=${encodeURIComponent(currentTenantId)}`);
+                      // ★ [セキュリティ] /api/staff/lookup-customer は認証必須化済み
+                      const { data: { session: luSession } } = await supabase.auth.getSession();
+                      const res = await fetch(`/api/staff/lookup-customer?phone=${encodeURIComponent(customerInfo.phone)}&tenantId=${encodeURIComponent(currentTenantId)}`, {
+                        headers: { Authorization: `Bearer ${luSession?.access_token || ''}` },
+                      });
                       const data = await res.json();
                       setLookupResult(data);
                       // 過去顧客があれば自動でフォームに入力

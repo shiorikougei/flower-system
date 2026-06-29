@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail, noReplyFooter } from '@/utils/email';
 import { rateLimit, getClientIp } from '@/utils/rateLimit';
+import { requireTenantStaff } from '@/utils/adminAuth';
 
 export const runtime = 'nodejs';
 
@@ -198,27 +199,46 @@ export async function POST(request) {
   }
 }
 
-// GET: 見積一覧（スタッフ用）
+// GET: 見積一覧（スタッフ用） or 単一取得（お客様向け確認ページ）
+// ★ [セキュリティ]
+//    - id 指定: 1件だけ返す（公開・UUID推測困難なため URL 知っている人のみアクセス可）
+//    - tenantId 指定（id なし）: 一覧取得は認証必須
 export async function GET(request) {
   try {
     const url = new URL(request.url);
     const tenantId = url.searchParams.get('tenantId');
+    const id = url.searchParams.get('id');
     const status = url.searchParams.get('status'); // optional filter
-    if (!tenantId) return NextResponse.json({ error: 'tenantId必要' }, { status: 400 });
 
     const supabase = admin();
+
+    // ★ id 指定: お客様向け1件取得（認証不要、UUID知っている前提）
+    if (id) {
+      const { data, error } = await supabase.from('estimates').select('*').eq('id', id).maybeSingle();
+      if (error) throw error;
+      if (!data) return NextResponse.json({ estimates: [] });
+      return NextResponse.json({ estimates: [data] });
+    }
+
+    // 一覧取得: 認証必須
+    if (!tenantId) return NextResponse.json({ error: 'tenantId必要' }, { status: 400 });
+    const auth = await requireTenantStaff(request, tenantId);
+    if (!auth.ok) return auth.response;
+
     let q = supabase.from('estimates').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(100);
     if (status) q = q.eq('status', status);
     const { data, error } = await q;
     if (error) throw error;
     return NextResponse.json({ estimates: data || [] });
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('[estimates GET]', err?.message);
+    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
   }
 }
 
 // DELETE: 見積依頼を削除（スタッフ）
 // クエリ: ?id=xxx
+// ★ [セキュリティ] 認証必須 + 当該見積のテナントと一致確認
 export async function DELETE(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -226,11 +246,20 @@ export async function DELETE(request) {
     if (!id) return NextResponse.json({ error: 'id が必要' }, { status: 400 });
 
     const supabase = admin();
+    // ★ [セキュリティ] 削除対象の所有テナントを取得
+    const { data: target } = await supabase.from('estimates').select('tenant_id').eq('id', id).maybeSingle();
+    if (!target) return NextResponse.json({ error: '見積が見つかりません' }, { status: 404 });
+
+    // ★ [セキュリティ] 自テナントスタッフ認証必須
+    const auth = await requireTenantStaff(request, target.tenant_id);
+    if (!auth.ok) return auth.response;
+
     const { error } = await supabase.from('estimates').delete().eq('id', id);
     if (error) throw error;
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('[estimates DELETE]', err?.message);
+    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
   }
 }
 
@@ -243,6 +272,13 @@ export async function PATCH(request) {
     const supabase = admin();
     const { data: cur } = await supabase.from('estimates').select('*').eq('id', id).single();
     if (!cur) return NextResponse.json({ error: '見積が見つかりません' }, { status: 404 });
+
+    // ★ [セキュリティ] reply / reject は店舗スタッフ専用
+    //    （accept はお客様承諾フローなので顧客トークンで認証する仕様だが、深夜にトークン検証を強化予定）
+    if (action === 'reply' || action === 'reject') {
+      const authR = await requireTenantStaff(request, cur.tenant_id);
+      if (!authR.ok) return authR.response;
+    }
 
     if (action === 'reply') {
       // 店舗回答

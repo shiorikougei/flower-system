@@ -48,8 +48,9 @@ export default function EstimateAcceptPage() {
   useEffect(() => {
     (async () => {
       try {
+        // ★ [セキュリティ] 一覧取得は認証必須化されたため、id 指定で 1件取得に変更
         const [estRes, settingsRes] = await Promise.all([
-          fetch(`/api/estimates?tenantId=${tenantId}`).then(r => r.json()),
+          fetch(`/api/estimates?id=${encodeURIComponent(estimateId)}`).then(r => r.json()),
           supabase.from('app_settings').select('settings_data').eq('id', tenantId).single(),
         ]);
         const found = (estRes.estimates || []).find(e => e.id === estimateId);

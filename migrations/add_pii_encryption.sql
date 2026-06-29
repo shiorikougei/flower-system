@@ -29,13 +29,11 @@ AS $$
 DECLARE
   k text;
 BEGIN
-  -- Supabase Vault の場合: vault.secrets テーブルから取得
-  -- まずは環境変数フォールバック実装（後で Vault に移行）
+  -- ★ [セキュリティ] ハードコードフォールバックを削除（弱鍵による全PII復号リスク回避）
+  -- Supabase Vault または app.pii_encryption_key カスタム設定で必ず設定すること
   SELECT current_setting('app.pii_encryption_key', true) INTO k;
-  IF k IS NULL OR k = '' THEN
-    -- フォールバック: ハードコードな初期キー（運用前に必ず Vault に切替）
-    -- ⚠️ 本番稼働前に Supabase Vault で本物のキーを設定してください
-    k := 'CHANGE_ME_BEFORE_PRODUCTION_DO_NOT_USE_THIS';
+  IF k IS NULL OR k = '' OR k = 'CHANGE_ME_BEFORE_PRODUCTION_DO_NOT_USE_THIS' THEN
+    RAISE EXCEPTION 'PII encryption key not configured. Set app.pii_encryption_key via Supabase Vault or ALTER DATABASE.';
   END IF;
   RETURN k;
 END;

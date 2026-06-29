@@ -17,7 +17,9 @@ const SUPER_ADMIN_EMAILS = [
 ];
 
 // NocoLde オーナー管理ページのパスワード（フロントの handleLogin と一致させる）
-const OWNER_PASSWORD = process.env.OWNER_PASSWORD || 'nocolde2026';
+// ★ [セキュリティ] ハードコード fallback を削除。未設定時は password 方式を無効化（fail-close）
+//    オーナーは SUPER_ADMIN_EMAILS の Bearer トークン経由でログイン可能
+const OWNER_PASSWORD = process.env.OWNER_PASSWORD;
 
 /**
  * Bearer token で認証ユーザーを取得
@@ -56,8 +58,9 @@ export async function requireAuthedUser(request) {
  */
 export async function requireOwner(request) {
   // オーナーパスワード方式 (Supabaseログイン不要)
+  // ★ [セキュリティ] OWNER_PASSWORD 未設定なら password 方式は完全に無効化
   const pwHeader = request.headers.get('x-owner-password') || '';
-  if (pwHeader) {
+  if (pwHeader && OWNER_PASSWORD) {
     // ブルートフォース対策: IP単位で30回/分まで（通常操作には充分、攻撃は阻止）
     const ip = getClientIp(request);
     const allowed = await rateLimit({ key: `owner_auth:${ip}`, max: 30, windowSec: 60 });

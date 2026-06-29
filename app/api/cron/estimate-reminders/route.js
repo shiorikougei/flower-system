@@ -22,14 +22,14 @@ function admin() {
   );
 }
 
-// 認証: Vercel Cron 自動 or 環境変数 CRON_SECRET
+// 認証: 環境変数 CRON_SECRET のみで検証（UA偽装防止）
+// ★ [セキュリティ] fail-close: CRON_SECRET 未設定なら必ず拒否、UA信用を廃止
 function isAuthorized(request) {
-  // Vercel Cron は user-agent: vercel-cron で来る
-  const ua = request.headers.get("user-agent") || "";
-  if (ua.includes("vercel-cron")) return true;
-  // 手動実行用 secret
   const secret = process.env.CRON_SECRET;
-  if (!secret) return true; // 未設定なら誰でも実行可（開発用）
+  if (!secret) {
+    console.error('[cron] CRON_SECRET 未設定のため実行を拒否');
+    return false;
+  }
   const auth = request.headers.get("authorization") || "";
   return auth === `Bearer ${secret}`;
 }
