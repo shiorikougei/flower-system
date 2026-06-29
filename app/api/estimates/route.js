@@ -41,6 +41,20 @@ export async function POST(request) {
 
     const supabase = admin();
 
+    // ★ [セキュリティ] テナント存在チェック（任意のテナント宛 spam 防止）
+    //    存在しない or 無効化されたテナントには見積を作らせない
+    {
+      const { data: tenantRow, error: tErr } = await supabase
+        .from('app_settings')
+        .select('id')
+        .eq('id', String(tenantId).toLowerCase())
+        .maybeSingle();
+      if (tErr || !tenantRow) {
+        // 詳細エラーは返さず一般的な失敗を返す（情報漏洩防止）
+        return NextResponse.json({ error: '見積依頼の登録に失敗しました。店舗IDをご確認ください。' }, { status: 400 });
+      }
+    }
+
     // 参考画像が text[] スキーマに合わない場合の互換性対応:
     //    URL配列を text[] にキャスト
     let refImgs = null;

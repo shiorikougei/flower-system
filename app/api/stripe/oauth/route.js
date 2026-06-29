@@ -6,6 +6,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe, STRIPE_CLIENT_ID, APP_URL } from '@/utils/stripe';
+import crypto from 'crypto';
+
+const NONCE_COOKIE_NAME = 'stripe_oauth_nonce';
 
 export async function GET(request) {
   const url = new URL(request.url);
@@ -18,13 +21,23 @@ export async function GET(request) {
     try {
       if (!stripe) throw new Error('Stripe未初期化');
 
-      // state からテナントIDを取り出す（簡易的にBase64エンコードしたtenant_idとする）
+      // state からテナントIDとナンスを取り出す
       let tenantId = '';
+      let stateNonce = '';
       try {
         const decoded = JSON.parse(Buffer.from(state || '', 'base64').toString('utf-8'));
         tenantId = decoded.tenant_id;
+        stateNonce = decoded.nonce || '';
       } catch (e) {
         return NextResponse.redirect(`${APP_URL}/staff/settings?stripe_error=invalid_state`);
+      }
+
+      // ★ [セキュリティ] CSRF対策: state の nonce と Cookie の nonce を照合
+      //    攻撃者が任意 tenant_id を持つ state を作っても、Cookie に正しい nonce がないので通らない
+      const cookieNonce = request.cookies.get(NONCE_COOKIE_NAME)?.value || '';
+      if (!stateNonce || !cookieNonce || stateNonce !== cookieNonce) {
+        console.warn('[stripe oauth] CSRF nonce mismatch', { hasState: !!stateNonce, hasCookie: !!cookieNonce });
+        return NextResponse.redirect(`${APP_URL}/staff/settings?stripe_error=csrf_check_failed`);
       }
 
       // 認可コードを access_token に交換
@@ -62,7 +75,10 @@ export async function GET(request) {
           },
         });
 
-      return NextResponse.redirect(`${APP_URL}/staff/settings?stripe_connected=1`);
+      // 使い終わった nonce Cookie を削除
+      const redirect = NextResponse.redirect(`${APP_URL}/staff/settings?stripe_connected=1`);
+      redirect.cookies.delete(NONCE_COOKIE_NAME);
+      return redirect;
     } catch (err) {
       console.error('[/api/stripe/oauth callback] error:', err);
       return NextResponse.redirect(`${APP_URL}/staff/settings?stripe_error=${encodeURIComponent(err.message || 'unknown')}`);
@@ -95,8 +111,12 @@ export async function GET(request) {
     return NextResponse.json({ error: 'STRIPE_CLIENT_IDが未設定' }, { status: 500 });
   }
 
-  // state にテナントIDを含める（コールバック時に取り出す）
-  const encodedState = Buffer.from(JSON.stringify({ tenant_id: tenantId })).toString('base64');
+  // ★ [セキュリティ] CSRF対策: ナンスを生成し、state と Cookie 両方に入れる
+  //    コールバック時に両者が一致しなければ拒否
+  const nonce = crypto.randomBytes(16).toString('hex');
+
+  // state にテナントIDとナンスを含める
+  const encodedState = Buffer.from(JSON.stringify({ tenant_id: tenantId, nonce })).toString('base64');
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: STRIPE_CLIENT_ID,
@@ -106,5 +126,14 @@ export async function GET(request) {
   });
   const authorizeUrl = `https://connect.stripe.com/oauth/authorize?${params.toString()}`;
 
-  return NextResponse.json({ url: authorizeUrl });
+  // ナンスを HttpOnly Cookie に保存（OAuth フロー中のみ有効）
+  const response = NextResponse.json({ url: authorizeUrl });
+  response.cookies.set(NONCE_COOKIE_NAME, nonce, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax', // Stripe からのリダイレクトで Cookie 送信されるよう lax
+    maxAge: 600, // 10分（通常 OAuth 完了は数分以内）
+    path: '/',
+  });
+  return response;
 }
