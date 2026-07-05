@@ -25,17 +25,17 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: ZAP Baseline Scan
-        uses: zaproxy/action-baseline@v0.13.0
+        uses: zaproxy/action-baseline@v0.14.0
         with:
           target: ${{ github.event.inputs.target_url || 'https://www.noodleflorix.com' }}
-          # 詳細レポートをアーティファクトとしてアップロード
-          artifact_name: zap-baseline-report
+          # 詳細レポートをアーティファクトとしてアップロード（アンダースコア形式で名前を統一）
+          artifact_name: zap_baseline_report
           # 既知の警告を無視するためのルール設定（必要に応じて追加）
           rules_file_name: .zap/rules.tsv
           # 失敗ステータスをIssueにする
-          issue_title: "🔒 OWASP ZAP: 月次セキュリティスキャン結果"
+          issue_title: "OWASP ZAP: 月次セキュリティスキャン結果"
           fail_action: false
           allow_issue_writing: true

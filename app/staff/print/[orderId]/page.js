@@ -269,6 +269,208 @@ export default function PrintSlipPage() {
   };
 
   // ==========================================
+  // ★ 新規：受注書 A4 フルサイズ テンプレート
+  //    店舗控え専用（大文字表示、お渡し時間追加、タイトル「受注書」）
+  // ==========================================
+  const FullSlipTemplate = () => {
+    const colorCode = '#2e7d32';
+    const bgColor = '#f1f8e9';
+    const staffArray = [
+      { label: '受注', name: o.staffName || o.orderStaff },
+      { label: '配達', name: o.deliveryStaff },
+      { label: '片付', name: o.cleanupStaff },
+      { label: '請求', name: o.billingStaff }
+    ];
+
+    return (
+      <div
+        className="slip-container relative w-full border-2 border-gray-400 p-6 flex flex-col justify-between overflow-hidden"
+        style={{ flex: 1, backgroundColor: bgImgUrl ? bgColor : '#ffffff' }}
+      >
+        {bgImgUrl && (
+          <div
+            className="absolute inset-0 z-0 grayscale-[30%] pointer-events-none"
+            style={{
+              backgroundImage: `url(${bgImgUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              mixBlendMode: 'multiply',
+              opacity: bgOpacity,
+            }}
+          />
+        )}
+
+        <div className="relative z-10 flex flex-col h-full">
+          <div>
+            {/* タイトル + 伝票情報 */}
+            <div className="flex justify-between items-start border-b-2 pb-3 mb-3" style={{ borderColor: colorCode }}>
+              <h1 className="text-4xl font-bold tracking-widest flex items-center gap-3" style={{ color: colorCode }}>
+                受 注 書
+                {isEcOrder && <span className="text-[12px] font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded">EC注文</span>}
+              </h1>
+              <div className="text-right text-[11px] space-y-0.5">
+                <p>伝票：{orderId.slice(0, 8).toUpperCase()}</p>
+                <p>受付日：{new Date().toLocaleDateString('ja-JP')}</p>
+              </div>
+            </div>
+
+            {/* お渡し情報 + 入金状況（大きく表示） */}
+            <div className="grid grid-cols-4 gap-3 mb-4">
+              <div className="border-2 border-gray-400 p-2 bg-white/95">
+                <p className="text-[10px] text-gray-500 font-bold mb-1">お渡し方法</p>
+                <p className="text-2xl font-bold text-gray-900 leading-tight">{getMethodText(o.receiveMethod || o.deliveryType)}</p>
+              </div>
+              <div className="border-2 border-gray-400 p-2 bg-white/95">
+                <p className="text-[10px] text-gray-500 font-bold mb-1">お渡し日</p>
+                <p className="text-2xl font-bold text-gray-900 leading-tight">{o.receiveDate || o.selectedDate || '未指定'}</p>
+              </div>
+              <div className="border-2 border-gray-400 p-2 bg-white/95">
+                <p className="text-[10px] text-gray-500 font-bold mb-1">お渡し時間</p>
+                <p className="text-2xl font-bold text-gray-900 leading-tight">{o.selectedTime || '未指定'}</p>
+              </div>
+              <div className="border-2 border-gray-400 p-2 bg-white/95" style={{ borderColor: colorCode }}>
+                <p className="text-[10px] text-gray-500 font-bold mb-1">入金状況</p>
+                <p className="text-xl font-bold leading-tight" style={{ color: colorCode }}>{o.paymentStatus || o.paymentMethod || '未定'}</p>
+              </div>
+            </div>
+
+            {/* ご依頼主 / お届け先 */}
+            <div className="flex gap-3 mb-3">
+              <div className="flex-1 border border-gray-400 p-2 bg-white/95 text-[11px] leading-tight">
+                <span className="text-[10px] text-gray-500 font-bold block mb-1">【ご依頼主様 (ご注文者)】</span>
+                <p className="font-bold text-lg mb-1">{o.customerInfo?.name} <span className="text-[11px] font-normal">様</span></p>
+                <p>〒{o.customerInfo?.zip} {o.customerInfo?.address1} {o.customerInfo?.address2}</p>
+                <p className="mt-0.5">TEL: {o.customerInfo?.phone}{o.customerInfo?.email ? `　Email: ${o.customerInfo.email}` : ''}</p>
+              </div>
+
+              <div className="flex-1 border border-gray-400 p-2 bg-white/95 text-[11px] leading-tight">
+                <span className="text-[10px] text-gray-500 font-bold block mb-1">【お届け先様】</span>
+                {isDifferent ? (
+                  <>
+                    <p className="font-bold text-lg mb-1">{o.recipientInfo?.name} <span className="text-[11px] font-normal">様</span></p>
+                    <p>〒{o.recipientInfo?.zip} {o.recipientInfo?.address1} {o.recipientInfo?.address2}</p>
+                    <p className="mt-0.5">TEL: {o.recipientInfo?.phone}</p>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-400 font-bold tracking-widest">
+                    ご依頼主様と同じ
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 商品名・内容（大きく表示） */}
+            <div className="border-2 border-gray-400 bg-white/95 mb-3">
+              <table className="w-full text-[13px] text-left">
+                <thead className="bg-gray-100 border-b-2 border-gray-400">
+                  <tr>
+                    <th className="p-2 text-base">商品名・内容</th>
+                    <th className="p-2 w-16 text-center text-base">数量</th>
+                    <th className="p-2 w-28 text-right text-base">金額(税抜)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isEcOrder ? (
+                    o.cartItems.map((c, idx) => (
+                      <tr key={idx} className="border-b">
+                        <td className="p-2">
+                          <span className="font-bold text-xl">{c.name}</span>
+                        </td>
+                        <td className="p-2 text-center align-top text-lg">{c.qty}</td>
+                        <td className="p-2 text-right align-top text-lg">¥{(Number(c.price) * Number(c.qty)).toLocaleString()}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr className="border-b">
+                      <td className="p-2">
+                        <span className="font-bold text-xl">{o.flowerType}</span>
+                        <div className="text-[12px] text-gray-600 mt-1">用途: {o.flowerPurpose} / 色: {o.flowerColor} / イメージ: {o.flowerVibe}</div>
+
+                        {o.cardType === '立札' && (
+                          <div className="mt-2 p-2 border border-dashed border-gray-400 bg-gray-50 rounded w-fit pr-8 leading-tight">
+                            <p className="text-[10px] text-gray-500 mb-1 font-bold">【立札の内容】</p>
+                            <p className="font-bold text-[#c62828] text-sm">{o.flowerPurpose === 'お供え' ? '御供' : (o.tateInput1 || '祝')}</p>
+                            <p className="font-bold text-base text-gray-800">{o.tateInput3 || o.tateInput2}</p>
+                          </div>
+                        )}
+
+                        {o.cardType === 'メッセージカード' && (
+                          <div className="mt-2 p-2 border border-dashed border-gray-400 bg-gray-50 rounded text-[12px] text-gray-800 italic">
+                            「{o.cardMessage}」
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-2 text-center align-top text-lg">1</td>
+                      <td className="p-2 text-right align-top text-lg">¥{itemPrice.toLocaleString()}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 合計金額 */}
+            <div className="flex justify-end mb-3">
+              <table className="w-64 text-sm border-2 border-gray-400 bg-white/95">
+                <tbody>
+                  <tr className="border-b border-gray-200"><td className="p-1.5 bg-gray-50 font-bold text-gray-600">商品代</td><td className="p-1.5 text-right">¥{itemPrice.toLocaleString()}</td></tr>
+                  <tr className="border-b border-gray-200"><td className="p-1.5 bg-gray-50 font-bold text-gray-600">送料・箱代等</td><td className="p-1.5 text-right">¥{shippingFee.toLocaleString()}</td></tr>
+                  <tr className="border-b border-gray-200"><td className="p-1.5 bg-gray-50 font-bold text-gray-600">消費税(10%)</td><td className="p-1.5 text-right">¥{tax.toLocaleString()}</td></tr>
+                  <tr><td className="p-2 bg-gray-100 font-bold text-lg" style={{ color: colorCode }}>合計(税込)</td><td className="p-2 text-right font-bold text-lg">¥{total.toLocaleString()}</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* 社内メモ表示（受注書のみ） */}
+            {o.note && (
+              <div className="border border-gray-300 p-2 bg-yellow-50 mb-3 text-[11px]">
+                <span className="text-[10px] text-gray-500 font-bold block mb-0.5">【社内メモ】</span>
+                <p className="text-gray-800 whitespace-pre-wrap">{o.note}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex-grow"></div>
+
+          <div className="flex justify-between items-end pt-2 border-t-2 border-gray-400">
+            <div className="flex items-end gap-3">
+              {generalConfig?.logoUrl && (
+                <img
+                  src={generalConfig.logoUrl}
+                  alt="Logo"
+                  style={{
+                    height: `${(logoSize / 100) * 40}px`,
+                    mixBlendMode: logoTransparent ? 'multiply' : 'normal',
+                  }}
+                  className="object-contain object-left"
+                />
+              )}
+              <div className="text-[10px] text-gray-700 leading-tight">
+                <p className="font-bold text-sm tracking-widest mb-0.5">{shopData?.name || 'FLORIX'}</p>
+                <p>〒{shopData?.zip || '---'} {shopData?.address}</p>
+                <p>TEL: {shopData?.phone} {shopData?.invoiceNumber && `(T${shopData.invoiceNumber})`}</p>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              {staffArray.map((staff, i) => (
+                <div key={i} className="flex flex-col items-center">
+                  <span className="text-[9px] text-gray-500 mb-0.5">{staff.label}</span>
+                  <div className="w-16 h-10 border-2 border-gray-400 rounded-md bg-white flex items-center justify-center shadow-sm">
+                    {staff.name && (
+                      <span className="text-gray-800 font-bold text-xs">{staff.name}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ==========================================
   // ② 新規追加：本番用 立札・カードテンプレート (A4フルサイズ)
   // ==========================================
   const CardTemplate = () => {
@@ -418,25 +620,48 @@ export default function PrintSlipPage() {
       {/* 印刷プレビュー領域 */}
       <div className="print-container flex flex-col items-center gap-8 pb-20">
         
-        {(printMode === 'all' || printMode === 'customer') && (
-          <div className="print-page bg-white shadow-xl flex flex-col relative" style={{ height: printMode === 'customer' ? '148.5mm' : '296mm' }}>
-            {printMode === 'all' && (
-              <>
-                <SlipTemplate title="受 注 書 控" colorCode="#2e7d32" bgColor="#f1f8e9" slipType="store" />
-                <div className="border-t border-dashed border-gray-400 w-full relative my-1 z-20 shrink-0">
-                  <span className="absolute -top-2.5 left-1/2 transform -translate-x-1/2 bg-white px-4 text-[10px] text-gray-400">✂ 切り取り線</span>
-                </div>
-              </>
-            )}
+        {/* ★ Page 1: 受注書（A4 フル）— printMode='all' のみ */}
+        {printMode === 'all' && (
+          <div className="print-page bg-white shadow-xl flex flex-col relative" style={{ height: '296mm' }}>
+            <FullSlipTemplate />
+          </div>
+        )}
+
+        {/* ★ Page 2: 上半分 = お客様控え / 下半分 = 納品書 + 受領書（左右） */}
+        {printMode === 'all' && (
+          <div className="print-page bg-white shadow-xl flex flex-col relative" style={{ pageBreakBefore: 'always', height: '296mm' }}>
+            {/* 上半分：お客様控え */}
+            <div className="flex flex-col" style={{ height: '148.5mm' }}>
+              <SlipTemplate title="お 客 様 控" colorCode="#1565c0" bgColor="#e3f2fd" slipType="customer" />
+            </div>
+            <div className="border-t border-dashed border-gray-400 w-full relative my-1 z-20 shrink-0">
+              <span className="absolute -top-2.5 left-1/2 transform -translate-x-1/2 bg-white px-4 text-[10px] text-gray-400">切り取り線</span>
+            </div>
+            {/* 下半分：左右に納品書 + 受領書 */}
+            <div className="flex flex-row gap-1" style={{ flex: 1 }}>
+              <div className="flex flex-col" style={{ flex: 1 }}>
+                <SlipTemplate title="納 品 書" colorCode="#f57f17" bgColor="#fffde7" slipType="delivery" />
+              </div>
+              <div className="flex flex-col" style={{ flex: 1 }}>
+                <SlipTemplate title="受 領 書" colorCode="#c62828" bgColor="#ffebee" slipType="receipt" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ★ お客様控え単独モード（A4半分） */}
+        {printMode === 'customer' && (
+          <div className="print-page bg-white shadow-xl flex flex-col relative" style={{ height: '148.5mm' }}>
             <SlipTemplate title="お 客 様 控" colorCode="#1565c0" bgColor="#e3f2fd" slipType="customer" />
           </div>
         )}
 
-        {(printMode === 'all' || printMode === 'delivery') && (
-          <div className="print-page bg-white shadow-xl flex flex-col relative" style={{ pageBreakBefore: printMode === 'delivery' ? 'auto' : 'always', height: '296mm' }}>
+        {/* ★ 納品・受領書単独モード（A4 半分ずつ 上下） */}
+        {printMode === 'delivery' && (
+          <div className="print-page bg-white shadow-xl flex flex-col relative" style={{ height: '296mm' }}>
             <SlipTemplate title="納 品 書" colorCode="#f57f17" bgColor="#fffde7" slipType="delivery" />
             <div className="border-t border-dashed border-gray-400 w-full relative my-1 z-20 shrink-0">
-              <span className="absolute -top-2.5 left-1/2 transform -translate-x-1/2 bg-white px-4 text-[10px] text-gray-400">✂ 切り取り線</span>
+              <span className="absolute -top-2.5 left-1/2 transform -translate-x-1/2 bg-white px-4 text-[10px] text-gray-400">切り取り線</span>
             </div>
             <SlipTemplate title="受 領 書" colorCode="#c62828" bgColor="#ffebee" slipType="receipt" />
           </div>
