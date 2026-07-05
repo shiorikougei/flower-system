@@ -622,15 +622,11 @@ export default function OrderDetailModal({
         </div>
         ${thankYouMessage}
         ${!hidePrice ? `
-          <div style="display:flex; justify-content:flex-end;">
-            <table class="amount-summary">
-              <tbody>
-                <tr><td class="amount-label">商品代</td><td class="amount-val">${formatPrice(totals.item)}</td></tr>
-                <tr><td class="amount-label">送料・手数料</td><td class="amount-val">${formatPrice(totals.fee + totals.pickup)}</td></tr>
-                <tr><td class="amount-label">消費税(10%)</td><td class="amount-val">${formatPrice(totals.tax)}</td></tr>
-                <tr><td class="amount-label-total">合計</td><td class="amount-val-total">${formatPrice(totals.total)}</td></tr>
-              </tbody>
-            </table>
+          <div class="amount-inline-row">
+            <div class="amount-inline-item"><span class="amount-inline-label">商品代</span><span class="amount-inline-val">${formatPrice(totals.item)}</span></div>
+            <div class="amount-inline-item"><span class="amount-inline-label">送料</span><span class="amount-inline-val">${formatPrice(totals.fee + totals.pickup)}</span></div>
+            <div class="amount-inline-item"><span class="amount-inline-label">消費税</span><span class="amount-inline-val">${formatPrice(totals.tax)}</span></div>
+            <div class="amount-inline-item amount-inline-total"><span class="amount-inline-label">合計</span><span class="amount-inline-val">${formatPrice(totals.total)}</span></div>
           </div>
         ` : ''}
       `;
@@ -852,6 +848,22 @@ export default function OrderDetailModal({
 
             /* ★ 万が一はみ出した場合の最終防衛線: 用紙の下は絶対に切る */
             .slip-full { max-height: 297mm; overflow: hidden; }
+            .slip { max-height: 138mm; overflow: hidden; }
+            .slip-quarter { max-height: 138mm; overflow: hidden; }
+
+            /* ★ 金額を横一列表示（省スペース） */
+            .amount-inline-row { display: flex; justify-content: flex-end; gap: 2mm; margin-top: 2mm; align-items: stretch; flex-wrap: nowrap; }
+            .amount-inline-item { display: flex; flex-direction: column; align-items: center; padding: 1.5mm 3mm; border: 0.5pt solid #ccc; background: #fafafa; border-radius: 1mm; min-width: 22mm; }
+            .amount-inline-label { font-size: 7pt; color: #666; margin-bottom: 0.5mm; letter-spacing: 0.02em; }
+            .amount-inline-val { font-size: 10pt; font-weight: bold; color: #222; white-space: nowrap; }
+            .amount-inline-total { background: #117768; border-color: #117768; }
+            .amount-inline-total .amount-inline-label { color: #fff; }
+            .amount-inline-total .amount-inline-val { color: #fff; font-size: 13pt; }
+            /* quarter モード（4分の1サイズ）の場合はさらに小さく */
+            .slip-quarter .amount-inline-item { padding: 1mm 2mm; min-width: 18mm; }
+            .slip-quarter .amount-inline-label { font-size: 6pt; }
+            .slip-quarter .amount-inline-val { font-size: 8pt; }
+            .slip-quarter .amount-inline-total .amount-inline-val { font-size: 10pt; }
 
             /* 金額表 + 担当者記入欄 */
             .fullslip-summary-row { display: grid; grid-template-columns: 1fr 80mm; gap: 6mm; margin-bottom: 4mm; align-items: end; }
