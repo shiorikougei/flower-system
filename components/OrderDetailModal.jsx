@@ -450,18 +450,31 @@ export default function OrderDetailModal({
                   ${itemsHtml}
                 </tbody>
               </table>
-              ${modalData.cardMessage ? `
-                <div class="fullslip-card-message">
-                  <div class="fullslip-card-message-label">【メッセージカード】</div>
-                  <div class="fullslip-card-message-text">${formatText(modalData.cardMessage)}</div>
-                </div>
-              ` : ''}
-              ${modalData.note ? `
-                <div class="fullslip-note">
-                  <div class="fullslip-note-label">【社内メモ】</div>
-                  <div class="fullslip-note-text">${formatText(modalData.note)}</div>
-                </div>
-              ` : ''}
+              ${(() => {
+                // ★ 文字数に応じて自動でフォントサイズを調整（下はみ出し防止）
+                //    合計文字数 = メッセージカード + 社内メモ
+                const cardText = modalData.cardMessage || '';
+                const noteText = modalData.note || '';
+                const totalLen = cardText.length + noteText.length;
+                let sizeCls = '';
+                if (totalLen > 400) sizeCls = 'fullslip-longtext-xsmall';
+                else if (totalLen > 250) sizeCls = 'fullslip-longtext-small';
+                else if (totalLen > 150) sizeCls = 'fullslip-longtext-medium';
+                return `
+                  ${cardText ? `
+                    <div class="fullslip-card-message ${sizeCls}">
+                      <div class="fullslip-card-message-label">【メッセージカード】</div>
+                      <div class="fullslip-card-message-text">${formatText(cardText)}</div>
+                    </div>
+                  ` : ''}
+                  ${noteText ? `
+                    <div class="fullslip-note ${sizeCls}">
+                      <div class="fullslip-note-label">【社内メモ】</div>
+                      <div class="fullslip-note-text">${formatText(noteText)}</div>
+                    </div>
+                  ` : ''}
+                `;
+              })()}
             </div>
 
             <!-- 金額表 + 担当者記入欄（左右並列） -->
@@ -819,6 +832,26 @@ export default function OrderDetailModal({
             .fullslip-note { padding: 2.5mm 3mm; margin-top: 2mm; background: #fff8e6; border-left: 2pt solid #e0a800; border-radius: 0 2mm 2mm 0; }
             .fullslip-note-label { font-size: 8pt; color: #a07a00; font-weight: 500; margin-bottom: 1mm; letter-spacing: 0.05em; }
             .fullslip-note-text { font-size: 9pt; color: #333; line-height: 1.6; white-space: pre-wrap; }
+
+            /* ★ 長文自動縮小（合計文字数に応じて自動で小さくする→下はみ出し防止） */
+            .fullslip-longtext-medium .fullslip-card-message-text,
+            .fullslip-longtext-medium .fullslip-note-text { font-size: 8.5pt; line-height: 1.5; }
+            .fullslip-longtext-medium { padding: 2mm 3mm; margin-top: 1.5mm; }
+
+            .fullslip-longtext-small .fullslip-card-message-text,
+            .fullslip-longtext-small .fullslip-note-text { font-size: 7.5pt; line-height: 1.45; }
+            .fullslip-longtext-small { padding: 1.8mm 2.5mm; margin-top: 1.2mm; }
+            .fullslip-longtext-small .fullslip-card-message-label,
+            .fullslip-longtext-small .fullslip-note-label { font-size: 7pt; margin-bottom: 0.8mm; }
+
+            .fullslip-longtext-xsmall .fullslip-card-message-text,
+            .fullslip-longtext-xsmall .fullslip-note-text { font-size: 6.5pt; line-height: 1.35; }
+            .fullslip-longtext-xsmall { padding: 1.5mm 2.5mm; margin-top: 1mm; }
+            .fullslip-longtext-xsmall .fullslip-card-message-label,
+            .fullslip-longtext-xsmall .fullslip-note-label { font-size: 6.5pt; margin-bottom: 0.5mm; }
+
+            /* ★ 万が一はみ出した場合の最終防衛線: 用紙の下は絶対に切る */
+            .slip-full { max-height: 297mm; overflow: hidden; }
 
             /* 金額表 + 担当者記入欄 */
             .fullslip-summary-row { display: grid; grid-template-columns: 1fr 80mm; gap: 6mm; margin-bottom: 4mm; align-items: end; }
