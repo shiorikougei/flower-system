@@ -1815,40 +1815,79 @@ export default function OrderDetailModal({
               </div>
               
               {modalData.paymentMethod && (
-                <div className="pt-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-t border-[#EAEAEA]">
-                  <div className="flex items-center gap-2 bg-[#F7F7F7] px-4 py-2.5 rounded-xl border border-[#EAEAEA] shadow-sm">
+                <div className="pt-4 flex flex-col gap-3 border-t border-[#EAEAEA]">
+                  <div className="flex items-center gap-2 bg-[#F7F7F7] px-4 py-2.5 rounded-xl border border-[#EAEAEA] shadow-sm w-fit">
                     <span className="text-[10px] font-bold text-[#999999] tracking-widest">支払方法</span>
                     <span className="text-[13px] font-bold text-[#2D4B3E]">{getPaymentLabel(modalData.paymentMethod)}</span>
                   </div>
-                  
-                  <div className="flex items-center gap-3">
-                    {isUnpaid ? (
-                      <>
-                        <span className="text-[12px] font-bold text-[#D97D54] flex items-center gap-1">
-                          <AlertCircle size={16}/> {currentPaymentStatus}
-                        </span>
-                        {onUpdatePayment && (
+
+                  {/* ★ [業務-8] 入金ステータス独立プルダウン */}
+                  {(() => {
+                    const currentShop = appSettings?.shops?.find(s => String(s.id) === String(modalData.shopId));
+                    const paidStatuses = (currentShop?.paidStatuses?.length > 0)
+                      ? currentShop.paidStatuses.filter(Boolean)
+                      : ['入金済（現金）', '入金済（振込）', '入金済（クレジットカード）'];
+                    const unpaidSubStatuses = (currentShop?.unpaidSubStatuses?.length > 0)
+                      ? currentShop.unpaidSubStatuses.filter(Boolean)
+                      : ['引き取り時支払い', '請求書発行', '後日振込'];
+                    const paymentStatusOptions = [
+                      ...paidStatuses,
+                      ...unpaidSubStatuses.map(s => `未入金（${s}）`),
+                    ];
+                    const currentPS = modalData.paymentStatus || '';
+                    const isPaidNow = /入金済|前払い済み/.test(currentPS);
+
+                    return (
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className="text-[10px] font-bold text-[#999999] tracking-widest whitespace-nowrap">入金ステータス</span>
+                        <select
+                          value={currentPS}
+                          onChange={async (e) => {
+                            const newStatus = e.target.value;
+                            if (!newStatus) return;
+                            const newIsPaid = /入金済|前払い済み/.test(newStatus);
+                            const updatedOrderData = { ...modalData, paymentStatus: newStatus };
+                            try {
+                              const { error } = await supabase
+                                .from('orders')
+                                .update({
+                                  order_data: updatedOrderData,
+                                  payment_status: newIsPaid ? 'paid' : 'unpaid',
+                                  paid_at: newIsPaid ? new Date().toISOString() : null,
+                                })
+                                .eq('id', order.id);
+                              if (error) throw error;
+                              setModalData(updatedOrderData);
+                              onUpdatePayment && onUpdatePayment(order.id, updatedOrderData, { skipConfirm: true, alreadyUpdated: true });
+                            } catch (err) {
+                              alert('入金ステータス更新失敗: ' + err.message);
+                            }
+                          }}
+                          className={`flex-1 min-w-[220px] h-11 px-3 rounded-xl border-2 text-[12.5px] font-bold outline-none transition-all cursor-pointer ${
+                            isPaidNow
+                              ? 'border-green-500 bg-green-50 text-green-700 hover:border-green-600'
+                              : 'border-[#D97D54] bg-[#D97D54]/5 text-[#D97D54] hover:border-[#c26d48]'
+                          }`}
+                        >
+                          {!currentPS && <option value="">未設定</option>}
+                          {paymentStatusOptions.map(o => (
+                            <option key={o} value={o}>{o}</option>
+                          ))}
+                        </select>
+
+                        {/* 銀行振込の場合は「入金確認 + 納品日 + メール送信」ボタン */}
+                        {isUnpaid && modalData.paymentMethod === 'bank_transfer' && onUpdatePayment && (
                           <button
-                            onClick={() => {
-                              // ★ 銀行振込の場合は確認モーダル経由（納品日確認+メール送信）
-                              if (modalData.paymentMethod === 'bank_transfer') {
-                                setShowPaymentConfirmModal(true);
-                              } else {
-                                onUpdatePayment(order.id, modalData);
-                              }
-                            }}
-                            className="px-4 py-2 bg-[#D97D54] text-white text-[12px] font-bold rounded-xl hover:bg-[#c26d48] transition-all shadow-sm flex items-center gap-1.5 active:scale-95"
+                            onClick={() => setShowPaymentConfirmModal(true)}
+                            className="px-4 py-2.5 bg-[#D97D54] text-white text-[11.5px] font-bold rounded-xl hover:bg-[#c26d48] transition-all shadow-sm flex items-center gap-1.5 active:scale-95 whitespace-nowrap"
+                            title="入金確認 → 納品日確認 → お客様へメール送信"
                           >
-                            <CheckCircle2 size={16}/> 入金済にする
+                            <CheckCircle2 size={16}/> 入金確認+メール
                           </button>
                         )}
-                      </>
-                    ) : (
-                      <span className="text-[12px] font-bold text-green-600 bg-green-50 px-3 py-2 rounded-xl border border-green-200 flex items-center gap-1">
-                        <CheckCircle2 size={16}/> {currentPaymentStatus}
-                      </span>
-                    )}
-                  </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>

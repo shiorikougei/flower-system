@@ -954,6 +954,57 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          {/* ★ [業務-8] 入金済み系ラベル設定（店舗ごとにカスタム可） */}
+          <div className="space-y-3 pt-6 border-t border-[#EAEAEA]">
+            <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={16}/> 入金済み系ラベル（受注一覧で表示）</h3>
+            <p className="text-[10px] text-[#999999] leading-relaxed">
+              入金完了時に選べるラベルを店舗ごとに設定できます。<br/>
+              例：「入金済（現金）」「入金済（振込）」「入金済（クレジットカード）」<br/>
+              ※ Stripe 決済完了時は自動で「入金済（クレジットカード）」がセットされます
+            </p>
+            <div className="bg-[#FBFAF9] p-3 rounded-xl space-y-2">
+              {((shop.paidStatuses && shop.paidStatuses.length > 0) ? shop.paidStatuses : ['入金済（現金）', '入金済（振込）', '入金済（クレジットカード）']).map((sub, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <span className="text-[10px] text-[#999] w-6">{idx + 1}</span>
+                  <input
+                    type="text"
+                    value={sub}
+                    onChange={(e) => {
+                      const current = (shop.paidStatuses && shop.paidStatuses.length > 0) ? [...shop.paidStatuses] : ['入金済（現金）', '入金済（振込）', '入金済（クレジットカード）'];
+                      current[idx] = e.target.value;
+                      setShops(shops.map(s => s.id === shop.id ? { ...s, paidStatuses: current } : s));
+                    }}
+                    className="flex-1 h-9 bg-white border rounded-lg px-3 text-[12px] outline-none focus:border-[#2D4B3E]"
+                    placeholder="例: 入金済（現金）"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const current = (shop.paidStatuses && shop.paidStatuses.length > 0) ? [...shop.paidStatuses] : ['入金済（現金）', '入金済（振込）', '入金済（クレジットカード）'];
+                      current.splice(idx, 1);
+                      setShops(shops.map(s => s.id === shop.id ? { ...s, paidStatuses: current.length > 0 ? current : ['入金済（現金）'] } : s));
+                    }}
+                    className="w-8 h-8 flex items-center justify-center text-[#D97D54] hover:bg-[#D97D54]/10 rounded-lg"
+                    title="削除"
+                  >
+                    <X size={14}/>
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  const current = (shop.paidStatuses && shop.paidStatuses.length > 0) ? [...shop.paidStatuses] : ['入金済（現金）', '入金済（振込）', '入金済（クレジットカード）'];
+                  current.push('');
+                  setShops(shops.map(s => s.id === shop.id ? { ...s, paidStatuses: current } : s));
+                }}
+                className="w-full py-2 bg-white border-dashed border border-[#EAEAEA] rounded-lg text-[11px] font-bold text-[#999999] hover:text-[#2D4B3E] hover:border-[#2D4B3E]/50 transition-all"
+              >
+                + 入金済みラベルを追加
+              </button>
+            </div>
+          </div>
+
           {/* ★ [注文-7] 未入金の内訳設定（受注一覧での細分化用） */}
           <div className="space-y-3 pt-6 border-t border-[#EAEAEA]">
             <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={16}/> 未入金の内訳（受注一覧で表示）</h3>

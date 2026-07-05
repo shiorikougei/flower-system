@@ -204,15 +204,31 @@ export default function OrdersPage() {
     }
   };
 
-  // ★ 完了/未完了でフィルタ → 次に商品フィルタ
+  // ★ [業務-8] 入金済み判定ヘルパー
+  //    payment_status === 'paid' or paymentStatus 文字列に「入金済」「前払い済み」を含む
+  const isOrderPaid = (order) => {
+    if (order?.payment_status === 'paid') return true;
+    const ps = String(order?.order_data?.paymentStatus || '');
+    return /入金済|前払い済み/.test(ps);
+  };
+
+  // ★ [業務-9] 3タブフィルタ: 未完了 / 未入金 / アーカイブ
+  //    - 未完了 : ワークフロー未完了（お渡し完了していない）
+  //    - 未入金 : ワークフロー完了 かつ 入金未完了
+  //    - アーカイブ : ワークフロー完了 かつ 入金完了
   const baseFilteredOrders = orders.filter(order => {
     const status = order?.order_data?.status || 'new';
-    // [注文-3] 配達完了・引き渡し完了・お渡し完了 もアーカイブ判定（自動でアーカイブに移動）
     const isCompletedKeyword = /完了|引き渡し|発送済/.test(String(status));
+    const isWorkflowCompleted = status === 'completed' || status === '完了' || status === 'キャンセル' || isCompletedKeyword;
+    const isPaid = isOrderPaid(order);
+
     if (filterMode === '未完了') {
-      return status !== 'completed' && status !== '完了' && status !== 'キャンセル' && !isCompletedKeyword;
+      return !isWorkflowCompleted;
+    } else if (filterMode === '未入金') {
+      return isWorkflowCompleted && !isPaid && status !== 'キャンセル';
     } else {
-      return status === 'completed' || status === '完了' || status === 'キャンセル' || isCompletedKeyword;
+      // アーカイブ: ワークフロー完了 かつ (入金済み or キャンセル)
+      return isWorkflowCompleted && (isPaid || status === 'キャンセル');
     }
   });
 
@@ -311,13 +327,19 @@ export default function OrdersPage() {
           <div className="flex bg-[#F7F7F7] p-1 rounded-xl border border-[#EAEAEA] w-fit">
             <button
               onClick={() => setFilterMode('未完了')}
-              className={`px-6 py-2 rounded-lg text-[12px] font-bold transition-all ${filterMode === '未完了' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}
+              className={`px-5 py-2 rounded-lg text-[12px] font-bold transition-all ${filterMode === '未完了' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}
             >
               未完了
             </button>
             <button
+              onClick={() => setFilterMode('未入金')}
+              className={`px-5 py-2 rounded-lg text-[12px] font-bold transition-all ${filterMode === '未入金' ? 'bg-white shadow-sm text-[#D97D54]' : 'text-[#999999] hover:text-[#555555]'}`}
+            >
+              未入金
+            </button>
+            <button
               onClick={() => setFilterMode('アーカイブ')}
-              className={`px-6 py-2 rounded-lg text-[12px] font-bold transition-all ${filterMode === 'アーカイブ' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}
+              className={`px-5 py-2 rounded-lg text-[12px] font-bold transition-all ${filterMode === 'アーカイブ' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}
             >
               アーカイブ
             </button>
