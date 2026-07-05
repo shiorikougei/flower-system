@@ -500,8 +500,8 @@ export default function OrderDetailModal({
         `;
       };
 
-      const renderSlip = ({ title, type, hidePrice = false, showReceiptNote = false, fullPage = false }) => `
-        <div class="${fullPage ? 'slip-full' : 'slip'}" style="color: ${hidePrice ? '#333' : 'inherit'}">
+      const renderSlip = ({ title, type, hidePrice = false, showReceiptNote = false, fullPage = false, quarter = false }) => `
+        <div class="${fullPage ? 'slip-full' : (quarter ? 'slip-quarter' : 'slip')}" style="color: ${hidePrice ? '#333' : 'inherit'}">
           <div class="slip-header">
             <div class="slip-title" style="color:${getTitleColor(type)}">${title}${isEcOrder ? ` <span style="font-size:9pt; background:#e3f2fd; color:#1565c0; padding:1mm 2mm; border-radius:1mm; font-weight:bold; vertical-align:middle;">EC注文</span>` : ''}</div>
             ${type === 'delivery' ? '' /* ★ ⑥ 納品書はヘッダー右上の伝票番号・受付日・お渡し方法・希望日・入金状況を出さない */ : renderHeaderMeta()}
@@ -604,6 +604,10 @@ export default function OrderDetailModal({
             .slip:first-child { border-bottom: 1px dashed #aaa; }
             /* EC注文用: 1ページ全面（277mm） */
             .slip-full { width: 100%; height: 277mm; padding: 4mm 14mm 6mm 14mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+            /* ★ 下半分左右分割用: A4半分(138mm) × 幅50% */
+            .slip-half-row { display: flex; width: 100%; height: 138mm; }
+            .slip-quarter { width: 50%; height: 138mm; padding: 3mm 7mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+            .slip-quarter:first-child { border-right: 1px dashed #aaa; }
             .cutline { position: absolute; top: calc(6mm + 138mm); left: 10mm; right: 10mm; transform: translateY(-50%); display: flex; justify-content: center; align-items: center; z-index: 10; pointer-events: none; }
             .cutline span { background: #fff; padding: 0 5mm; font-size: 8pt; color: #888; letter-spacing: 0.2em; }
             .slip-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3mm; }
@@ -669,33 +673,47 @@ export default function OrderDetailModal({
         <body>
           ${isEcOrder ? `
             ${modalData.isRecipientDifferent ? `
-              <!-- EC注文（贈り物）: 1ページ目=受注書控（店舗保管）, 2ページ目=お届け物のご案内（同梱用・金額なし） -->
+              <!-- EC注文（贈り物）: Page1=受注書(A4フル), Page2=お客様控(上半分)+納品書・受領書(下左右), Page3=お届け物のご案内 -->
               <div class="page">
-                ${renderSlip({ title: '受 注 書 控', type: 'order_store', hidePrice: false, fullPage: true })}
+                ${renderSlip({ title: '受 注 書', type: 'order_store', hidePrice: false, fullPage: true })}
+              </div>
+              <div class="page">
+                ${renderSlip({ title: 'お 客 様 控', type: 'customer', hidePrice: false })}
+                <div class="slip-half-row">
+                  ${renderSlip({ title: '納 品 書', type: 'delivery', hidePrice: true, quarter: true })}
+                  ${renderSlip({ title: '受 領 書', type: 'receipt', hidePrice: true, showReceiptNote: true, quarter: true })}
+                </div>
+                <div class="cutline"><span>切り取り線</span></div>
               </div>
               <div class="page">
                 ${renderEnclosedCard({ fullPage: true })}
               </div>
             ` : `
-              <!-- EC注文（ご依頼主=お届け先）: 1ページ目=受注書控, 2ページ目=納品書 -->
+              <!-- EC注文（ご依頼主=お届け先）: Page1=受注書(A4フル), Page2=お客様控(上半分)+納品書・受領書(下左右) -->
               <div class="page">
-                ${renderSlip({ title: '受 注 書 控', type: 'order_store', hidePrice: false, fullPage: true })}
+                ${renderSlip({ title: '受 注 書', type: 'order_store', hidePrice: false, fullPage: true })}
               </div>
               <div class="page">
-                ${renderSlip({ title: '納 品 書', type: 'delivery', hidePrice: false, fullPage: true })}
+                ${renderSlip({ title: 'お 客 様 控', type: 'customer', hidePrice: false })}
+                <div class="slip-half-row">
+                  ${renderSlip({ title: '納 品 書', type: 'delivery', hidePrice: true, quarter: true })}
+                  ${renderSlip({ title: '受 領 書', type: 'receipt', hidePrice: true, showReceiptNote: true, quarter: true })}
+                </div>
+                <div class="cutline"><span>切り取り線</span></div>
               </div>
             `}
           ` : `
-            <!-- カスタム注文: 各ページ2分割（既存） -->
+            <!-- カスタム注文: Page1=受注書(A4フル), Page2=お客様控(上半分)+納品書・受領書(下左右) -->
             <div class="page">
-              ${renderSlip({ title: '受 注 書 控', type: 'order_store', hidePrice: false })}
-              ${renderSlip({ title: 'お 客 様 控', type: 'customer', hidePrice: false })}
-              <div class="cutline"><span>✂ 切り取り線</span></div>
+              ${renderSlip({ title: '受 注 書', type: 'order_store', hidePrice: false, fullPage: true })}
             </div>
             <div class="page">
-              ${renderSlip({ title: '納 品 書', type: 'delivery', hidePrice: true })}
-              ${renderSlip({ title: '受 領 書', type: 'receipt', hidePrice: true, showReceiptNote: true })}
-              <div class="cutline"><span>✂ 切り取り線</span></div>
+              ${renderSlip({ title: 'お 客 様 控', type: 'customer', hidePrice: false })}
+              <div class="slip-half-row">
+                ${renderSlip({ title: '納 品 書', type: 'delivery', hidePrice: true, quarter: true })}
+                ${renderSlip({ title: '受 領 書', type: 'receipt', hidePrice: true, showReceiptNote: true, quarter: true })}
+              </div>
+              <div class="cutline"><span>切り取り線</span></div>
             </div>
           `}
           <script>
