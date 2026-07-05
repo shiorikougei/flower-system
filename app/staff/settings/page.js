@@ -519,7 +519,7 @@ export default function SettingsPage() {
             </div>
           )}
           <div className="space-y-3">
-            {(statusConfig.type === 'template' ? ['受注', '制作', '配達', '片付', '請求'] : statusConfig.customLabels).map((l, i) => (
+            {(statusConfig.type === 'template' ? ['受注', '制作', '配達', '片付'] : statusConfig.customLabels).map((l, i) => (
               <div key={i} className="flex gap-2">
                 <input type="text" value={l} readOnly={statusConfig.type==='template'} onChange={(e) => { if(statusConfig.type==='custom'){ const n = [...statusConfig.customLabels]; n[i] = e.target.value; setStatusConfig({...statusConfig, customLabels: n}); } }} className={`flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none ${statusConfig.type==='template'?'text-[#999999] cursor-not-allowed':'focus:border-[#2D4B3E]'}`} />
                 {statusConfig.type === 'custom' && <button onClick={() => setStatusConfig({...statusConfig, customLabels: statusConfig.customLabels.filter((_, idx) => idx !== i)})} className="text-red-300 p-2 hover:text-red-500"><Trash2 size={18}/></button>}
@@ -954,8 +954,48 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* ★ [業務-8] 入金済み系ラベル設定（店舗ごとにカスタム可） */}
+          {/* ★ [業務-8] 入金ステータス設定（テンプレ／カスタム切替） */}
           <div className="space-y-3 pt-6 border-t border-[#EAEAEA]">
+            <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={16}/> 入金ステータス設定</h3>
+            <p className="text-[10px] text-[#999999] leading-relaxed">
+              受注一覧・注文詳細で選べる入金ステータスの選択肢を設定できます。
+            </p>
+            <div className="flex gap-2 p-1 bg-[#F7F7F7] rounded-xl">
+              {['template', 'custom'].map(t => (
+                <button
+                  key={t}
+                  onClick={() => {
+                    const nextConfig = { ...(shop.paymentStatusConfig || {}), type: t };
+                    setShops(shops.map(s => s.id === shop.id ? { ...s, paymentStatusConfig: nextConfig } : s));
+                  }}
+                  className={`flex-1 py-2.5 rounded-lg font-bold text-[11px] transition-all ${(shop.paymentStatusConfig?.type || 'custom') === t ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}
+                >
+                  {t === 'template' ? '標準（テンプレ）' : 'カスタム'}
+                </button>
+              ))}
+            </div>
+            {(shop.paymentStatusConfig?.type || 'custom') === 'template' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-2">
+                <p className="text-[11px] text-blue-900 leading-relaxed">
+                  <strong>標準テンプレを使用中</strong>（編集不可）。以下の 6 項目が入金ステータスの選択肢になります：
+                </p>
+                <ul className="text-[11px] text-blue-800 space-y-1 pl-4">
+                  <li>・入金済（現金）</li>
+                  <li>・入金済（振込）</li>
+                  <li>・入金済（クレジットカード）</li>
+                  <li>・未入金（引き取り時支払い）</li>
+                  <li>・未入金（請求書発行）</li>
+                  <li>・未入金（後日振込）</li>
+                </ul>
+                <p className="text-[10px] text-blue-700 leading-relaxed pt-1">
+                  ※ 選択肢を追加・変更したい場合は「カスタム」に切り替えてください。
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* 既存の「入金済み系ラベル」+「未入金の内訳」設定（カスタム時のみ有効） */}
+          <div className={`space-y-3 pt-6 border-t border-[#EAEAEA] ${(shop.paymentStatusConfig?.type || 'custom') === 'template' ? 'opacity-40 pointer-events-none' : ''}`}>
             <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={16}/> 入金済み系ラベル（受注一覧で表示）</h3>
             <p className="text-[10px] text-[#999999] leading-relaxed">
               入金完了時に選べるラベルを店舗ごとに設定できます。<br/>
@@ -1005,8 +1045,8 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* ★ [注文-7] 未入金の内訳設定（受注一覧での細分化用） */}
-          <div className="space-y-3 pt-6 border-t border-[#EAEAEA]">
+          {/* ★ [注文-7] 未入金の内訳設定（受注一覧での細分化用、カスタム時のみ有効） */}
+          <div className={`space-y-3 pt-6 border-t border-[#EAEAEA] ${(shop.paymentStatusConfig?.type || 'custom') === 'template' ? 'opacity-40 pointer-events-none' : ''}`}>
             <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={16}/> 未入金の内訳（受注一覧で表示）</h3>
             <p className="text-[10px] text-[#999999] leading-relaxed">
               代理入力で「未入金」を選んだとき、内訳を選べるようになります。<br/>

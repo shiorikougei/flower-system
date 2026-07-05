@@ -1824,16 +1824,31 @@ export default function OrderDetailModal({
                   {/* ★ [業務-8] 入金ステータス独立プルダウン */}
                   {(() => {
                     const currentShop = appSettings?.shops?.find(s => String(s.id) === String(modalData.shopId));
-                    const paidStatuses = (currentShop?.paidStatuses?.length > 0)
-                      ? currentShop.paidStatuses.filter(Boolean)
-                      : ['入金済（現金）', '入金済（振込）', '入金済（クレジットカード）'];
-                    const unpaidSubStatuses = (currentShop?.unpaidSubStatuses?.length > 0)
-                      ? currentShop.unpaidSubStatuses.filter(Boolean)
-                      : ['引き取り時支払い', '請求書発行', '後日振込'];
-                    const paymentStatusOptions = [
-                      ...paidStatuses,
-                      ...unpaidSubStatuses.map(s => `未入金（${s}）`),
+                    // ★ テンプレ／カスタム切替を判別
+                    const paymentType = currentShop?.paymentStatusConfig?.type || 'custom';
+                    const TEMPLATE_PAYMENT_STATUSES = [
+                      '入金済（現金）',
+                      '入金済（振込）',
+                      '入金済（クレジットカード）',
+                      '未入金（引き取り時支払い）',
+                      '未入金（請求書発行）',
+                      '未入金（後日振込）',
                     ];
+                    let paymentStatusOptions;
+                    if (paymentType === 'template') {
+                      paymentStatusOptions = TEMPLATE_PAYMENT_STATUSES;
+                    } else {
+                      const paidStatuses = (currentShop?.paidStatuses?.length > 0)
+                        ? currentShop.paidStatuses.filter(Boolean)
+                        : ['入金済（現金）', '入金済（振込）', '入金済（クレジットカード）'];
+                      const unpaidSubStatuses = (currentShop?.unpaidSubStatuses?.length > 0)
+                        ? currentShop.unpaidSubStatuses.filter(Boolean)
+                        : ['引き取り時支払い', '請求書発行', '後日振込'];
+                      paymentStatusOptions = [
+                        ...paidStatuses,
+                        ...unpaidSubStatuses.map(s => `未入金（${s}）`),
+                      ];
+                    }
                     const currentPS = modalData.paymentStatus || '';
                     const isPaidNow = /入金済|前払い済み/.test(currentPS);
 

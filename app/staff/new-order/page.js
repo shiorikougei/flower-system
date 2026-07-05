@@ -98,9 +98,15 @@ export default function StaffNewOrderPage() {
   };
   const designOptions = appSettings?.designOptions || defaultDesignOptions;
 
-  // ★ [注文-7] 現在選択中の店舗の未入金サブステータスリスト
+  // ★ [注文-7 / 業務-8] 現在選択中の店舗の未入金サブステータスリスト
+  //    テンプレ／カスタム切替に対応
   const currentUnpaidSubs = useMemo(() => {
     const currentShop = appSettings?.shops?.find(s => String(s.id) === String(shopId));
+    const paymentType = currentShop?.paymentStatusConfig?.type || 'custom';
+    if (paymentType === 'template') {
+      // テンプレの未入金内訳（固定）
+      return ['引き取り時支払い', '請求書発行', '後日振込'];
+    }
     const list = (currentShop?.unpaidSubStatuses && currentShop.unpaidSubStatuses.length > 0)
       ? currentShop.unpaidSubStatuses.filter(s => s && String(s).trim().length > 0)
       : ['引き取り時支払い', '請求書発行', '後日振込'];
