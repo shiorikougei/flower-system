@@ -213,22 +213,28 @@ export default function OrdersPage() {
   };
 
   // ★ [業務-9] 3タブフィルタ: 未完了 / 未入金 / アーカイブ
-  //    - 未完了 : ワークフロー未完了（お渡し完了していない）
-  //    - 未入金 : ワークフロー完了 かつ 入金未完了
-  //    - アーカイブ : ワークフロー完了 かつ 入金完了
+  //    - 未完了 : お渡し未完了 かつ 未入金（まだ何もしていない or 途中）
+  //    - 未入金 : お渡し完了 かつ 未入金（入金だけ待ってる）
+  //    - アーカイブ : お渡し完了 かつ 入金完了（すべて完了）
+  //    ※「お渡し未完了 かつ 入金済み（前払い済み）」は未完了タブに含める（配達待ちなので）
   const baseFilteredOrders = orders.filter(order => {
     const status = order?.order_data?.status || 'new';
     const isCompletedKeyword = /完了|引き渡し|発送済/.test(String(status));
     const isWorkflowCompleted = status === 'completed' || status === '完了' || status === 'キャンセル' || isCompletedKeyword;
     const isPaid = isOrderPaid(order);
+    const isCancelled = status === 'キャンセル';
 
     if (filterMode === '未完了') {
-      return !isWorkflowCompleted;
+      // ★ 厳密仕様: お渡し未完了 かつ 未入金
+      return !isWorkflowCompleted && !isPaid;
     } else if (filterMode === '未入金') {
-      return isWorkflowCompleted && !isPaid && status !== 'キャンセル';
+      // お渡し完了 かつ 未入金 かつ 非キャンセル
+      return isWorkflowCompleted && !isPaid && !isCancelled;
     } else {
-      // アーカイブ: ワークフロー完了 かつ (入金済み or キャンセル)
-      return isWorkflowCompleted && (isPaid || status === 'キャンセル');
+      // アーカイブ: お渡し完了 かつ (入金完了 or キャンセル)
+      //   ★ セーフガード: お渡し未完了 + 入金済み（前払いで配達前）もアーカイブに含める
+      //     （どこにも表示されないのを防ぐ）
+      return (isWorkflowCompleted && (isPaid || isCancelled)) || (!isWorkflowCompleted && isPaid);
     }
   });
 
