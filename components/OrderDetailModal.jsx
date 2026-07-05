@@ -464,8 +464,21 @@ export default function OrderDetailModal({
               ` : ''}
             </div>
 
-            <!-- 金額表 -->
-            <div class="fullslip-amounts-row">
+            <!-- 金額表 + 担当者記入欄（左右並列） -->
+            <div class="fullslip-summary-row">
+              <!-- 左：ステータスごとの担当者記入欄 -->
+              <div class="fullslip-staff-section">
+                <div class="fullslip-staff-title">担当者記入欄</div>
+                <div class="fullslip-staff-grid">
+                  <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">受注</div><div class="fullslip-staff-cell-name">${formatText(modalData.staffName || modalData.orderStaff || '')}</div></div>
+                  <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">制作</div><div class="fullslip-staff-cell-name">${formatText(modalData.productionStaff || '')}</div></div>
+                  <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">配達</div><div class="fullslip-staff-cell-name">${formatText(modalData.deliveryStaff || '')}</div></div>
+                  <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">片付</div><div class="fullslip-staff-cell-name">${formatText(modalData.cleanupStaff || '')}</div></div>
+                  <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">請求</div><div class="fullslip-staff-cell-name">${formatText(modalData.billingStaff || '')}</div></div>
+                </div>
+              </div>
+
+              <!-- 右：金額表 -->
               <table class="fullslip-amounts">
                 <tr><td class="fullslip-amount-label">商品代</td><td class="fullslip-amount-value">¥${itemP.toLocaleString()}</td></tr>
                 <tr><td class="fullslip-amount-label">送料・手数料</td><td class="fullslip-amount-value">¥${feeP.toLocaleString()}</td></tr>
@@ -474,7 +487,7 @@ export default function OrderDetailModal({
               </table>
             </div>
 
-            <!-- フッター：店舗情報 + スタッフ印 -->
+            <!-- フッター：店舗情報 -->
             <div class="fullslip-footer">
               <div class="fullslip-shop">
                 <div class="fullslip-shop-name">${formatText(shopName)}</div>
@@ -482,12 +495,6 @@ export default function OrderDetailModal({
                   <div>〒${formatText(shopZip)} ${formatText(shopAddress)}</div>
                   <div>TEL: ${formatText(shopTel)}${shopInvoice ? ` （T${formatText(shopInvoice)}）` : ''}</div>
                 </div>
-              </div>
-              <div class="fullslip-staff-boxes">
-                <div class="fullslip-staff-box"><div class="fullslip-staff-label">受注</div><div class="fullslip-staff-name"></div></div>
-                <div class="fullslip-staff-box"><div class="fullslip-staff-label">制作</div><div class="fullslip-staff-name"></div></div>
-                <div class="fullslip-staff-box"><div class="fullslip-staff-label">配達</div><div class="fullslip-staff-name"></div></div>
-                <div class="fullslip-staff-box"><div class="fullslip-staff-label">片付</div><div class="fullslip-staff-name"></div></div>
               </div>
             </div>
           </div>
@@ -813,8 +820,18 @@ export default function OrderDetailModal({
             .fullslip-note-label { font-size: 9pt; color: #a07a00; font-weight: 500; margin-bottom: 1.5mm; letter-spacing: 0.05em; }
             .fullslip-note-text { font-size: 10pt; color: #333; line-height: 1.7; white-space: pre-wrap; }
 
-            /* 金額表 */
-            .fullslip-amounts-row { display: flex; justify-content: flex-end; margin-bottom: 6mm; }
+            /* 金額表 + 担当者記入欄（左右並列） */
+            .fullslip-summary-row { display: grid; grid-template-columns: 1fr 85mm; gap: 8mm; margin-bottom: 6mm; align-items: end; }
+
+            /* 担当者記入欄（左側） */
+            .fullslip-staff-section { }
+            .fullslip-staff-title { font-size: 9pt; color: #777; font-weight: 500; margin-bottom: 3mm; letter-spacing: 0.05em; }
+            .fullslip-staff-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2mm; }
+            .fullslip-staff-cell { display: flex; flex-direction: column; }
+            .fullslip-staff-cell-label { font-size: 9pt; color: #666; font-weight: 500; text-align: center; margin-bottom: 1.5mm; }
+            .fullslip-staff-cell-name { border: 0.5pt solid #999; height: 14mm; background: #fff; border-radius: 1mm; display: flex; align-items: center; justify-content: center; font-size: 11pt; font-weight: 700; color: #222; }
+
+            /* 金額表（右側） */
             .fullslip-amounts { border-collapse: collapse; width: 85mm; }
             .fullslip-amounts td { padding: 3mm 5mm; font-size: 11pt; border-bottom: 0.5pt solid #ddd; }
             .fullslip-amount-label { text-align: left; color: #666; width: 55%; }
@@ -824,13 +841,9 @@ export default function OrderDetailModal({
             .fullslip-amount-value-total { color: #2D4B3E; text-align: right; font-size: 20pt; }
 
             /* フッター */
-            .fullslip-footer { margin-top: auto; padding-top: 5mm; border-top: 0.5pt solid #ccc; display: flex; justify-content: space-between; align-items: flex-end; }
+            .fullslip-footer { margin-top: auto; padding-top: 5mm; border-top: 0.5pt solid #ccc; }
             .fullslip-shop-name { font-size: 13pt; font-weight: 700; margin-bottom: 2mm; letter-spacing: 0.08em; color: #2D4B3E; }
             .fullslip-shop-details { font-size: 9pt; color: #555; line-height: 1.7; }
-            .fullslip-staff-boxes { display: flex; gap: 2mm; }
-            .fullslip-staff-box { display: flex; flex-direction: column; align-items: center; gap: 1mm; }
-            .fullslip-staff-label { font-size: 8pt; color: #888; font-weight: 500; letter-spacing: 0.05em; }
-            .fullslip-staff-name { border: 0.5pt solid #999; width: 16mm; height: 10mm; background: #fff; border-radius: 1mm; }
             .cutline { position: absolute; top: calc(6mm + 138mm); left: 10mm; right: 10mm; transform: translateY(-50%); display: flex; justify-content: center; align-items: center; z-index: 10; pointer-events: none; }
             .cutline span { background: #fff; padding: 0 5mm; font-size: 8pt; color: #888; letter-spacing: 0.2em; }
             .slip-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3mm; }
