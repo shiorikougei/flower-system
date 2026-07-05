@@ -313,11 +313,16 @@ export default function OrderDetailModal({
       const safeId = String(order.id || '').slice(0, 8);
       const receiveMethodStr = getMethodLabel(modalData.receiveMethod);
       const datePart = modalData.selectedDate || '未指定';
-      
+      const timePart = modalData.selectedTime || '未指定';
+
+      // ★ paymentMethod を日本語表記に変換（受注書で「card」等の英語表示を防止）
+      const paymentMethodMap = { card: 'クレジットカード', bank_transfer: '銀行振込', cash: '現金' };
+      const paymentMethodJp = paymentMethodMap[modalData.paymentMethod] || modalData.paymentMethod || '';
+
       let paymentStatus = currentPaymentStatus;  // ★ 上で計算した実効値を使う
       if (modalData.paymentMethod) {
-        paymentStatus = modalData.paymentMethod;
-        if (modalData.paymentStatus) paymentStatus += ' (' + modalData.paymentStatus + ')';
+        paymentStatus = paymentMethodJp;
+        if (modalData.paymentStatus) paymentStatus += '（' + modalData.paymentStatus + '）';
       }
 
       const formatPrice = (price) => `¥${Number(price || 0).toLocaleString()}`;
@@ -338,6 +343,159 @@ export default function OrderDetailModal({
       };
 
       const renderHeaderMeta = () => `<div class="meta-area"><div>伝票：${safeId}    受付：${safeFormatDate(order.created_at, false)}</div><div>お渡し：${receiveMethodStr}    希望日：${datePart}</div><div>入金状況：${paymentStatus}</div></div>`;
+
+      // ★ A4フル 受注書専用テンプレート（老眼でも見えるサイズ、A4全体をバランスよく使用）
+      const renderFullSlip = ({ title }) => {
+        // 商品行を組み立て
+        let itemsHtml = '';
+        if (isEcOrder && Array.isArray(modalData.cartItems)) {
+          itemsHtml = modalData.cartItems.map(c => `
+            <tr>
+              <td class="fullslip-item-name">${formatText(c.name)}</td>
+              <td class="fullslip-item-qty">${formatText(c.qty)}</td>
+              <td class="fullslip-item-price">¥${(Number(c.price) * Number(c.qty)).toLocaleString()}</td>
+            </tr>
+          `).join('');
+        } else {
+          itemsHtml = `
+            <tr>
+              <td class="fullslip-item-name">
+                ${formatText(modalData.flowerType || 'お花のご注文')}
+                ${(modalData.flowerPurpose || modalData.flowerColor || modalData.flowerVibe) ? `
+                  <div class="fullslip-item-detail">
+                    ${modalData.flowerPurpose ? `用途: ${formatText(modalData.flowerPurpose)}` : ''}
+                    ${modalData.flowerColor ? ` / 色: ${formatText(modalData.flowerColor)}` : ''}
+                    ${modalData.flowerVibe ? ` / イメージ: ${formatText(modalData.flowerVibe)}` : ''}
+                  </div>
+                ` : ''}
+              </td>
+              <td class="fullslip-item-qty">1</td>
+              <td class="fullslip-item-price">¥${Number(modalData.itemPrice || 0).toLocaleString()}</td>
+            </tr>
+          `;
+        }
+
+        // 金額計算
+        const itemP = isEcOrder && Array.isArray(modalData.cartItems)
+          ? modalData.cartItems.reduce((s, c) => s + Number(c.price) * Number(c.qty), 0)
+          : Number(modalData.itemPrice || 0);
+        const feeP = Number(modalData.calculatedFee || 0) + Number(modalData.ecBoxFee || 0);
+        const subT = itemP + feeP;
+        const taxP = Math.floor(subT * 0.1);
+        const totalP = subT + taxP;
+
+        return `
+          <div class="slip-full fullslip">
+            <!-- タイトル + 伝票情報 -->
+            <div class="fullslip-header">
+              <div class="fullslip-title">${title}</div>
+              <div class="fullslip-meta-top">
+                <div>伝票：${safeId}</div>
+                <div>受付：${safeFormatDate(order.created_at, false)}</div>
+              </div>
+            </div>
+
+            <!-- 4カード：お渡し方法 / お渡し日 / お渡し時間 / 入金状況（すべて大きく表示） -->
+            <div class="fullslip-cards">
+              <div class="fullslip-card">
+                <div class="fullslip-card-label">お渡し方法</div>
+                <div class="fullslip-card-value">${formatText(receiveMethodStr)}</div>
+              </div>
+              <div class="fullslip-card">
+                <div class="fullslip-card-label">お渡し日</div>
+                <div class="fullslip-card-value">${formatText(datePart)}</div>
+              </div>
+              <div class="fullslip-card">
+                <div class="fullslip-card-label">お渡し時間</div>
+                <div class="fullslip-card-value">${formatText(timePart)}</div>
+              </div>
+              <div class="fullslip-card fullslip-card-highlight">
+                <div class="fullslip-card-label">入金状況</div>
+                <div class="fullslip-card-value">${formatText(paymentStatus)}</div>
+              </div>
+            </div>
+
+            <!-- ご依頼主 / お届け先（大きく） -->
+            <div class="fullslip-clients">
+              <div class="fullslip-client-box">
+                <div class="fullslip-client-title">【ご依頼主様（ご注文者）】</div>
+                <div class="fullslip-client-name">${formatText(customer.name)} <span class="fullslip-client-sama">様</span></div>
+                <div class="fullslip-client-details">
+                  <div>〒${formatText(customer.zip)}</div>
+                  <div>${formatText(customer.address1)} ${formatText(customer.address2)}</div>
+                  <div>TEL: ${formatText(customer.phone)}</div>
+                </div>
+              </div>
+              <div class="fullslip-client-box">
+                <div class="fullslip-client-title">【お届け先様】</div>
+                ${modalData.isRecipientDifferent ? `
+                  <div class="fullslip-client-name">${formatText(recipient.name)} <span class="fullslip-client-sama">様</span></div>
+                  <div class="fullslip-client-details">
+                    <div>〒${formatText(recipient.zip)}</div>
+                    <div>${formatText(recipient.address1)} ${formatText(recipient.address2)}</div>
+                    <div>TEL: ${formatText(recipient.phone)}</div>
+                  </div>
+                ` : `
+                  <div class="fullslip-same-text">ご依頼主様と同じ</div>
+                `}
+              </div>
+            </div>
+
+            <!-- 商品名・内容（とても大きく表示） -->
+            <div class="fullslip-items">
+              <div class="fullslip-items-header">
+                <span>商品名・内容</span>
+                <span class="fullslip-items-header-qty">数量</span>
+                <span class="fullslip-items-header-price">金額（税抜）</span>
+              </div>
+              <table class="fullslip-items-table">
+                <tbody>
+                  ${itemsHtml}
+                </tbody>
+              </table>
+              ${modalData.cardMessage ? `
+                <div class="fullslip-card-message">
+                  <div class="fullslip-card-message-label">【メッセージカード】</div>
+                  <div class="fullslip-card-message-text">${formatText(modalData.cardMessage)}</div>
+                </div>
+              ` : ''}
+              ${modalData.note ? `
+                <div class="fullslip-note">
+                  <div class="fullslip-note-label">【社内メモ】</div>
+                  <div class="fullslip-note-text">${formatText(modalData.note)}</div>
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- 金額表 -->
+            <div class="fullslip-amounts-row">
+              <table class="fullslip-amounts">
+                <tr><td class="fullslip-amount-label">商品代</td><td class="fullslip-amount-value">¥${itemP.toLocaleString()}</td></tr>
+                <tr><td class="fullslip-amount-label">送料・手数料</td><td class="fullslip-amount-value">¥${feeP.toLocaleString()}</td></tr>
+                <tr><td class="fullslip-amount-label">消費税（10%）</td><td class="fullslip-amount-value">¥${taxP.toLocaleString()}</td></tr>
+                <tr class="fullslip-amount-total"><td class="fullslip-amount-label-total">合計（税込）</td><td class="fullslip-amount-value-total">¥${totalP.toLocaleString()}</td></tr>
+              </table>
+            </div>
+
+            <!-- フッター：店舗情報 + スタッフ印 -->
+            <div class="fullslip-footer">
+              <div class="fullslip-shop">
+                <div class="fullslip-shop-name">${formatText(shopName)}</div>
+                <div class="fullslip-shop-details">
+                  <div>〒${formatText(shopZip)} ${formatText(shopAddress)}</div>
+                  <div>TEL: ${formatText(shopTel)}${shopInvoice ? ` （T${formatText(shopInvoice)}）` : ''}</div>
+                </div>
+              </div>
+              <div class="fullslip-staff-boxes">
+                <div class="fullslip-staff-box"><div class="fullslip-staff-label">受注</div><div class="fullslip-staff-name"></div></div>
+                <div class="fullslip-staff-box"><div class="fullslip-staff-label">制作</div><div class="fullslip-staff-name"></div></div>
+                <div class="fullslip-staff-box"><div class="fullslip-staff-label">配達</div><div class="fullslip-staff-name"></div></div>
+                <div class="fullslip-staff-box"><div class="fullslip-staff-label">片付</div><div class="fullslip-staff-name"></div></div>
+              </div>
+            </div>
+          </div>
+        `;
+      };
 
       const renderClientBoxes = (hidePrice) => `
         <div class="info-grid">
@@ -500,8 +658,11 @@ export default function OrderDetailModal({
         `;
       };
 
-      const renderSlip = ({ title, type, hidePrice = false, showReceiptNote = false, fullPage = false, quarter = false }) => `
-        <div class="${fullPage ? 'slip-full' : (quarter ? 'slip-quarter' : 'slip')}" style="color: ${hidePrice ? '#333' : 'inherit'}">
+      const renderSlip = ({ title, type, hidePrice = false, showReceiptNote = false, fullPage = false, quarter = false }) => {
+        // ★ A4フル（受注書）は専用テンプレートで大きく表示
+        if (fullPage) return renderFullSlip({ title });
+        return `
+        <div class="${quarter ? 'slip-quarter' : 'slip'}" style="color: ${hidePrice ? '#333' : 'inherit'}">
           <div class="slip-header">
             <div class="slip-title" style="color:${getTitleColor(type)}">${title}${isEcOrder ? ` <span style="font-size:9pt; background:#e3f2fd; color:#1565c0; padding:1mm 2mm; border-radius:1mm; font-weight:bold; vertical-align:middle;">EC注文</span>` : ''}</div>
             ${type === 'delivery' ? '' /* ★ ⑥ 納品書はヘッダー右上の伝票番号・受付日・お渡し方法・希望日・入金状況を出さない */ : renderHeaderMeta()}
@@ -520,6 +681,7 @@ export default function OrderDetailModal({
           ${renderFooter(type, hidePrice)}
         </div>
       `;
+      };
 
       // ★ EC贈り物用：店舗案内チラシ（金額なし。お届け先様への同梱物）
       const renderEnclosedCard = ({ fullPage = true }) => {
@@ -608,6 +770,65 @@ export default function OrderDetailModal({
             .slip-half-row { display: flex; width: 100%; height: 138mm; }
             .slip-quarter { width: 50%; height: 138mm; padding: 3mm 7mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
             .slip-quarter:first-child { border-right: 1px dashed #aaa; }
+
+            /* ★ 受注書 A4フル専用スタイル（老眼でも見えるサイズ、A4全体をバランスよく使用） */
+            .fullslip { padding: 6mm 12mm; }
+            .fullslip-header { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 3mm; border-bottom: 2pt solid #117768; margin-bottom: 5mm; }
+            .fullslip-title { font-size: 44pt; font-weight: 900; letter-spacing: 0.3em; color: #117768; line-height: 1; }
+            .fullslip-meta-top { text-align: right; font-size: 10pt; color: #555; line-height: 1.6; }
+
+            /* 4カード：お渡し方法・日・時間・入金状況 */
+            .fullslip-cards { display: flex; gap: 3mm; margin-bottom: 5mm; }
+            .fullslip-card { flex: 1; border: 1.5pt solid #444; padding: 3mm; background: #fff; text-align: center; }
+            .fullslip-card-highlight { border: 2pt solid #117768; background: #f0faf7; }
+            .fullslip-card-label { font-size: 10pt; color: #666; font-weight: bold; margin-bottom: 2mm; }
+            .fullslip-card-value { font-size: 20pt; font-weight: bold; color: #222; line-height: 1.2; }
+            .fullslip-card-highlight .fullslip-card-value { color: #117768; }
+
+            /* 依頼主 / お届け先 */
+            .fullslip-clients { display: flex; gap: 4mm; margin-bottom: 5mm; }
+            .fullslip-client-box { flex: 1; border: 1pt solid #444; padding: 4mm; background: #fff; }
+            .fullslip-client-title { font-size: 10pt; color: #444; font-weight: bold; margin-bottom: 2mm; }
+            .fullslip-client-name { font-size: 22pt; font-weight: bold; margin-bottom: 2mm; }
+            .fullslip-client-sama { font-size: 12pt; font-weight: normal; }
+            .fullslip-client-details { font-size: 11pt; line-height: 1.7; color: #333; }
+            .fullslip-same-text { display: flex; align-items: center; justify-content: center; min-height: 30mm; font-size: 14pt; font-weight: bold; color: #888; letter-spacing: 0.1em; }
+
+            /* 商品名・内容 */
+            .fullslip-items { border: 1.5pt solid #444; margin-bottom: 5mm; background: #fff; }
+            .fullslip-items-header { display: flex; justify-content: space-between; background: #f5f5f5; padding: 2mm 4mm; border-bottom: 1pt solid #444; font-size: 11pt; font-weight: bold; }
+            .fullslip-items-header-qty { width: 20mm; text-align: center; }
+            .fullslip-items-header-price { width: 40mm; text-align: right; }
+            .fullslip-items-table { width: 100%; border-collapse: collapse; }
+            .fullslip-items-table td { padding: 3mm 4mm; vertical-align: top; border-bottom: 0.5pt solid #ddd; }
+            .fullslip-item-name { font-size: 22pt; font-weight: bold; }
+            .fullslip-item-qty { width: 20mm; text-align: center; font-size: 18pt; font-weight: bold; }
+            .fullslip-item-price { width: 40mm; text-align: right; font-size: 18pt; font-weight: bold; }
+            .fullslip-item-detail { font-size: 11pt; color: #555; font-weight: normal; margin-top: 2mm; }
+            .fullslip-card-message { padding: 3mm 4mm; border-top: 0.5pt dashed #999; background: #fffdf5; }
+            .fullslip-card-message-label { font-size: 9pt; color: #888; font-weight: bold; margin-bottom: 1mm; }
+            .fullslip-card-message-text { font-size: 12pt; font-style: italic; color: #333; }
+            .fullslip-note { padding: 3mm 4mm; border-top: 0.5pt dashed #999; background: #fffbe6; }
+            .fullslip-note-label { font-size: 9pt; color: #666; font-weight: bold; margin-bottom: 1mm; }
+            .fullslip-note-text { font-size: 11pt; color: #333; white-space: pre-wrap; }
+
+            /* 金額表 */
+            .fullslip-amounts-row { display: flex; justify-content: flex-end; margin-bottom: 5mm; }
+            .fullslip-amounts { border-collapse: collapse; width: 90mm; }
+            .fullslip-amounts td { border: 1pt solid #444; padding: 3mm 4mm; font-size: 13pt; font-weight: bold; }
+            .fullslip-amount-label { background: #f5f5f5; text-align: left; color: #555; width: 50%; }
+            .fullslip-amount-label-total { background: #117768; color: #fff; font-size: 15pt; text-align: left; }
+            .fullslip-amount-value { text-align: right; }
+            .fullslip-amount-value-total { text-align: right; color: #117768; font-size: 20pt; font-weight: 900; }
+
+            /* フッター */
+            .fullslip-footer { margin-top: auto; padding-top: 4mm; border-top: 1pt dashed #999; display: flex; justify-content: space-between; align-items: flex-end; }
+            .fullslip-shop-name { font-size: 14pt; font-weight: 900; margin-bottom: 2mm; letter-spacing: 0.1em; }
+            .fullslip-shop-details { font-size: 10pt; color: #555; line-height: 1.6; }
+            .fullslip-staff-boxes { display: flex; gap: 2mm; }
+            .fullslip-staff-box { display: flex; flex-direction: column; align-items: center; gap: 1mm; }
+            .fullslip-staff-label { font-size: 8pt; color: #666; font-weight: bold; }
+            .fullslip-staff-name { border: 1pt solid #666; width: 18mm; height: 10mm; background: #fff; border-radius: 1px; }
             .cutline { position: absolute; top: calc(6mm + 138mm); left: 10mm; right: 10mm; transform: translateY(-50%); display: flex; justify-content: center; align-items: center; z-index: 10; pointer-events: none; }
             .cutline span { background: #fff; padding: 0 5mm; font-size: 8pt; color: #888; letter-spacing: 0.2em; }
             .slip-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3mm; }
