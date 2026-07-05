@@ -580,15 +580,15 @@ export default function OrderDetailModal({
             `;
           }).join('');
         } else {
-          // ★ ⑤ 納品書(delivery)は商品名のみ、用途・色・イメージ・備考は出さない
-          const isDeliverySlip = slipType === 'delivery';
+          // ★ 納品書(delivery)・受領書(receipt)は商品名のみ、用途・色・イメージ・カード・備考は出さない
+          const hideDetails = slipType === 'delivery' || slipType === 'receipt';
           itemRows = `
               <tr>
                 <td class="item-cell">
                   <div class="item-name">${formatText(modalData.flowerType) || '未設定'}</div>
-                  ${isDeliverySlip ? '' : `<div class="item-detail">用途: ${formatText(modalData.flowerPurpose) || '-'}${modalData.otherPurpose ? ` (${formatText(modalData.otherPurpose)})` : ''} / 色: ${formatText(modalData.flowerColor) || '-'}${modalData.otherColor ? ` (${formatText(modalData.otherColor)})` : ''} / イメージ: ${formatText(modalData.flowerVibe) || '-'}${modalData.otherVibe ? ` (${formatText(modalData.otherVibe)})` : ''}</div>`}
-                  ${isDeliverySlip ? '' : renderCardBlock()}
-                  ${isDeliverySlip || !modalData.note ? '' : `<div class="item-detail" style="color:#d97c8f; margin-top:2mm;">備考: ${formatText(modalData.note)}</div>`}
+                  ${hideDetails ? '' : `<div class="item-detail">用途: ${formatText(modalData.flowerPurpose) || '-'}${modalData.otherPurpose ? ` (${formatText(modalData.otherPurpose)})` : ''} / 色: ${formatText(modalData.flowerColor) || '-'}${modalData.otherColor ? ` (${formatText(modalData.otherColor)})` : ''} / イメージ: ${formatText(modalData.flowerVibe) || '-'}${modalData.otherVibe ? ` (${formatText(modalData.otherVibe)})` : ''}</div>`}
+                  ${hideDetails ? '' : renderCardBlock()}
+                  ${hideDetails || !modalData.note ? '' : `<div class="item-detail" style="color:#d97c8f; margin-top:2mm;">備考: ${formatText(modalData.note)}</div>`}
                 </td>
                 <td class="qty-cell">1</td>
                 <td class="price-cell">${hidePrice ? '' : formatPrice(modalData.itemPrice)}</td>
