@@ -623,10 +623,17 @@ export default function OrderDetailModal({
         ${thankYouMessage}
         ${!hidePrice ? `
           <div class="amount-inline-row">
-            <div class="amount-inline-item"><span class="amount-inline-label">商品代</span><span class="amount-inline-val">${formatPrice(totals.item)}</span></div>
-            <div class="amount-inline-item"><span class="amount-inline-label">送料</span><span class="amount-inline-val">${formatPrice(totals.fee + totals.pickup)}</span></div>
-            <div class="amount-inline-item"><span class="amount-inline-label">消費税</span><span class="amount-inline-val">${formatPrice(totals.tax)}</span></div>
-            <div class="amount-inline-item amount-inline-total"><span class="amount-inline-label">合計</span><span class="amount-inline-val">${formatPrice(totals.total)}</span></div>
+            <div class="amount-inline-breakdown">
+              <span class="amount-inline-sub">商品代 <b>${formatPrice(totals.item)}</b></span>
+              <span class="amount-inline-sep">/</span>
+              <span class="amount-inline-sub">送料 <b>${formatPrice(totals.fee + totals.pickup)}</b></span>
+              <span class="amount-inline-sep">/</span>
+              <span class="amount-inline-sub">消費税 <b>${formatPrice(totals.tax)}</b></span>
+            </div>
+            <div class="amount-inline-total-block">
+              <span class="amount-inline-total-label">合計（税込）</span>
+              <span class="amount-inline-total-val">${formatPrice(totals.total)}</span>
+            </div>
           </div>
         ` : ''}
       `;
@@ -640,12 +647,17 @@ export default function OrderDetailModal({
         } else if (type === 'customer') {
           const firstStatus = activeStatuses[0] || '受注';
           const entry = history.find(h => h.status === firstStatus || h.status === 'new') || history[history.length - 1];
-          const staff = entry ? entry.staff : (modalData.staffName || '');
-          footerActionsHtml = `<div class="check-group"><div class="check-label">受付</div><div class="check-box ${staff ? 'filled' : ''}">${staff}</div></div>`;
+          const rawStaff = entry ? entry.staff : (modalData.staffName || '');
+          // ★ [BUGFIX] 「スタッフ」「担当者」など汎用ワードは自動入力しない
+          const genericWords = ['スタッフ', '担当者', '未選択', '未設定'];
+          const staff = (rawStaff && !genericWords.includes(String(rawStaff).trim())) ? rawStaff : '';
+          footerActionsHtml = `<div class="check-group"><div class="check-label">受付</div><div class="check-box ${staff ? 'filled' : ''}">${formatText(staff)}</div></div>`;
         } else if (type === 'delivery' || type === 'receipt') {
           const deliveryEntry = history.find(h => h.status.includes('配達'));
-          const staff = deliveryEntry ? deliveryEntry.staff : '';
-          footerActionsHtml = `<div class="check-group"><div class="check-label">配達</div><div class="check-box ${staff ? 'filled' : ''}" style="border-color:#888;">${staff}</div></div>`;
+          const rawStaff = deliveryEntry ? deliveryEntry.staff : '';
+          const genericWords = ['スタッフ', '担当者', '未選択', '未設定'];
+          const staff = (rawStaff && !genericWords.includes(String(rawStaff).trim())) ? rawStaff : '';
+          footerActionsHtml = `<div class="check-group"><div class="check-label">配達</div><div class="check-box ${staff ? 'filled' : ''}" style="border-color:#888;">${formatText(staff)}</div></div>`;
         } else {
           // [印刷修正] 自動追加された完了系ステータスは署名欄から除外（受領証の方に分かれているため）
           //   + 最大4個までに制限（横スペースに収めるため）
@@ -851,19 +863,20 @@ export default function OrderDetailModal({
             .slip { max-height: 138mm; overflow: hidden; }
             .slip-quarter { max-height: 138mm; overflow: hidden; }
 
-            /* ★ 金額を横一列表示（省スペース） */
-            .amount-inline-row { display: flex; justify-content: flex-end; gap: 2mm; margin-top: 2mm; align-items: stretch; flex-wrap: nowrap; }
-            .amount-inline-item { display: flex; flex-direction: column; align-items: center; padding: 1.5mm 3mm; border: 0.5pt solid #ccc; background: #fafafa; border-radius: 1mm; min-width: 22mm; }
-            .amount-inline-label { font-size: 7pt; color: #666; margin-bottom: 0.5mm; letter-spacing: 0.02em; }
-            .amount-inline-val { font-size: 10pt; font-weight: bold; color: #222; white-space: nowrap; }
-            .amount-inline-total { background: #117768; border-color: #117768; }
-            .amount-inline-total .amount-inline-label { color: #fff; }
-            .amount-inline-total .amount-inline-val { color: #fff; font-size: 13pt; }
-            /* quarter モード（4分の1サイズ）の場合はさらに小さく */
-            .slip-quarter .amount-inline-item { padding: 1mm 2mm; min-width: 18mm; }
-            .slip-quarter .amount-inline-label { font-size: 6pt; }
-            .slip-quarter .amount-inline-val { font-size: 8pt; }
-            .slip-quarter .amount-inline-total .amount-inline-val { font-size: 10pt; }
+            /* ★ 金額表示: 内訳インライン + 合計強調（シンプル＆スタイリッシュ） */
+            .amount-inline-row { display: flex; justify-content: flex-end; align-items: center; gap: 5mm; margin-top: 3mm; }
+            .amount-inline-breakdown { display: flex; align-items: center; gap: 2.5mm; font-size: 9pt; color: #666; }
+            .amount-inline-sub b { color: #222; font-weight: bold; margin-left: 1mm; }
+            .amount-inline-sep { color: #ccc; font-size: 8pt; }
+            .amount-inline-total-block { display: flex; align-items: baseline; gap: 2mm; padding: 2mm 4mm; border-top: 1pt solid #117768; border-bottom: 1pt solid #117768; }
+            .amount-inline-total-label { font-size: 9pt; color: #117768; font-weight: bold; letter-spacing: 0.05em; }
+            .amount-inline-total-val { font-size: 15pt; color: #117768; font-weight: 900; }
+            /* quarter モード（4分の1サイズ） */
+            .slip-quarter .amount-inline-row { gap: 2mm; margin-top: 2mm; flex-wrap: wrap; justify-content: flex-end; }
+            .slip-quarter .amount-inline-breakdown { font-size: 7pt; gap: 1.5mm; }
+            .slip-quarter .amount-inline-total-block { padding: 1mm 2mm; }
+            .slip-quarter .amount-inline-total-label { font-size: 7pt; }
+            .slip-quarter .amount-inline-total-val { font-size: 11pt; }
 
             /* 金額表 + 担当者記入欄 */
             .fullslip-summary-row { display: grid; grid-template-columns: 1fr 80mm; gap: 6mm; margin-bottom: 4mm; align-items: end; }
