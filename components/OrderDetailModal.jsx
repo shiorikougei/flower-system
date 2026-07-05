@@ -1523,6 +1523,95 @@ export default function OrderDetailModal({
             </div>
           </div>
 
+          {/* ★ [業務-8] 入金ステータス独立プルダウン（ステータス更新の直下） */}
+          {modalData.paymentMethod && (() => {
+            const currentShop = appSettings?.shops?.find(s => String(s.id) === String(modalData.shopId));
+            const paymentType = currentShop?.paymentStatusConfig?.type || 'custom';
+            const TEMPLATE_PAYMENT_STATUSES = [
+              '入金済（現金）',
+              '入金済（振込）',
+              '入金済（クレジットカード）',
+              '未入金（引き取り時支払い）',
+              '未入金（請求書発行）',
+              '未入金（後日振込）',
+            ];
+            let paymentStatusOptions;
+            if (paymentType === 'template') {
+              paymentStatusOptions = TEMPLATE_PAYMENT_STATUSES;
+            } else {
+              const paidStatuses = (currentShop?.paidStatuses?.length > 0)
+                ? currentShop.paidStatuses.filter(Boolean)
+                : ['入金済（現金）', '入金済（振込）', '入金済（クレジットカード）'];
+              const unpaidSubStatuses = (currentShop?.unpaidSubStatuses?.length > 0)
+                ? currentShop.unpaidSubStatuses.filter(Boolean)
+                : ['引き取り時支払い', '請求書発行', '後日振込'];
+              paymentStatusOptions = [
+                ...paidStatuses,
+                ...unpaidSubStatuses.map(s => `未入金（${s}）`),
+              ];
+            }
+            const currentPS = modalData.paymentStatus || '';
+            const isPaidNow = /入金済|前払い済み/.test(currentPS);
+
+            return (
+              <div className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-2 bg-[#F7F7F7] px-3 py-1.5 rounded-lg w-fit">
+                  <span className="text-[10px] font-bold text-[#999999] tracking-widest">支払方法</span>
+                  <span className="text-[12px] font-bold text-[#2D4B3E]">{getPaymentLabel(modalData.paymentMethod)}</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 bg-[#FBFAF9] p-2 rounded-2xl border border-[#EAEAEA]">
+                  <span className="text-[11px] font-bold text-[#999999] px-2 flex items-center gap-1 hidden sm:flex"><CreditCard size={14}/> 入金ステータス</span>
+                  <select
+                    value={currentPS}
+                    onChange={async (e) => {
+                      const newStatus = e.target.value;
+                      if (!newStatus) return;
+                      const newIsPaid = /入金済|前払い済み/.test(newStatus);
+                      const updatedOrderData = { ...modalData, paymentStatus: newStatus };
+                      try {
+                        const { error } = await supabase
+                          .from('orders')
+                          .update({
+                            order_data: updatedOrderData,
+                            payment_status: newIsPaid ? 'paid' : 'unpaid',
+                            paid_at: newIsPaid ? new Date().toISOString() : null,
+                          })
+                          .eq('id', order.id);
+                        if (error) throw error;
+                        if (onUpdatePayment) {
+                          onUpdatePayment(order.id, updatedOrderData, { skipConfirm: true, alreadyUpdated: true });
+                        } else if (onClose) {
+                          onClose();
+                        }
+                      } catch (err) {
+                        alert('入金ステータス更新失敗: ' + err.message);
+                      }
+                    }}
+                    className={`h-10 min-w-[220px] px-3 rounded-xl border-2 text-[12px] font-bold outline-none shadow-sm cursor-pointer ${
+                      isPaidNow
+                        ? 'border-green-500 bg-green-50 text-green-700 hover:border-green-600'
+                        : 'border-[#D97D54] bg-[#D97D54]/5 text-[#D97D54] hover:border-[#c26d48]'
+                    }`}
+                  >
+                    {!currentPS && <option value="">未設定</option>}
+                    {paymentStatusOptions.map(o => (
+                      <option key={o} value={o}>{o}</option>
+                    ))}
+                  </select>
+                  {isUnpaid && modalData.paymentMethod === 'bank_transfer' && onUpdatePayment && (
+                    <button
+                      onClick={() => setShowPaymentConfirmModal(true)}
+                      className="h-10 px-3 bg-[#D97D54] text-white text-[11px] font-bold rounded-xl hover:bg-[#c26d48] transition-all shadow-sm flex items-center gap-1 active:scale-95 whitespace-nowrap"
+                      title="入金確認 → 納品日確認 → お客様へメール送信"
+                    >
+                      <CheckCircle2 size={14}/> 入金確認+メール
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
           {isSagawa ? (
             <div className="bg-green-50 border-2 border-green-200 p-6 md:p-8 rounded-[24px] flex flex-col md:flex-row items-center gap-6 justify-center text-center shadow-inner relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-bl-[64px] -mr-4 -mt-4"></div>
@@ -1820,89 +1909,7 @@ export default function OrderDetailModal({
                     <span className="text-[10px] font-bold text-[#999999] tracking-widest">支払方法</span>
                     <span className="text-[13px] font-bold text-[#2D4B3E]">{getPaymentLabel(modalData.paymentMethod)}</span>
                   </div>
-
-                  {/* ★ [業務-8] 入金ステータス独立プルダウン */}
-                  {(() => {
-                    const currentShop = appSettings?.shops?.find(s => String(s.id) === String(modalData.shopId));
-                    // ★ テンプレ／カスタム切替を判別
-                    const paymentType = currentShop?.paymentStatusConfig?.type || 'custom';
-                    const TEMPLATE_PAYMENT_STATUSES = [
-                      '入金済（現金）',
-                      '入金済（振込）',
-                      '入金済（クレジットカード）',
-                      '未入金（引き取り時支払い）',
-                      '未入金（請求書発行）',
-                      '未入金（後日振込）',
-                    ];
-                    let paymentStatusOptions;
-                    if (paymentType === 'template') {
-                      paymentStatusOptions = TEMPLATE_PAYMENT_STATUSES;
-                    } else {
-                      const paidStatuses = (currentShop?.paidStatuses?.length > 0)
-                        ? currentShop.paidStatuses.filter(Boolean)
-                        : ['入金済（現金）', '入金済（振込）', '入金済（クレジットカード）'];
-                      const unpaidSubStatuses = (currentShop?.unpaidSubStatuses?.length > 0)
-                        ? currentShop.unpaidSubStatuses.filter(Boolean)
-                        : ['引き取り時支払い', '請求書発行', '後日振込'];
-                      paymentStatusOptions = [
-                        ...paidStatuses,
-                        ...unpaidSubStatuses.map(s => `未入金（${s}）`),
-                      ];
-                    }
-                    const currentPS = modalData.paymentStatus || '';
-                    const isPaidNow = /入金済|前払い済み/.test(currentPS);
-
-                    return (
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <span className="text-[10px] font-bold text-[#999999] tracking-widest whitespace-nowrap">入金ステータス</span>
-                        <select
-                          value={currentPS}
-                          onChange={async (e) => {
-                            const newStatus = e.target.value;
-                            if (!newStatus) return;
-                            const newIsPaid = /入金済|前払い済み/.test(newStatus);
-                            const updatedOrderData = { ...modalData, paymentStatus: newStatus };
-                            try {
-                              const { error } = await supabase
-                                .from('orders')
-                                .update({
-                                  order_data: updatedOrderData,
-                                  payment_status: newIsPaid ? 'paid' : 'unpaid',
-                                  paid_at: newIsPaid ? new Date().toISOString() : null,
-                                })
-                                .eq('id', order.id);
-                              if (error) throw error;
-                              setModalData(updatedOrderData);
-                              onUpdatePayment && onUpdatePayment(order.id, updatedOrderData, { skipConfirm: true, alreadyUpdated: true });
-                            } catch (err) {
-                              alert('入金ステータス更新失敗: ' + err.message);
-                            }
-                          }}
-                          className={`flex-1 min-w-[220px] h-11 px-3 rounded-xl border-2 text-[12.5px] font-bold outline-none transition-all cursor-pointer ${
-                            isPaidNow
-                              ? 'border-green-500 bg-green-50 text-green-700 hover:border-green-600'
-                              : 'border-[#D97D54] bg-[#D97D54]/5 text-[#D97D54] hover:border-[#c26d48]'
-                          }`}
-                        >
-                          {!currentPS && <option value="">未設定</option>}
-                          {paymentStatusOptions.map(o => (
-                            <option key={o} value={o}>{o}</option>
-                          ))}
-                        </select>
-
-                        {/* 銀行振込の場合は「入金確認 + 納品日 + メール送信」ボタン */}
-                        {isUnpaid && modalData.paymentMethod === 'bank_transfer' && onUpdatePayment && (
-                          <button
-                            onClick={() => setShowPaymentConfirmModal(true)}
-                            className="px-4 py-2.5 bg-[#D97D54] text-white text-[11.5px] font-bold rounded-xl hover:bg-[#c26d48] transition-all shadow-sm flex items-center gap-1.5 active:scale-95 whitespace-nowrap"
-                            title="入金確認 → 納品日確認 → お客様へメール送信"
-                          >
-                            <CheckCircle2 size={16}/> 入金確認+メール
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })()}
+                  <p className="text-[10px] text-[#999]">※ 入金ステータスは上部のステータス更新の下から変更できます</p>
                 </div>
               )}
             </div>
