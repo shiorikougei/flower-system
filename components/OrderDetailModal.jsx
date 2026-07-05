@@ -695,11 +695,20 @@ export default function OrderDetailModal({
           ${renderClientBoxes(hidePrice)}
           ${renderItemsBlock(hidePrice, type)}
           ${showReceiptNote ? `
-            <div class="receipt-note" style="margin-top: 2mm; margin-bottom: 1mm;">
-              <div style="font-size: 8pt; margin-bottom: 2mm;">上記の商品を確かに受領いたしました。</div>
-              <div style="display: flex; justify-content: flex-end; gap: 6mm; font-size: 9pt;">
-                <div>受領日：<span style="display:inline-block; width:10mm; border-bottom:1px solid #555;"></span>年<span style="display:inline-block; width:7mm; border-bottom:1px solid #555;"></span>月<span style="display:inline-block; width:7mm; border-bottom:1px solid #555;"></span>日</div>
-                <div>サインまたは印：<span style="display:inline-block; width:40mm; border-bottom:1px solid #555;"></span></div>
+            <div class="receipt-note-v2">
+              <div class="receipt-note-v2-text">上記の商品を確かに受領いたしました。</div>
+              <div class="receipt-note-v2-row">
+                <span class="receipt-note-v2-label">受領日</span>
+                <span class="receipt-note-v2-line" style="width:14mm;"></span>
+                <span>年</span>
+                <span class="receipt-note-v2-line" style="width:10mm;"></span>
+                <span>月</span>
+                <span class="receipt-note-v2-line" style="width:10mm;"></span>
+                <span>日</span>
+              </div>
+              <div class="receipt-note-v2-row">
+                <span class="receipt-note-v2-label">サインまたは印</span>
+                <span class="receipt-note-v2-line" style="flex:1;"></span>
               </div>
             </div>
           ` : ''}
@@ -862,6 +871,20 @@ export default function OrderDetailModal({
             .slip-full { max-height: 297mm; overflow: hidden; }
             .slip { max-height: 138mm; overflow: hidden; }
             .slip-quarter { max-height: 138mm; overflow: hidden; }
+
+            /* ★ 受領書のサイン欄（書きやすく大きめに） */
+            .receipt-note-v2 { margin-top: 3mm; padding: 3mm 3mm; background: #fafafa; border: 0.5pt solid #ddd; border-radius: 1mm; }
+            .receipt-note-v2-text { font-size: 10pt; font-weight: bold; color: #333; margin-bottom: 4mm; }
+            .receipt-note-v2-row { display: flex; align-items: baseline; gap: 2mm; font-size: 11pt; color: #333; margin-bottom: 5mm; }
+            .receipt-note-v2-row:last-child { margin-bottom: 1mm; }
+            .receipt-note-v2-label { color: #555; font-weight: 500; min-width: 26mm; }
+            .receipt-note-v2-line { display: inline-block; border-bottom: 1pt solid #333; height: 8mm; }
+            /* quarter モード（受領書は右下四分の一）でも書きやすさ確保 */
+            .slip-quarter .receipt-note-v2 { margin-top: 2mm; padding: 2.5mm; }
+            .slip-quarter .receipt-note-v2-text { font-size: 9pt; margin-bottom: 3mm; }
+            .slip-quarter .receipt-note-v2-row { font-size: 10pt; margin-bottom: 4mm; gap: 1.5mm; }
+            .slip-quarter .receipt-note-v2-label { min-width: 22mm; }
+            .slip-quarter .receipt-note-v2-line { height: 7mm; }
 
             /* ★ 金額表示: 内訳インライン + 合計強調（シンプル＆スタイリッシュ） */
             .amount-inline-row { display: flex; justify-content: flex-end; align-items: center; gap: 5mm; margin-top: 3mm; }
