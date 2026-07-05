@@ -319,11 +319,8 @@ export default function OrderDetailModal({
       const paymentMethodMap = { card: 'クレジットカード', bank_transfer: '銀行振込', cash: '現金' };
       const paymentMethodJp = paymentMethodMap[modalData.paymentMethod] || modalData.paymentMethod || '';
 
-      let paymentStatus = currentPaymentStatus;  // ★ 上で計算した実効値を使う
-      if (modalData.paymentMethod) {
-        paymentStatus = paymentMethodJp;
-        if (modalData.paymentStatus) paymentStatus += '（' + modalData.paymentStatus + '）';
-      }
+      // ★ [BUGFIX] 重複表示防止: modalData.paymentStatus に既に「入金済（クレジットカード）」等が入っている場合はそのまま使う
+      let paymentStatus = modalData.paymentStatus || paymentMethodJp || currentPaymentStatus || '未定';
 
       const formatPrice = (price) => `¥${Number(price || 0).toLocaleString()}`;
 
@@ -771,64 +768,69 @@ export default function OrderDetailModal({
             .slip-quarter { width: 50%; height: 138mm; padding: 3mm 7mm; display: flex; flex-direction: column; position: relative; overflow: hidden; }
             .slip-quarter:first-child { border-right: 1px dashed #aaa; }
 
-            /* ★ 受注書 A4フル専用スタイル（老眼でも見えるサイズ、A4全体をバランスよく使用） */
-            .fullslip { padding: 6mm 12mm; }
-            .fullslip-header { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 3mm; border-bottom: 2pt solid #117768; margin-bottom: 5mm; }
-            .fullslip-title { font-size: 44pt; font-weight: 900; letter-spacing: 0.3em; color: #117768; line-height: 1; }
-            .fullslip-meta-top { text-align: right; font-size: 10pt; color: #555; line-height: 1.6; }
+            /* ★ 受注書 A4フル 洗練デザイン（老眼でも見えるサイズ + 情報階層クリア） */
+            .fullslip { padding: 8mm 14mm; background: #fff; }
 
-            /* 4カード：お渡し方法・日・時間・入金状況 */
-            .fullslip-cards { display: flex; gap: 3mm; margin-bottom: 5mm; }
-            .fullslip-card { flex: 1; border: 1.5pt solid #444; padding: 3mm; background: #fff; text-align: center; }
-            .fullslip-card-highlight { border: 2pt solid #117768; background: #f0faf7; }
-            .fullslip-card-label { font-size: 10pt; color: #666; font-weight: bold; margin-bottom: 2mm; }
-            .fullslip-card-value { font-size: 20pt; font-weight: bold; color: #222; line-height: 1.2; }
-            .fullslip-card-highlight .fullslip-card-value { color: #117768; }
+            /* ヘッダー */
+            .fullslip-header { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 4mm; border-bottom: 0.5pt solid #333; margin-bottom: 7mm; }
+            .fullslip-title { font-size: 32pt; font-weight: 700; letter-spacing: 0.4em; color: #2D4B3E; line-height: 1; }
+            .fullslip-meta-top { text-align: right; font-size: 9pt; color: #666; line-height: 1.7; }
+
+            /* 4項目情報行（お渡し方法・日・時間・入金状況） */
+            .fullslip-cards { display: grid; grid-template-columns: 1fr 1fr 1fr 1.4fr; gap: 0; margin-bottom: 7mm; border-top: 0.5pt solid #ddd; border-bottom: 0.5pt solid #ddd; }
+            .fullslip-card { padding: 4mm 3mm; text-align: center; border-right: 0.5pt solid #ddd; }
+            .fullslip-card:last-child { border-right: none; background: #f7fbf9; }
+            .fullslip-card-label { font-size: 9pt; color: #777; font-weight: 500; margin-bottom: 3mm; letter-spacing: 0.05em; }
+            .fullslip-card-value { font-size: 17pt; font-weight: 700; color: #222; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .fullslip-card:last-child .fullslip-card-value { color: #2D4B3E; font-size: 14pt; white-space: normal; word-break: break-word; line-height: 1.4; }
 
             /* 依頼主 / お届け先 */
-            .fullslip-clients { display: flex; gap: 4mm; margin-bottom: 5mm; }
-            .fullslip-client-box { flex: 1; border: 1pt solid #444; padding: 4mm; background: #fff; }
-            .fullslip-client-title { font-size: 10pt; color: #444; font-weight: bold; margin-bottom: 2mm; }
-            .fullslip-client-name { font-size: 22pt; font-weight: bold; margin-bottom: 2mm; }
-            .fullslip-client-sama { font-size: 12pt; font-weight: normal; }
-            .fullslip-client-details { font-size: 11pt; line-height: 1.7; color: #333; }
-            .fullslip-same-text { display: flex; align-items: center; justify-content: center; min-height: 30mm; font-size: 14pt; font-weight: bold; color: #888; letter-spacing: 0.1em; }
+            .fullslip-clients { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; margin-bottom: 6mm; }
+            .fullslip-client-box { border-left: 2.5pt solid #2D4B3E; padding: 2mm 5mm; }
+            .fullslip-client-title { font-size: 9pt; color: #777; font-weight: 500; margin-bottom: 2mm; letter-spacing: 0.05em; }
+            .fullslip-client-name { font-size: 20pt; font-weight: 700; margin-bottom: 3mm; letter-spacing: 0.02em; }
+            .fullslip-client-sama { font-size: 11pt; font-weight: normal; color: #555; margin-left: 2mm; }
+            .fullslip-client-details { font-size: 10.5pt; line-height: 1.8; color: #333; }
+            .fullslip-same-text { display: flex; align-items: center; justify-content: center; min-height: 22mm; font-size: 13pt; color: #999; letter-spacing: 0.15em; }
 
             /* 商品名・内容 */
-            .fullslip-items { border: 1.5pt solid #444; margin-bottom: 5mm; background: #fff; }
-            .fullslip-items-header { display: flex; justify-content: space-between; background: #f5f5f5; padding: 2mm 4mm; border-bottom: 1pt solid #444; font-size: 11pt; font-weight: bold; }
-            .fullslip-items-header-qty { width: 20mm; text-align: center; }
-            .fullslip-items-header-price { width: 40mm; text-align: right; }
+            .fullslip-items { margin-bottom: 5mm; }
+            .fullslip-items-header { display: grid; grid-template-columns: 1fr 20mm 40mm; padding: 2mm 3mm; border-bottom: 1pt solid #333; font-size: 9pt; font-weight: 500; color: #777; letter-spacing: 0.05em; }
+            .fullslip-items-header > span:nth-child(2) { text-align: center; }
+            .fullslip-items-header > span:nth-child(3) { text-align: right; }
             .fullslip-items-table { width: 100%; border-collapse: collapse; }
-            .fullslip-items-table td { padding: 3mm 4mm; vertical-align: top; border-bottom: 0.5pt solid #ddd; }
-            .fullslip-item-name { font-size: 22pt; font-weight: bold; }
-            .fullslip-item-qty { width: 20mm; text-align: center; font-size: 18pt; font-weight: bold; }
-            .fullslip-item-price { width: 40mm; text-align: right; font-size: 18pt; font-weight: bold; }
-            .fullslip-item-detail { font-size: 11pt; color: #555; font-weight: normal; margin-top: 2mm; }
-            .fullslip-card-message { padding: 3mm 4mm; border-top: 0.5pt dashed #999; background: #fffdf5; }
-            .fullslip-card-message-label { font-size: 9pt; color: #888; font-weight: bold; margin-bottom: 1mm; }
-            .fullslip-card-message-text { font-size: 12pt; font-style: italic; color: #333; }
-            .fullslip-note { padding: 3mm 4mm; border-top: 0.5pt dashed #999; background: #fffbe6; }
-            .fullslip-note-label { font-size: 9pt; color: #666; font-weight: bold; margin-bottom: 1mm; }
-            .fullslip-note-text { font-size: 11pt; color: #333; white-space: pre-wrap; }
+            .fullslip-items-table td { padding: 5mm 3mm; vertical-align: top; border-bottom: 0.5pt solid #eee; }
+            .fullslip-item-name { font-size: 20pt; font-weight: 700; letter-spacing: 0.02em; }
+            .fullslip-item-qty { width: 20mm; text-align: center; font-size: 16pt; font-weight: 700; vertical-align: middle; }
+            .fullslip-item-price { width: 40mm; text-align: right; font-size: 16pt; font-weight: 700; vertical-align: middle; }
+            .fullslip-item-detail { font-size: 10pt; color: #666; font-weight: normal; margin-top: 2mm; }
+
+            /* カードメッセージ・社内メモ */
+            .fullslip-card-message { padding: 3mm 4mm; margin-top: 3mm; background: #fffdf5; border-left: 2pt solid #d4b34e; border-radius: 0 2mm 2mm 0; }
+            .fullslip-card-message-label { font-size: 9pt; color: #a88820; font-weight: 500; margin-bottom: 1.5mm; letter-spacing: 0.05em; }
+            .fullslip-card-message-text { font-size: 11pt; color: #333; line-height: 1.6; }
+            .fullslip-note { padding: 3mm 4mm; margin-top: 3mm; background: #fff8e6; border-left: 2pt solid #e0a800; border-radius: 0 2mm 2mm 0; }
+            .fullslip-note-label { font-size: 9pt; color: #a07a00; font-weight: 500; margin-bottom: 1.5mm; letter-spacing: 0.05em; }
+            .fullslip-note-text { font-size: 10pt; color: #333; line-height: 1.7; white-space: pre-wrap; }
 
             /* 金額表 */
-            .fullslip-amounts-row { display: flex; justify-content: flex-end; margin-bottom: 5mm; }
-            .fullslip-amounts { border-collapse: collapse; width: 90mm; }
-            .fullslip-amounts td { border: 1pt solid #444; padding: 3mm 4mm; font-size: 13pt; font-weight: bold; }
-            .fullslip-amount-label { background: #f5f5f5; text-align: left; color: #555; width: 50%; }
-            .fullslip-amount-label-total { background: #117768; color: #fff; font-size: 15pt; text-align: left; }
-            .fullslip-amount-value { text-align: right; }
-            .fullslip-amount-value-total { text-align: right; color: #117768; font-size: 20pt; font-weight: 900; }
+            .fullslip-amounts-row { display: flex; justify-content: flex-end; margin-bottom: 6mm; }
+            .fullslip-amounts { border-collapse: collapse; width: 85mm; }
+            .fullslip-amounts td { padding: 3mm 5mm; font-size: 11pt; border-bottom: 0.5pt solid #ddd; }
+            .fullslip-amount-label { text-align: left; color: #666; width: 55%; }
+            .fullslip-amount-value { text-align: right; font-weight: 500; }
+            .fullslip-amount-total td { border-bottom: none; border-top: 1.5pt solid #2D4B3E; padding-top: 4mm; padding-bottom: 4mm; font-size: 14pt; font-weight: 700; }
+            .fullslip-amount-label-total { color: #2D4B3E; text-align: left; }
+            .fullslip-amount-value-total { color: #2D4B3E; text-align: right; font-size: 20pt; }
 
             /* フッター */
-            .fullslip-footer { margin-top: auto; padding-top: 4mm; border-top: 1pt dashed #999; display: flex; justify-content: space-between; align-items: flex-end; }
-            .fullslip-shop-name { font-size: 14pt; font-weight: 900; margin-bottom: 2mm; letter-spacing: 0.1em; }
-            .fullslip-shop-details { font-size: 10pt; color: #555; line-height: 1.6; }
+            .fullslip-footer { margin-top: auto; padding-top: 5mm; border-top: 0.5pt solid #ccc; display: flex; justify-content: space-between; align-items: flex-end; }
+            .fullslip-shop-name { font-size: 13pt; font-weight: 700; margin-bottom: 2mm; letter-spacing: 0.08em; color: #2D4B3E; }
+            .fullslip-shop-details { font-size: 9pt; color: #555; line-height: 1.7; }
             .fullslip-staff-boxes { display: flex; gap: 2mm; }
             .fullslip-staff-box { display: flex; flex-direction: column; align-items: center; gap: 1mm; }
-            .fullslip-staff-label { font-size: 8pt; color: #666; font-weight: bold; }
-            .fullslip-staff-name { border: 1pt solid #666; width: 18mm; height: 10mm; background: #fff; border-radius: 1px; }
+            .fullslip-staff-label { font-size: 8pt; color: #888; font-weight: 500; letter-spacing: 0.05em; }
+            .fullslip-staff-name { border: 0.5pt solid #999; width: 16mm; height: 10mm; background: #fff; border-radius: 1mm; }
             .cutline { position: absolute; top: calc(6mm + 138mm); left: 10mm; right: 10mm; transform: translateY(-50%); display: flex; justify-content: center; align-items: center; z-index: 10; pointer-events: none; }
             .cutline span { background: #fff; padding: 0 5mm; font-size: 8pt; color: #888; letter-spacing: 0.2em; }
             .slip-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3mm; }
