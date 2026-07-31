@@ -452,10 +452,11 @@ export default function OrderDetailModal({
               </table>
               ${(() => {
                 // ★ 文字数に応じて自動でフォントサイズを調整（下はみ出し防止）
-                //    合計文字数 = メッセージカード + 社内メモ
+                //    合計文字数 = メッセージカード + 社内メモ + お客様備考
                 const cardText = modalData.cardMessage || '';
                 const noteText = modalData.note || '';
-                const totalLen = cardText.length + noteText.length;
+                const purposeNote = modalData.purposeNote || '';
+                const totalLen = cardText.length + noteText.length + purposeNote.length;
                 let sizeCls = '';
                 if (totalLen > 400) sizeCls = 'fullslip-longtext-xsmall';
                 else if (totalLen > 250) sizeCls = 'fullslip-longtext-small';
@@ -465,6 +466,12 @@ export default function OrderDetailModal({
                     <div class="fullslip-card-message ${sizeCls}">
                       <div class="fullslip-card-message-label">【メッセージカード】</div>
                       <div class="fullslip-card-message-text">${formatText(cardText)}</div>
+                    </div>
+                  ` : ''}
+                  ${purposeNote ? `
+                    <div class="fullslip-note ${sizeCls}" style="background:#eff6ff; border-left-color:#3b82f6;">
+                      <div class="fullslip-note-label" style="color:#1e40af;">【お客様からの補足・備考】</div>
+                      <div class="fullslip-note-text">${formatText(purposeNote)}</div>
                     </div>
                   ` : ''}
                   ${noteText ? `
@@ -1936,6 +1943,14 @@ export default function OrderDetailModal({
             <div className="bg-yellow-50 p-6 rounded-[24px] border border-yellow-200 shadow-sm mb-4">
               <h3 className="text-[12px] font-bold text-yellow-800 mb-2 tracking-widest flex items-center gap-2">社内メモ / お客様要望</h3>
               <p className="text-[14px] font-bold text-yellow-900 whitespace-pre-wrap leading-relaxed">{modalData.note}</p>
+            </div>
+          )}
+
+          {/* ★ お客様が入力した補足・備考（purposeNote） */}
+          {modalData.purposeNote && (
+            <div className="bg-blue-50 p-6 rounded-[24px] border border-blue-200 shadow-sm mb-4">
+              <h3 className="text-[12px] font-bold text-blue-800 mb-2 tracking-widest flex items-center gap-2">お客様からの補足・備考</h3>
+              <p className="text-[14px] font-bold text-blue-900 whitespace-pre-wrap leading-relaxed">{modalData.purposeNote}</p>
             </div>
           )}
         </div>
