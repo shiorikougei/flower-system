@@ -80,6 +80,33 @@ export default function OrderDetailModal({
     setEditForm(null);
   }, [order]);
 
+  // ★ 見積金額の確認（見積から作られた注文のみ）
+  //    見積の税込金額をサーバーから読み、注文の合計と突き合わせて表示する。
+  //    読み取り専用。取得した値は modalData に混ぜない（混ぜると更新時に注文データへ保存されてしまうため）
+  const [estimateCheck, setEstimateCheck] = useState(null); // null | { state: 'loading' | 'done' | 'error', expectedTotal? }
+  useEffect(() => {
+    const od = order?.order_data;
+    if (!od?.fromEstimate || !od?.estimateId) { setEstimateCheck(null); return; }
+    let cancelled = false;
+    setEstimateCheck({ state: 'loading' });
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('no session');
+        const res = await fetch(`/api/staff/estimate-amount?estimateId=${encodeURIComponent(od.estimateId)}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const data = await res.json();
+        if (!cancelled) setEstimateCheck({ state: 'done', expectedTotal: data.expectedTotal });
+      } catch (e) {
+        console.warn('[OrderDetailModal] 見積金額の取得に失敗:', e?.message);
+        if (!cancelled) setEstimateCheck({ state: 'error' });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [order]);
+
   if (!order) return null;
 
   const modalData = order.order_data || {};
@@ -1909,7 +1936,54 @@ export default function OrderDetailModal({
                   <span className="text-[32px] md:text-[36px] font-black text-[#2D4B3E] leading-none">¥{getTotals(modalData).total.toLocaleString()}</span>
                 </div>
               </div>
-              
+
+              {/* ★ 見積金額の確認（見積から作られた注文のみ表示） */}
+              {estimateCheck && (() => {
+                const orderTotal = getTotals(modalData).total;
+                const hasCorrection = Array.isArray(modalData.amountCorrections) && modalData.amountCorrections.length > 0;
+                if (estimateCheck.state === 'loading') {
+                  return <p className="text-[12px] text-[#999]">見積の金額を確認しています...</p>;
+                }
+                if (estimateCheck.state === 'error' || estimateCheck.expectedTotal == null) {
+                  return (
+                    <div className="flex items-start gap-2 bg-[#F7F7F7] border border-[#EAEAEA] rounded-xl px-4 py-3 text-[12px] text-[#555]">
+                      <AlertCircle size={16} className="shrink-0 mt-0.5 text-[#999]"/>
+                      <span>見積の金額を確認できませんでした。見積一覧で金額をご確認ください。</span>
+                    </div>
+                  );
+                }
+                const expected = estimateCheck.expectedTotal;
+                const matched = expected === orderTotal;
+                const diff = orderTotal - expected;
+                return (
+                  <div className={`rounded-xl border-2 px-4 py-3 space-y-2 ${matched ? 'bg-[#EEF5F1] border-[#117768]/30' : 'bg-[#FDF1EB] border-[#D97D54]'}`}>
+                    <div className={`flex items-center gap-2 text-[14px] font-black ${matched ? 'text-[#117768]' : 'text-[#D97D54]'}`}>
+                      {matched ? <CheckCircle2 size={18}/> : <AlertCircle size={18}/>}
+                      {matched ? '見積の金額と一致しています' : '見積の金額と違います'}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[13px] text-[#2D4B3E]">
+                      <span>見積でご案内した金額（税込）</span>
+                      <span className="text-right font-bold">¥{expected.toLocaleString()}</span>
+                      <span>この注文の金額（税込）</span>
+                      <span className="text-right font-bold">¥{orderTotal.toLocaleString()}</span>
+                      {!matched && (
+                        <>
+                          <span>差額</span>
+                          <span className="text-right font-bold text-[#D97D54]">{diff > 0 ? '+' : '-'}¥{Math.abs(diff).toLocaleString()}</span>
+                        </>
+                      )}
+                    </div>
+                    {!matched && (
+                      <p className="text-[12px] text-[#555] leading-relaxed">
+                        {hasCorrection
+                          ? 'この注文は金額訂正の記録があります。下の「訂正履歴」で内容をご確認ください。'
+                          : '制作に入る前に、見積の内容とお支払い金額をご確認ください。'}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+
               {modalData.paymentMethod && (
                 <div className="pt-4 flex flex-col gap-3 border-t border-[#EAEAEA]">
                   <div className="flex items-center gap-2 bg-[#F7F7F7] px-4 py-2.5 rounded-xl border border-[#EAEAEA] shadow-sm w-fit">
