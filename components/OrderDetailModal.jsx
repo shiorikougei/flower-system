@@ -118,6 +118,33 @@ export default function OrderDetailModal({
     return () => { cancelled = true; };
   }, [order]);
 
+  // ★ 見積の参考写真（見積から作られた注文のみ）
+  //    新しい注文で order_data.referenceImages があればそれを使い、無ければ estimateId から読み込んで表示する。
+  //    読み込んだ写真は modalData に混ぜない（混ぜると更新時に過去の注文データへ保存されてしまうため）
+  const [estimateImages, setEstimateImages] = useState([]);
+  useEffect(() => {
+    const od = order?.order_data;
+    if (!od?.fromEstimate || !od?.estimateId) { setEstimateImages([]); return; }
+    if (Array.isArray(od.referenceImages) && od.referenceImages.length > 0) { setEstimateImages(od.referenceImages); return; }
+    let cancelled = false;
+    setEstimateImages([]);
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const res = await fetch(`/api/staff/estimate-images?ids=${encodeURIComponent(od.estimateId)}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setEstimateImages(data?.images?.[od.estimateId] || []);
+      } catch (e) {
+        console.warn('[OrderDetailModal] 見積写真の取得に失敗:', e?.message);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [order]);
+
   // ★ 納品書QR: 注文の店舗に「ホームページURL」が設定されていれば、モーダル表示時にQR画像を先に作っておく
   //    （印刷ボタンの処理を非同期にするとポップアップがブロックされやすいため、事前生成にする）
   const [shopQr, setShopQr] = useState(null); // null | { url, label, dataUrl }
@@ -1809,6 +1836,20 @@ export default function OrderDetailModal({
                     </div>
                   );
                 })()}
+
+                {/* ★ 見積の参考写真（お客様が見積依頼時に添付。表示のみ） */}
+                {estimateImages.length > 0 && (
+                  <div className="space-y-2 mt-2">
+                    <span className="text-[10px] font-bold text-[#117768] bg-[#117768]/10 px-2 py-0.5 rounded inline-block">見積の参考写真 ({estimateImages.length}枚)</span>
+                    <div className="grid grid-cols-2 gap-2 w-full sm:w-40">
+                      {estimateImages.map((url, i) => (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" title="拡大して見る">
+                          <img src={url} alt={`見積の参考写真${i+1}`} className="w-full aspect-square object-cover rounded-lg border border-[#EAEAEA] shadow-sm hover:opacity-80 transition-opacity"/>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="relative mt-2">
                   <input
