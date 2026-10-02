@@ -13,6 +13,17 @@ import {
 import TatefudaPreview from '@/components/TatefudaPreview';
 import { ensureOperationAllowed, getCurrentRole, getCurrentStaff } from '@/utils/staffRole';
 import { getTateOptions } from '@/utils/tateMaster';
+import { getQrCodeDataUrl } from '@/utils/qrcode';
+
+// 納品書QR用: http(s) のURLだけを許可する（それ以外はQRを出さない）
+const normalizeHomepageUrl = (raw) => {
+  const url = String(raw || '').trim();
+  if (!url || url.length > 300) return '';
+  try {
+    const u = new URL(url);
+    return (u.protocol === 'https:' || u.protocol === 'http:') ? u.toString() : '';
+  } catch { return ''; }
+};
 
 export default function OrderDetailModal({ 
   order, 
@@ -106,6 +117,25 @@ export default function OrderDetailModal({
     })();
     return () => { cancelled = true; };
   }, [order]);
+
+  // ★ 納品書QR: 注文の店舗に「ホームページURL」が設定されていれば、モーダル表示時にQR画像を先に作っておく
+  //    （印刷ボタンの処理を非同期にするとポップアップがブロックされやすいため、事前生成にする）
+  const [shopQr, setShopQr] = useState(null); // null | { url, label, dataUrl }
+  useEffect(() => {
+    const shops = appSettings?.shops || [];
+    const od = order?.order_data || {};
+    const targetShop = shops.find(s => String(s.id) === String(od.shopId)) || shops[0] || {};
+    const url = normalizeHomepageUrl(targetShop.homepageUrl);
+    if (!url) { setShopQr(null); return; }
+    let cancelled = false;
+    (async () => {
+      const dataUrl = await getQrCodeDataUrl(url, { width: 360 });
+      if (cancelled) return;
+      const label = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      setShopQr(dataUrl ? { url, label, dataUrl } : null);
+    })();
+    return () => { cancelled = true; };
+  }, [order, appSettings]);
 
   if (!order) return null;
 
@@ -705,6 +735,10 @@ export default function OrderDetailModal({
             return `<div class="check-group"><div class="check-label">${shortLabel}</div><div class="check-box ${staff ? 'filled' : ''}">${staff}</div></div>`;
           }).join('');
         }
+        // ★ 納品書のみ: お店のホームページQR（店舗設定の「ホームページURL」が空なら出さない）
+        const qrHtml = (type === 'delivery' && shopQr?.dataUrl)
+          ? `<div class="shop-qr"><img src="${shopQr.dataUrl}" alt="QR"/><div class="shop-qr-label">${formatText(shopQr.label)}</div></div>`
+          : '';
         return `
           <div class="footer" style="border-top-color:${hidePrice ? '#888' : '#bbb'}">
             <div class="shop-block">
@@ -712,7 +746,7 @@ export default function OrderDetailModal({
               <div>〒${shopZip} ${shopAddress}</div>
               <div>TEL: ${shopTel}${shopInvoice ? ` (${shopInvoice})` : ''}</div>
             </div>
-            <div class="footer-actions">${footerActionsHtml}</div>
+            <div class="footer-actions">${qrHtml}${footerActionsHtml}</div>
           </div>
         `;
       };
@@ -986,6 +1020,9 @@ export default function OrderDetailModal({
             .shop-block { font-size: 8pt; line-height: 1.4; color: #444; }
             .shop-name { font-size: 12pt; font-weight: 900; color: #222; margin-bottom: 1mm; }
             .footer-actions { display: flex; gap: 2mm; }
+            .shop-qr { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+            .shop-qr img { width: 17mm; height: 17mm; display: block; }
+            .shop-qr-label { font-size: 7pt; color: #444; max-width: 24mm; text-align: center; word-break: break-all; line-height: 1.2; margin-top: 0.5mm; }
             .check-group { display: flex; flex-direction: column; align-items: center; gap: 0.5mm; }
             .check-label { font-size: 6.5pt; color: #666; font-weight: bold; }
             .check-box { border: 0.5pt solid #666; width: 14mm; height: 6mm; display: flex; align-items: center; justify-content: center; font-size: 7pt; font-weight: bold; border-radius: 1px; }

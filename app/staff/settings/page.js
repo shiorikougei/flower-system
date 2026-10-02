@@ -760,6 +760,12 @@ export default function SettingsPage() {
             <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">郵便番号</label><input type="text" value={shop.zip} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, zip:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="000-0000"/></div>
             <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">住所</label><input type="text" value={shop.address} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, address:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/></div>
             <div className="space-y-1 md:col-span-2"><label className="text-[10px] font-bold text-[#999999]">インボイス番号</label><input type="text" value={shop.invoiceNumber || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, invoiceNumber:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="T12345..."/></div>
+            {/* ★ 納品書のQRコード用: お店のホームページURL（空欄なら納品書にQRを出さない） */}
+            <div className="space-y-1 md:col-span-2">
+              <label className="text-[10px] font-bold text-[#999999]">ホームページURL（納品書のQRコードに使用）</label>
+              <input type="url" value={shop.homepageUrl || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, homepageUrl:e.target.value.trim()}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="https://ohana5.com/"/>
+              <p className="text-[10px] text-[#999999]">https:// から始まるURLを入力してください。空欄の場合、納品書にQRコードは表示されません。</p>
+            </div>
 
             {/* ★ [SEO-#23] 緯度経度（LocalBusiness geo） */}
             <div className="space-y-1">
