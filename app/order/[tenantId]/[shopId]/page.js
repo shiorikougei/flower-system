@@ -186,6 +186,8 @@ export default function OrderEntryPage() {
           <p className="text-[11px] text-[#999999] leading-relaxed">
             お電話でのご注文も承っております{shop.phone ? <><br/>TEL: <a href={`tel:${String(shop.phone).replace(/[^\d+]/g, '')}`} className="text-[#2D4B3E] font-bold">{shop.phone}</a></> : ''}
           </p>
+          {/* [2026-10 B3] お店ごとのプライバシーポリシー */}
+          <Link href={`/order/${tenantId}/${shopId}/privacy`} className="inline-block mt-3 text-[11px] text-[#777] underline hover:text-[#2D4B3E]">プライバシーポリシー</Link>
         </div>
       </main>
 

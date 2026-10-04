@@ -10,7 +10,7 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { sendEmail } from '@/utils/email';
+import { sendEmail, shopContactEmail } from '@/utils/email';
 import { findTemplateFor, renderTemplate, bodyToHtml } from '@/utils/emailTemplates';
 
 export const runtime = 'nodejs';
@@ -87,7 +87,7 @@ export async function GET(request) {
           shopPhone,
         };
         const { subject, body } = renderTemplate(tpl, vars);
-        const html = bodyToHtml(body, { shopName });
+        const html = bodyToHtml(body, { shopName, shopEmail: shopContactEmail(shop, settings), shopPhone, lineAddFriendUrl: settings.lineConfig?.addFriendUrl || '' });
         const from = `${shopName} <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
 
         const result = await sendEmail({ to: a.customer_email, subject, html, from });

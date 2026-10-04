@@ -267,6 +267,10 @@ export default function ShopCatalogPage() {
             <p className="text-[10px] text-[#999] mt-0.5">特別な相談</p>
           </Link>
         </div>
+        {/* [2026-10 B3] お店ごとのプライバシーポリシー */}
+        <div className="text-center mt-6">
+          <Link href={`/order/${tenantId}/${shopId}/privacy`} className="text-[11px] text-[#777] underline hover:text-[#2D4B3E]">プライバシーポリシー</Link>
+        </div>
       </main>
 
       {/* 商品詳細モーダル */}

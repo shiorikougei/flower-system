@@ -10,7 +10,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/utils/stripe';
-import { sendEmail } from '@/utils/email';
+import { sendEmail, shopContactEmail } from '@/utils/email';
 import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatOrderBreakdown, formatRecipientInfo, formatLineAddFriendBlock, escapeHtml } from '@/utils/emailTemplates';
 import { sendLineParallelToEmail } from '@/utils/line';
 import { createMypageMagicUrl } from '@/utils/mypageLink';
@@ -137,7 +137,7 @@ export async function POST(request) {
                 lineAddFriendUrl: formatLineAddFriendBlock(settings.lineConfig, customerEmail),
               };
               const { subject, body } = renderTemplate(tpl, vars);
-              const html = bodyToHtml(body, { shopName, shopEmail: shop.email || settings.generalConfig?.email || '', shopPhone, lineAddFriendUrl: settings.lineConfig?.addFriendUrl || '' });
+              const html = bodyToHtml(body, { shopName, shopEmail: shopContactEmail(shop, settings), shopPhone, lineAddFriendUrl: settings.lineConfig?.addFriendUrl || '' });
               const from = `${shopName} <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
               await sendEmail({ to: customerEmail, subject, html, from });
               console.log('[webhook] 注文確認メール送信完了:', customerEmail);

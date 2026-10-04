@@ -586,8 +586,15 @@ export default function StaffNewOrderPage() {
         selectedTime, itemPrice, calculatedFee, pickupFee, 
         absenceAction, absenceNote, 
         flowerPurpose, flowerColor, flowerVibe, otherPurpose, otherVibe,
-        cardType, cardMessage, tatePattern,
-        tateInput1, tateInput2, tateInput3, tateInput3a, tateInput3b,
+        // [2026-10 B1] メッセージカードと立札はどちらか一方だけ（切り替える前に入力した内容は送らない）
+        cardType,
+        cardMessage: cardType === 'メッセージカード' ? cardMessage : '',
+        tatePattern: cardType === '立札' ? tatePattern : '',
+        tateInput1: cardType === '立札' ? tateInput1 : '',
+        tateInput2: cardType === '立札' ? tateInput2 : '',
+        tateInput3: cardType === '立札' ? tateInput3 : '',
+        tateInput3a: cardType === '立札' ? tateInput3a : '',
+        tateInput3b: cardType === '立札' ? tateInput3b : '',
         customerInfo, isRecipientDifferent, recipientInfo, note,
         paymentMethod,
         // ★ ③ 入金メモ（自由記入）

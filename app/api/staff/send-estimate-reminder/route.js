@@ -7,7 +7,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { sendEmail, noReplyFooter } from "@/utils/email";
+import { sendEmail, noReplyFooter, shopContactEmail } from "@/utils/email";
 import { customerEstimateUrl } from "@/utils/estimateThread";
 
 export const runtime = "nodejs";
@@ -126,7 +126,7 @@ export async function POST(request) {
     </div>
     ${shopPhone ? `<p style="text-align: center; font-size: 12px; color: #666; margin: 12px 0 0;">お電話でのお問い合わせ: <strong>${shopPhone}</strong></p>` : ""}
   </div>
-  <p style="text-align: center; font-size: 11px; color: #999; margin-top: 12px;">${noReplyFooter()}</p>
+  <p style="text-align: center; font-size: 11px; color: #999; margin-top: 12px;">${noReplyFooter({ shopName, shopEmail: shopContactEmail(targetShop, settings), shopPhone })}</p>
 </div>`;
 
     await sendEmail({

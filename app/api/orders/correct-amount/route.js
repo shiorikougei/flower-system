@@ -8,7 +8,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { sendEmail, noReplyFooter } from "@/utils/email";
+import { sendEmail, noReplyFooter, shopContactEmail } from "@/utils/email";
 
 export const runtime = "nodejs";
 
@@ -293,7 +293,7 @@ export async function POST(request) {
     </p>
     ${shopPhone ? `<p style="text-align: center; font-size: 12px; color: #2D4B3E; font-weight: bold; margin: 12px 0;">📞 ${escapeHtml(shopPhone)}</p>` : ""}
   </div>
-  <p style="text-align: center; font-size: 11px; color: #999; margin-top: 12px;">${noReplyFooter()}</p>
+  <p style="text-align: center; font-size: 11px; color: #999; margin-top: 12px;">${noReplyFooter({ shopName, shopEmail: shopContactEmail(targetShop, settings), shopPhone: targetShop.phone || "" })}</p>
 </div>`;
 
         await sendEmail({
@@ -359,7 +359,7 @@ export async function POST(request) {
     </p>
     ${shopPhone ? `<p style="text-align: center; font-size: 12px; color: #2D4B3E; font-weight: bold; margin: 12px 0;">📞 ${escapeHtml(shopPhone)}</p>` : ""}
   </div>
-  <p style="text-align: center; font-size: 11px; color: #999; margin-top: 12px;">${noReplyFooter()}</p>
+  <p style="text-align: center; font-size: 11px; color: #999; margin-top: 12px;">${noReplyFooter({ shopName, shopEmail: shopContactEmail(targetShop, settings), shopPhone: targetShop.phone || "" })}</p>
 </div>`;
 
         await sendEmail({

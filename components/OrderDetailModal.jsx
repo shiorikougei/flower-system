@@ -306,16 +306,9 @@ export default function OrderDetailModal({
       order.order_data.completionImages = allImages;
       order.order_data.completionImage = allImages[0];
 
-      // ★ 完成写真メールは自動送信せず、確認モーダルでプレビュー → 送信
-      const customerEmail = modalData.customerInfo?.email;
-      if (customerEmail) {
-        // ★ 納品日初期値をセット
-        setCompletionDeliveryDate(modalData.selectedDate || '');
-        setCompletionDeliveryTime(modalData.selectedTime || '');
-        setCompletionMailPreview({ images: allImages, customerEmail });
-      } else {
-        alert('完成写真をアップロードしました\n（お客様のメアドが登録されてないため、メール送信はスキップされます）');
-      }
+      // ★ [2026-10 B4] 写真の登録だけ行う（「メールを送信しますか」の確認は出さない。9/17 打ち合わせで決定）
+      //    お客様に送りたいときは、注文詳細の「完成写真メール送信」ボタンから送れる
+      alert(`完成写真を登録しました（${uploadedUrls.length}枚）`);
 
     } catch (error) {
       console.error('Upload Error:', error);
@@ -480,7 +473,8 @@ export default function OrderDetailModal({
         // ★ [帳票改修 2026-10] カード・立札は 1 枚目（商品の下）、備考・社内メモ・その他は金額欄の後ろにまとめる
         // ★ 文字数に応じて自動でフォントサイズを調整（下はみ出し防止）
         //    合計文字数 = メッセージカード + 社内メモ + お客様備考
-        const cardText = modalData.cardMessage || '';
+        // [2026-10 B1] メッセージカードと立札はどちらか一方だけ。立札の注文では、切り替える前に入力されたメッセージは印刷しない（データはそのまま）
+        const cardText = modalData.cardType === '立札' ? '' : (modalData.cardMessage || '');
         const noteText = modalData.note || '';
         const purposeNote = modalData.purposeNote || '';
         // ★ [帳票改修 2026-10] 用紙が足りなければ次の用紙に続くため、文字は縮小しない（老眼でも読める大きさを維持）

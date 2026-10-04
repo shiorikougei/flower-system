@@ -10,7 +10,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-import { sendEmail } from '@/utils/email';
+import { sendEmail, shopContactInfo } from '@/utils/email';
 import { findTemplateFor, renderTemplate, bodyToHtml } from '@/utils/emailTemplates';
 
 const TOKEN_EXPIRY_HOURS = 24;
@@ -96,7 +96,7 @@ export async function POST(request) {
       };
       const rendered = renderTemplate(tpl, vars);
       subject = rendered.subject;
-      html = bodyToHtml(rendered.body, { shopName });
+      html = bodyToHtml(rendered.body, shopContactInfo(settingsRow?.settings_data, shopIdForLookup));
     } else {
       // フォールバック
       subject = `【${shopName}】注文履歴ご確認URL`;
