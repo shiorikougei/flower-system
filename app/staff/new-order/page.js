@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { Store, AlertCircle, Calendar, ChevronRight, Package } from 'lucide-react';
 import TatefudaPreview from '@/components/TatefudaPreview';
+import TatefudaFreeInput from '@/components/TatefudaFreeInput';
 import HelpTooltip from '@/components/HelpTooltip';
 import { ensureOperationAllowed, getCurrentStaff } from '@/utils/staffRole';
 import { getAvailableTateOptions } from '@/utils/tateMaster';
@@ -65,6 +66,10 @@ export default function StaffNewOrderPage() {
   const [cardType, setCardType] = useState('なし');
   const [cardMessage, setCardMessage] = useState('');
   const [tatePattern, setTatePattern] = useState('');
+  // [2026-10 B2] 立札は自由入力（会社名・送り主・ご要望）
+  const [tateCompany, setTateCompany] = useState('');
+  const [tateSender, setTateSender] = useState('');
+  const [tateRequest, setTateRequest] = useState('');
   const [tateInput1, setTateInput1] = useState(''); 
   const [tateInput2, setTateInput2] = useState(''); 
   const [tateInput3, setTateInput3] = useState(''); 
@@ -595,6 +600,9 @@ export default function StaffNewOrderPage() {
         tateInput3: cardType === '立札' ? tateInput3 : '',
         tateInput3a: cardType === '立札' ? tateInput3a : '',
         tateInput3b: cardType === '立札' ? tateInput3b : '',
+        tateCompany: cardType === '立札' ? tateCompany.trim() : '',
+        tateSender: cardType === '立札' ? tateSender.trim() : '',
+        tateRequest: cardType === '立札' ? tateRequest.trim() : '',
         customerInfo, isRecipientDifferent, recipientInfo, note,
         paymentMethod,
         // ★ ③ 入金メモ（自由記入）
@@ -1332,50 +1340,11 @@ export default function StaffNewOrderPage() {
             )}
 
             {cardType === '立札' && (
-              <div className="space-y-6 bg-white p-6 rounded-2xl border border-[#EAEAEA] shadow-sm animate-in zoom-in-95 duration-300">
-                
-                <select value={tatePattern} onChange={(e) => setTatePattern(e.target.value)} className="w-full h-14 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl outline-none font-bold text-[13px] focus:border-[#2D4B3E]">
-                  <option value="">レイアウトを選択</option>
-                  {availableTateOptions.length > 0 ? (
-                    availableTateOptions.map(opt => (<option key={opt.id} value={opt.id}>{opt.label}</option>))
-                  ) : (
-                    <option value="" disabled>現在この店舗で利用可能なテンプレートがありません</option>
-                  )}
-                </select>
-                
-                {tatePattern && (
-                  <div className="space-y-3">
-                    {tateNeeds.includes('1') && <input type="text" placeholder={`① 内容 (例: ${isOsonae ? '御供' : '御開店'})`} value={tateInput1} onChange={(e) => setTateInput1(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
-                    {tateNeeds.includes('2') && <input type="text" placeholder="② 宛名 (例: 〇〇様)" value={tateInput2} onChange={(e) => setTateInput2(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
-                    {tateNeeds.includes('3') && (
-                      <div className="space-y-1">
-                        <textarea placeholder={"③ 贈り主 (例: 株式会社〇〇)\n※連名はEnterで改行"} value={tateInput3} onChange={(e) => setTateInput3(e.target.value)} rows={2} className="w-full px-4 py-2 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none resize-y" />
-                        <p className="text-[10px] text-[#999] pl-1">連名: Enterで改行</p>
-                      </div>
-                    )}
-                    {tateNeeds.includes('3a') && <input type="text" placeholder="③-1 会社名" value={tateInput3a} onChange={(e) => setTateInput3a(e.target.value)} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none" />}
-                    {tateNeeds.includes('3b') && (
-                      <div className="space-y-1">
-                        <textarea placeholder={"③-2 役職・氏名\n※連名はEnterで改行"} value={tateInput3b} onChange={(e) => setTateInput3b(e.target.value)} rows={2} className="w-full px-4 py-2 border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none resize-y" />
-                        <p className="text-[10px] text-[#999] pl-1">連名: Enterで改行</p>
-                      </div>
-                    )}
-                    
-                    <p className="text-[10px] font-bold text-[#999999] text-center pt-4">仕上がりプレビュー</p>
-                    <TatefudaPreview 
-                      tatePattern={tatePattern}
-                      layout={selectedTateOpt?.layout}
-                      isOsonae={isOsonae}
-                      input1={tateInput1}
-                      input2={tateInput2}
-                      input3={tateInput3}
-                      input3a={tateInput3a}
-                      input3b={tateInput3b}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
+                <TatefudaFreeInput
+                  company={tateCompany} sender={tateSender} request={tateRequest}
+                  onChange={(k, val) => { if (k === 'tateCompany') setTateCompany(val); else if (k === 'tateSender') setTateSender(val); else setTateRequest(val); }}
+                />
+              )}
           </div>
 
           {/* ★ 旧 section 4 (スケジュール・情報) は section 1 直下に移動 → 新 section 2 として描画 */}
