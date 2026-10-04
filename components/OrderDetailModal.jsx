@@ -94,6 +94,8 @@ export default function OrderDetailModal({
   // ★ 見積金額の確認（見積から作られた注文のみ）
   //    見積の税込金額をサーバーから読み、注文の合計と突き合わせて表示する。
   //    読み取り専用。取得した値は modalData に混ぜない（混ぜると更新時に注文データへ保存されてしまうため）
+  // ★ [A8] ステータス更新後に「更新しました」を表示
+  const [statusSavedMsg, setStatusSavedMsg] = useState('');
   const [estimateCheck, setEstimateCheck] = useState(null); // null | { state: 'loading' | 'done' | 'error', expectedTotal? }
   useEffect(() => {
     const od = order?.order_data;
@@ -109,7 +111,7 @@ export default function OrderDetailModal({
         });
         if (!res.ok) throw new Error(`status ${res.status}`);
         const data = await res.json();
-        if (!cancelled) setEstimateCheck({ state: 'done', expectedTotal: data.expectedTotal });
+        if (!cancelled) setEstimateCheck({ state: 'done', expectedTotal: data.expectedTotal, repliedAt: data.repliedAt || null, requestContent: data.requestContent || '', replyMessage: data.replyMessage || '' });
       } catch (e) {
         console.warn('[OrderDetailModal] 見積金額の取得に失敗:', e?.message);
         if (!cancelled) setEstimateCheck({ state: 'error' });
@@ -426,6 +428,14 @@ export default function OrderDetailModal({
       const renderHeaderMeta = () => `<div class="meta-area"><div>伝票：${safeId}    受付：${safeFormatDate(order.created_at, false)}</div><div>お渡し：${receiveMethodStr}    希望日：${datePart}</div><div>入金状況：${paymentStatus}</div></div>`;
 
       // ★ A4フル 受注書専用テンプレート（老眼でも見えるサイズ、A4全体をバランスよく使用）
+      // ★ [A7] 受注書の記入欄の「済」は「請求」（入金済み）だけに付ける（2026-10-05 しーちゃん決定）
+      //    作業の欄（受注・制作・配達・片付）は手書き用に空欄のまま。入金データは読むだけ
+      const currentWorkStatus = modalData.currentStatus || modalData.status || 'new';
+      const stepDone = (label) => {
+        if (label !== '請求' || currentWorkStatus === 'キャンセル') return false;
+        return order?.payment_status === 'paid' || /入金済|前払い済み/.test(String(modalData.paymentStatus || ''));
+      };
+
       // ★ [帳票改修 2026-10] 受注書・受注書控えは A4 に全情報を出す（収まらない場合は次の用紙に続く）
       //    customerCopy=true（受注書控え・お客様にお渡し）は社内メモと担当者記入欄を出さない
       const renderFullSlip = ({ title, customerCopy = false }) => {
@@ -516,7 +526,16 @@ export default function OrderDetailModal({
                     </div>
                   ` : ''}
         `;
+        // ★ [A12] 見積から作られた注文: 見積のやり取り（お客様のご依頼・お店の回答）を受注書に載せる（受注書控えには出さない）
+        const estimateExchangeHtml = (modalData.fromEstimate && !customerCopy && (estimateCheck?.requestContent || estimateCheck?.replyMessage)) ? `
+          <div class="fullslip-note fs-estimate-exchange">
+            <div class="fullslip-note-label">【見積のやり取り】${estimateCheck?.repliedAt ? `（回答日 ${new Date(estimateCheck.repliedAt).toLocaleDateString('ja-JP')}）` : ''}</div>
+            ${estimateCheck?.requestContent ? `<div class="fs-ex-head">お客様のご依頼</div><div class="fullslip-note-text">${formatText(estimateCheck.requestContent)}</div>` : ''}
+            ${estimateCheck?.replyMessage ? `<div class="fs-ex-head">お店の回答</div><div class="fullslip-note-text">${formatText(estimateCheck.replyMessage)}</div>` : ''}
+          </div>
+        ` : '';
         const moreBlocksHtml = `
+                  ${estimateExchangeHtml}
                   ${purposeNote ? `
                     <div class="fullslip-note ${sizeCls}" style="background:#eff6ff; border-left-color:#3b82f6;">
                       <div class="fullslip-note-label" style="color:#1e40af;">【お客様からの補足・備考】</div>
@@ -552,11 +571,11 @@ export default function OrderDetailModal({
           <div class="fullslip-staff-section">
             <div class="fullslip-staff-title">担当者記入欄</div>
             <div class="fullslip-staff-grid">
-              <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">受注</div><div class="fullslip-staff-cell-name">${formatText(modalData.staffName || modalData.orderStaff || '')}</div></div>
-              <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">制作</div><div class="fullslip-staff-cell-name">${formatText(modalData.productionStaff || '')}</div></div>
-              <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">配達</div><div class="fullslip-staff-cell-name">${formatText(modalData.deliveryStaff || '')}</div></div>
-              <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">片付</div><div class="fullslip-staff-cell-name">${formatText(modalData.cleanupStaff || '')}</div></div>
-              <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">請求</div><div class="fullslip-staff-cell-name">${formatText(modalData.billingStaff || '')}</div></div>
+              <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">受注</div><div class="fullslip-staff-cell-name">${formatText(modalData.staffName || modalData.orderStaff || '')}${stepDone('受注') ? '<span class="fullslip-staff-done">済</span>' : ''}</div></div>
+              <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">制作</div><div class="fullslip-staff-cell-name">${formatText(modalData.productionStaff || '')}${stepDone('制作') ? '<span class="fullslip-staff-done">済</span>' : ''}</div></div>
+              <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">配達</div><div class="fullslip-staff-cell-name">${formatText(modalData.deliveryStaff || '')}${stepDone('配達') ? '<span class="fullslip-staff-done">済</span>' : ''}</div></div>
+              <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">片付</div><div class="fullslip-staff-cell-name">${formatText(modalData.cleanupStaff || '')}${stepDone('片付') ? '<span class="fullslip-staff-done">済</span>' : ''}</div></div>
+              <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">請求</div><div class="fullslip-staff-cell-name">${formatText(modalData.billingStaff || '')}${stepDone('請求') ? '<span class="fullslip-staff-done">済</span>' : ''}</div></div>
             </div>
           </div>
         `;
@@ -567,6 +586,7 @@ export default function OrderDetailModal({
             <div class="fullslip-header">
               <div class="fullslip-title">${title}</div>
               <div class="fullslip-meta-top">
+                ${modalData.fromEstimate && !customerCopy ? `<div class="fs-estimate-badge">見積もり依頼あり${estimateCheck?.repliedAt ? `（回答日 ${new Date(estimateCheck.repliedAt).toLocaleDateString('ja-JP')}）` : ''}</div>` : ''}
                 <div>伝票：${safeId}</div>
                 <div>受付：${safeFormatDate(order.created_at, false)}</div>
               </div>
@@ -1061,7 +1081,12 @@ export default function OrderDetailModal({
             .fullslip-staff-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.5mm; }
             .fullslip-staff-cell { display: flex; flex-direction: column; }
             .fullslip-staff-cell-label { font-size: 8pt; color: #666; font-weight: 500; text-align: center; margin-bottom: 1mm; }
-            .fullslip-staff-cell-name { border: 0.5pt solid #999; height: 12mm; background: #fff; border-radius: 1mm; display: flex; align-items: center; justify-content: center; font-size: 10pt; font-weight: 700; color: #222; }
+            .fullslip-staff-done { position: absolute; top: 1mm; right: 1.5mm; width: 7mm; height: 7mm; border: 1pt solid #117768; color: #117768; border-radius: 50%; font-size: 9pt; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+            .fs-estimate-exchange { background: #fff7f2; border-left-color: #D97D54; }
+            .fs-estimate-exchange .fullslip-note-label { color: #D97D54; }
+            .fs-ex-head { font-size: 9pt; font-weight: 700; color: #555; margin-top: 2mm; }
+            .fs-estimate-badge { display: inline-block; margin-bottom: 1.5mm; padding: 0.5mm 2.5mm; border: 1pt solid #D97D54; color: #D97D54; border-radius: 1mm; font-size: 9.5pt; font-weight: 700; }
+            .fullslip-staff-cell-name { position: relative; border: 0.5pt solid #999; height: 12mm; background: #fff; border-radius: 1mm; display: flex; align-items: center; justify-content: center; font-size: 10pt; font-weight: 700; color: #222; }
 
             .fullslip-amounts { border-collapse: collapse; width: 80mm; }
             .fullslip-amounts td { padding: 2mm 4mm; font-size: 10pt; border-bottom: 0.5pt solid #ddd; }
@@ -1635,7 +1660,8 @@ export default function OrderDetailModal({
                 // ★ ① PIN必須なのにスタッフ未選択 → 操作拒否
                 const guard = ensureOperationAllowed('ステータス更新');
                 if (!guard.allowed) { alert(guard.message); return; }
-                const currentStaff = (typeof window !== 'undefined') ? JSON.parse(localStorage.getItem('florix_currentStaff') || 'null') : null;
+                // ★ [A9][BUGFIX] 読み取り先のキー名が保存先（florix_current_staff）と違っていたため、常に空 -> 履歴が「-」になっていた
+                const currentStaff = getCurrentStaff();
                 const autoStaff = currentStaff?.name || '';
 
                 // ★ 完了系ステータスの場合、メール送信を確認
@@ -1714,10 +1740,19 @@ export default function OrderDetailModal({
                   }
                 }
 
-                onUpdateStatus(order.id, updateForm.status, autoStaff);
+                const ok = await onUpdateStatus(order.id, updateForm.status, autoStaff);
+                if (ok !== false) {
+                  setStatusSavedMsg(`「${updateForm.status === 'new' ? '未対応' : updateForm.status}」に更新しました`);
+                  setTimeout(() => setStatusSavedMsg(''), 4000);
+                }
               }} className="h-10 px-4 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-xl hover:bg-[#1f352b] transition-all shadow-sm">
                 更新
               </button>
+              {statusSavedMsg && (
+                <span className="flex items-center gap-1 text-[13px] font-bold text-[#117768]" role="status">
+                  <CheckCircle2 size={16}/> {statusSavedMsg}
+                </span>
+              )}
             </div>
           </div>
 
