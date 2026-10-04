@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
-import { ChevronLeft, Send, CheckCircle, XCircle, RefreshCw, Mail, Phone, Trash2 } from 'lucide-react';
+import { ChevronLeft, Send, CheckCircle, XCircle, RefreshCw, Mail, Phone, Trash2, RotateCcw } from 'lucide-react';
 
 export default function EstimatesPage() {
   const [tenantId, setTenantId] = useState(null);
@@ -296,34 +296,55 @@ export default function EstimatesPage() {
     try {
       // ★ [セキュリティ] /api/estimates PATCH (reject) は認証必須化済み
       const { data: { session } } = await supabase.auth.getSession();
-      await fetch('/api/estimates', {
+      if (!session) { alert('ログインの有効期限が切れています。ページを再読み込みして、もう一度ログインしてください。'); return; }
+      const res = await fetch('/api/estimates', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ id, action: 'reject' }),
       });
-      loadEstimates();
-    } catch (e) { alert(e.message); }
-  }
-
-  async function handleDelete(id, est) {
-    // 確定済み（注文に転送済み）の場合は警告強化
-    let confirmMsg = 'このお見積もり依頼を完全に削除しますか？\nこの操作は取り消せません。';
-    if (est?.status === 'converted' && est?.order_id) {
-      confirmMsg = `この見積は正式注文に確定済みです（注文ID: ${String(est.order_id).slice(0,8)}）\n\n見積データのみ削除されます（注文データは残ります）。\n本当に削除しますか？`;
-    }
-    if (!confirm(confirmMsg)) return;
-    try {
-      const res = await fetch(`/api/estimates?id=${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-      });
+      // ★ [BUGFIX] 失敗しても何も表示されず「却下できない」状態に見えていたため、結果を確認して表示する
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || '削除に失敗しました');
+      if (!res.ok) throw new Error(data?.error || '却下に失敗しました');
       loadEstimates();
-      alert('見積依頼を削除しました');
+      alert('見積依頼を却下しました');
     } catch (e) { alert('エラー: ' + e.message); }
   }
 
-  const filtered = filter === 'all' ? estimates : estimates.filter(e => e.status === filter);
+  // ★ [2026-10] 「削除」はデータを消さずゴミ箱へ移す（あとから「元に戻す」で復元できる）
+  async function updateEstimateStatus(id, action, doneMessage) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { alert('ログインの有効期限が切れています。ページを再読み込みして、もう一度ログインしてください。'); return; }
+      const res = await fetch('/api/estimates', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ id, action }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || '操作に失敗しました');
+      loadEstimates();
+      alert(doneMessage);
+    } catch (e) { alert('エラー: ' + e.message); }
+  }
+
+  async function handleDelete(id, est) {
+    let confirmMsg = 'この見積依頼をゴミ箱に移しますか？\n（「ゴミ箱」から元に戻せます）';
+    if (est?.status === 'converted' && est?.order_id) {
+      confirmMsg = `この見積は正式注文に確定済みです（注文ID: ${String(est.order_id).slice(0,8)}）
+
+見積データのみゴミ箱に移ります（注文データはそのまま残ります）。
+ゴミ箱に移しますか？`;
+    }
+    if (!confirm(confirmMsg)) return;
+    await updateEstimateStatus(id, 'trash', '見積依頼をゴミ箱に移しました（「ゴミ箱」から元に戻せます）');
+  }
+
+  async function handleRestore(id) {
+    if (!confirm('この見積依頼を元に戻しますか？')) return;
+    await updateEstimateStatus(id, 'restore', '見積依頼を元に戻しました');
+  }
+
+  const filtered = filter === 'all' ? estimates.filter(e => e.status !== 'deleted') : estimates.filter(e => e.status === filter);
 
   const STATUS_LABELS = {
     pending: { label: '未回答', color: 'bg-amber-100 text-amber-700 border-amber-300' },
@@ -331,6 +352,8 @@ export default function EstimatesPage() {
     accepted: { label: '承諾済', color: 'bg-green-100 text-green-700 border-green-300' },
     converted: { label: '注文確定', color: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
     rejected: { label: '却下', color: 'bg-gray-100 text-gray-600 border-gray-300' },
+    expired: { label: '期限切れ', color: 'bg-gray-100 text-gray-500 border-gray-300' },
+    deleted: { label: 'ゴミ箱', color: 'bg-red-50 text-red-500 border-red-200' },
   };
 
   return (
@@ -351,6 +374,7 @@ export default function EstimatesPage() {
             { id: 'replied', label: '回答済' },
             { id: 'converted', label: '確定済' },
             { id: 'rejected', label: '却下' },
+            { id: 'deleted', label: 'ゴミ箱' },
           ].map(f => (
             <button key={f.id} onClick={() => setFilter(f.id)}
               className={`px-4 py-2 rounded-full text-[12px] font-bold ${filter === f.id ? 'bg-[#2D4B3E] text-white' : 'bg-white border border-[#EAEAEA] text-[#555]'}`}>
@@ -743,14 +767,24 @@ export default function EstimatesPage() {
                     </div>
                   )}
 
-                  {/* ★ 削除ボタン（全ステータス対象） */}
-                  <div className="flex justify-end pt-2 border-t border-[#EAEAEA]">
-                    <button
-                      onClick={() => handleDelete(est.id, est)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 text-[11px] font-bold rounded-lg hover:bg-red-500 hover:text-white transition-all"
-                    >
-                      <Trash2 size={12}/> この見積を削除
-                    </button>
+                  {/* ★ [2026-10] 却下・ゴミ箱は「元に戻す」、それ以外は「ゴミ箱へ移動」（データは消さない） */}
+                  <div className="flex justify-end gap-2 pt-2 border-t border-[#EAEAEA]">
+                    {(est.status === 'rejected' || est.status === 'deleted') && (
+                      <button
+                        onClick={() => handleRestore(est.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#2D4B3E]/40 text-[#2D4B3E] text-[11px] font-bold rounded-lg hover:bg-[#2D4B3E] hover:text-white transition-all"
+                      >
+                        <RotateCcw size={12}/> 元に戻す
+                      </button>
+                    )}
+                    {est.status !== 'deleted' && (
+                      <button
+                        onClick={() => handleDelete(est.id, est)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 text-[11px] font-bold rounded-lg hover:bg-red-500 hover:text-white transition-all"
+                      >
+                        <Trash2 size={12}/> ゴミ箱へ移動
+                      </button>
+                    )}
                   </div>
                 </div>
               );

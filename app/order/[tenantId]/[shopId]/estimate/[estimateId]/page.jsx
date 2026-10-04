@@ -271,7 +271,7 @@ export default function EstimateAcceptPage() {
       </div>
     );
   }
-  if (estimate.status === 'rejected') {
+  if (estimate.status === 'rejected' || estimate.status === 'deleted') {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="bg-white p-8 rounded-2xl border border-gray-200 text-center">

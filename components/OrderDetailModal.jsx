@@ -426,7 +426,9 @@ export default function OrderDetailModal({
       const renderHeaderMeta = () => `<div class="meta-area"><div>伝票：${safeId}    受付：${safeFormatDate(order.created_at, false)}</div><div>お渡し：${receiveMethodStr}    希望日：${datePart}</div><div>入金状況：${paymentStatus}</div></div>`;
 
       // ★ A4フル 受注書専用テンプレート（老眼でも見えるサイズ、A4全体をバランスよく使用）
-      const renderFullSlip = ({ title }) => {
+      // ★ [帳票改修 2026-10] 受注書・受注書控えは A4 に全情報を出す（収まらない場合は次の用紙に続く）
+      //    customerCopy=true（受注書控え・お客様にお渡し）は社内メモと担当者記入欄を出さない
+      const renderFullSlip = ({ title, customerCopy = false }) => {
         // 商品行を組み立て
         let itemsHtml = '';
         if (isEcOrder && Array.isArray(modalData.cartItems)) {
@@ -465,7 +467,101 @@ export default function OrderDetailModal({
         const taxP = Math.floor(subT * 0.1);
         const totalP = subT + taxP;
 
+        // ★ [帳票改修 2026-10] カード・立札は 1 枚目（商品の下）、備考・社内メモ・その他は金額欄の後ろにまとめる
+        // ★ 文字数に応じて自動でフォントサイズを調整（下はみ出し防止）
+        //    合計文字数 = メッセージカード + 社内メモ + お客様備考
+        const cardText = modalData.cardMessage || '';
+        const noteText = modalData.note || '';
+        const purposeNote = modalData.purposeNote || '';
+        // ★ [帳票改修 2026-10] 用紙が足りなければ次の用紙に続くため、文字は縮小しない（老眼でも読める大きさを維持）
+        const sizeCls = '';
+        // 立札（パターン + 入力内容をすべて）
+        const tateLines = [
+          modalData.tatePattern ? `パターン: ${formatText(modalData.tatePattern)}` : '',
+          modalData.tateInput1 ? `① ${formatText(modalData.tateInput1)}` : '',
+          modalData.tateInput2 ? `② ${formatText(modalData.tateInput2)}` : '',
+          modalData.tateInput3 ? `③ ${formatText(modalData.tateInput3)}` : '',
+          modalData.tateInput3a ? `③-1 ${formatText(modalData.tateInput3a)}` : '',
+          modalData.tateInput3b ? `③-2 ${formatText(modalData.tateInput3b)}` : '',
+        ].filter(Boolean);
+        const showTate = modalData.cardType === '立札' && tateLines.length > 0;
+        // その他の情報（入力されているものだけ）
+        const osonae = modalData.osonaeInfo || {};
+        const extraRows = [
+          modalData.fromEstimate ? ['見積もり', '見積もり依頼からのご注文'] : null,
+          (modalData.otherPurpose || modalData.otherColor || modalData.otherVibe)
+            ? ['ご要望の詳細', [modalData.otherPurpose && `用途: ${formatText(modalData.otherPurpose)}`, modalData.otherColor && `色: ${formatText(modalData.otherColor)}`, modalData.otherVibe && `イメージ: ${formatText(modalData.otherVibe)}`].filter(Boolean).join(' / ')] : null,
+          osonae.deceasedName ? ['故人様', formatText(osonae.deceasedName)] : null,
+          osonae.mournerName ? ['喪主様', formatText(osonae.mournerName)] : null,
+          osonae.sponsorNames ? ['ご芳名', formatText(osonae.sponsorNames)] : null,
+          osonae.venueName ? ['斎場・会場', formatText(osonae.venueName)] : null,
+          osonae.ceremonyTime ? ['通夜・告別式', formatText(osonae.ceremonyTime)] : null,
+          modalData.shippingDate ? ['発送日', formatText(modalData.shippingDate)] : null,
+          modalData.isBring === 'bring' ? ['持ち込み', 'お客様からのお花・器の持ち込みあり'] : null,
+          modalData.receiveMethod === 'delivery' && modalData.absenceAction ? ['不在時の対応', `${formatText(modalData.absenceAction)}${modalData.absenceNote ? `（${formatText(modalData.absenceNote)}）` : ''}`] : null,
+          modalData.receiveMethod === 'delivery' && modalData.isRecipientDifferent ? ['事前連絡', modalData.priorContactAgreed ? 'お届け先への事前連絡に同意あり' : '同意なし'] : null,
+          modalData.referenceImage ? ['参考画像', 'あり（画面で確認）'] : null,
+        ].filter(Boolean);
+        const cardBlocksHtml = `
+                  ${showTate ? `
+                    <div class="fullslip-card-message">
+                      <div class="fullslip-card-message-label">【立札】</div>
+                      <div class="fullslip-card-message-text">${tateLines.join('<br/>')}</div>
+                    </div>
+                  ` : ''}
+                  ${cardText ? `
+                    <div class="fullslip-card-message ${sizeCls}">
+                      <div class="fullslip-card-message-label">【メッセージカード】</div>
+                      <div class="fullslip-card-message-text">${formatText(cardText)}</div>
+                    </div>
+                  ` : ''}
+        `;
+        const moreBlocksHtml = `
+                  ${purposeNote ? `
+                    <div class="fullslip-note ${sizeCls}" style="background:#eff6ff; border-left-color:#3b82f6;">
+                      <div class="fullslip-note-label" style="color:#1e40af;">【お客様からの補足・備考】</div>
+                      <div class="fullslip-note-text">${formatText(purposeNote)}</div>
+                    </div>
+                  ` : ''}
+                  ${noteText && !customerCopy ? `
+                    <div class="fullslip-note ${sizeCls}">
+                      <div class="fullslip-note-label">【社内メモ】</div>
+                      <div class="fullslip-note-text">${formatText(noteText)}</div>
+                    </div>
+                  ` : ''}
+                  ${extraRows.length > 0 ? `
+                    <table class="fullslip-extra">
+                      ${extraRows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('')}
+                    </table>
+                  ` : ''}
+        `;
+        // ★ [帳票改修 2026-10] 一番下の欄: 受注書 = 担当者記入欄のみ / 受注書控え = 店舗情報 + ホームページQR
+        const fsGroup = customerCopy ? 'copy' : 'order';
+        const footerHtml = customerCopy ? `
+          <div class="fullslip-footer fs-shop-footer">
+            <div class="fullslip-shop">
+              <div class="fullslip-shop-name">${formatText(shopName)}</div>
+              <div class="fullslip-shop-details">
+                <div>〒${formatText(shopZip)} ${formatText(shopAddress)}</div>
+                <div>TEL: ${formatText(shopTel)}${shopInvoice ? ` （T${formatText(shopInvoice)}）` : ''}</div>
+              </div>
+            </div>
+            ${shopQr?.dataUrl ? `<div class="shop-qr fs-shop-qr"><img src="${shopQr.dataUrl}" alt="QR"/><div class="shop-qr-label">${formatText(shopQr.label)}</div></div>` : ''}
+          </div>
+        ` : `
+          <div class="fullslip-staff-section">
+            <div class="fullslip-staff-title">担当者記入欄</div>
+            <div class="fullslip-staff-grid">
+              <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">受注</div><div class="fullslip-staff-cell-name">${formatText(modalData.staffName || modalData.orderStaff || '')}</div></div>
+              <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">制作</div><div class="fullslip-staff-cell-name">${formatText(modalData.productionStaff || '')}</div></div>
+              <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">配達</div><div class="fullslip-staff-cell-name">${formatText(modalData.deliveryStaff || '')}</div></div>
+              <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">片付</div><div class="fullslip-staff-cell-name">${formatText(modalData.cleanupStaff || '')}</div></div>
+              <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">請求</div><div class="fullslip-staff-cell-name">${formatText(modalData.billingStaff || '')}</div></div>
+            </div>
+          </div>
+        `;
         return `
+          <div class="page fs-page" data-fs-group="${fsGroup}" data-fs-role="main">
           <div class="slip-full fullslip">
             <!-- タイトル + 伝票情報 -->
             <div class="fullslip-header">
@@ -534,55 +630,11 @@ export default function OrderDetailModal({
                   ${itemsHtml}
                 </tbody>
               </table>
-              ${(() => {
-                // ★ 文字数に応じて自動でフォントサイズを調整（下はみ出し防止）
-                //    合計文字数 = メッセージカード + 社内メモ + お客様備考
-                const cardText = modalData.cardMessage || '';
-                const noteText = modalData.note || '';
-                const purposeNote = modalData.purposeNote || '';
-                const totalLen = cardText.length + noteText.length + purposeNote.length;
-                let sizeCls = '';
-                if (totalLen > 400) sizeCls = 'fullslip-longtext-xsmall';
-                else if (totalLen > 250) sizeCls = 'fullslip-longtext-small';
-                else if (totalLen > 150) sizeCls = 'fullslip-longtext-medium';
-                return `
-                  ${cardText ? `
-                    <div class="fullslip-card-message ${sizeCls}">
-                      <div class="fullslip-card-message-label">【メッセージカード】</div>
-                      <div class="fullslip-card-message-text">${formatText(cardText)}</div>
-                    </div>
-                  ` : ''}
-                  ${purposeNote ? `
-                    <div class="fullslip-note ${sizeCls}" style="background:#eff6ff; border-left-color:#3b82f6;">
-                      <div class="fullslip-note-label" style="color:#1e40af;">【お客様からの補足・備考】</div>
-                      <div class="fullslip-note-text">${formatText(purposeNote)}</div>
-                    </div>
-                  ` : ''}
-                  ${noteText ? `
-                    <div class="fullslip-note ${sizeCls}">
-                      <div class="fullslip-note-label">【社内メモ】</div>
-                      <div class="fullslip-note-text">${formatText(noteText)}</div>
-                    </div>
-                  ` : ''}
-                `;
-              })()}
+              ${cardBlocksHtml}
             </div>
 
-            <!-- 金額表 + 担当者記入欄（左右並列） -->
-            <div class="fullslip-summary-row">
-              <!-- 左：ステータスごとの担当者記入欄 -->
-              <div class="fullslip-staff-section">
-                <div class="fullslip-staff-title">担当者記入欄</div>
-                <div class="fullslip-staff-grid">
-                  <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">受注</div><div class="fullslip-staff-cell-name">${formatText(modalData.staffName || modalData.orderStaff || '')}</div></div>
-                  <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">制作</div><div class="fullslip-staff-cell-name">${formatText(modalData.productionStaff || '')}</div></div>
-                  <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">配達</div><div class="fullslip-staff-cell-name">${formatText(modalData.deliveryStaff || '')}</div></div>
-                  <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">片付</div><div class="fullslip-staff-cell-name">${formatText(modalData.cleanupStaff || '')}</div></div>
-                  <div class="fullslip-staff-cell"><div class="fullslip-staff-cell-label">請求</div><div class="fullslip-staff-cell-name">${formatText(modalData.billingStaff || '')}</div></div>
-                </div>
-              </div>
-
-              <!-- 右：金額表 -->
+            <!-- ★ [帳票改修 2026-10] 金額表（商品・カード/立札の下） -->
+            <div class="fullslip-amount-row">
               <table class="fullslip-amounts">
                 <tr><td class="fullslip-amount-label">商品代</td><td class="fullslip-amount-value">¥${itemP.toLocaleString()}</td></tr>
                 <tr><td class="fullslip-amount-label">送料・手数料</td><td class="fullslip-amount-value">¥${feeP.toLocaleString()}</td></tr>
@@ -590,18 +642,24 @@ export default function OrderDetailModal({
                 <tr class="fullslip-amount-total"><td class="fullslip-amount-label-total">合計（税込）</td><td class="fullslip-amount-value-total">¥${totalP.toLocaleString()}</td></tr>
               </table>
             </div>
-
-            <!-- フッター：店舗情報 -->
-            <div class="fullslip-footer">
-              <div class="fullslip-shop">
-                <div class="fullslip-shop-name">${formatText(shopName)}</div>
-                <div class="fullslip-shop-details">
-                  <div>〒${formatText(shopZip)} ${formatText(shopAddress)}</div>
-                  <div>TEL: ${formatText(shopTel)}${shopInvoice ? ` （T${formatText(shopInvoice)}）` : ''}</div>
-                </div>
+            <!-- 「詳細」が 1 枚目に収まる場合はここに入る（印刷時に自動判定） -->
+            <div class="fs-detail-anchor"></div>
+            <!-- 一番下の欄（最後の用紙の一番下に置く） -->
+            <div class="fs-footer-slot">${footerHtml}</div>
+            <div class="fs-pageno"></div>
+          </div>
+          </div>
+          ${moreBlocksHtml.trim() ? `
+          <div class="page fs-page" data-fs-group="${fsGroup}" data-fs-role="detail">
+            <div class="slip-full fullslip">
+              <div class="fullslip-more">
+                <div class="fullslip-more-title">詳細　<span>伝票：${safeId}　${formatText(customer.name)} 様</span></div>
+                ${moreBlocksHtml}
               </div>
+              <div class="fs-pageno"></div>
             </div>
           </div>
+          ` : ''}
         `;
       };
 
@@ -611,9 +669,9 @@ export default function OrderDetailModal({
             <div class="info-title">【ご依頼主様（ご注文者）】</div>
             <div class="info-main">${formatText(customer.name)} <span style="font-size:9pt; font-weight:normal;">様</span></div>
             <div class="info-sub-bottom">
+              <div>TEL: ${formatText(customer.phone)}</div>
               <div>〒${formatText(customer.zip)}</div>
               <div>${formatText(customer.address1)} ${formatText(customer.address2)}</div>
-              <div>TEL: ${formatText(customer.phone)}</div>
             </div>
           </div>
           <div class="info-box" style="border-color:${hidePrice ? '#888' : '#444'}">
@@ -621,9 +679,9 @@ export default function OrderDetailModal({
             ${modalData.isRecipientDifferent ? `
               <div class="info-main">${formatText(recipient.name)} <span style="font-size:9pt; font-weight:normal;">様</span></div>
               <div class="info-sub-bottom">
+                <div>TEL: ${formatText(recipient.phone)}</div>
                 <div>〒${formatText(recipient.zip)}</div>
                 <div>${formatText(recipient.address1)} ${formatText(recipient.address2)}</div>
-                <div>TEL: ${formatText(recipient.phone)}</div>
               </div>
             ` : `<div class="same-text">ご依頼主様と同じ</div>`}
           </div>
@@ -652,9 +710,9 @@ export default function OrderDetailModal({
             const optTotal = Number(c.optionsTotal) || 0;
             // ★ オプションの詳細を商品名の下に表示
             const optLines = [];
-            if (opt.wrapping)      optLines.push(`🎁 ラッピング (+¥${(Number(opt.wrapping.price)||0).toLocaleString()})`);
-            if (opt.messageCard)   optLines.push(`💌 メッセージカード${opt.messageCard.text ? ` 「${formatText(opt.messageCard.text)}」` : ''} ${Number(opt.messageCard.price) > 0 ? `(+¥${Number(opt.messageCard.price).toLocaleString()})` : '(無料)'}`);
-            if (opt.textInsertion) optLines.push(`✍️ 文字入れ「${formatText(opt.textInsertion.text)}」(${formatText(opt.textInsertion.position)}) (+¥${(Number(opt.textInsertion.price)||0).toLocaleString()})`);
+            if (opt.wrapping)      optLines.push(`[ラッピング] (+¥${(Number(opt.wrapping.price)||0).toLocaleString()})`);
+            if (opt.messageCard)   optLines.push(`[メッセージカード]${opt.messageCard.text ? ` 「${formatText(opt.messageCard.text)}」` : ''} ${Number(opt.messageCard.price) > 0 ? `(+¥${Number(opt.messageCard.price).toLocaleString()})` : '(無料)'}`);
+            if (opt.textInsertion) optLines.push(`[文字入れ]「${formatText(opt.textInsertion.text)}」(${formatText(opt.textInsertion.position)}) (+¥${(Number(opt.textInsertion.price)||0).toLocaleString()})`);
             const optBlock = optLines.length > 0
               ? `<div class="item-detail" style="color:#b8588a; margin-top:1mm;">${optLines.join('<br/>')}</div>`
               : '';
@@ -785,7 +843,7 @@ export default function OrderDetailModal({
         <div class="${quarter ? 'slip-quarter' : 'slip'}" style="color: ${hidePrice ? '#333' : 'inherit'}">
           <div class="slip-header">
             <div class="slip-title" style="color:${getTitleColor(type)}">${title}${isEcOrder ? ` <span style="font-size:9pt; background:#e3f2fd; color:#1565c0; padding:1mm 2mm; border-radius:1mm; font-weight:bold; vertical-align:middle;">EC注文</span>` : ''}</div>
-            ${type === 'delivery' ? '' /* ★ ⑥ 納品書はヘッダー右上の伝票番号・受付日・お渡し方法・希望日・入金状況を出さない */ : renderHeaderMeta()}
+            ${(type === 'delivery' || type === 'receipt') ? '' /* ★ ⑥ 納品書・受領書はヘッダー右上の伝票番号・受付日・お渡し方法・希望日・入金状況を出さない（受領書は 2026-10 に追加） */ : renderHeaderMeta()}
           </div>
           ${renderClientBoxes(hidePrice)}
           ${renderItemsBlock(hidePrice, type)}
@@ -840,7 +898,7 @@ export default function OrderDetailModal({
               <div style="font-size:13pt; font-weight:bold;">${formatText(recipient.name)} <span style="font-size:10pt; font-weight:normal;">様</span></div>
               <div style="margin-top:6mm; font-size:10.5pt; color:#333; line-height:2;">
                 この度は <strong style="color:#117768;">${formatText(customer.name)}</strong> 様より<br/>
-                心のこもったお贈り物が届きました🌸<br/>
+                心のこもったお贈り物が届きました。<br/>
                 <span style="font-size:10pt; color:#555;">心を込めてお作りしたお花をお届けいたします。</span>
               </div>
             </div>
@@ -1071,65 +1129,107 @@ export default function OrderDetailModal({
               max-height: 18mm;
               overflow: hidden;
             }
-            /* 住所セルが多段になっても枠内で収まる */
+            /* 住所セルが多段になっても枠内で収まる
+               ★ [BUGFIX] 半分幅の納品書・受領書で住所が折り返すと、最後の行の電話番号が 16mm で切れていた
+                  -> 電話番号を先頭に移し、高さの上限を 28mm に緩和（下の商品欄には余白があるため） */
             .info-box .info-sub-bottom {
-              max-height: 16mm;
+              max-height: 28mm;
               overflow: hidden;
             }
             /* slip 内の overflow を厳密に */
             .slip, .slip-full {
               overflow: hidden !important;
             }
+            /* ★ [帳票改修 2026-10] 受注書・受注書控え: 高さ固定をやめ、収まらない分は次の用紙へ続ける（情報が欠けないように） */
+            .page.page-flow { height: auto !important; min-height: 297mm; overflow: visible !important; }
+            .page-flow .slip-full { height: auto !important; min-height: 277mm; max-height: none !important; overflow: visible !important; }
+            .page-flow .fullslip-card-value { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; word-break: break-word; }
+            @media print { .page.page-flow { page-break-inside: auto !important; break-inside: auto !important; } }
+            /* ★ ページの区切り: 各まとまり（見出し・お客様情報・商品・カード/立札・備考・その他の行・金額〜店舗情報）の途中では改ページしない */
+            .page-flow .fullslip-header, .page-flow .fullslip-cards, .page-flow .fullslip-clients,
+            .page-flow .fullslip-items-header, .page-flow .fullslip-items-table tr,
+            .page-flow .fullslip-card-message, .page-flow .fullslip-note,
+            .page-flow .fullslip-extra tr, .page-flow .fullslip-bottom {
+              break-inside: avoid !important; page-break-inside: avoid !important;
+            }
+            .page-flow .fullslip-extra { break-inside: avoid !important; page-break-inside: avoid !important; }
+            /* ★ 「詳細」は 1 枚目に収まらなければ丸ごと次の用紙へ（見出しと中身が別の用紙に分かれないように） */
+            .page-flow .fullslip-more { break-inside: avoid !important; page-break-inside: avoid !important; }
+            /* ★ [帳票改修 2026-10] 受注書・控えのページ構成 */
+            .fs-page .slip-full { height: 277mm; display: flex; flex-direction: column; position: relative; padding-bottom: 10mm; }
+            .fullslip-amount-row { display: flex; justify-content: flex-end; margin-top: 4mm; break-inside: avoid; }
+            .fullslip-amount-row .fullslip-amounts { width: 85mm; }
+            .fs-footer-slot { margin-top: auto; padding-top: 4mm; }
+            .fs-shop-footer { display: flex; justify-content: space-between; align-items: flex-end; gap: 6mm; }
+            .fs-shop-qr img { width: 20mm; height: 20mm; }
+            .fs-pageno { position: absolute; right: 14mm; bottom: 4mm; font-size: 10pt; font-weight: 700; color: #555; letter-spacing: 0.1em; }
+            .page.fs-overflow { height: auto !important; overflow: visible !important; }
+            .fs-overflow .slip-full { height: auto !important; min-height: 277mm; max-height: none !important; overflow: visible !important; }
+            .fullslip-more { margin-top: 5mm; padding-top: 3mm; border-top: 0.5pt dashed #bbb; }
+            .fullslip-more-title { font-size: 12pt; font-weight: 700; color: #2D4B3E; letter-spacing: 0.2em; margin-bottom: 2mm; break-after: avoid; page-break-after: avoid; }
+            .fullslip-more-title span { font-size: 9pt; font-weight: 400; color: #666; letter-spacing: 0; margin-left: 2mm; }
+            @media print { html, body { background: #fff !important; } }
+            /* ★ 受注書・控え: 用紙の余白は 0 のまま（余白があるとブラウザが日付・URL・ページ番号を印刷してしまうため）、
+                  伝票の内側の上下余白を各用紙ごとに付ける（2 枚目が用紙の端から始まらないように） */
+            @media print {
+              .page.page-flow { min-height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
+              .page-flow .slip-full {
+                min-height: 0 !important; padding-top: 10mm !important; padding-bottom: 10mm !important;
+                -webkit-box-decoration-break: clone; box-decoration-break: clone;
+              }
+            }
+            .fullslip-extra { width: 100%; border-collapse: collapse; margin-top: 3mm; font-size: 10pt; }
+            .fullslip-extra th { width: 30mm; text-align: left; vertical-align: top; color: #555; font-weight: 700; padding: 1.5mm 2mm; border-bottom: 0.5pt solid #e5e5e5; white-space: nowrap; }
+            .fullslip-extra td { padding: 1.5mm 2mm; border-bottom: 0.5pt solid #e5e5e5; color: #222; line-height: 1.5; }
           </style>
         </head>
         <body>
-          ${isEcOrder ? `
-            ${modalData.isRecipientDifferent ? `
-              <!-- EC注文（贈り物）: Page1=受注書(A4フル), Page2=お客様控(上半分)+納品書・受領書(下左右), Page3=お届け物のご案内 -->
-              <div class="page">
-                ${renderSlip({ title: '受 注 書', type: 'order_store', hidePrice: false, fullPage: true })}
-              </div>
-              <div class="page">
-                ${renderSlip({ title: 'お 客 様 控', type: 'customer', hidePrice: false })}
-                <div class="slip-half-row">
-                  ${renderSlip({ title: '納 品 書', type: 'delivery', hidePrice: true, quarter: true })}
-                  ${renderSlip({ title: '受 領 書', type: 'receipt', hidePrice: true, showReceiptNote: true, quarter: true })}
-                </div>
-                <div class="cutline"><span>切り取り線</span></div>
-              </div>
-              <div class="page">
-                ${renderEnclosedCard({ fullPage: true })}
-              </div>
-            ` : `
-              <!-- EC注文（ご依頼主=お届け先）: Page1=受注書(A4フル), Page2=お客様控(上半分)+納品書・受領書(下左右) -->
-              <div class="page">
-                ${renderSlip({ title: '受 注 書', type: 'order_store', hidePrice: false, fullPage: true })}
-              </div>
-              <div class="page">
-                ${renderSlip({ title: 'お 客 様 控', type: 'customer', hidePrice: false })}
-                <div class="slip-half-row">
-                  ${renderSlip({ title: '納 品 書', type: 'delivery', hidePrice: true, quarter: true })}
-                  ${renderSlip({ title: '受 領 書', type: 'receipt', hidePrice: true, showReceiptNote: true, quarter: true })}
-                </div>
-                <div class="cutline"><span>切り取り線</span></div>
-              </div>
-            `}
-          ` : `
-            <!-- カスタム注文: Page1=受注書(A4フル), Page2=お客様控(上半分)+納品書・受領書(下左右) -->
+          <!-- ★ [帳票改修 2026-10]
+               Page: 受注書（A4・全情報。収まらなければ次の用紙へ続く）
+               Page: 受注書控え（A4・お客様にお渡し。店頭受付＝スタッフ代理入力の注文のみ）
+               Page: 納品書（上半分）+ 受領書（下半分）。中央に切り取り線
+               Page: 贈り物のご案内（EC の贈り物のみ） -->
+          ${renderFullSlip({ title: '受 注 書' })}
+          ${modalData.isStaffEntered === true ? `
+            ${renderFullSlip({ title: '受 注 書 控', customerCopy: true })}
+          ` : ''}
+          <div class="page">
+            ${renderSlip({ title: '納 品 書', type: 'delivery', hidePrice: true })}
+            ${renderSlip({ title: '受 領 書', type: 'receipt', hidePrice: true, showReceiptNote: true })}
+            <div class="cutline"><span>切り取り線</span></div>
+          </div>
+          ${isEcOrder && modalData.isRecipientDifferent ? `
             <div class="page">
-              ${renderSlip({ title: '受 注 書', type: 'order_store', hidePrice: false, fullPage: true })}
+              ${renderEnclosedCard({ fullPage: true })}
             </div>
-            <div class="page">
-              ${renderSlip({ title: 'お 客 様 控', type: 'customer', hidePrice: false })}
-              <div class="slip-half-row">
-                ${renderSlip({ title: '納 品 書', type: 'delivery', hidePrice: true, quarter: true })}
-                ${renderSlip({ title: '受 領 書', type: 'receipt', hidePrice: true, showReceiptNote: true, quarter: true })}
-              </div>
-              <div class="cutline"><span>切り取り線</span></div>
-            </div>
-          `}
+          ` : ''}
           <script>
-            window.onload = function() { setTimeout(function() { window.print(); }, 400); };
+            // ★ [帳票改修 2026-10] 受注書・控え: 「詳細」が 1 枚目に収まれば 1 枚、収まらなければ 2 枚（1/2・2/2）にする
+            //    一番下の欄（担当者記入欄 / 店舗情報）は最後の用紙の一番下に置く
+            function layoutFullSlips() {
+              var fits = function (el) { return el.scrollHeight <= el.clientHeight + 1; };
+              document.querySelectorAll('[data-fs-role="main"]').forEach(function (mainPage) {
+                if (mainPage.getAttribute('data-fs-done')) return;
+                mainPage.setAttribute('data-fs-done', '1');
+                var g = mainPage.getAttribute('data-fs-group');
+                var detail = document.querySelector('[data-fs-group="' + g + '"][data-fs-role="detail"]');
+                if (!detail) return;
+                var mainSlip = mainPage.querySelector('.slip-full');
+                var detailSlip = detail.querySelector('.slip-full');
+                var more = detailSlip.querySelector('.fullslip-more');
+                var footer = mainSlip.querySelector('.fs-footer-slot');
+                mainSlip.querySelector('.fs-detail-anchor').appendChild(more);
+                if (fits(mainSlip)) { detail.parentNode.removeChild(detail); return; }
+                var detailNo = detailSlip.querySelector('.fs-pageno');
+                detailSlip.insertBefore(more, detailNo);
+                detailSlip.insertBefore(footer, detailNo);
+                mainSlip.querySelector('.fs-pageno').textContent = '1 / 2';
+                detailNo.textContent = '2 / 2';
+                if (!fits(detailSlip)) detail.classList.add('fs-overflow');
+              });
+            }
+            window.layoutFullSlips = layoutFullSlips;
+            window.onload = function() { try { layoutFullSlips(); } catch (e) {} setTimeout(function() { window.print(); }, 400); };
           </script>
         </body>
         </html>
