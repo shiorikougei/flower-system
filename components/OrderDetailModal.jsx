@@ -13,6 +13,7 @@ import {
 import TatefudaPreview from '@/components/TatefudaPreview';
 import { ensureOperationAllowed, getCurrentRole, getCurrentStaff } from '@/utils/staffRole';
 import { getTateOptions } from '@/utils/tateMaster';
+import { isFreeTatefuda, tatefudaRows } from '@/utils/tatefuda';
 import { getQrCodeDataUrl } from '@/utils/qrcode';
 
 // 納品書QR用: http(s) のURLだけを許可する（それ以外はQRを出さない）
@@ -488,6 +489,10 @@ export default function OrderDetailModal({
           modalData.tateInput3a ? `③-1 ${formatText(modalData.tateInput3a)}` : '',
           modalData.tateInput3b ? `③-2 ${formatText(modalData.tateInput3b)}` : '',
         ].filter(Boolean);
+        // [2026-10 B2] 自由入力の立札（会社名・送り主・ご要望）。古い形の注文は上の行のまま
+        if (isFreeTatefuda(modalData)) {
+          tateLines.splice(0, tateLines.length, ...tatefudaRows(modalData).map(([k, v]) => `${k}: ${formatText(v).replace(/\n/g, '<br/>')}`));
+        }
         const showTate = modalData.cardType === '立札' && tateLines.length > 0;
         // その他の情報（入力されているものだけ）
         const osonae = modalData.osonaeInfo || {};
@@ -703,6 +708,11 @@ export default function OrderDetailModal({
       `;
 
       const renderCardBlock = () => {
+        // [2026-10 B2] 自由入力の立札
+        if (modalData.cardType === '立札' && isFreeTatefuda(modalData)) {
+          const compactFree = (s) => formatText(s || '').split(/\n+/).filter(Boolean).join(' ・ ');
+          return `<div class="simple-card-text">${tatefudaRows(modalData).map(([, v]) => compactFree(v)).join(' / ')}</div>`;
+        }
         if (modalData.cardType === '立札' && (modalData.tatePattern || modalData.tateInput1 || modalData.tateInput2 || modalData.tateInput3)) {
           // ★ 立札に連名が含まれる場合 (\n) は ・ で繋いで1行にコンパクト化
           const compact = (s) => formatText(s || '').split(/\n+/).filter(Boolean).join(' ・ ');
@@ -1376,6 +1386,9 @@ export default function OrderDetailModal({
       tateInput1: modalData.tateInput1 || '',
       tateInput2: modalData.tateInput2 || '',
       tateInput3: modalData.tateInput3 || '',
+      tateCompany: modalData.tateCompany || '',
+      tateSender: modalData.tateSender || '',
+      tateRequest: modalData.tateRequest || '',
       receiveMethod: modalData.receiveMethod || '',
       selectedShop: modalData.selectedShop || '',
       isRecipientDifferent: !!modalData.isRecipientDifferent,
@@ -1407,6 +1420,9 @@ export default function OrderDetailModal({
         tateInput1: editForm.tateInput1,
         tateInput2: editForm.tateInput2,
         tateInput3: editForm.tateInput3,
+        tateCompany: editForm.tateCompany,
+        tateSender: editForm.tateSender,
+        tateRequest: editForm.tateRequest,
         receiveMethod: editForm.receiveMethod,
         selectedShop: editForm.selectedShop,
         isRecipientDifferent: editForm.isRecipientDifferent,
@@ -2098,7 +2114,17 @@ export default function OrderDetailModal({
                   </div>
                 )}
 
-                {modalData.cardType === '立札' && (
+                {/* [2026-10 B2] 自由入力の立札（会社名・送り主・ご要望） */}
+                {modalData.cardType === '立札' && isFreeTatefuda(modalData) && (
+                  <div className="space-y-1.5 text-[12px] bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA]">
+                    {tatefudaRows(modalData).map(([k, v]) => (
+                      <div key={k} className="flex border-b border-white pb-1 last:border-b-0"><span className="w-16 text-[#999999] font-bold shrink-0">{k}:</span><span className="font-black whitespace-pre-line">{v}</span></div>
+                    ))}
+                    <p className="text-[10px] text-[#999] pt-2">レイアウトと頭書き（御祝・御供など）はお店で決めます</p>
+                  </div>
+                )}
+
+                {modalData.cardType === '立札' && !isFreeTatefuda(modalData) && (
                   <div className="space-y-1.5 text-[12px] bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA]">
                     <span className="inline-block bg-[#2D4B3E] text-white px-2 py-0.5 rounded text-[10px] font-bold mb-2">{modalData.tatePattern}</span>
                     {modalData.tateInput1 && <div className="flex border-b border-white pb-1"><span className="w-16 text-[#999999] font-bold">内容:</span><span className="font-black">{modalData.tateInput1}</span></div>}
@@ -2415,11 +2441,20 @@ export default function OrderDetailModal({
                     <input type="text" placeholder="例: 御祝、御供" value={editForm.tatePattern} onChange={(e) => setEditForm({...editForm, tatePattern: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
                   </div>
                 </div>
+                {/* [2026-10 B2] 立札（自由入力） */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <input type="text" placeholder="立札 会社名・団体名" value={editForm.tateCompany} onChange={(e) => setEditForm({...editForm, tateCompany: e.target.value})} className="h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>
+                  <textarea placeholder="立札 送り主（連名は改行）" value={editForm.tateSender} onChange={(e) => setEditForm({...editForm, tateSender: e.target.value})} rows={2} className="px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E] resize-y"/>
+                  <textarea placeholder="立札 ご要望" value={editForm.tateRequest} onChange={(e) => setEditForm({...editForm, tateRequest: e.target.value})} rows={2} className="px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E] resize-y"/>
+                </div>
+                {/* 古い形（パターン選択）の立札が入っている注文だけ、元の入力欄も出す */}
+                {(modalData.tateInput1 || modalData.tateInput2 || modalData.tateInput3) && (
                 <div className="grid grid-cols-3 gap-2">
                   <input type="text" placeholder="立札 1行目" value={editForm.tateInput1} onChange={(e) => setEditForm({...editForm, tateInput1: e.target.value})} className="h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>
                   <input type="text" placeholder="立札 2行目" value={editForm.tateInput2} onChange={(e) => setEditForm({...editForm, tateInput2: e.target.value})} className="h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>
                   <textarea placeholder="立札 3行目（連名はEnter改行）" value={editForm.tateInput3} onChange={(e) => setEditForm({...editForm, tateInput3: e.target.value})} rows={2} className="px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E] resize-y"/>
                 </div>
+                )}
                 <div>
                   <label className="text-[11px] font-bold text-[#555] block mb-1">メッセージカード本文</label>
                   <textarea value={editForm.cardMessage} onChange={(e) => setEditForm({...editForm, cardMessage: e.target.value})} rows={3} className="w-full px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>

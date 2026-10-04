@@ -8,6 +8,7 @@ import OrderDetailModal from '@/components/OrderDetailModal';
 import { logAction } from '@/utils/auditLog';
 import HelpTooltip from '@/components/HelpTooltip';
 import { ensureOperationAllowed } from '@/utils/staffRole';
+import { tatefudaText } from '@/utils/tatefuda';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -487,8 +488,8 @@ export default function OrdersPage() {
                       if (vibe) chips.push({ icon: '', label: 'イメージ', value: vibe, bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-900' });
 
                       // 立札・カード
-                      const tateText = [d.tatePattern, d.tateInput1, d.tateInput2, d.tateInput3]
-                        .filter(Boolean).join(' / ');
+                      // [2026-10 B2] 自由入力（会社名・送り主・ご要望）と古い形の両方に対応
+                      const tateText = tatefudaText(d);
                       if (d.cardType === '立札' && tateText) {
                         chips.push({ icon: '', label: '立札', value: tateText, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-900' });
                       } else if (d.cardType === 'メッセージカード' && d.cardMessage) {
