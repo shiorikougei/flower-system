@@ -1679,7 +1679,11 @@ export default function OrderDetailModal({
                 const completionInfo = detectCompletionTrigger(updateForm.status);
                 const customerEmail = modalData.customerInfo?.email;
 
-                if (completionInfo && customerEmail) {
+                // ★ [2026-10 B5] 店頭お渡し完了は確認を出さず、更新できたら全員に自動送信（下の更新処理のあと）
+                const prevStatus = modalData.currentStatus || modalData.status || '';
+                const autoPickupMail = completionInfo?.trigger === 'status_pickup_done' && !!customerEmail && prevStatus !== updateForm.status;
+
+                if (completionInfo && customerEmail && completionInfo.trigger !== 'status_pickup_done') {
                   // ★ 発送完了の場合は佐川追跡番号を入力できる
                   let trackingNo = '';
                   if (completionInfo.trigger === 'status_shipping_done') {
@@ -1736,7 +1740,24 @@ export default function OrderDetailModal({
 
                 const ok = await onUpdateStatus(order.id, updateForm.status, autoStaff);
                 if (ok !== false) {
-                  setStatusSavedMsg(`「${updateForm.status === 'new' ? '未対応' : updateForm.status}」に更新しました`);
+                  let mailNote = '';
+                  if (autoPickupMail) {
+                    try {
+                      const { supabase } = await import('@/utils/supabase');
+                      const { data: { session } } = await supabase.auth.getSession();
+                      const res = await fetch('/api/staff/send-template-email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+                        body: JSON.stringify({ orderId: order.id, triggerId: 'status_pickup_done' }),
+                      });
+                      const result = await res.json().catch(() => ({}));
+                      mailNote = res.ok ? '（お渡し完了メールを送信しました）' : '';
+                      if (!res.ok) alert('お渡し完了メールを送れませんでした: ' + (result.error || '不明なエラー'));
+                    } catch (e) {
+                      alert('お渡し完了メールを送れませんでした: ' + e.message);
+                    }
+                  }
+                  setStatusSavedMsg(`「${updateForm.status === 'new' ? '未対応' : updateForm.status}」に更新しました${mailNote}`);
                   setTimeout(() => setStatusSavedMsg(''), 4000);
                 }
               }} className="h-10 px-4 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-xl hover:bg-[#1f352b] transition-all shadow-sm">
