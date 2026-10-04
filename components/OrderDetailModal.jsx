@@ -111,7 +111,7 @@ export default function OrderDetailModal({
         });
         if (!res.ok) throw new Error(`status ${res.status}`);
         const data = await res.json();
-        if (!cancelled) setEstimateCheck({ state: 'done', expectedTotal: data.expectedTotal, repliedAt: data.repliedAt || null });
+        if (!cancelled) setEstimateCheck({ state: 'done', expectedTotal: data.expectedTotal, repliedAt: data.repliedAt || null, requestContent: data.requestContent || '', replyMessage: data.replyMessage || '' });
       } catch (e) {
         console.warn('[OrderDetailModal] 見積金額の取得に失敗:', e?.message);
         if (!cancelled) setEstimateCheck({ state: 'error' });
@@ -526,7 +526,16 @@ export default function OrderDetailModal({
                     </div>
                   ` : ''}
         `;
+        // ★ [A12] 見積から作られた注文: 見積のやり取り（お客様のご依頼・お店の回答）を受注書に載せる（受注書控えには出さない）
+        const estimateExchangeHtml = (modalData.fromEstimate && !customerCopy && (estimateCheck?.requestContent || estimateCheck?.replyMessage)) ? `
+          <div class="fullslip-note fs-estimate-exchange">
+            <div class="fullslip-note-label">【見積のやり取り】${estimateCheck?.repliedAt ? `（回答日 ${new Date(estimateCheck.repliedAt).toLocaleDateString('ja-JP')}）` : ''}</div>
+            ${estimateCheck?.requestContent ? `<div class="fs-ex-head">お客様のご依頼</div><div class="fullslip-note-text">${formatText(estimateCheck.requestContent)}</div>` : ''}
+            ${estimateCheck?.replyMessage ? `<div class="fs-ex-head">お店の回答</div><div class="fullslip-note-text">${formatText(estimateCheck.replyMessage)}</div>` : ''}
+          </div>
+        ` : '';
         const moreBlocksHtml = `
+                  ${estimateExchangeHtml}
                   ${purposeNote ? `
                     <div class="fullslip-note ${sizeCls}" style="background:#eff6ff; border-left-color:#3b82f6;">
                       <div class="fullslip-note-label" style="color:#1e40af;">【お客様からの補足・備考】</div>
@@ -1073,6 +1082,9 @@ export default function OrderDetailModal({
             .fullslip-staff-cell { display: flex; flex-direction: column; }
             .fullslip-staff-cell-label { font-size: 8pt; color: #666; font-weight: 500; text-align: center; margin-bottom: 1mm; }
             .fullslip-staff-done { position: absolute; top: 1mm; right: 1.5mm; width: 7mm; height: 7mm; border: 1pt solid #117768; color: #117768; border-radius: 50%; font-size: 9pt; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+            .fs-estimate-exchange { background: #fff7f2; border-left-color: #D97D54; }
+            .fs-estimate-exchange .fullslip-note-label { color: #D97D54; }
+            .fs-ex-head { font-size: 9pt; font-weight: 700; color: #555; margin-top: 2mm; }
             .fs-estimate-badge { display: inline-block; margin-bottom: 1.5mm; padding: 0.5mm 2.5mm; border: 1pt solid #D97D54; color: #D97D54; border-radius: 1mm; font-size: 9.5pt; font-weight: 700; }
             .fullslip-staff-cell-name { position: relative; border: 0.5pt solid #999; height: 12mm; background: #fff; border-radius: 1mm; display: flex; align-items: center; justify-content: center; font-size: 10pt; font-weight: 700; color: #222; }
 
