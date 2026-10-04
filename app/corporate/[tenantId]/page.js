@@ -5,9 +5,10 @@ import { supabase } from '@/utils/supabase';
 import { 
   Building2, Calendar, ShoppingBag, FileText, 
   ChevronRight, Plus, CreditCard, LogOut, Gift, ArrowRight, Download, Package,
-  MapPin, Truck, Store, MessageSquare, AlertCircle, Trash2, RefreshCw, Zap, Repeat, Settings, X
+  MapPin, Truck, Store, MessageSquare, AlertCircle, Trash2, RefreshCw, Zap, Repeat, Settings, X, ListChecks, Tag
 } from 'lucide-react';
 import Link from 'next/link';
+import { isFreeTatefuda, tatefudaRows } from '@/utils/tatefuda';
 
 export default function CorporateDashboardPage() {
   const router = useRouter();
@@ -593,7 +594,15 @@ export default function CorporateDashboardPage() {
                       {modalData.cardMessage}
                     </div>
                   )}
-                  {modalData.cardType === '立札' && (
+                  {/* [2026-10 B2] 自由入力の立札（会社名・送り主・ご要望） */}
+                  {modalData.cardType === '立札' && isFreeTatefuda(modalData) && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[13px] bg-[#FBFAF9] p-6 rounded-2xl border border-[#EAEAEA]">
+                      {tatefudaRows(modalData).map(([k, v]) => (
+                        <p key={k}><span className="text-[#999999] text-[10px] block tracking-widest mb-0.5">{k}</span><span className="font-black text-[15px] whitespace-pre-line">{v}</span></p>
+                      ))}
+                    </div>
+                  )}
+                  {modalData.cardType === '立札' && !isFreeTatefuda(modalData) && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[13px] bg-[#FBFAF9] p-6 rounded-2xl border border-[#EAEAEA]">
                       {modalData.tateInput1 && <p><span className="text-[#999999] text-[10px] block tracking-widest mb-0.5">① 内容</span><span className="font-black text-[15px]">{modalData.tateInput1}</span></p>}
                       {modalData.tateInput2 && <p><span className="text-[#999999] text-[10px] block tracking-widest mb-0.5">② 宛名</span><span className="font-black text-[15px]">{modalData.tateInput2} 様</span></p>}

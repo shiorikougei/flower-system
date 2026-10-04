@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import FeatureGate from '@/components/FeatureGate';
 import HelpTooltip from '@/components/HelpTooltip';
+import { tatefudaText } from '@/utils/tatefuda';
 
 export default function CustomersPage() {
   return (
@@ -703,7 +704,7 @@ function CustomersPageContent() {
                             <div className="space-y-1 sm:border-l sm:border-[#EAEAEA] sm:pl-4">
                               <p><span className="text-[#999] text-[10px] mr-2">お届け先</span> <span className="font-bold text-[#333]">{d.isRecipientDifferent ? `${d.recipientInfo?.name} 様` : 'ご自宅/ご本人'}</span></p>
                               {d.cardType && d.cardType !== 'なし' && (
-                                <p className="mt-2"><span className="inline-block bg-red-50 text-red-600 px-1.5 py-0.5 rounded text-[9px] font-bold mr-1">{d.cardType}</span> <span className="font-bold text-[#333] truncate inline-block align-bottom max-w-[120px]">{d.cardType === '立札' ? d.tateInput1 : d.cardMessage}</span></p>
+                                <p className="mt-2"><span className="inline-block bg-red-50 text-red-600 px-1.5 py-0.5 rounded text-[9px] font-bold mr-1">{d.cardType}</span> <span className="font-bold text-[#333] truncate inline-block align-bottom max-w-[120px]">{d.cardType === '立札' ? tatefudaText(d) : d.cardMessage}</span></p>
                               )}
                             </div>
                           </div>

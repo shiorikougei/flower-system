@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
 import { CheckCircle2, AlertCircle, ChevronLeft, CreditCard, Banknote, Clock, Calendar, Lightbulb, FileText, ClipboardList, Mail, Send } from 'lucide-react';
-import TatefudaPreview from '@/components/TatefudaPreview';
+import TatefudaFreeInput from '@/components/TatefudaFreeInput';
 
 export default function EstimateAcceptPage() {
   const params = useParams();
@@ -43,6 +43,10 @@ export default function EstimateAcceptPage() {
     tateInput3: '',
     tateInput3a: '',
     tateInput3b: '',
+    // [2026-10 B2] 立札は自由入力（会社名・送り主・ご要望）
+    tateCompany: '',
+    tateSender: '',
+    tateRequest: '',
     // お供え
     osonaeInfo: {
       deceasedName: '', mournerName: '', sponsorNames: '', venueName: '', ceremonyTime: '',
@@ -98,17 +102,7 @@ export default function EstimateAcceptPage() {
   const selectedPrice = Number(selectedVersion?.proposed_price) || 0;
   const isOsonae = rd.purpose?.includes('供') || rd.purpose?.includes('悔') || rd.purpose === 'お供え・お悔やみ';
   const needsTatefuda = rd.cardType === 'tatefuda';
-  const tatePatterns = isOsonae ? [
-    { id: 'p1', label: '① 御供｜横型 (背景あり)', needs: ['3'], layout: 'horizontal' },
-    { id: 'p3', label: '② 御供｜縦型 (シンプル)', needs: ['3'], layout: 'vertical' },
-    { id: 'p4', label: '③ 御供｜縦型 (会社名入)', needs: ['3a', '3b'], layout: 'vertical' },
-  ] : [
-    { id: 'p5', label: '⑤ 祝｜横型 (スタンダード)', needs: ['1', '3'], layout: 'horizontal' },
-    { id: 'p6', label: '⑥ 祝｜横型 (様へ構成)', needs: ['1', '2', '3'], layout: 'horizontal' },
-    { id: 'p7', label: '⑦ 祝｜縦型 (二列構成)', needs: ['1', '3'], layout: 'vertical' },
-    { id: 'p8', label: '⑧ 祝｜縦型 (三列完成版)', needs: ['1', '2', '3'], layout: 'vertical' },
-  ];
-  const selectedPattern = tatePatterns.find(p => p.id === orderForm.tatePattern);
+  // [2026-10 B2] 立札のレイアウト（横型・縦型など）と頭書きはお店が決める
 
   // ★ 自社配達の場合は事前連絡同意が必要
   const isDelivery = rd.deliveryMethod === 'delivery' && pd.selfDeliveryAccepted === 'yes';
@@ -122,15 +116,7 @@ export default function EstimateAcceptPage() {
     if (!orderForm.customerZip || orderForm.customerZip.length !== 7) { setError('郵便番号 (7桁) を入力してください'); return; }
     if (!orderForm.customerAddress1 || !orderForm.customerAddress2) { setError('ご住所をすべて入力してください'); return; }
     if (orderForm.paymentMethod === 'bank_transfer' && !orderForm.paymentScheduledDate) { setError('ご入金予定日を選択してください'); return; }
-    if (needsTatefuda && !orderForm.tatePattern) { setError('立札のレイアウトを選択してください'); return; }
-    if (needsTatefuda && selectedPattern) {
-      const needs = selectedPattern.needs;
-      if (needs.includes('1') && !orderForm.tateInput1) { setError('立札①の内容を入力してください'); return; }
-      if (needs.includes('2') && !orderForm.tateInput2) { setError('立札②の宛名を入力してください'); return; }
-      if (needs.includes('3') && !orderForm.tateInput3) { setError('立札③の贈り主を入力してください'); return; }
-      if (needs.includes('3a') && !orderForm.tateInput3a) { setError('立札③-1の会社名を入力してください'); return; }
-      if (needs.includes('3b') && !orderForm.tateInput3b) { setError('立札③-2の役職・氏名を入力してください'); return; }
-    }
+    if (needsTatefuda && !orderForm.tateSender.trim()) { setError('立札の送り主のお名前を入力してください'); return; }
     if (isOsonae && (!orderForm.osonaeInfo.deceasedName || !orderForm.osonaeInfo.venueName)) {
       setError('お供え花の詳細情報 (故人さま名・斎場名) を入力してください'); return;
     }
@@ -176,12 +162,10 @@ export default function EstimateAcceptPage() {
         // ★ 立札情報
         cardType: rd.cardType === 'message' ? 'メッセージカード' : (needsTatefuda ? '立札' : 'なし'),
         cardMessage: rd.cardType === 'message' ? (rd.cardContent || '') : '',
-        tatePattern: needsTatefuda ? orderForm.tatePattern : '',
-        tateInput1: orderForm.tateInput1,
-        tateInput2: orderForm.tateInput2,
-        tateInput3: orderForm.tateInput3,
-        tateInput3a: orderForm.tateInput3a,
-        tateInput3b: orderForm.tateInput3b,
+        tatePattern: '',
+        tateCompany: needsTatefuda ? orderForm.tateCompany.trim() : '',
+        tateSender: needsTatefuda ? orderForm.tateSender.trim() : '',
+        tateRequest: needsTatefuda ? orderForm.tateRequest.trim() : '',
         selectedDate: rd.desiredDate || '',
         selectedTime: rd.desiredTime || '',
         priorContactAgreed: isDelivery ? orderForm.priorContactAgreed : null,
@@ -589,48 +573,14 @@ export default function EstimateAcceptPage() {
         {/* ★ 立札詳細 (cardType=tatefuda の場合) */}
         {needsTatefuda && (
           <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-4">
-            <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-1"><ClipboardList size={13}/> 立札の詳細</p>
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-[#555]">レイアウト <span className="text-red-500">*</span></label>
-              <select value={orderForm.tatePattern}
-                onChange={e => setOrderForm({...orderForm, tatePattern: e.target.value})}
-                className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] font-bold outline-none focus:border-[#2D4B3E]">
-                <option value="">レイアウトを選択</option>
-                {tatePatterns.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-              </select>
-            </div>
-            {selectedPattern && (
-              <div className="space-y-2">
-                {selectedPattern.needs.includes('1') && <input type="text" placeholder={`① 内容 (例: ${isOsonae ? '御供' : '御開店'})`} value={orderForm.tateInput1} onChange={e => setOrderForm({...orderForm, tateInput1: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>}
-                {selectedPattern.needs.includes('2') && <input type="text" placeholder="② 宛名 (例: 〇〇様)" value={orderForm.tateInput2} onChange={e => setOrderForm({...orderForm, tateInput2: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>}
-                {selectedPattern.needs.includes('3') && (
-                  <div className="space-y-1">
-                    <textarea placeholder={"③ 贈り主 (例: 株式会社〇〇)\n※連名はEnterで改行"} value={orderForm.tateInput3} onChange={e => setOrderForm({...orderForm, tateInput3: e.target.value})} rows={2} className="w-full px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E] resize-y"/>
-                    <p className="text-[10px] text-[#999] pl-1 flex items-center gap-1"><Lightbulb size={10}/> 連名: Enterで改行</p>
-                  </div>
-                )}
-                {selectedPattern.needs.includes('3a') && <input type="text" placeholder="③-1 会社名" value={orderForm.tateInput3a} onChange={e => setOrderForm({...orderForm, tateInput3a: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>}
-                {selectedPattern.needs.includes('3b') && (
-                  <div className="space-y-1">
-                    <textarea placeholder={"③-2 役職・氏名\n※連名はEnterで改行"} value={orderForm.tateInput3b} onChange={e => setOrderForm({...orderForm, tateInput3b: e.target.value})} rows={2} className="w-full px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E] resize-y"/>
-                    <p className="text-[10px] text-[#999] pl-1 flex items-center gap-1"><Lightbulb size={10}/> 連名: Enterで改行</p>
-                  </div>
-                )}
-
-                {/* ★ 仕上がりプレビュー */}
-                <p className="text-[10px] font-bold text-[#999] text-center pt-3 mb-1">仕上がりプレビュー</p>
-                <TatefudaPreview
-                  tatePattern={orderForm.tatePattern}
-                  layout={selectedPattern.layout}
-                  isOsonae={isOsonae}
-                  input1={orderForm.tateInput1}
-                  input2={orderForm.tateInput2}
-                  input3={orderForm.tateInput3}
-                  input3a={orderForm.tateInput3a}
-                  input3b={orderForm.tateInput3b}
-                />
-              </div>
+            <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-1"><ClipboardList size={13}/> 立札の内容</p>
+            {rd.cardContent && (
+              <p className="text-[11px] text-[#555] bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-3 whitespace-pre-wrap">ご依頼時の内容: {rd.cardContent}</p>
             )}
+            <TatefudaFreeInput compact
+              company={orderForm.tateCompany} sender={orderForm.tateSender} request={orderForm.tateRequest}
+              onChange={(k, val) => setOrderForm(f => ({ ...f, [k]: val }))}
+            />
           </div>
         )}
 
