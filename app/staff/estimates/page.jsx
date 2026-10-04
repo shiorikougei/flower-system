@@ -296,13 +296,18 @@ export default function EstimatesPage() {
     try {
       // ★ [セキュリティ] /api/estimates PATCH (reject) は認証必須化済み
       const { data: { session } } = await supabase.auth.getSession();
-      await fetch('/api/estimates', {
+      if (!session) { alert('ログインの有効期限が切れています。ページを再読み込みして、もう一度ログインしてください。'); return; }
+      const res = await fetch('/api/estimates', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ id, action: 'reject' }),
       });
+      // ★ [BUGFIX] 失敗しても何も表示されず「却下できない」状態に見えていたため、結果を確認して表示する
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || '却下に失敗しました');
       loadEstimates();
-    } catch (e) { alert(e.message); }
+      alert('見積依頼を却下しました');
+    } catch (e) { alert('エラー: ' + e.message); }
   }
 
   async function handleDelete(id, est) {
@@ -313,8 +318,12 @@ export default function EstimatesPage() {
     }
     if (!confirm(confirmMsg)) return;
     try {
+      // ★ [BUGFIX] DELETE は認証必須のため、ログイン情報を付けて送る（付けていなかったため常に失敗していた）
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { alert('ログインの有効期限が切れています。ページを再読み込みして、もう一度ログインしてください。'); return; }
       const res = await fetch(`/api/estimates?id=${encodeURIComponent(id)}`, {
         method: 'DELETE',
+        headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || '削除に失敗しました');
