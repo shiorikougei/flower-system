@@ -467,6 +467,74 @@ export default function OrderDetailModal({
         const taxP = Math.floor(subT * 0.1);
         const totalP = subT + taxP;
 
+        // ★ [帳票改修 2026-10] カード・立札は 1 枚目（商品の下）、備考・社内メモ・その他は金額欄の後ろにまとめる
+        // ★ 文字数に応じて自動でフォントサイズを調整（下はみ出し防止）
+        //    合計文字数 = メッセージカード + 社内メモ + お客様備考
+        const cardText = modalData.cardMessage || '';
+        const noteText = modalData.note || '';
+        const purposeNote = modalData.purposeNote || '';
+        // ★ [帳票改修 2026-10] 用紙が足りなければ次の用紙に続くため、文字は縮小しない（老眼でも読める大きさを維持）
+        const sizeCls = '';
+        // 立札（パターン + 入力内容をすべて）
+        const tateLines = [
+          modalData.tatePattern ? `パターン: ${formatText(modalData.tatePattern)}` : '',
+          modalData.tateInput1 ? `① ${formatText(modalData.tateInput1)}` : '',
+          modalData.tateInput2 ? `② ${formatText(modalData.tateInput2)}` : '',
+          modalData.tateInput3 ? `③ ${formatText(modalData.tateInput3)}` : '',
+          modalData.tateInput3a ? `③-1 ${formatText(modalData.tateInput3a)}` : '',
+          modalData.tateInput3b ? `③-2 ${formatText(modalData.tateInput3b)}` : '',
+        ].filter(Boolean);
+        const showTate = modalData.cardType === '立札' && tateLines.length > 0;
+        // その他の情報（入力されているものだけ）
+        const osonae = modalData.osonaeInfo || {};
+        const extraRows = [
+          modalData.fromEstimate ? ['見積もり', '見積もり依頼からのご注文'] : null,
+          (modalData.otherPurpose || modalData.otherColor || modalData.otherVibe)
+            ? ['ご要望の詳細', [modalData.otherPurpose && `用途: ${formatText(modalData.otherPurpose)}`, modalData.otherColor && `色: ${formatText(modalData.otherColor)}`, modalData.otherVibe && `イメージ: ${formatText(modalData.otherVibe)}`].filter(Boolean).join(' / ')] : null,
+          osonae.deceasedName ? ['故人様', formatText(osonae.deceasedName)] : null,
+          osonae.mournerName ? ['喪主様', formatText(osonae.mournerName)] : null,
+          osonae.sponsorNames ? ['ご芳名', formatText(osonae.sponsorNames)] : null,
+          osonae.venueName ? ['斎場・会場', formatText(osonae.venueName)] : null,
+          osonae.ceremonyTime ? ['通夜・告別式', formatText(osonae.ceremonyTime)] : null,
+          modalData.shippingDate ? ['発送日', formatText(modalData.shippingDate)] : null,
+          modalData.isBring === 'bring' ? ['持ち込み', 'お客様からのお花・器の持ち込みあり'] : null,
+          modalData.receiveMethod === 'delivery' && modalData.absenceAction ? ['不在時の対応', `${formatText(modalData.absenceAction)}${modalData.absenceNote ? `（${formatText(modalData.absenceNote)}）` : ''}`] : null,
+          modalData.receiveMethod === 'delivery' && modalData.isRecipientDifferent ? ['事前連絡', modalData.priorContactAgreed ? 'お届け先への事前連絡に同意あり' : '同意なし'] : null,
+          modalData.referenceImage ? ['参考画像', 'あり（画面で確認）'] : null,
+        ].filter(Boolean);
+        const cardBlocksHtml = `
+                  ${showTate ? `
+                    <div class="fullslip-card-message">
+                      <div class="fullslip-card-message-label">【立札】</div>
+                      <div class="fullslip-card-message-text">${tateLines.join('<br/>')}</div>
+                    </div>
+                  ` : ''}
+                  ${cardText ? `
+                    <div class="fullslip-card-message ${sizeCls}">
+                      <div class="fullslip-card-message-label">【メッセージカード】</div>
+                      <div class="fullslip-card-message-text">${formatText(cardText)}</div>
+                    </div>
+                  ` : ''}
+        `;
+        const moreBlocksHtml = `
+                  ${purposeNote ? `
+                    <div class="fullslip-note ${sizeCls}" style="background:#eff6ff; border-left-color:#3b82f6;">
+                      <div class="fullslip-note-label" style="color:#1e40af;">【お客様からの補足・備考】</div>
+                      <div class="fullslip-note-text">${formatText(purposeNote)}</div>
+                    </div>
+                  ` : ''}
+                  ${noteText && !customerCopy ? `
+                    <div class="fullslip-note ${sizeCls}">
+                      <div class="fullslip-note-label">【社内メモ】</div>
+                      <div class="fullslip-note-text">${formatText(noteText)}</div>
+                    </div>
+                  ` : ''}
+                  ${extraRows.length > 0 ? `
+                    <table class="fullslip-extra">
+                      ${extraRows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('')}
+                    </table>
+                  ` : ''}
+        `;
         return `
           <div class="slip-full fullslip">
             <!-- タイトル + 伝票情報 -->
@@ -536,75 +604,11 @@ export default function OrderDetailModal({
                   ${itemsHtml}
                 </tbody>
               </table>
-              ${(() => {
-                // ★ 文字数に応じて自動でフォントサイズを調整（下はみ出し防止）
-                //    合計文字数 = メッセージカード + 社内メモ + お客様備考
-                const cardText = modalData.cardMessage || '';
-                const noteText = modalData.note || '';
-                const purposeNote = modalData.purposeNote || '';
-                // ★ [帳票改修 2026-10] 用紙が足りなければ次の用紙に続くため、文字は縮小しない（老眼でも読める大きさを維持）
-                const sizeCls = '';
-                // 立札（パターン + 入力内容をすべて）
-                const tateLines = [
-                  modalData.tatePattern ? `パターン: ${formatText(modalData.tatePattern)}` : '',
-                  modalData.tateInput1 ? `① ${formatText(modalData.tateInput1)}` : '',
-                  modalData.tateInput2 ? `② ${formatText(modalData.tateInput2)}` : '',
-                  modalData.tateInput3 ? `③ ${formatText(modalData.tateInput3)}` : '',
-                  modalData.tateInput3a ? `③-1 ${formatText(modalData.tateInput3a)}` : '',
-                  modalData.tateInput3b ? `③-2 ${formatText(modalData.tateInput3b)}` : '',
-                ].filter(Boolean);
-                const showTate = modalData.cardType === '立札' && tateLines.length > 0;
-                // その他の情報（入力されているものだけ）
-                const osonae = modalData.osonaeInfo || {};
-                const extraRows = [
-                  modalData.fromEstimate ? ['見積もり', '見積もり依頼からのご注文'] : null,
-                  (modalData.otherPurpose || modalData.otherColor || modalData.otherVibe)
-                    ? ['ご要望の詳細', [modalData.otherPurpose && `用途: ${formatText(modalData.otherPurpose)}`, modalData.otherColor && `色: ${formatText(modalData.otherColor)}`, modalData.otherVibe && `イメージ: ${formatText(modalData.otherVibe)}`].filter(Boolean).join(' / ')] : null,
-                  osonae.deceasedName ? ['故人様', formatText(osonae.deceasedName)] : null,
-                  osonae.mournerName ? ['喪主様', formatText(osonae.mournerName)] : null,
-                  osonae.sponsorNames ? ['ご芳名', formatText(osonae.sponsorNames)] : null,
-                  osonae.venueName ? ['斎場・会場', formatText(osonae.venueName)] : null,
-                  osonae.ceremonyTime ? ['通夜・告別式', formatText(osonae.ceremonyTime)] : null,
-                  modalData.shippingDate ? ['発送日', formatText(modalData.shippingDate)] : null,
-                  modalData.isBring === 'bring' ? ['持ち込み', 'お客様からのお花・器の持ち込みあり'] : null,
-                  modalData.receiveMethod === 'delivery' && modalData.absenceAction ? ['不在時の対応', `${formatText(modalData.absenceAction)}${modalData.absenceNote ? `（${formatText(modalData.absenceNote)}）` : ''}`] : null,
-                  modalData.receiveMethod === 'delivery' && modalData.isRecipientDifferent ? ['事前連絡', modalData.priorContactAgreed ? 'お届け先への事前連絡に同意あり' : '同意なし'] : null,
-                  modalData.referenceImage ? ['参考画像', 'あり（画面で確認）'] : null,
-                ].filter(Boolean);
-                return `
-                  ${showTate ? `
-                    <div class="fullslip-card-message">
-                      <div class="fullslip-card-message-label">【立札】</div>
-                      <div class="fullslip-card-message-text">${tateLines.join('<br/>')}</div>
-                    </div>
-                  ` : ''}
-                  ${cardText ? `
-                    <div class="fullslip-card-message ${sizeCls}">
-                      <div class="fullslip-card-message-label">【メッセージカード】</div>
-                      <div class="fullslip-card-message-text">${formatText(cardText)}</div>
-                    </div>
-                  ` : ''}
-                  ${purposeNote ? `
-                    <div class="fullslip-note ${sizeCls}" style="background:#eff6ff; border-left-color:#3b82f6;">
-                      <div class="fullslip-note-label" style="color:#1e40af;">【お客様からの補足・備考】</div>
-                      <div class="fullslip-note-text">${formatText(purposeNote)}</div>
-                    </div>
-                  ` : ''}
-                  ${noteText && !customerCopy ? `
-                    <div class="fullslip-note ${sizeCls}">
-                      <div class="fullslip-note-label">【社内メモ】</div>
-                      <div class="fullslip-note-text">${formatText(noteText)}</div>
-                    </div>
-                  ` : ''}
-                  ${extraRows.length > 0 ? `
-                    <table class="fullslip-extra">
-                      ${extraRows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('')}
-                    </table>
-                  ` : ''}
-                `;
-              })()}
+              ${cardBlocksHtml}
             </div>
 
+            <!-- ★ [帳票改修 2026-10] 金額表・担当者記入欄・店舗情報はひとまとまりにして、ページの途中で分かれないようにする -->
+            <div class="fullslip-bottom">
             <!-- 金額表 + 担当者記入欄（左右並列） -->
             <div class="fullslip-summary-row">
               <!-- 左：ステータスごとの担当者記入欄（受注書控えには出さない） -->
@@ -640,6 +644,13 @@ export default function OrderDetailModal({
                 </div>
               </div>
             </div>
+            </div>
+            ${moreBlocksHtml.trim() ? `
+              <div class="fullslip-more">
+                <div class="fullslip-more-title">詳細　<span>伝票：${safeId}　${formatText(customer.name)} 様</span></div>
+                ${moreBlocksHtml}
+              </div>
+            ` : ''}
           </div>
         `;
       };
@@ -1126,6 +1137,24 @@ export default function OrderDetailModal({
             .page-flow .slip-full { height: auto !important; min-height: 277mm; max-height: none !important; overflow: visible !important; }
             .page-flow .fullslip-card-value { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; word-break: break-word; }
             @media print { .page.page-flow { page-break-inside: auto !important; break-inside: auto !important; } }
+            /* ★ ページの区切り: 各まとまり（見出し・お客様情報・商品・カード/立札・備考・その他の行・金額〜店舗情報）の途中では改ページしない */
+            .page-flow .fullslip-header, .page-flow .fullslip-cards, .page-flow .fullslip-clients,
+            .page-flow .fullslip-items-header, .page-flow .fullslip-items-table tr,
+            .page-flow .fullslip-card-message, .page-flow .fullslip-note,
+            .page-flow .fullslip-extra tr, .page-flow .fullslip-bottom {
+              break-inside: avoid !important; page-break-inside: avoid !important;
+            }
+            .page-flow .fullslip-extra { break-inside: avoid !important; page-break-inside: avoid !important; }
+            .fullslip-more { margin-top: 5mm; padding-top: 3mm; border-top: 0.5pt dashed #bbb; }
+            .fullslip-more-title { font-size: 12pt; font-weight: 700; color: #2D4B3E; letter-spacing: 0.2em; margin-bottom: 2mm; break-after: avoid; page-break-after: avoid; }
+            .fullslip-more-title span { font-size: 9pt; font-weight: 400; color: #666; letter-spacing: 0; margin-left: 2mm; }
+            @media print { html, body { background: #fff !important; } }
+            /* ★ 受注書・控えは用紙の上下に余白を取る（2 枚目が用紙の端から始まらないように） */
+            @page flowpage { size: A4 portrait; margin: 10mm 0 10mm 0; }
+            @media print {
+              .page.page-flow { page: flowpage; min-height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
+              .page-flow .slip-full { min-height: 0 !important; }
+            }
             .fullslip-extra { width: 100%; border-collapse: collapse; margin-top: 3mm; font-size: 10pt; }
             .fullslip-extra th { width: 30mm; text-align: left; vertical-align: top; color: #555; font-weight: 700; padding: 1.5mm 2mm; border-bottom: 0.5pt solid #e5e5e5; white-space: nowrap; }
             .fullslip-extra td { padding: 1.5mm 2mm; border-bottom: 0.5pt solid #e5e5e5; color: #222; line-height: 1.5; }
