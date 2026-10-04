@@ -1145,15 +1145,20 @@ export default function OrderDetailModal({
               break-inside: avoid !important; page-break-inside: avoid !important;
             }
             .page-flow .fullslip-extra { break-inside: avoid !important; page-break-inside: avoid !important; }
+            /* ★ 「詳細」は 1 枚目に収まらなければ丸ごと次の用紙へ（見出しと中身が別の用紙に分かれないように） */
+            .page-flow .fullslip-more { break-inside: avoid !important; page-break-inside: avoid !important; }
             .fullslip-more { margin-top: 5mm; padding-top: 3mm; border-top: 0.5pt dashed #bbb; }
             .fullslip-more-title { font-size: 12pt; font-weight: 700; color: #2D4B3E; letter-spacing: 0.2em; margin-bottom: 2mm; break-after: avoid; page-break-after: avoid; }
             .fullslip-more-title span { font-size: 9pt; font-weight: 400; color: #666; letter-spacing: 0; margin-left: 2mm; }
             @media print { html, body { background: #fff !important; } }
-            /* ★ 受注書・控えは用紙の上下に余白を取る（2 枚目が用紙の端から始まらないように） */
-            @page flowpage { size: A4 portrait; margin: 10mm 0 10mm 0; }
+            /* ★ 受注書・控え: 用紙の余白は 0 のまま（余白があるとブラウザが日付・URL・ページ番号を印刷してしまうため）、
+                  伝票の内側の上下余白を各用紙ごとに付ける（2 枚目が用紙の端から始まらないように） */
             @media print {
-              .page.page-flow { page: flowpage; min-height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
-              .page-flow .slip-full { min-height: 0 !important; }
+              .page.page-flow { min-height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
+              .page-flow .slip-full {
+                min-height: 0 !important; padding-top: 10mm !important; padding-bottom: 10mm !important;
+                -webkit-box-decoration-break: clone; box-decoration-break: clone;
+              }
             }
             .fullslip-extra { width: 100%; border-collapse: collapse; margin-top: 3mm; font-size: 10pt; }
             .fullslip-extra th { width: 30mm; text-align: left; vertical-align: top; color: #555; font-weight: 700; padding: 1.5mm 2mm; border-bottom: 0.5pt solid #e5e5e5; white-space: nowrap; }
