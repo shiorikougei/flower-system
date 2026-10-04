@@ -42,3 +42,7 @@ next-env.d.ts
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Next.js 16.3 以降の next dev が自動生成するエージェント向けファイル（リポジトリでは管理しない）
+/AGENTS.md
+/CLAUDE.md
