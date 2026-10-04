@@ -8,7 +8,7 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { sendEmail, noReplyFooter } from '@/utils/email';
+import { sendEmail, noReplyFooter, shopContactEmail } from '@/utils/email';
 import { rateLimit, getClientIp } from '@/utils/rateLimit';
 import { requireTenantStaff } from '@/utils/adminAuth';
 import {
@@ -38,7 +38,7 @@ async function loadShopInfo(supabase, est) {
     settings,
     shop,
     shopName: shop.name || settings.generalConfig?.appName || 'お花屋さん',
-    shopEmail: shop.email || settings.generalConfig?.email || '',
+    shopEmail: shopContactEmail(shop, settings),
     shopPhone: shop.phone || settings.generalConfig?.phone || '',
     lineUrl: settings.lineConfig?.addFriendUrl || '',
   };
@@ -573,7 +573,7 @@ export async function PATCH(request) {
       const settings2 = tRow2?.settings_data || {};
       const shop2 = settings2.shops?.find(s => String(s.id) === String(cur.shop_id)) || settings2.shops?.[0] || {};
       const shopName2 = shop2.name || settings2.generalConfig?.appName || 'お花屋さん';
-      const shopEmail2 = shop2.email || settings2.generalConfig?.email || '';
+      const shopEmail2 = shopContactEmail(shop2, settings2);
       const shopPhone2 = shop2.phone || settings2.generalConfig?.phone || '';
       const lineUrl2 = settings2.lineConfig?.addFriendUrl || '';
 

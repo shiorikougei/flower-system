@@ -10,7 +10,7 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { sendEmail } from '@/utils/email';
+import { sendEmail, shopContactEmail } from '@/utils/email';
 import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatOrderBreakdown, formatRecipientInfo, formatLineAddFriendBlock } from '@/utils/emailTemplates';
 import { sendLineParallelToEmail, getNotificationPreference } from '@/utils/line';
 import { createMypageMagicUrl } from '@/utils/mypageLink';
@@ -118,7 +118,7 @@ export async function POST(request) {
     };
 
     const { subject, body } = renderTemplate(tpl, vars);
-    const html = bodyToHtml(body, { shopName, shopEmail: shop.email || settings.generalConfig?.email || '', shopPhone, lineAddFriendUrl: settings.lineConfig?.addFriendUrl || '' });
+    const html = bodyToHtml(body, { shopName, shopEmail: shopContactEmail(shop, settings), shopPhone, lineAddFriendUrl: settings.lineConfig?.addFriendUrl || '' });
     const from = `${shopName} <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
 
     // お客様の通知設定を取得

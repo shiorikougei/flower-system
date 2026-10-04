@@ -9,6 +9,30 @@ const DEFAULT_FROM = process.env.EMAIL_FROM || 'order@noodleflorix.com';
 const DEFAULT_FROM_NAME = process.env.EMAIL_FROM_NAME || 'Florix';
 
 /**
+ * [2026-10 B3] お客様に表示するお店のお問い合わせ用メールアドレス
+ * 店舗設定の「お問い合わせ用メールアドレス」→ 旧項目（shop.email / generalConfig.email）の順に使う
+ * 開発側のアドレスは使わない（お問い合わせはお店に一本化）
+ */
+export function shopContactEmail(shop, settings) {
+  return String(shop?.contactEmail || shop?.email || settings?.generalConfig?.email || '').trim();
+}
+
+/**
+ * [2026-10 B3] 店舗設定からお客様向けのお問い合わせ先（店名・メール・電話・LINE）をまとめて返す
+ */
+export function shopContactInfo(settings, shopId) {
+  const shops = Array.isArray(settings?.shops) ? settings.shops : [];
+  const shop = shops.find(s => String(s.id) === String(shopId)) || shops[0] || {};
+  return {
+    shop,
+    shopName: shop.name || settings?.generalConfig?.appName || 'お花屋さん',
+    shopEmail: shopContactEmail(shop, settings),
+    shopPhone: shop.phone || settings?.generalConfig?.phone || '',
+    lineAddFriendUrl: settings?.lineConfig?.addFriendUrl || '',
+  };
+}
+
+/**
  * 送信専用フッター（共通）
  * このメールアドレスへの返信は確認されない旨をお客様に明示
  * @param {object} opts
@@ -25,8 +49,9 @@ export function noReplyFooter({
   lineAddFriendUrl = '',
   contactEmail = '', // 後方互換
 } = {}) {
-  // 連絡先メアドの決定 (shopEmail優先 / なければ contactEmail / それもなければ NocoLde の問い合わせ)
-  const email = shopEmail || contactEmail || 'marusyou.reishin@gmail.com';
+  // 連絡先メアドの決定 (shopEmail優先 / なければ contactEmail)
+  // [2026-10 B3] お問い合わせはお店に一本化。開発側のアドレスには切り替えない
+  const email = shopEmail || contactEmail || '';
   const contactLines = [];
   if (email) contactLines.push(`📧 <a href="mailto:${email}" style="color:#92722c;text-decoration:underline;">${email}</a>`);
   if (shopPhone) contactLines.push(`📞 <a href="tel:${shopPhone}" style="color:#92722c;text-decoration:underline;">${shopPhone}</a>`);
@@ -35,7 +60,7 @@ export function noReplyFooter({
   return `
     <div style="margin-top:32px;padding:14px;background:#f9f5ed;border:1pt solid #e5d9bd;border-radius:8px;font-size:11px;color:#92722c;line-height:1.7;">
       ⚠️ <strong>このメールは送信専用アドレスから自動送信されています。</strong><br/>
-      ご返信いただいてもご対応できかねますので、お問い合わせは下記${shopName ? `（${shopName}）` : ''}までご連絡ください。<br/>
+      ご返信いただいてもご対応できかねますので、お問い合わせは${contactLines.length > 0 ? `下記${shopName ? `（${shopName}）` : ''}まで` : `${shopName || 'ご注文のお店'}まで直接`}ご連絡ください。<br/>
       ${contactLines.join('<br/>')}
     </div>
   `;

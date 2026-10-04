@@ -6,7 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { sendEmail } from '@/utils/email';
+import { sendEmail, shopContactInfo } from '@/utils/email';
 import { findTemplateFor, renderTemplate, bodyToHtml } from '@/utils/emailTemplates';
 
 export async function POST(request) {
@@ -87,7 +87,7 @@ export async function POST(request) {
           };
           const rendered = renderTemplate(tpl, vars);
           subject = rendered.subject;
-          html = bodyToHtml(rendered.body, { shopName });
+          html = bodyToHtml(rendered.body, shopContactInfo(settingsRow?.settings_data, shopId));
         } else {
           subject = `【${shopName}】「${product.name}」が入荷しました`;
           html = buildRestockEmail({ productName: product.name, shopName, productImage: product.image_url, shopUrl: `${appUrl}/order/${product.tenant_id}/${shopId}/shop`, customerName: r.customer_name });
