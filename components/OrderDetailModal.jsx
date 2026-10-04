@@ -13,6 +13,17 @@ import {
 import TatefudaPreview from '@/components/TatefudaPreview';
 import { ensureOperationAllowed, getCurrentRole, getCurrentStaff } from '@/utils/staffRole';
 import { getTateOptions } from '@/utils/tateMaster';
+import { getQrCodeDataUrl } from '@/utils/qrcode';
+
+// 納品書QR用: http(s) のURLだけを許可する（それ以外はQRを出さない）
+const normalizeHomepageUrl = (raw) => {
+  const url = String(raw || '').trim();
+  if (!url || url.length > 300) return '';
+  try {
+    const u = new URL(url);
+    return (u.protocol === 'https:' || u.protocol === 'http:') ? u.toString() : '';
+  } catch { return ''; }
+};
 
 export default function OrderDetailModal({ 
   order, 
@@ -79,6 +90,79 @@ export default function OrderDetailModal({
     setShowEditModal(false);
     setEditForm(null);
   }, [order]);
+
+  // ★ 見積金額の確認（見積から作られた注文のみ）
+  //    見積の税込金額をサーバーから読み、注文の合計と突き合わせて表示する。
+  //    読み取り専用。取得した値は modalData に混ぜない（混ぜると更新時に注文データへ保存されてしまうため）
+  const [estimateCheck, setEstimateCheck] = useState(null); // null | { state: 'loading' | 'done' | 'error', expectedTotal? }
+  useEffect(() => {
+    const od = order?.order_data;
+    if (!od?.fromEstimate || !od?.estimateId) { setEstimateCheck(null); return; }
+    let cancelled = false;
+    setEstimateCheck({ state: 'loading' });
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('no session');
+        const res = await fetch(`/api/staff/estimate-amount?estimateId=${encodeURIComponent(od.estimateId)}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const data = await res.json();
+        if (!cancelled) setEstimateCheck({ state: 'done', expectedTotal: data.expectedTotal });
+      } catch (e) {
+        console.warn('[OrderDetailModal] 見積金額の取得に失敗:', e?.message);
+        if (!cancelled) setEstimateCheck({ state: 'error' });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [order]);
+
+  // ★ 見積の参考写真（見積から作られた注文のみ）
+  //    新しい注文で order_data.referenceImages があればそれを使い、無ければ estimateId から読み込んで表示する。
+  //    読み込んだ写真は modalData に混ぜない（混ぜると更新時に過去の注文データへ保存されてしまうため）
+  const [estimateImages, setEstimateImages] = useState([]);
+  useEffect(() => {
+    const od = order?.order_data;
+    if (!od?.fromEstimate || !od?.estimateId) { setEstimateImages([]); return; }
+    if (Array.isArray(od.referenceImages) && od.referenceImages.length > 0) { setEstimateImages(od.referenceImages); return; }
+    let cancelled = false;
+    setEstimateImages([]);
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const res = await fetch(`/api/staff/estimate-images?ids=${encodeURIComponent(od.estimateId)}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setEstimateImages(data?.images?.[od.estimateId] || []);
+      } catch (e) {
+        console.warn('[OrderDetailModal] 見積写真の取得に失敗:', e?.message);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [order]);
+
+  // ★ 納品書QR: 注文の店舗に「ホームページURL」が設定されていれば、モーダル表示時にQR画像を先に作っておく
+  //    （印刷ボタンの処理を非同期にするとポップアップがブロックされやすいため、事前生成にする）
+  const [shopQr, setShopQr] = useState(null); // null | { url, label, dataUrl }
+  useEffect(() => {
+    const shops = appSettings?.shops || [];
+    const od = order?.order_data || {};
+    const targetShop = shops.find(s => String(s.id) === String(od.shopId)) || shops[0] || {};
+    const url = normalizeHomepageUrl(targetShop.homepageUrl);
+    if (!url) { setShopQr(null); return; }
+    let cancelled = false;
+    (async () => {
+      const dataUrl = await getQrCodeDataUrl(url, { width: 360 });
+      if (cancelled) return;
+      const label = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      setShopQr(dataUrl ? { url, label, dataUrl } : null);
+    })();
+    return () => { cancelled = true; };
+  }, [order, appSettings]);
 
   if (!order) return null;
 
@@ -678,6 +762,10 @@ export default function OrderDetailModal({
             return `<div class="check-group"><div class="check-label">${shortLabel}</div><div class="check-box ${staff ? 'filled' : ''}">${staff}</div></div>`;
           }).join('');
         }
+        // ★ 納品書のみ: お店のホームページQR（店舗設定の「ホームページURL」が空なら出さない）
+        const qrHtml = (type === 'delivery' && shopQr?.dataUrl)
+          ? `<div class="shop-qr"><img src="${shopQr.dataUrl}" alt="QR"/><div class="shop-qr-label">${formatText(shopQr.label)}</div></div>`
+          : '';
         return `
           <div class="footer" style="border-top-color:${hidePrice ? '#888' : '#bbb'}">
             <div class="shop-block">
@@ -685,7 +773,7 @@ export default function OrderDetailModal({
               <div>〒${shopZip} ${shopAddress}</div>
               <div>TEL: ${shopTel}${shopInvoice ? ` (${shopInvoice})` : ''}</div>
             </div>
-            <div class="footer-actions">${footerActionsHtml}</div>
+            <div class="footer-actions">${qrHtml}${footerActionsHtml}</div>
           </div>
         `;
       };
@@ -959,6 +1047,9 @@ export default function OrderDetailModal({
             .shop-block { font-size: 8pt; line-height: 1.4; color: #444; }
             .shop-name { font-size: 12pt; font-weight: 900; color: #222; margin-bottom: 1mm; }
             .footer-actions { display: flex; gap: 2mm; }
+            .shop-qr { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+            .shop-qr img { width: 17mm; height: 17mm; display: block; }
+            .shop-qr-label { font-size: 7pt; color: #444; max-width: 24mm; text-align: center; word-break: break-all; line-height: 1.2; margin-top: 0.5mm; }
             .check-group { display: flex; flex-direction: column; align-items: center; gap: 0.5mm; }
             .check-label { font-size: 6.5pt; color: #666; font-weight: bold; }
             .check-box { border: 0.5pt solid #666; width: 14mm; height: 6mm; display: flex; align-items: center; justify-content: center; font-size: 7pt; font-weight: bold; border-radius: 1px; }
@@ -1746,6 +1837,20 @@ export default function OrderDetailModal({
                   );
                 })()}
 
+                {/* ★ 見積の参考写真（お客様が見積依頼時に添付。表示のみ） */}
+                {estimateImages.length > 0 && (
+                  <div className="space-y-2 mt-2">
+                    <span className="text-[10px] font-bold text-[#117768] bg-[#117768]/10 px-2 py-0.5 rounded inline-block">見積の参考写真 ({estimateImages.length}枚)</span>
+                    <div className="grid grid-cols-2 gap-2 w-full sm:w-40">
+                      {estimateImages.map((url, i) => (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" title="拡大して見る">
+                          <img src={url} alt={`見積の参考写真${i+1}`} className="w-full aspect-square object-cover rounded-lg border border-[#EAEAEA] shadow-sm hover:opacity-80 transition-opacity"/>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="relative mt-2">
                   <input
                     type="file"
@@ -1909,7 +2014,54 @@ export default function OrderDetailModal({
                   <span className="text-[32px] md:text-[36px] font-black text-[#2D4B3E] leading-none">¥{getTotals(modalData).total.toLocaleString()}</span>
                 </div>
               </div>
-              
+
+              {/* ★ 見積金額の確認（見積から作られた注文のみ表示） */}
+              {estimateCheck && (() => {
+                const orderTotal = getTotals(modalData).total;
+                const hasCorrection = Array.isArray(modalData.amountCorrections) && modalData.amountCorrections.length > 0;
+                if (estimateCheck.state === 'loading') {
+                  return <p className="text-[12px] text-[#999]">見積の金額を確認しています...</p>;
+                }
+                if (estimateCheck.state === 'error' || estimateCheck.expectedTotal == null) {
+                  return (
+                    <div className="flex items-start gap-2 bg-[#F7F7F7] border border-[#EAEAEA] rounded-xl px-4 py-3 text-[12px] text-[#555]">
+                      <AlertCircle size={16} className="shrink-0 mt-0.5 text-[#999]"/>
+                      <span>見積の金額を確認できませんでした。見積一覧で金額をご確認ください。</span>
+                    </div>
+                  );
+                }
+                const expected = estimateCheck.expectedTotal;
+                const matched = expected === orderTotal;
+                const diff = orderTotal - expected;
+                return (
+                  <div className={`rounded-xl border-2 px-4 py-3 space-y-2 ${matched ? 'bg-[#EEF5F1] border-[#117768]/30' : 'bg-[#FDF1EB] border-[#D97D54]'}`}>
+                    <div className={`flex items-center gap-2 text-[14px] font-black ${matched ? 'text-[#117768]' : 'text-[#D97D54]'}`}>
+                      {matched ? <CheckCircle2 size={18}/> : <AlertCircle size={18}/>}
+                      {matched ? '見積の金額と一致しています' : '見積の金額と違います'}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[13px] text-[#2D4B3E]">
+                      <span>見積でご案内した金額（税込）</span>
+                      <span className="text-right font-bold">¥{expected.toLocaleString()}</span>
+                      <span>この注文の金額（税込）</span>
+                      <span className="text-right font-bold">¥{orderTotal.toLocaleString()}</span>
+                      {!matched && (
+                        <>
+                          <span>差額</span>
+                          <span className="text-right font-bold text-[#D97D54]">{diff > 0 ? '+' : '-'}¥{Math.abs(diff).toLocaleString()}</span>
+                        </>
+                      )}
+                    </div>
+                    {!matched && (
+                      <p className="text-[12px] text-[#555] leading-relaxed">
+                        {hasCorrection
+                          ? 'この注文は金額訂正の記録があります。下の「訂正履歴」で内容をご確認ください。'
+                          : '制作に入る前に、見積の内容とお支払い金額をご確認ください。'}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+
               {modalData.paymentMethod && (
                 <div className="pt-4 flex flex-col gap-3 border-t border-[#EAEAEA]">
                   <div className="flex items-center gap-2 bg-[#F7F7F7] px-4 py-2.5 rounded-xl border border-[#EAEAEA] shadow-sm w-fit">
