@@ -429,16 +429,14 @@ export default function OrderDetailModal({
 
       // ★ A4フル 受注書専用テンプレート（老眼でも見えるサイズ、A4全体をバランスよく使用）
       // ★ [A7] 受注書の記入欄に「済」を付ける（印刷した時点で済んでいる工程）
-      //    作業: その工程（またはそれより後の工程）まで進んでいれば済。請求: 入金済みなら済（入金データは読むだけ）
+      //    作業: 対応履歴に記録がある工程（または現在のステータス）だけ済。飛ばした工程には付けない
+      //    配達: 自社配達の注文のときだけ。請求: 入金済みなら済（入金データは読むだけ）
       const currentWorkStatus = modalData.currentStatus || modalData.status || 'new';
-      const stepIndex = (label) => activeStatuses.findIndex((s) => String(s).includes(label));
       const stepDone = (label) => {
         if (currentWorkStatus === 'キャンセル') return false;
         if (label === '請求') return order?.payment_status === 'paid' || /入金済|前払い済み/.test(String(modalData.paymentStatus || ''));
-        if (history.some((h) => String(h.status || '').includes(label))) return true;
-        const li = stepIndex(label);
-        const ci = activeStatuses.indexOf(currentWorkStatus);
-        return li >= 0 && ci >= 0 && ci >= li;
+        if (label === '配達' && modalData.receiveMethod !== 'delivery') return false;
+        return String(currentWorkStatus).includes(label) || history.some((h) => String(h.status || '').includes(label));
       };
 
       // ★ [帳票改修 2026-10] 受注書・受注書控えは A4 に全情報を出す（収まらない場合は次の用紙に続く）
