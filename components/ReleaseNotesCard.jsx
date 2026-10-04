@@ -1,42 +1,50 @@
 'use client';
-// スタッフ画面ダッシュボード上部の「お知らせ（更新情報）」カード
-// 「確認しました」を押したお知らせは、この端末では表示しない（ブラウザに記録。記録できない環境では毎回表示）
-import { useState, useSyncExternalStore } from 'react';
+// スタッフ画面の「お知らせ（更新情報）」
+//   - ReleaseNotesCard  : ダッシュボード上部のカード（内容 + 「確認しました」）
+//   - ReleaseNotesBanner: ホーム以外の全画面の上部に出る細い帯（未確認のお知らせがあるときだけ）
+//   - useUnseenReleaseNotes: 未確認のお知らせ（サイドバーの件数バッジにも使う）
+// 「確認しました」はこの端末のブラウザに記録する。記録できない環境では、画面を開いている間だけ非表示にする。
+import { useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { Megaphone, ChevronRight } from 'lucide-react';
 import { getActiveReleaseNotes } from '@/utils/releaseNotes';
 
 const STORAGE_KEY = 'florix_release_notes_seen';
+const CHANGE_EVENT = 'florix-release-notes-change';
+const memorySeen = new Set();
 
 function readSeenRaw() {
-  try { return localStorage.getItem(STORAGE_KEY) || '[]'; } catch { return '[]'; }
+  try { return localStorage.getItem(STORAGE_KEY) || JSON.stringify([...memorySeen]); } catch { return JSON.stringify([...memorySeen]); }
 }
 function readSeen() {
   try { return JSON.parse(readSeenRaw()); } catch { return []; }
 }
+function markSeen(id) {
+  memorySeen.add(id);
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...new Set([...readSeen(), id])])); } catch { /* 記録できなくても続ける */ }
+  window.dispatchEvent(new Event(CHANGE_EVENT));
+}
 function subscribe(callback) {
   window.addEventListener('storage', callback);
-  return () => window.removeEventListener('storage', callback);
+  window.addEventListener(CHANGE_EVENT, callback);
+  return () => {
+    window.removeEventListener('storage', callback);
+    window.removeEventListener(CHANGE_EVENT, callback);
+  };
 }
-function writeSeen(ids) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(ids)); } catch { /* 記録できなくても表示は続ける */ }
+
+/** 未確認のお知らせ。サーバー側では ready=false（何も表示しない） */
+export function useUnseenReleaseNotes() {
+  const raw = useSyncExternalStore(subscribe, readSeenRaw, () => null);
+  if (raw === null) return { ready: false, notes: [] };
+  let seen = [];
+  try { seen = JSON.parse(raw); } catch { seen = []; }
+  return { ready: true, notes: getActiveReleaseNotes().filter((n) => !seen.includes(n.id)) };
 }
 
 export default function ReleaseNotesCard() {
-  // サーバー側では何も出さず、ブラウザで「確認済み」の記録を読んでから表示する
-  const seenRaw = useSyncExternalStore(subscribe, readSeenRaw, () => null);
-  const [hiddenNow, setHiddenNow] = useState([]); // この画面で「確認しました」を押したもの（記録できない環境向け）
-  if (seenRaw === null) return null;
-  let seen = [];
-  try { seen = JSON.parse(seenRaw); } catch { seen = []; }
-  const notes = getActiveReleaseNotes().filter((n) => !seen.includes(n.id) && !hiddenNow.includes(n.id));
-
+  const { notes } = useUnseenReleaseNotes();
   if (notes.length === 0) return null;
-
-  const markSeen = (id) => {
-    writeSeen([...new Set([...readSeen(), id])]);
-    setHiddenNow((prev) => [...prev, id]);
-  };
 
   return (
     <div className="space-y-3">
@@ -75,5 +83,21 @@ export default function ReleaseNotesCard() {
         </div>
       ))}
     </div>
+  );
+}
+
+/** ホーム以外の画面の上部に出る帯。押すとホームのお知らせへ */
+export function ReleaseNotesBanner({ pathname }) {
+  const { notes } = useUnseenReleaseNotes();
+  if (notes.length === 0 || pathname === '/staff') return null;
+  return (
+    <Link
+      href="/staff"
+      className="print:hidden flex items-center gap-2 px-4 md:px-8 py-2.5 bg-[#117768] text-white text-[13px] font-bold hover:bg-[#0d5e54]"
+    >
+      <Megaphone size={15} className="shrink-0" />
+      <span className="min-w-0 flex-1">アプリが更新されました。お知らせが {notes.length} 件あります</span>
+      <span className="shrink-0 inline-flex items-center gap-0.5 underline">見る <ChevronRight size={14} /></span>
+    </Link>
   );
 }
