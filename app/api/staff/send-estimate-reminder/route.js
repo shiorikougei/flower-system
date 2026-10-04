@@ -8,6 +8,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendEmail, noReplyFooter } from "@/utils/email";
+import { customerEstimateUrl } from "@/utils/estimateThread";
 
 export const runtime = "nodejs";
 
@@ -84,7 +85,8 @@ export async function POST(request) {
       return NextResponse.json({ error: "有効期限が無効または既に切れています" }, { status: 400 });
     }
 
-    const confirmUrl = `${BASE_URL}/order/${est.tenant_id}/${est.shop_id || "default"}/estimate/${est.id}`;
+    // [2026-10] お客様用の鍵がある見積はリンクに鍵を付ける
+    const confirmUrl = customerEstimateUrl(est, BASE_URL);
     const taxIncTotal = Math.round((est.proposed_price || 0) * 1.1);
 
     // カスタムメッセージ

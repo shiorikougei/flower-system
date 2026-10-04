@@ -20,6 +20,8 @@ export default function StaffLayout({ children }) {
   // ★ お知らせ（更新情報）の未確認件数（サイドバーの「ホーム」にバッジ表示）
   const { notes: unseenNotes } = useUnseenReleaseNotes();
   const [appName, setAppName] = useState('FLORIX');
+  // [2026-10] お客様から見積の変更依頼が来ている件数（サイドバーの「お見積もり依頼」にバッジ表示）
+  const [estimateRevisionCount, setEstimateRevisionCount] = useState(0);
   const [logoUrl, setLogoUrl] = useState('');
   const [isPremiumPlan, setIsPremiumPlan] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -92,6 +94,25 @@ export default function StaffLayout({ children }) {
     }
     fetchSettings();
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
+        if (!profile?.tenant_id) return;
+        const res = await fetch(`/api/estimates?tenantId=${encodeURIComponent(profile.tenant_id)}&count=revision_requested`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setEstimateRevisionCount(Number(data.count) || 0);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [pathname]);
 
   // ★ メニューをカテゴリ別に整理（feature: 機能がONのときだけ表示）
   const menuCategories = [
@@ -432,6 +453,9 @@ export default function StaffLayout({ children }) {
                   >
                     <Icon size={16} className={isActive ? 'text-[#2D4B3E]' : 'text-[#999999]'} />
                     {item.name}
+                    {item.path === '/staff/estimates' && estimateRevisionCount > 0 && (
+                      <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-[#D97D54] text-white text-[11px] font-bold flex items-center justify-center" title="お客様から変更依頼が来ている見積">{estimateRevisionCount}</span>
+                    )}
                     {item.path === '/staff' && unseenNotes.length > 0 && (
                       <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-[#D97D54] text-white text-[11px] font-bold flex items-center justify-center" title="未確認のお知らせ">{unseenNotes.length}</span>
                     )}
