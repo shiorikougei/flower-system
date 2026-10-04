@@ -428,15 +428,12 @@ export default function OrderDetailModal({
       const renderHeaderMeta = () => `<div class="meta-area"><div>伝票：${safeId}    受付：${safeFormatDate(order.created_at, false)}</div><div>お渡し：${receiveMethodStr}    希望日：${datePart}</div><div>入金状況：${paymentStatus}</div></div>`;
 
       // ★ A4フル 受注書専用テンプレート（老眼でも見えるサイズ、A4全体をバランスよく使用）
-      // ★ [A7] 受注書の記入欄に「済」を付ける（印刷した時点で済んでいる工程）
-      //    作業: 対応履歴に記録がある工程（または現在のステータス）だけ済。飛ばした工程には付けない
-      //    配達: 自社配達の注文のときだけ。請求: 入金済みなら済（入金データは読むだけ）
+      // ★ [A7] 受注書の記入欄の「済」は「請求」（入金済み）だけに付ける（2026-10-05 しーちゃん決定）
+      //    作業の欄（受注・制作・配達・片付）は手書き用に空欄のまま。入金データは読むだけ
       const currentWorkStatus = modalData.currentStatus || modalData.status || 'new';
       const stepDone = (label) => {
-        if (currentWorkStatus === 'キャンセル') return false;
-        if (label === '請求') return order?.payment_status === 'paid' || /入金済|前払い済み/.test(String(modalData.paymentStatus || ''));
-        if (label === '配達' && modalData.receiveMethod !== 'delivery') return false;
-        return String(currentWorkStatus).includes(label) || history.some((h) => String(h.status || '').includes(label));
+        if (label !== '請求' || currentWorkStatus === 'キャンセル') return false;
+        return order?.payment_status === 'paid' || /入金済|前払い済み/.test(String(modalData.paymentStatus || ''));
       };
 
       // ★ [帳票改修 2026-10] 受注書・受注書控えは A4 に全情報を出す（収まらない場合は次の用紙に続く）
