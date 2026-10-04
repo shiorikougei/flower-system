@@ -611,9 +611,9 @@ export default function OrderDetailModal({
             <div class="info-title">【ご依頼主様（ご注文者）】</div>
             <div class="info-main">${formatText(customer.name)} <span style="font-size:9pt; font-weight:normal;">様</span></div>
             <div class="info-sub-bottom">
+              <div>TEL: ${formatText(customer.phone)}</div>
               <div>〒${formatText(customer.zip)}</div>
               <div>${formatText(customer.address1)} ${formatText(customer.address2)}</div>
-              <div>TEL: ${formatText(customer.phone)}</div>
             </div>
           </div>
           <div class="info-box" style="border-color:${hidePrice ? '#888' : '#444'}">
@@ -621,9 +621,9 @@ export default function OrderDetailModal({
             ${modalData.isRecipientDifferent ? `
               <div class="info-main">${formatText(recipient.name)} <span style="font-size:9pt; font-weight:normal;">様</span></div>
               <div class="info-sub-bottom">
+                <div>TEL: ${formatText(recipient.phone)}</div>
                 <div>〒${formatText(recipient.zip)}</div>
                 <div>${formatText(recipient.address1)} ${formatText(recipient.address2)}</div>
-                <div>TEL: ${formatText(recipient.phone)}</div>
               </div>
             ` : `<div class="same-text">ご依頼主様と同じ</div>`}
           </div>
@@ -1071,9 +1071,11 @@ export default function OrderDetailModal({
               max-height: 18mm;
               overflow: hidden;
             }
-            /* 住所セルが多段になっても枠内で収まる */
+            /* 住所セルが多段になっても枠内で収まる
+               ★ [BUGFIX] 半分幅の納品書・受領書で住所が折り返すと、最後の行の電話番号が 16mm で切れていた
+                  -> 電話番号を先頭に移し、高さの上限を 28mm に緩和（下の商品欄には余白があるため） */
             .info-box .info-sub-bottom {
-              max-height: 16mm;
+              max-height: 28mm;
               overflow: hidden;
             }
             /* slip 内の overflow を厳密に */
