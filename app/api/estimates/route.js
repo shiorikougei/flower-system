@@ -275,7 +275,7 @@ export async function PATCH(request) {
 
     // ★ [セキュリティ] reply / reject は店舗スタッフ専用
     //    （accept はお客様承諾フローなので顧客トークンで認証する仕様だが、深夜にトークン検証を強化予定）
-    if (action === 'reply' || action === 'reject') {
+    if (action === 'reply' || action === 'reject' || action === 'trash' || action === 'restore') {
       const authR = await requireTenantStaff(request, cur.tenant_id);
       if (!authR.ok) return authR.response;
     }
@@ -494,6 +494,21 @@ export async function PATCH(request) {
     } else if (action === 'reject') {
       await supabase.from('estimates').update({ status: 'rejected' }).eq('id', id);
       return NextResponse.json({ ok: true });
+    } else if (action === 'trash') {
+      // ★ [2026-10] 「削除」はデータを消さず、ゴミ箱（status = 'deleted'）へ移す。あとから元に戻せる
+      const { error: trashErr } = await supabase.from('estimates').update({ status: 'deleted' }).eq('id', id);
+      if (trashErr) throw trashErr;
+      return NextResponse.json({ ok: true });
+    } else if (action === 'restore') {
+      // ★ [2026-10] 却下・ゴミ箱から元に戻す。戻し先は見積の状態から判断する
+      //    注文に確定済み -> converted / 回答済み -> replied / それ以外 -> pending
+      if (cur.status !== 'rejected' && cur.status !== 'deleted') {
+        return NextResponse.json({ error: 'この見積は元に戻す対象ではありません' }, { status: 400 });
+      }
+      const restored = cur.order_id ? 'converted' : (cur.replied_at || cur.reply_message ? 'replied' : 'pending');
+      const { error: restoreErr } = await supabase.from('estimates').update({ status: restored }).eq('id', id);
+      if (restoreErr) throw restoreErr;
+      return NextResponse.json({ ok: true, status: restored });
     }
     return NextResponse.json({ error: '不正なaction' }, { status: 400 });
   } catch (err) {
