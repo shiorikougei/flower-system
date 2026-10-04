@@ -10,6 +10,10 @@ export default function EstimatesPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [editingId, setEditingId] = useState(null);
+  // [2026-10] 文章だけの返信
+  const [messagingId, setMessagingId] = useState(null);
+  const [messageText, setMessageText] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
   // ★ 新・回答フォーム (料金内訳 + 自動メッセージ生成)
   const [replyForm, setReplyForm] = useState({
     productPrice: '',          // 商品代 (税抜)
@@ -150,8 +154,25 @@ export default function EstimatesPage() {
   }
 
   // ★ 見積編集開始時に料金を自動算出してフォームにセット
-  function startEditing(est) {
+  function startEditing(est, baseVersion = null) {
     setEditingId(est.id);
+    setMessagingId(null);
+    if (baseVersion) {
+      // [2026-10] 見積の出し直し: 最新の見積案の内訳から始める（変えるところだけ直せばよい）
+      const bd = baseVersion.proposed_data || {};
+      setReplyForm({
+        productPrice: bd.productPrice ? String(bd.productPrice) : '',
+        selfDeliveryAccepted: bd.selfDeliveryAccepted || '',
+        selfDeliveryFee: bd.selfDeliveryFee ? String(bd.selfDeliveryFee) : '',
+        sagawaFee: bd.sagawaFee ? String(bd.sagawaFee) : '',
+        boxFee: bd.boxFee ? String(bd.boxFee) : '',
+        coolFee: bd.coolFee ? String(bd.coolFee) : '',
+        otherFees: Array.isArray(bd.otherFees) ? bd.otherFees.map(o => ({ name: o.name || '', amount: String(o.amount || '') })) : [],
+        staffComment: '',
+        message: '',
+      });
+      return;
+    }
     const rd = est.request_data || {};
     const addr = [rd.deliveryAddress1, rd.deliveryAddress2].filter(Boolean).join(' ') || rd.deliveryAddress || '';
     const productPriceGuess = 0; // 商品代は店舗判断
@@ -291,6 +312,34 @@ export default function EstimatesPage() {
     } catch (e) { alert('エラー: ' + e.message); }
   }
 
+  // [2026-10] 文章だけの返信（金額は変えない）
+  async function handleSendMessage(id) {
+    if (!messageText.trim()) { alert('返信の内容を入力してください'); return; }
+    setSendingMessage(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { alert('ログインの有効期限が切れています。ページを再読み込みして、もう一度ログインしてください。'); return; }
+      const res = await fetch('/api/estimates', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ id, action: 'message', body: messageText }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || '送信に失敗しました');
+      setMessagingId(null);
+      setMessageText('');
+      loadEstimates();
+      alert('お客様に返信をお送りしました');
+    } catch (e) { alert('エラー: ' + e.message); }
+    finally { setSendingMessage(false); }
+  }
+
+  // [2026-10] 見積案の取り下げ・元に戻す
+  async function handleVersionStatus(id, versionId, withdraw) {
+    if (!confirm(withdraw ? 'この見積案を取り下げますか？\n（お客様はこの見積案で注文できなくなります。あとから元に戻せます）' : 'この見積案を元に戻しますか？\n（お客様がこの見積案で注文できるようになります）')) return;
+    await updateEstimateStatus(id, withdraw ? 'withdraw_version' : 'reinstate_version', withdraw ? '見積案を取り下げました' : '見積案を元に戻しました', { versionId });
+  }
+
   async function handleReject(id) {
     if (!confirm('このお見積もり依頼を却下しますか？')) return;
     try {
@@ -311,14 +360,14 @@ export default function EstimatesPage() {
   }
 
   // ★ [2026-10] 「削除」はデータを消さずゴミ箱へ移す（あとから「元に戻す」で復元できる）
-  async function updateEstimateStatus(id, action, doneMessage) {
+  async function updateEstimateStatus(id, action, doneMessage, extra = {}) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { alert('ログインの有効期限が切れています。ページを再読み込みして、もう一度ログインしてください。'); return; }
       const res = await fetch('/api/estimates', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ id, action }),
+        body: JSON.stringify({ id, action, ...extra }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || '操作に失敗しました');
@@ -344,11 +393,13 @@ export default function EstimatesPage() {
     await updateEstimateStatus(id, 'restore', '見積依頼を元に戻しました');
   }
 
+  const revisionCount = estimates.filter(e => e.status === 'revision_requested').length;
   const filtered = filter === 'all' ? estimates.filter(e => e.status !== 'deleted') : estimates.filter(e => e.status === filter);
 
   const STATUS_LABELS = {
     pending: { label: '未回答', color: 'bg-amber-100 text-amber-700 border-amber-300' },
     replied: { label: '回答済', color: 'bg-blue-100 text-blue-700 border-blue-300' },
+    revision_requested: { label: '変更依頼あり', color: 'bg-orange-100 text-orange-800 border-orange-300' },
     accepted: { label: '承諾済', color: 'bg-green-100 text-green-700 border-green-300' },
     converted: { label: '注文確定', color: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
     rejected: { label: '却下', color: 'bg-gray-100 text-gray-600 border-gray-300' },
@@ -371,6 +422,7 @@ export default function EstimatesPage() {
           {[
             { id: 'all', label: 'すべて' },
             { id: 'pending', label: '未回答' },
+            { id: 'revision_requested', label: '変更依頼あり' },
             { id: 'replied', label: '回答済' },
             { id: 'converted', label: '確定済' },
             { id: 'rejected', label: '却下' },
@@ -379,6 +431,9 @@ export default function EstimatesPage() {
             <button key={f.id} onClick={() => setFilter(f.id)}
               className={`px-4 py-2 rounded-full text-[12px] font-bold ${filter === f.id ? 'bg-[#2D4B3E] text-white' : 'bg-white border border-[#EAEAEA] text-[#555]'}`}>
               {f.label}
+              {f.id === 'revision_requested' && revisionCount > 0 && (
+                <span className="ml-1.5 inline-flex min-w-5 h-5 px-1.5 rounded-full bg-[#D97D54] text-white text-[11px] items-center justify-center">{revisionCount}</span>
+              )}
             </button>
           ))}
         </div>
@@ -447,7 +502,7 @@ export default function EstimatesPage() {
                         })()}
                       </div>
                     ) : (
-                      <pre className="text-[12px] text-[#222] whitespace-pre-wrap font-sans leading-relaxed">{est.request_content}</pre>
+                      <pre className="text-[12px] text-[#222] whitespace-pre-wrap font-sans leading-relaxed [overflow-wrap:anywhere]">{est.request_content}</pre>
                     )}
                   </div>
 
@@ -468,12 +523,61 @@ export default function EstimatesPage() {
                     </div>
                   )}
 
-                  {est.reply_message && (
-                    <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-lg">
-                      <p className="text-[10px] font-bold text-emerald-700 mb-1">店舗回答 (¥{Number(est.proposed_price).toLocaleString()} 税抜)</p>
-                      <pre className="text-[12px] text-[#222] whitespace-pre-wrap font-sans leading-relaxed">{est.reply_message}</pre>
-                    </div>
-                  )}
+                  {/* [2026-10] やり取り（見積案・メッセージ）を時間順に表示 */}
+                  {(() => {
+                    const versions = Array.isArray(est.versions) && est.versions.length > 0
+                      ? est.versions
+                      : (est.reply_message ? [{ id: 'legacy', version_no: 1, proposed_price: est.proposed_price, message: est.reply_message, status: 'active', created_at: est.replied_at, legacy: true }] : []);
+                    const messages = Array.isArray(est.messages) ? est.messages : [];
+                    if (versions.length === 0 && messages.length === 0) return null;
+                    const active = versions.filter(v => v.status === 'active');
+                    const latestId = active[active.length - 1]?.id;
+                    const items = [
+                      ...versions.map(v => ({ key: 'v-' + v.id, at: v.created_at, v })),
+                      ...messages.map(m => ({ key: 'm-' + m.id, at: m.created_at, m })),
+                    ].sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0));
+                    const canEditVersions = !['converted', 'deleted'].includes(est.status);
+                    return (
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-bold text-[#999]">やり取り</p>
+                        {items.map(item => {
+                          if (item.m) {
+                            const isCustomer = item.m.sender === 'customer';
+                            return (
+                              <div key={item.key} className={`p-3 rounded-lg border ${isCustomer ? 'bg-orange-50 border-orange-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                                <p className={`text-[10px] font-bold mb-1 ${isCustomer ? 'text-orange-800' : 'text-emerald-700'}`}>
+                                  {isCustomer ? 'お客様からの変更依頼' : 'お店からの返信'}
+                                  <span className="font-normal text-[#777] ml-2">{item.at ? new Date(item.at).toLocaleString('ja-JP') : ''}</span>
+                                </p>
+                                <pre className="text-[12px] text-[#222] whitespace-pre-wrap font-sans leading-relaxed [overflow-wrap:anywhere]">{item.m.body}</pre>
+                              </div>
+                            );
+                          }
+                          const v = item.v;
+                          const withdrawn = v.status !== 'active';
+                          return (
+                            <div key={item.key} className={`p-3 rounded-lg border ${withdrawn ? 'bg-gray-50 border-gray-200 opacity-70' : 'bg-emerald-50 border-emerald-200'}`}>
+                              <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                                <p className="text-[10px] font-bold text-emerald-700">
+                                  見積案 {v.version_no}（¥{Number(v.proposed_price).toLocaleString()} 税抜 / ¥{Math.floor(Number(v.proposed_price) * 1.1).toLocaleString()} 税込）
+                                  {v.id === latestId && <span className="ml-2 px-1.5 py-0.5 rounded bg-emerald-600 text-white">最新</span>}
+                                  {withdrawn && <span className="ml-2 px-1.5 py-0.5 rounded bg-gray-300 text-gray-700">取り下げ</span>}
+                                  <span className="font-normal text-[#777] ml-2">{item.at ? new Date(item.at).toLocaleString('ja-JP') : ''}</span>
+                                </p>
+                                {canEditVersions && (
+                                  <button type="button" onClick={() => handleVersionStatus(est.id, v.id, !withdrawn)}
+                                    className="text-[10px] font-bold px-2 py-1 rounded border border-[#EAEAEA] bg-white text-[#555] hover:border-[#2D4B3E]">
+                                    {withdrawn ? '元に戻す' : 'この案を取り下げ'}
+                                  </button>
+                                )}
+                              </div>
+                              <pre className="text-[12px] text-[#222] whitespace-pre-wrap font-sans leading-relaxed [overflow-wrap:anywhere]">{v.message}</pre>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
 
                   {/* [見積-4] 期限切れ間近のリマインダー送信ボタン（replied のみ） */}
                   {est.status === 'replied' && est.expires_at && est.customer_email && (() => {
@@ -551,6 +655,41 @@ export default function EstimatesPage() {
                         className="h-10 px-4 bg-white border border-red-200 text-red-600 text-[12px] font-bold rounded-lg hover:bg-red-50 flex items-center gap-1">
                         <XCircle size={12}/> 却下
                       </button>
+                    </div>
+                  )}
+
+                  {['replied', 'revision_requested', 'expired'].includes(est.status) && !isEditing && messagingId !== est.id && (
+                    <div className="flex gap-2 pt-2 flex-wrap">
+                      <button onClick={() => { setMessagingId(est.id); setMessageText(''); setEditingId(null); }}
+                        className="flex-1 min-w-[140px] h-10 bg-white border border-[#117768] text-[#117768] text-[12px] font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-[#117768]/5">
+                        <Mail size={12}/> 返信する（文章のみ）
+                      </button>
+                      <button onClick={() => {
+                          const vs = Array.isArray(est.versions) ? est.versions : [];
+                          const act = vs.filter(v => v.status === 'active');
+                          startEditing(est, act[act.length - 1] || vs[vs.length - 1] || (est.proposed_data ? { proposed_data: est.proposed_data } : null));
+                        }}
+                        className="flex-1 min-w-[140px] h-10 bg-[#117768] text-white text-[12px] font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-[#0d5e54]">
+                        <Send size={12}/> 見積を出し直す
+                      </button>
+                    </div>
+                  )}
+
+                  {messagingId === est.id && (
+                    <div className="space-y-2 pt-3 border-t border-[#EAEAEA]">
+                      <label className="block">
+                        <span className="text-[10px] font-bold text-[#555]">お客様への返信（金額は変わりません。メールでお送りします）</span>
+                        <textarea value={messageText} onChange={e => setMessageText(e.target.value)} rows={5}
+                          placeholder="例: ダリアでのお作りも可能です。ご予算はそのままで大丈夫です。"
+                          className="w-full mt-1 px-3 py-2 bg-white border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#117768] resize-y leading-relaxed"/>
+                      </label>
+                      <div className="flex gap-2">
+                        <button onClick={() => setMessagingId(null)} className="h-10 px-4 bg-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-lg">キャンセル</button>
+                        <button onClick={() => handleSendMessage(est.id)} disabled={sendingMessage || !messageText.trim()}
+                          className="flex-1 h-10 bg-[#117768] text-white text-[12px] font-bold rounded-lg hover:bg-[#0d5e54] flex items-center justify-center gap-1 disabled:opacity-50">
+                          <Send size={12}/> {sendingMessage ? '送信中...' : '返信を送る'}
+                        </button>
+                      </div>
                     </div>
                   )}
 

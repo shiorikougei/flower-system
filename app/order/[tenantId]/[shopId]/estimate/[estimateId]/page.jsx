@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
-import { CheckCircle2, AlertCircle, ChevronLeft, CreditCard, Banknote, Clock, Calendar, Lightbulb, FileText, ClipboardList, Mail } from 'lucide-react';
+import { CheckCircle2, AlertCircle, ChevronLeft, CreditCard, Banknote, Clock, Calendar, Lightbulb, FileText, ClipboardList, Mail, Send } from 'lucide-react';
 import TatefudaPreview from '@/components/TatefudaPreview';
 
 export default function EstimateAcceptPage() {
@@ -19,6 +19,13 @@ export default function EstimateAcceptPage() {
   const [accepting, setAccepting] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(null);
+  // [2026-10] やり取りの無制限化: お客様用の鍵・選んだ見積案・変更依頼
+  const [accessToken, setAccessToken] = useState('');
+  const [selectedVersionId, setSelectedVersionId] = useState(null);
+  const [revisionText, setRevisionText] = useState('');
+  const [sendingRevision, setSendingRevision] = useState(false);
+  const [revisionError, setRevisionError] = useState('');
+  const [revisionSent, setRevisionSent] = useState(false);
 
   // ★ ご注文確定に必要な追加情報
   const [orderForm, setOrderForm] = useState({
@@ -49,8 +56,11 @@ export default function EstimateAcceptPage() {
     (async () => {
       try {
         // ★ [セキュリティ] 一覧取得は認証必須化されたため、id 指定で 1件取得に変更
+        // [2026-10] メールのリンクに付いているお客様用の鍵（?t=）も一緒に送る
+        const t = new URLSearchParams(window.location.search).get('t') || '';
+        setAccessToken(t);
         const [estRes, settingsRes] = await Promise.all([
-          fetch(`/api/estimates?id=${encodeURIComponent(estimateId)}`).then(r => r.json()),
+          fetch(`/api/estimates?id=${encodeURIComponent(estimateId)}${t ? `&t=${encodeURIComponent(t)}` : ''}`).then(r => r.json()),
           supabase.from('app_settings').select('settings_data').eq('id', tenantId).single(),
         ]);
         const found = (estRes.estimates || []).find(e => e.id === estimateId);
@@ -79,7 +89,13 @@ export default function EstimateAcceptPage() {
 
   // 立札パターン（お供え/通常）
   const rd = estimate?.request_data || {};
-  const pd = estimate?.proposed_data || {};
+  // [2026-10] 見積案（出し直すたびに増える）。取り下げていない案ならどれからでも注文できる。最新を目立たせる
+  const versions = Array.isArray(estimate?.versions) ? estimate.versions : [];
+  const activeVersions = versions.filter(v => v.status === 'active');
+  const latestActive = activeVersions[activeVersions.length - 1] || null;
+  const selectedVersion = activeVersions.find(v => v.id === selectedVersionId) || latestActive;
+  const pd = selectedVersion?.proposed_data || {};
+  const selectedPrice = Number(selectedVersion?.proposed_price) || 0;
   const isOsonae = rd.purpose?.includes('供') || rd.purpose?.includes('悔') || rd.purpose === 'お供え・お悔やみ';
   const needsTatefuda = rd.cardType === 'tatefuda';
   const tatePatterns = isOsonae ? [
@@ -101,6 +117,7 @@ export default function EstimateAcceptPage() {
 
   async function handleAccept() {
     setError('');
+    if (!selectedVersion) { setError('ご注文いただける見積案がありません。お店にお問い合わせください'); return; }
     // バリデーション
     if (!orderForm.customerZip || orderForm.customerZip.length !== 7) { setError('郵便番号 (7桁) を入力してください'); return; }
     if (!orderForm.customerAddress1 || !orderForm.customerAddress2) { setError('ご住所をすべて入力してください'); return; }
@@ -129,6 +146,8 @@ export default function EstimateAcceptPage() {
         shopId,
         fromEstimate: true,
         estimateId,
+        // [2026-10] どの見積案で注文するか（金額はサーバーがこの見積案から確定する）
+        estimateVersionId: selectedVersion.id,
         customerInfo: {
           name: estimate.customer_name,
           email: estimate.customer_email,
@@ -167,7 +186,8 @@ export default function EstimateAcceptPage() {
         selectedTime: rd.desiredTime || '',
         priorContactAgreed: isDelivery ? orderForm.priorContactAgreed : null,
         // ★ 金額情報
-        itemPrice: Number(pd.productPrice) || estimate.proposed_price,
+        // 表示用の目安。実際の金額はサーバーが見積案から確定する
+        itemPrice: selectedPrice - ((Number(pd.selfDeliveryFee) || 0) + (Number(pd.sagawaFee) || 0) + (Number(pd.boxFee) || 0) + (Number(pd.coolFee) || 0) + ((pd.otherFees || []).reduce((s, o) => s + (Number(o.amount) || 0), 0))),
         calculatedFee: (Number(pd.selfDeliveryFee) || 0)
           + (Number(pd.sagawaFee) || 0)
           + (Number(pd.boxFee) || 0)
@@ -181,7 +201,7 @@ export default function EstimateAcceptPage() {
         },
         pickupFee: 0,
         paymentScheduledDate: orderForm.paymentMethod === 'bank_transfer' ? orderForm.paymentScheduledDate : null,
-        note: `お見積もり依頼から確定 (見積ID: ${String(estimateId).slice(0,8)})\n\n${estimate.reply_message || ''}`,
+        note: `お見積もり依頼から確定 (見積ID: ${String(estimateId).slice(0,8)} / 見積案 ${selectedVersion.version_no})\n\n${selectedVersion.message || ''}`,
         status: 'new',
       };
 
@@ -193,6 +213,7 @@ export default function EstimateAcceptPage() {
           shopId,
           orderData,
           paymentMethod: orderForm.paymentMethod,
+          estimateToken: accessToken,
         }),
       });
       const data = await res.json();
@@ -208,6 +229,34 @@ export default function EstimateAcceptPage() {
       setError(e.message);
     } finally {
       setAccepting(false);
+    }
+  }
+
+  // [2026-10] お客様からの変更依頼（文章のみ）
+  async function handleRequestRevision() {
+    setRevisionError('');
+    const text = revisionText.trim();
+    if (!text) { setRevisionError('ご依頼の内容を入力してください'); return; }
+    setSendingRevision(true);
+    try {
+      const res = await fetch('/api/estimates', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: estimateId, action: 'request_revision', customerToken: accessToken, body: text }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || '送信に失敗しました');
+      setRevisionText('');
+      setRevisionSent(true);
+      setEstimate(prev => prev ? {
+        ...prev,
+        status: 'revision_requested',
+        messages: [...(prev.messages || []), { id: 'local-' + Date.now(), sender: 'customer', body: text, created_at: new Date().toISOString() }],
+      } : prev);
+    } catch (e) {
+      setRevisionError(e.message);
+    } finally {
+      setSendingRevision(false);
     }
   }
 
@@ -309,8 +358,29 @@ export default function EstimateAcceptPage() {
     );
   }
 
-  const tax = Math.floor(estimate.proposed_price * 0.1);
-  const total = estimate.proposed_price + tax;
+  const tax = Math.floor(selectedPrice * 0.1);
+  const total = selectedPrice + tax;
+
+  // 料金内訳の行
+  const breakdownRows = (d) => {
+    const rows = [];
+    if (!d || typeof d !== 'object') return rows;
+    if (d.productPrice > 0) rows.push(['商品代 (税抜)', d.productPrice]);
+    if (d.selfDeliveryAccepted === 'yes' && d.selfDeliveryFee > 0) rows.push(['自社配達料', d.selfDeliveryFee]);
+    if (d.sagawaFee > 0) rows.push(['業者配送料 (佐川)', d.sagawaFee]);
+    if (d.boxFee > 0) rows.push(['箱代', d.boxFee]);
+    if (d.coolFee > 0) rows.push(['クール便代', d.coolFee]);
+    (d.otherFees || []).forEach(o => { if (Number(o.amount) > 0) rows.push([o.name || 'その他', Number(o.amount)]); });
+    return rows;
+  };
+
+  // [2026-10] やり取りを時間順に並べる（最初のご依頼 → 見積案・メッセージ）
+  const timeline = [
+    { kind: 'request', key: 'request', at: estimate.created_at },
+    ...versions.map(v => ({ kind: 'version', key: 'v-' + v.id, at: v.created_at, v })),
+    ...(Array.isArray(estimate.messages) ? estimate.messages : []).map(m => ({ kind: 'message', key: 'm-' + m.id, at: m.created_at, m })),
+  ].sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0));
+  const fmtAt = (at) => at ? new Date(at).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
 
   return (
     <div className="min-h-screen bg-[#FBFAF9] font-sans pb-20">
@@ -325,43 +395,129 @@ export default function EstimateAcceptPage() {
       <main className="max-w-[700px] mx-auto px-6 py-10 space-y-6">
         <div>
           <h1 className="text-[22px] font-bold text-[#2D4B3E]">お見積もりのご確認・確定</h1>
-          <p className="text-[11px] text-[#999] mt-1">内容にご納得いただけましたら、下記の情報を入力してご注文を確定してください。</p>
+          <p className="text-[12px] text-[#555] mt-1 leading-relaxed">お店とのやり取りと、お見積もりの内容です。ご希望の見積案を選んでご注文いただけます。内容を変えたいときは、下の「変更を依頼する」からお送りください。</p>
         </div>
 
-        {/* 店舗からの確定見積 */}
-        <div className="bg-white p-6 rounded-2xl border-2 border-emerald-200 space-y-4">
-          <p className="text-[11px] font-bold text-emerald-700">店舗からの確定見積</p>
-          {estimate.reply_message && (
-            <pre className="text-[12px] text-[#222] bg-emerald-50 p-4 rounded-xl whitespace-pre-wrap font-sans leading-relaxed">{estimate.reply_message}</pre>
-          )}
-          {pd && typeof pd === 'object' && (() => {
-            const rows = [];
-            if (pd.productPrice > 0) rows.push(['商品代 (税抜)', pd.productPrice]);
-            if (pd.selfDeliveryAccepted === 'yes' && pd.selfDeliveryFee > 0) rows.push(['自社配達料', pd.selfDeliveryFee]);
-            if (pd.sagawaFee > 0) rows.push(['業者配送料 (佐川)', pd.sagawaFee]);
-            if (pd.boxFee > 0) rows.push(['箱代', pd.boxFee]);
-            if (pd.coolFee > 0) rows.push(['クール便代', pd.coolFee]);
-            (pd.otherFees || []).forEach(o => { if (Number(o.amount) > 0) rows.push([o.name || 'その他', Number(o.amount)]); });
-            if (rows.length === 0) return null;
+        {estimate.status === 'revision_requested' && (
+          <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 text-[12px] text-amber-900 leading-relaxed">
+            <p className="font-bold">変更のご依頼を受け付けました</p>
+            <p>お店からのお返事をメールでお知らせします。今ある見積案でご注文いただくこともできます。</p>
+          </div>
+        )}
+
+        {/* [2026-10] これまでのやり取り */}
+        <section className="space-y-3" aria-label="これまでのやり取り">
+          <p className="text-[13px] font-bold text-[#2D4B3E]">これまでのやり取り</p>
+          {timeline.map(item => {
+            if (item.kind === 'request') {
+              return (
+                <div key={item.key} className="bg-white border border-[#EAEAEA] rounded-2xl p-4 space-y-1">
+                  <p className="text-[11px] font-bold text-[#555]">お客様のご依頼 <span className="font-normal text-[#999] ml-1">{fmtAt(item.at)}</span></p>
+                  <pre className="text-[12px] text-[#222] whitespace-pre-wrap font-sans leading-relaxed [overflow-wrap:anywhere]">{estimate.request_content}</pre>
+                </div>
+              );
+            }
+            if (item.kind === 'message') {
+              const isCustomer = item.m.sender === 'customer';
+              return (
+                <div key={item.key} className={`rounded-2xl p-4 space-y-1 border ${isCustomer ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                  <p className={`text-[11px] font-bold ${isCustomer ? 'text-amber-800' : 'text-emerald-700'}`}>
+                    {isCustomer ? 'お客様からの変更のご依頼' : 'お店からのご連絡'} <span className="font-normal text-[#777] ml-1">{fmtAt(item.at)}</span>
+                  </p>
+                  <pre className="text-[12px] text-[#222] whitespace-pre-wrap font-sans leading-relaxed [overflow-wrap:anywhere]">{item.m.body}</pre>
+                </div>
+              );
+            }
+            const v = item.v;
+            const isWithdrawn = v.status !== 'active';
+            const isLatest = latestActive && v.id === latestActive.id;
+            const isSelected = selectedVersion && v.id === selectedVersion.id;
+            const vTax = Math.floor((Number(v.proposed_price) || 0) * 0.1);
+            const vTotal = (Number(v.proposed_price) || 0) + vTax;
+            const rows = breakdownRows(v.proposed_data);
             return (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-1.5">
-                <p className="text-[11px] font-bold text-emerald-700 mb-2 flex items-center gap-1"><ClipboardList size={11}/> 料金内訳</p>
-                {rows.map(([label, amount], i) => (
-                  <div key={i} className="flex justify-between text-[12px] text-emerald-900">
-                    <span>{label}</span><span className="font-bold">¥{Number(amount).toLocaleString()}</span>
+              <div key={item.key} className={`bg-white rounded-2xl p-5 space-y-3 ${isWithdrawn ? 'border border-gray-200 opacity-60' : isLatest ? 'border-2 border-emerald-500 shadow-md' : 'border border-emerald-200'}`}>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <p className="text-[13px] font-bold text-emerald-800">
+                    お店のお見積もり 見積案 {v.version_no}
+                    <span className="font-normal text-[11px] text-[#777] ml-2">{fmtAt(item.at)}</span>
+                  </p>
+                  <div className="flex gap-1.5">
+                    {isLatest && <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-600 text-white">最新</span>}
+                    {isWithdrawn && <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-gray-200 text-gray-600">お店が取り下げました</span>}
+                    {isSelected && !isWithdrawn && <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#2D4B3E] text-white">選択中</span>}
                   </div>
-                ))}
-                <div className="flex justify-between text-[11px] text-emerald-700 pt-2 border-t border-emerald-300">
-                  <span>消費税 (10%)</span><span>¥{tax.toLocaleString()}</span>
+                </div>
+                {v.message && (
+                  <pre className="text-[12px] text-[#222] bg-emerald-50 p-4 rounded-xl whitespace-pre-wrap font-sans leading-relaxed [overflow-wrap:anywhere]">{v.message}</pre>
+                )}
+                {rows.length > 0 && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-1.5">
+                    <p className="text-[11px] font-bold text-emerald-700 mb-2 flex items-center gap-1"><ClipboardList size={11}/> 料金内訳</p>
+                    {rows.map(([label, amount], i) => (
+                      <div key={i} className="flex justify-between text-[12px] text-emerald-900">
+                        <span>{label}</span><span className="font-bold">¥{Number(amount).toLocaleString()}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between text-[11px] text-emerald-700 pt-2 border-t border-emerald-300">
+                      <span>消費税 (10%)</span><span>¥{vTax.toLocaleString()}</span>
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-end justify-between gap-3 flex-wrap">
+                  <div>
+                    <p className="text-[11px] text-emerald-700">ご提案価格 (税込)</p>
+                    <p className="text-[26px] font-bold text-emerald-700 leading-tight">¥{vTotal.toLocaleString()}</p>
+                    <p className="text-[11px] text-emerald-600">税抜 ¥{(Number(v.proposed_price) || 0).toLocaleString()} + 消費税 ¥{vTax.toLocaleString()}</p>
+                  </div>
+                  {!isWithdrawn && (
+                    <button type="button"
+                      onClick={() => { setSelectedVersionId(v.id); document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' }); }}
+                      className={`h-11 px-5 rounded-xl text-[13px] font-bold ${isLatest ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-white border-2 border-emerald-600 text-emerald-700 hover:bg-emerald-50'}`}>
+                      この見積案で注文する
+                    </button>
+                  )}
                 </div>
               </div>
             );
-          })()}
-          <div className="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-5 text-center">
-            <p className="text-[11px] text-emerald-700">ご提案価格 (税込)</p>
-            <p className="text-[32px] font-bold text-emerald-700">¥{total.toLocaleString()}</p>
-            <p className="text-[10px] text-emerald-600 mt-1">税抜 ¥{estimate.proposed_price.toLocaleString()} + 消費税 ¥{tax.toLocaleString()}</p>
-          </div>
+          })}
+        </section>
+
+        {/* [2026-10] 変更を依頼する */}
+        <section className="bg-white p-5 rounded-2xl border border-[#EAEAEA] space-y-3" aria-label="変更を依頼する">
+          <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-1"><Send size={13}/> 変更を依頼する</p>
+          <p className="text-[11px] text-[#555] leading-relaxed">お花の内容・ご予算・お届けの日時など、変えたいことをお書きください。お店から、お返事か新しいお見積もりをメールでお送りします。</p>
+          <label className="block">
+            <span className="sr-only">変更のご依頼の内容</span>
+            <textarea value={revisionText} onChange={e => { setRevisionText(e.target.value); setRevisionSent(false); }}
+              rows={4} maxLength={2000}
+              placeholder="例: ご予算を 8,000 円くらいにしたいです / 色をもう少し淡い色にできますか"
+              className="w-full px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E] resize-y leading-relaxed"/>
+          </label>
+          {revisionError && <p className="text-[12px] text-red-700 font-bold">{revisionError}</p>}
+          {revisionSent && <p className="text-[12px] text-emerald-700 font-bold">お店に送信しました。お返事はメールでお知らせします。</p>}
+          <button type="button" onClick={handleRequestRevision} disabled={sendingRevision || !revisionText.trim()}
+            className="h-11 px-5 bg-[#2D4B3E] text-white rounded-xl text-[13px] font-bold disabled:opacity-50">
+            {sendingRevision ? '送信中...' : '変更を依頼する'}
+          </button>
+        </section>
+
+        {/* ご注文する見積案 */}
+        <div id="order-form" className="bg-white p-6 rounded-2xl border-2 border-emerald-200 space-y-4 scroll-mt-6">
+          <p className="text-[13px] font-bold text-emerald-700">ご注文する見積案</p>
+          {selectedVersion ? (
+            <div className="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-5 text-center">
+              <p className="text-[12px] font-bold text-emerald-800">見積案 {selectedVersion.version_no}{latestActive && selectedVersion.id === latestActive.id ? '（最新）' : ''}</p>
+              <p className="text-[11px] text-emerald-700 mt-1">ご提案価格 (税込)</p>
+              <p className="text-[32px] font-bold text-emerald-700">¥{total.toLocaleString()}</p>
+              <p className="text-[10px] text-emerald-600 mt-1">税抜 ¥{selectedPrice.toLocaleString()} + 消費税 ¥{tax.toLocaleString()}</p>
+              {activeVersions.length > 1 && (
+                <p className="text-[11px] text-[#555] mt-2">ほかの見積案で注文するときは、上の「この見積案で注文する」を押してください。</p>
+              )}
+            </div>
+          ) : (
+            <p className="text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-4">今ご注文いただける見積案がありません。お店からのお返事をお待ちください。</p>
+          )}
           {/* [見積-1] 有効期限バナー */}
           {expiresAt && (
             <div className={`rounded-xl p-3 text-center border-2 ${isNearExpiry ? 'bg-amber-50 border-amber-300' : 'bg-blue-50 border-blue-200'}`}>

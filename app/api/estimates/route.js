@@ -2,17 +2,121 @@
 // POST   /api/estimates       → 新規見積依頼（お客様）
 // GET    /api/estimates       → 一覧取得（スタッフ）
 // PATCH  /api/estimates       → 店舗回答 or 確定変換
+//   [2026-10] やり取りの無制限化（docs/ESTIMATE_THREAD_DESIGN.md）
+//   - reply: 見積案を追加（出し直し）/ message: 文章だけの返信 / withdraw_version・reinstate_version: 見積案の取り下げ・戻す
+//   - request_revision: お客様からの変更依頼（お客様用の鍵で確認）
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail, noReplyFooter } from '@/utils/email';
 import { rateLimit, getClientIp } from '@/utils/rateLimit';
 import { requireTenantStaff } from '@/utils/adminAuth';
+import {
+  newExpiresAt, newAccessToken, customerEstimateUrl, isValidCustomerToken, publicEstimate,
+  loadVersions, loadMessages, loadThreadsFor, materializeLegacyVersion,
+} from '@/utils/estimateThread';
 
 export const runtime = 'nodejs';
 
 function admin() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+// 新しい表・列がまだ無いとき（本番に SQL を流す前）のエラーか
+function isMissingSchema(err) {
+  const code = err?.code || '';
+  return code === '42P01' || code === '42703' || code === 'PGRST204' || code === 'PGRST205';
+}
+
+const escHtml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+async function loadShopInfo(supabase, est) {
+  const { data: tRow } = await supabase.from('app_settings').select('settings_data').eq('id', est.tenant_id).single();
+  const settings = tRow?.settings_data || {};
+  const shop = settings.shops?.find(s => String(s.id) === String(est.shop_id)) || settings.shops?.[0] || {};
+  return {
+    settings,
+    shop,
+    shopName: shop.name || settings.generalConfig?.appName || 'お花屋さん',
+    shopEmail: shop.email || settings.generalConfig?.email || '',
+    shopPhone: shop.phone || settings.generalConfig?.phone || '',
+    lineUrl: settings.lineConfig?.addFriendUrl || '',
+  };
+}
+
+// お客様へのお知らせ（メール + LINE 連携済みなら LINE）。お客様の通知設定を尊重する
+async function notifyCustomer(supabase, est, { subject, heading, bodyHtml, lineText }) {
+  const info = await loadShopInfo(supabase, est);
+  let preference = 'both';
+  try {
+    const { data: link } = await supabase
+      .from('customer_line_links')
+      .select('notification_preference, is_active')
+      .eq('tenant_id', est.tenant_id)
+      .eq('customer_email', String(est.customer_email || '').toLowerCase())
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle();
+    if (link?.notification_preference) preference = link.notification_preference;
+  } catch {}
+  const url = customerEstimateUrl(est);
+  if (preference !== 'line_only') {
+    try {
+      await sendEmail({
+        to: est.customer_email,
+        from: `${info.shopName} <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`,
+        subject: `【${info.shopName}】${subject}`,
+        html: `<!DOCTYPE html><html><body style="font-family:'Hiragino Sans',sans-serif;padding:20px;background:#FBFAF9;">
+          <div style="max-width:600px;margin:0 auto;background:white;padding:30px;border-radius:12px;">
+            <h2 style="color:#117768;margin:0 0 16px;">${escHtml(heading)}</h2>
+            <p>${escHtml(est.customer_name)} 様</p>
+            ${bodyHtml}
+            <p style="margin:24px 0 0;">
+              <a href="${url}" style="display:inline-block;background:#117768;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">お見積もりのページを開く</a>
+            </p>
+            <p style="font-size:12px;color:#666;margin-top:16px;">お見積もりのページから、ご注文や内容の変更のご依頼ができます。</p>
+            ${noReplyFooter({ shopName: info.shopName, shopEmail: info.shopEmail, shopPhone: info.shopPhone, lineAddFriendUrl: info.lineUrl })}
+          </div>
+        </body></html>`,
+      });
+    } catch (e) { console.warn('[estimate notify customer mail]', e?.message); }
+  }
+  try {
+    const { sendLineParallelToEmail } = await import('@/utils/line');
+    await sendLineParallelToEmail({
+      supabaseAdmin: supabase,
+      tenantSettings: info.settings,
+      tenantId: est.tenant_id,
+      customerEmail: est.customer_email,
+      text: `【${info.shopName}】${subject}\n\n${est.customer_name} 様\n\n${lineText}\n\n▼ お見積もりのページ\n${url}`,
+    });
+  } catch (e) { console.warn('[estimate notify customer LINE]', e?.message); }
+}
+
+// お店へのお知らせ（お客様から変更依頼が来たとき）
+async function notifyShopRevision(supabase, est, body) {
+  const info = await loadShopInfo(supabase, est);
+  const shopEmail = (info.shop.notifyEmail || '').trim() || info.shop.email || info.settings.generalConfig?.email;
+  if (!shopEmail || info.shop.notifyOnEstimate === false) return;
+  const ccEmails = (info.shop.notifyCcEmails || '').split(',').map(s => s.trim()).filter(Boolean);
+  await sendEmail({
+    to: shopEmail,
+    cc: ccEmails.length > 0 ? ccEmails : undefined,
+    subject: `【見積】${est.customer_name} 様から変更のご依頼があります`,
+    html: `<!DOCTYPE html><html><body style="font-family:'Hiragino Sans',sans-serif;padding:20px;background:#fbfaf9;">
+      <div style="max-width:600px;margin:0 auto;background:white;padding:30px;border-radius:12px;">
+        <h2 style="color:#117768;margin:0 0 16px;">お見積もりの変更のご依頼</h2>
+        <p style="margin:5px 0;"><strong>お客様:</strong> ${escHtml(est.customer_name)} 様</p>
+        <p style="margin:5px 0;"><strong>メール:</strong> ${escHtml(est.customer_email)}</p>
+        <p style="margin:5px 0;"><strong>お電話:</strong> ${escHtml(est.customer_phone || '-')}</p>
+        <div style="background:#FFFAEB;border-left:4px solid #D97706;padding:14px;border-radius:8px;margin:16px 0;white-space:pre-wrap;font-size:13px;">${escHtml(body)}</div>
+        <p style="margin-top:24px;text-align:center;">
+          <a href="https://noodleflorix.com/staff/estimates" style="display:inline-block;background:#117768;color:white;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px;">スタッフ画面で返信する</a>
+        </p>
+      </div>
+      ${noReplyFooter()}
+    </body></html>`,
+  });
 }
 
 // POST: お客様が見積依頼
@@ -79,9 +183,16 @@ export async function POST(request) {
       reference_images: refImgs,
       status: 'pending',
       expires_at: expiresAt,
+      // [2026-10] お客様用の鍵（メールのリンクに付ける。見積のページの操作に使う）
+      access_token: newAccessToken(),
     };
 
-    const { data, error } = await supabase.from('estimates').insert([insertPayload]).select('id').single();
+    let { data, error } = await supabase.from('estimates').insert([insertPayload]).select('id').single();
+    if (error && isMissingSchema(error)) {
+      // 鍵の列がまだ無い（本番に SQL を流す前）ときは、鍵なしで今までどおり登録する
+      const { access_token, ...withoutToken } = insertPayload;
+      ({ data, error } = await supabase.from('estimates').insert([withoutToken]).select('id').single());
+    }
 
     if (error) {
       // [Phase1-① PII保護] 詳細エラーは本番でクライアントに返さない（DB構造・PII漏洩リスク）
@@ -209,15 +320,31 @@ export async function GET(request) {
     const tenantId = url.searchParams.get('tenantId');
     const id = url.searchParams.get('id');
     const status = url.searchParams.get('status'); // optional filter
+    const token = url.searchParams.get('t');
 
     const supabase = admin();
 
     // ★ id 指定: お客様向け1件取得（認証不要、UUID知っている前提）
+    //   [2026-10] お客様用の鍵がある見積は、鍵が合うときだけ返す。やり取り（見積案・メッセージ）も一緒に返す
     if (id) {
       const { data, error } = await supabase.from('estimates').select('*').eq('id', id).maybeSingle();
       if (error) throw error;
-      if (!data) return NextResponse.json({ estimates: [] });
-      return NextResponse.json({ estimates: [data] });
+      if (!data || !isValidCustomerToken(data, token)) return NextResponse.json({ estimates: [] });
+      let versions = [];
+      let messages = [];
+      try {
+        versions = await loadVersions(supabase, data);
+        messages = await loadMessages(supabase, data);
+      } catch (e) {
+        if (!isMissingSchema(e)) throw e;
+        versions = [];
+        messages = [];
+      }
+      if (versions.length === 0 && data.replied_at && data.proposed_price !== null) {
+        // 表がまだ無いときの「見積案1」
+        versions = [{ id: 'legacy', version_no: 1, proposed_price: Number(data.proposed_price) || 0, proposed_data: data.proposed_data, message: data.reply_message || '', status: 'active', created_at: data.replied_at, legacy: true }];
+      }
+      return NextResponse.json({ estimates: [{ ...publicEstimate(data), versions, messages }] });
     }
 
     // 一覧取得: 認証必須
@@ -225,11 +352,31 @@ export async function GET(request) {
     const auth = await requireTenantStaff(request, tenantId);
     if (!auth.ok) return auth.response;
 
+    // [2026-10] サイドバーのバッジ用: 変更依頼ありの件数だけ返す
+    if (url.searchParams.get('count') === 'revision_requested') {
+      const { count, error: cErr } = await supabase
+        .from('estimates')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .eq('status', 'revision_requested');
+      if (cErr) throw cErr;
+      return NextResponse.json({ count: count || 0 });
+    }
+
     let q = supabase.from('estimates').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(100);
     if (status) q = q.eq('status', status);
     const { data, error } = await q;
     if (error) throw error;
-    return NextResponse.json({ estimates: data || [] });
+    const list = (data || []).map(publicEstimate);
+    let threads = {};
+    try {
+      threads = await loadThreadsFor(supabase, list);
+    } catch (e) {
+      if (!isMissingSchema(e)) throw e;
+    }
+    return NextResponse.json({
+      estimates: list.map(e => ({ ...e, versions: threads[e.id]?.versions || [], messages: threads[e.id]?.messages || [] })),
+    });
   } catch (err) {
     console.error('[estimates GET]', err?.message);
     return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
@@ -266,7 +413,7 @@ export async function DELETE(request) {
 // PATCH: 店舗回答 or お客様承諾
 export async function PATCH(request) {
   try {
-    const { id, action, replyMessage, proposedPrice, proposedData, customerToken, customerExtraData } = await request.json();
+    const { id, action, replyMessage, proposedPrice, proposedData, customerToken, customerExtraData, body: messageBody, versionId } = await request.json();
     if (!id || !action) return NextResponse.json({ error: 'id/action必要' }, { status: 400 });
 
     const supabase = admin();
@@ -275,27 +422,151 @@ export async function PATCH(request) {
 
     // ★ [セキュリティ] reply / reject は店舗スタッフ専用
     //    （accept はお客様承諾フローなので顧客トークンで認証する仕様だが、深夜にトークン検証を強化予定）
-    if (action === 'reply' || action === 'reject' || action === 'trash' || action === 'restore') {
+    let staffUserId = null;
+    if (['reply', 'reject', 'trash', 'restore', 'message', 'withdraw_version', 'reinstate_version'].includes(action)) {
       const authR = await requireTenantStaff(request, cur.tenant_id);
       if (!authR.ok) return authR.response;
+      staffUserId = authR.user?.id || null;
+    }
+
+    // [2026-10] お客様からの変更依頼（ログイン不要。お客様用の鍵で確認）
+    if (action === 'request_revision') {
+      if (!isValidCustomerToken(cur, customerToken)) {
+        return NextResponse.json({ error: 'お見積もりが見つかりません' }, { status: 404 });
+      }
+      const ip = getClientIp(request);
+      const allowed = await rateLimit({ key: `estimate_revision:${id}:${ip}`, max: 5, windowSec: 600 });
+      if (!allowed) {
+        return NextResponse.json({ error: '短い時間に何度も送信されています。10分ほど待ってから再度お試しください。' }, { status: 429 });
+      }
+      const text = String(messageBody || '').trim();
+      if (!text) return NextResponse.json({ error: 'ご依頼の内容を入力してください' }, { status: 400 });
+      if (text.length > 2000) return NextResponse.json({ error: `内容が長すぎます (${text.length}文字 / 上限 2000文字)` }, { status: 400 });
+      if (!['replied', 'revision_requested', 'expired'].includes(cur.status)) {
+        return NextResponse.json({ error: 'このお見積もりには変更のご依頼を送れません' }, { status: 400 });
+      }
+      const { error: mErr } = await supabase.from('estimate_messages').insert([{
+        estimate_id: id, tenant_id: cur.tenant_id, sender: 'customer', body: text,
+      }]);
+      if (mErr) throw mErr;
+      const { error: uErr } = await supabase.from('estimates').update({
+        status: 'revision_requested',
+        expires_at: newExpiresAt(),
+      }).eq('id', id);
+      if (uErr) throw uErr;
+      try { await notifyShopRevision(supabase, cur, text); } catch (e) { console.warn('[estimate revision notify]', e?.message); }
+      return NextResponse.json({ ok: true });
+    }
+
+    // [2026-10] お店から文章だけの返信（金額は変えない）
+    if (action === 'message') {
+      const text = String(messageBody || '').trim();
+      if (!text) return NextResponse.json({ error: '返信の内容を入力してください' }, { status: 400 });
+      if (text.length > 4000) return NextResponse.json({ error: '内容が長すぎます（上限 4000文字）' }, { status: 400 });
+      if (['converted', 'rejected', 'deleted'].includes(cur.status)) {
+        return NextResponse.json({ error: 'この見積には返信できません' }, { status: 400 });
+      }
+      const { error: mErr } = await supabase.from('estimate_messages').insert([{
+        estimate_id: id, tenant_id: cur.tenant_id, sender: 'shop', body: text, created_by: staffUserId,
+      }]);
+      if (mErr) throw mErr;
+      // 見積案があれば「回答済」に戻す（無ければ未回答のまま）。期限は 30 日延ばす
+      let hasVersion = false;
+      try { hasVersion = (await loadVersions(supabase, cur)).length > 0; } catch {}
+      const nextStatus = hasVersion ? 'replied' : cur.status;
+      const { error: uErr } = await supabase.from('estimates').update({
+        status: nextStatus,
+        ...(hasVersion ? { expires_at: newExpiresAt() } : {}),
+      }).eq('id', id);
+      if (uErr) throw uErr;
+      await notifyCustomer(supabase, cur, {
+        subject: 'お見積もりについてのご連絡',
+        heading: 'お見積もりについてのご連絡',
+        bodyHtml: `<div style="background:#f0fdf4;padding:15px;border-radius:8px;white-space:pre-wrap;font-size:13px;line-height:1.8;">${escHtml(text)}</div>`,
+        lineText: text,
+      });
+      return NextResponse.json({ ok: true, status: nextStatus });
+    }
+
+    // [2026-10] 見積案の取り下げ・元に戻す
+    if (action === 'withdraw_version' || action === 'reinstate_version') {
+      if (!versionId) return NextResponse.json({ error: 'versionId が必要' }, { status: 400 });
+      let targetId = versionId;
+      if (versionId === 'legacy') {
+        // 表に無い「見積案1」は、今の回答を見積案1として保存してから取り下げる
+        const rows = await materializeLegacyVersion(supabase, cur);
+        targetId = rows.find(r => r.version_no === 1)?.id;
+        if (!targetId) return NextResponse.json({ error: '見積案が見つかりません' }, { status: 404 });
+      }
+      const { data: target } = await supabase.from('estimate_versions').select('id, estimate_id').eq('id', targetId).maybeSingle();
+      if (!target || target.estimate_id !== id) return NextResponse.json({ error: '見積案が見つかりません' }, { status: 404 });
+      const { error: vErr } = await supabase.from('estimate_versions')
+        .update({ status: action === 'withdraw_version' ? 'withdrawn' : 'active' })
+        .eq('id', targetId);
+      if (vErr) throw vErr;
+      return NextResponse.json({ ok: true });
     }
 
     if (action === 'reply') {
       // 店舗回答
+      // [2026-10] 回答のたびに「見積案」を 1 つ追加する（出し直し）。何度でも可
+      if (!['pending', 'replied', 'revision_requested', 'expired'].includes(cur.status)) {
+        return NextResponse.json({ error: 'この見積には回答できません（確定済み・却下・ゴミ箱）' }, { status: 400 });
+      }
+      const priceInt = Math.floor(Number(proposedPrice) || 0);
+      if (priceInt <= 0) return NextResponse.json({ error: '金額を入力してください' }, { status: 400 });
+      let versionNo = 1;
+      try {
+        const rows = await materializeLegacyVersion(supabase, cur);
+        versionNo = rows.length > 0 ? Math.max(...rows.map(r => r.version_no)) + 1 : 1;
+        const { error: vErr } = await supabase.from('estimate_versions').insert([{
+          estimate_id: id,
+          tenant_id: cur.tenant_id,
+          version_no: versionNo,
+          proposed_price: priceInt,
+          proposed_data: proposedData || null,
+          message: String(replyMessage || '').slice(0, 4000),
+          status: 'active',
+          created_by: staffUserId,
+        }]);
+        if (vErr) throw vErr;
+      } catch (e) {
+        // 表がまだ無い（本番に SQL を流す前）ときは、今までどおり estimates だけ更新する
+        if (!isMissingSchema(e)) throw e;
+        versionNo = 1;
+      }
+
       // [見積-1] 回答時に有効期限をリセット（回答日から30日延長）
-      const newExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-      await supabase.from('estimates').update({
+      // 今の画面・自動お知らせが動くように、最新の見積案を estimates にも入れる
+      const { error: upErr } = await supabase.from('estimates').update({
         reply_message: String(replyMessage || '').slice(0, 4000),
-        proposed_price: Number(proposedPrice) || 0,
+        proposed_price: priceInt,
         proposed_data: proposedData || null, // 料金内訳を保存
         status: 'replied',
         replied_at: new Date().toISOString(),
-        expires_at: newExpiresAt,
+        expires_at: newExpiresAt(),
         // 催促・期限通知履歴をリセット（次フェーズで再通知できるように）
         reminder_sent_at: null,
         expiry_warning_sent_at: null,
         staff_expiry_alert_sent_at: null,
       }).eq('id', id);
+      if (upErr) throw upErr;
+
+      if (versionNo > 1) {
+        const taxIncl = Math.floor(priceInt * 1.1);
+        await notifyCustomer(supabase, cur, {
+          subject: `お見積もりを更新しました（見積案 ${versionNo}）`,
+          heading: `お見積もりを更新しました（見積案 ${versionNo}）`,
+          bodyHtml: `<p>ご依頼の内容をもとに、お見積もりを出し直しました。</p>
+            <div style="background:#f0fdf4;border:2px solid #117768;padding:20px;border-radius:12px;margin:20px 0;">
+              <p style="margin:0;font-size:11px;color:#666;">見積案 ${versionNo} のご提案価格（税込）</p>
+              <p style="margin:5px 0;font-size:32px;font-weight:bold;color:#117768;">¥${taxIncl.toLocaleString()}</p>
+            </div>
+            <p style="background:white;padding:15px;border:1px solid #eaeaea;border-radius:8px;white-space:pre-wrap;">${escHtml(replyMessage || '')}</p>`,
+          lineText: `見積案 ${versionNo} のご提案価格（税込）: ¥${taxIncl.toLocaleString()}\n\n${replyMessage || ''}`,
+        });
+        return NextResponse.json({ ok: true, versionNo });
+      }
 
       // 店舗情報を取得 (送信元・問合せ先のため)
       const { data: tRow2 } = await supabase.from('app_settings').select('settings_data').eq('id', cur.tenant_id).single();
@@ -375,7 +646,7 @@ export async function PATCH(request) {
                 <p style="margin-top:20px;">
                   内容にご納得いただけましたら、下記から正式注文へお進みください👇
                 </p>
-                <a href="https://noodleflorix.com/order/${cur.tenant_id}/${cur.shop_id || 'default'}/estimate/${id}"
+                <a href="${customerEstimateUrl(cur)}"
                    style="display:inline-block;background:#117768;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">
                   この内容で確定する →
                 </a>
@@ -395,13 +666,17 @@ export async function PATCH(request) {
           tenantSettings: settings2,
           tenantId: cur.tenant_id,
           customerEmail: cur.customer_email,
-          text: `【${shopName2}】お見積もりのご回答\n\n${cur.customer_name} 様\n\nご提案価格(税込): ¥${(Math.floor(Number(proposedPrice) * 1.1)).toLocaleString()}\n\n${replyMessage || ''}\n\n▼ 内容にご納得いただけましたら、こちらから正式注文へ\nhttps://noodleflorix.com/order/${cur.tenant_id}/${cur.shop_id || 'default'}/estimate/${id}`,
+          text: `【${shopName2}】お見積もりのご回答\n\n${cur.customer_name} 様\n\nご提案価格(税込): ¥${(Math.floor(Number(proposedPrice) * 1.1)).toLocaleString()}\n\n${replyMessage || ''}\n\n▼ 内容にご納得いただけましたら、こちらから正式注文へ\n${customerEstimateUrl(cur)}`,
         });
       } catch (e) { console.warn('[estimate reply LINE]', e?.message); }
 
       return NextResponse.json({ ok: true });
     } else if (action === 'accept') {
       // お客様承諾 → 正式注文に変換
+      // [2026-10] お客様用の鍵がある見積は、鍵が合わないと受け付けない
+      if (!isValidCustomerToken(cur, customerToken)) {
+        return NextResponse.json({ error: '見積が見つかりません' }, { status: 404 });
+      }
       if (cur.status !== 'replied') {
         return NextResponse.json({ error: '回答前の見積です' }, { status: 400 });
       }

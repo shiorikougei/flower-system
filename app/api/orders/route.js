@@ -19,6 +19,7 @@ import { sendLineParallelToEmail } from '@/utils/line';
 import { createMypageMagicUrl } from '@/utils/mypageLink';
 import { rateLimit, getClientIp } from '@/utils/rateLimit';
 import { validateOrderData } from '@/utils/orderValidator';
+import { loadVersions, amountsFromVersion, isValidCustomerToken } from '@/utils/estimateThread';
 
 export async function POST(request) {
   try {
@@ -97,6 +98,48 @@ export async function POST(request) {
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
+
+    // ---- [2026-10 C1] お見積もりからの注文: 金額は保存済みの見積案からサーバーで確定する ----
+    //   ブラウザから送られた itemPrice / calculatedFee は使わない
+    if (orderData.fromEstimate && orderData.estimateId && !isStaffEntered) {
+      const { data: est } = await supabaseAdmin
+        .from('estimates').select('*').eq('id', String(orderData.estimateId)).maybeSingle();
+      if (!est || String(est.tenant_id) !== String(tenantId) || !isValidCustomerToken(est, body.estimateToken)) {
+        return NextResponse.json({ error: 'お見積もりが見つかりません' }, { status: 400 });
+      }
+      if (est.order_id || est.status === 'converted') {
+        return NextResponse.json({ error: 'このお見積もりはすでにご注文済みです' }, { status: 400 });
+      }
+      if (!['replied', 'revision_requested'].includes(est.status)) {
+        return NextResponse.json({ error: 'このお見積もりからはご注文いただけません' }, { status: 400 });
+      }
+      if (est.expires_at && new Date(est.expires_at) < new Date()) {
+        return NextResponse.json({ error: 'お見積もりの有効期限が切れています' }, { status: 400 });
+      }
+      let versions = [];
+      try {
+        versions = await loadVersions(supabaseAdmin, est);
+      } catch (e) {
+        // 見積案の表がまだ無いとき（本番に SQL を流す前）は、今の回答を見積案1として扱う
+        versions = est.proposed_price !== null ? [{ id: 'legacy', version_no: 1, proposed_price: est.proposed_price, proposed_data: est.proposed_data, status: 'active' }] : [];
+      }
+      const active = versions.filter(v => v.status === 'active');
+      const chosen = orderData.estimateVersionId
+        ? versions.find(v => String(v.id) === String(orderData.estimateVersionId))
+        : active[active.length - 1];
+      if (!chosen) return NextResponse.json({ error: 'お見積もりの内容が見つかりません' }, { status: 400 });
+      if (chosen.status !== 'active') {
+        return NextResponse.json({ error: 'お選びの見積案はお店が取り下げました。ページを再読み込みして、ほかの見積案をお選びください' }, { status: 400 });
+      }
+      const amt = amountsFromVersion(chosen);
+      if (!amt.ok) return NextResponse.json({ error: 'お見積もりの金額が正しくありません。お店にお問い合わせください' }, { status: 400 });
+      orderData.itemPrice = amt.itemPrice;
+      orderData.calculatedFee = amt.calculatedFee;
+      orderData.feeBreakdown = amt.feeBreakdown;
+      orderData.pickupFee = 0;
+      orderData.estimateVersionId = chosen.id;
+      orderData.estimateVersionNo = chosen.version_no;
+    }
 
     // ---- 金額の再計算（クライアントの数字を信用しない）----
     // EC注文（カート）の場合は cartItems から再計算
@@ -299,7 +342,9 @@ export async function POST(request) {
         await supabaseAdmin
           .from('estimates')
           .update({ status: 'converted', order_id: orderId })
-          .eq('id', orderData.estimateId);
+          .eq('id', orderData.estimateId)
+          // [2026-10] すでに別の注文と結び付いている見積は上書きしない
+          .is('order_id', null);
       } catch (e) {
         console.warn('[/api/orders] estimate mark converted失敗:', e?.message);
       }
