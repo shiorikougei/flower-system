@@ -10,6 +10,7 @@ import {
 import { getCurrentStaff } from '@/utils/staffRole';
 import { clockIn, clockOut, breakStart, breakEnd } from '@/utils/attendance';
 import HelpTooltip from '@/components/HelpTooltip';
+import ReleaseNotesCard from '@/components/ReleaseNotesCard';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -246,6 +247,9 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-2">
           <p className="text-[14px] text-[#555555]">本日の業務状況と最新の注文状況を確認しましょう。</p>
         </div>
+
+        {/* ★ お知らせ（更新情報）: utils/releaseNotes.js に追加すると表示される */}
+        <ReleaseNotesCard />
 
         {/* ★ 勤怠カード（TOP配置） */}
         <div className="bg-gradient-to-br from-[#117768]/5 to-[#2D4B3E]/10 border border-[#117768]/20 rounded-2xl p-5 md:p-6">

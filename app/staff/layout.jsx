@@ -11,11 +11,14 @@ import { getCurrentStaff, setCurrentStaff, setAuthConfig, ROLE_LABELS, ROLE_DESC
 import { logAction } from '@/utils/auditLog';
 import { isFeatureEnabled } from '@/utils/features';
 import UpgradeModal from '@/components/UpgradeModal';
+import { ReleaseNotesBanner, useUnseenReleaseNotes } from '@/components/ReleaseNotesCard';
 
 const SETTINGS_CACHE_KEY = 'florix_app_settings_cache';
 
 export default function StaffLayout({ children }) {
   const pathname = usePathname();
+  // ★ お知らせ（更新情報）の未確認件数（サイドバーの「ホーム」にバッジ表示）
+  const { notes: unseenNotes } = useUnseenReleaseNotes();
   const [appName, setAppName] = useState('FLORIX');
   const [logoUrl, setLogoUrl] = useState('');
   const [isPremiumPlan, setIsPremiumPlan] = useState(false);
@@ -429,6 +432,9 @@ export default function StaffLayout({ children }) {
                   >
                     <Icon size={16} className={isActive ? 'text-[#2D4B3E]' : 'text-[#999999]'} />
                     {item.name}
+                    {item.path === '/staff' && unseenNotes.length > 0 && (
+                      <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-[#D97D54] text-white text-[11px] font-bold flex items-center justify-center" title="未確認のお知らせ">{unseenNotes.length}</span>
+                    )}
                   </Link>
                 );
               })}
@@ -468,6 +474,8 @@ export default function StaffLayout({ children }) {
       </aside>
       
       <main className="flex-1 md:ml-64 min-w-0 print:ml-0">
+        {/* ★ 未確認のお知らせがあるとき、ホーム以外の画面の上部に帯を出す */}
+        <ReleaseNotesBanner pathname={pathname} />
         {children}
       </main>
 
