@@ -2168,10 +2168,11 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-[#FBFAF9] flex flex-col font-sans text-left pb-40">
-      <header className="h-20 bg-white/80 backdrop-blur-md border-b flex items-center justify-between px-6 md:px-12 sticky top-0 z-50 shadow-sm">
+      {/* ★ [2026-10] ノートPCでタブが右にはみ出して選べなかった -> 収まらない分は 2 段目に折り返す（高さは自動） */}
+      <header className="min-h-20 py-2 bg-white/80 backdrop-blur-md border-b flex items-center justify-between px-6 md:px-12 sticky top-0 z-50 shadow-sm">
         <h1 className="text-[16px] font-bold text-[#2D4B3E] tracking-tight">システム設定</h1>
         {/* ★ カテゴリ別タブ表示 */}
-        <div className="hidden md:flex flex-1 mx-6 overflow-x-auto hide-scrollbar gap-2">
+        <div className="hidden md:flex flex-1 mx-6 flex-wrap gap-x-2 gap-y-1.5 min-w-0">
           {tabCategories.map(cat => (
             <div key={cat.name} className="flex flex-col items-start shrink-0">
               <span className="text-[8px] font-bold text-[#999999] tracking-widest mb-0.5 px-1">{cat.name}</span>
