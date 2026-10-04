@@ -4,7 +4,7 @@
 // 認証: スタッフセッション必須（自テナントの見積のみ）
 // 読み取り専用。見積・注文のデータは一切変更しない。
 // Returns:
-//   { proposedPrice, tax, expectedTotal, status }
+//   { proposedPrice, tax, expectedTotal, status, repliedAt }
 //   expectedTotal = お客様の承諾画面に表示した税込金額（proposed_price + floor(proposed_price * 0.1)）
 
 import { NextResponse } from 'next/server';
@@ -28,7 +28,7 @@ export async function GET(request) {
 
     const { data: est, error } = await auth.supabaseAdmin
       .from('estimates')
-      .select('id, proposed_price, status')
+      .select('id, proposed_price, status, replied_at')
       .eq('id', estimateId)
       .eq('tenant_id', String(auth.tenant_id))
       .maybeSingle();
@@ -41,11 +41,11 @@ export async function GET(request) {
 
     const proposedPrice = Number(est.proposed_price);
     if (!Number.isFinite(proposedPrice) || proposedPrice <= 0) {
-      return NextResponse.json({ proposedPrice: null, tax: null, expectedTotal: null, status: est.status });
+      return NextResponse.json({ proposedPrice: null, tax: null, expectedTotal: null, status: est.status, repliedAt: est.replied_at || null });
     }
     // 承諾画面（estimate/[estimateId]/page.jsx）と同じ計算
     const tax = Math.floor(proposedPrice * 0.1);
-    return NextResponse.json({ proposedPrice, tax, expectedTotal: proposedPrice + tax, status: est.status });
+    return NextResponse.json({ proposedPrice, tax, expectedTotal: proposedPrice + tax, status: est.status, repliedAt: est.replied_at || null });
   } catch (e) {
     console.error('[/api/staff/estimate-amount] error:', e);
     return NextResponse.json({ error: '見積の取得に失敗しました' }, { status: 500 });

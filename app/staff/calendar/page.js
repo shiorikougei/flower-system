@@ -105,15 +105,18 @@ export default function CalendarPage() {
       };
       
       // ★ セキュリティ: tenant_id でも絞り込み（多層防御）
-      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId).eq('tenant_id', currentTenantId);
+      const { error: updateErr } = await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId).eq('tenant_id', currentTenantId);
+      if (updateErr) throw updateErr;
 
       const newOrders = orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o);
       setOrders(newOrders);
       sessionStorage.setItem(`florix_orders_cache_${currentTenantId}`, JSON.stringify(newOrders));
 
       setSelectedOrder({ ...targetOrder, order_data: updatedData });
+      return true;
     } catch (err) {
       alert('更新に失敗しました。');
+      return false;
     }
   };
 

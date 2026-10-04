@@ -83,7 +83,7 @@ export default function OrdersPage() {
   const handleUpdateStatus = async (orderId, newStatus, staffName) => {
     // ★ ① PIN必須なのにスタッフ未選択 → 操作拒否
     const guard = ensureOperationAllowed('ステータス更新');
-    if (!guard.allowed) { alert(guard.message); return; }
+    if (!guard.allowed) { alert(guard.message); return false; }
     // ★ 担当スタッフは任意化 (未選択でも更新可能)
     try {
       const targetOrder = orders.find(o => o.id === orderId);
@@ -103,7 +103,8 @@ export default function OrdersPage() {
       };
       
       // ★ セキュリティ: tenant_id でも絞り込み（多層防御）
-      await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId).eq('tenant_id', currentTenantId);
+      const { error: updateErr } = await supabase.from('orders').update({ order_data: updatedData }).eq('id', orderId).eq('tenant_id', currentTenantId);
+      if (updateErr) throw updateErr;
 
       const newOrders = orders.map(o => o.id === orderId ? { ...o, order_data: updatedData } : o);
       setOrders(newOrders);
@@ -112,8 +113,10 @@ export default function OrdersPage() {
       setSelectedOrder({ ...targetOrder, order_data: updatedData });
       // ★ 操作履歴記録
       logAction({ action: 'order_status_change', targetType: 'order', targetId: orderId, description: `ステータスを「${newStatus}」に変更` });
+      return true;
     } catch (err) {
       alert('更新に失敗しました。');
+      return false;
     }
   };
 
