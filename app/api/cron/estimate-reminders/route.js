@@ -15,6 +15,9 @@ export const dynamic = "force-dynamic";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.noodleflorix.com";
 
+// [セキュリティ 2026-10] メールに入れるお客様の入力はエスケープする
+const esc = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
 function admin() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -54,9 +57,63 @@ export async function GET(request) {
     {
       const { data: expiredList } = await supabase
         .from("estimates")
-        .select("id, tenant_id")
+        .select("id, tenant_id, shop_id, status, customer_name, customer_phone, request_content, created_at")
         .in("status", ["pending", "replied"])
         .lt("expires_at", now.toISOString());
+
+      // [2026-10 D3] 回答しないまま 30 日の期限が切れた見積（status = pending）を、お店ごとに 1 通にまとめて知らせる
+      const unanswered = (expiredList || []).filter(e => e.status === "pending");
+      const byTenantShop = {};
+      for (const e of unanswered) {
+        const k = `${e.tenant_id}::${e.shop_id || ""}`;
+        (byTenantShop[k] = byTenantShop[k] || []).push(e);
+      }
+      for (const [k, list] of Object.entries(byTenantShop)) {
+        try {
+          const [tenantId, shopId] = k.split("::");
+          const { data: tRow } = await supabase.from("app_settings").select("settings_data").eq("id", tenantId).single();
+          const settings = tRow?.settings_data || {};
+          const targetShop = settings.shops?.find(s => String(s.id) === String(shopId)) || settings.shops?.[0] || {};
+          const shopEmail = (targetShop.notifyEmail || "").trim() || targetShop.email || settings.generalConfig?.email;
+          if (!shopEmail) continue;
+          const ccEmails = (targetShop.notifyCcEmails || "").split(",").map(s => s.trim()).filter(Boolean);
+          const rows = list.map(e => `<tr>
+              <td style="padding: 6px 10px; border-bottom: 1px solid #eee;">${esc(e.customer_name || "-")} 様</td>
+              <td style="padding: 6px 10px; border-bottom: 1px solid #eee;">${esc(e.customer_phone || "-")}</td>
+              <td style="padding: 6px 10px; border-bottom: 1px solid #eee;">${new Date(e.created_at).toLocaleDateString("ja-JP")}</td>
+              <td style="padding: 6px 10px; border-bottom: 1px solid #eee; color: #555;">${esc(String(e.request_content || "").slice(0, 60))}${String(e.request_content || "").length > 60 ? "…" : ""}</td>
+            </tr>`).join("");
+          const html = `
+<div style="font-family: 'Hiragino Kaku Gothic ProN', sans-serif; max-width: 640px; margin: 0 auto; padding: 24px;">
+  <div style="background: #B45309; color: white; padding: 16px 24px; border-radius: 12px 12px 0 0;">
+    <h2 style="margin: 0; font-size: 16px;">回答しないまま期限が切れたお見積もり依頼があります（${list.length}件）</h2>
+  </div>
+  <div style="background: #FFFAEB; border: 1px solid #FCD34D; border-top: none; padding: 20px; border-radius: 0 0 12px 12px;">
+    <p style="margin: 0 0 16px; font-size: 13px; color: #92400E;">
+      次のお見積もり依頼は、30 日間回答がないまま期限が切れ、「期限切れ」になりました。<br/>
+      必要に応じて、お客様にご連絡をお願いします。
+    </p>
+    <table style="width: 100%; border-collapse: collapse; font-size: 12px; color: #333; background: white;">
+      <tr style="background: #FEF3C7;"><th style="padding: 6px 10px; text-align: left;">お客様</th><th style="padding: 6px 10px; text-align: left;">電話</th><th style="padding: 6px 10px; text-align: left;">依頼日</th><th style="padding: 6px 10px; text-align: left;">ご依頼内容</th></tr>
+      ${rows}
+    </table>
+    <div style="margin-top: 20px; text-align: center;">
+      <a href="${BASE_URL}/staff/estimates" style="display: inline-block; padding: 12px 24px; background: #B45309; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 13px;">スタッフ画面で確認する</a>
+    </div>
+  </div>
+  <p style="text-align: center; font-size: 11px; color: #999; margin-top: 12px;">${noReplyFooter()}</p>
+</div>`;
+          await sendEmail({
+            to: shopEmail,
+            cc: ccEmails.length > 0 ? ccEmails : undefined,
+            subject: `【未回答のまま期限切れ】お見積もり依頼 ${list.length}件`,
+            html,
+          });
+          results.unansweredExpiredNotified = (results.unansweredExpiredNotified || 0) + list.length;
+        } catch (e) {
+          results.errors.push({ type: "unanswered_expired", message: e?.message });
+        }
+      }
 
       if (Array.isArray(expiredList) && expiredList.length > 0) {
         const ids = expiredList.map(e => e.id);
@@ -101,15 +158,15 @@ export async function GET(request) {
       お早めにご対応をお願いします🌸
     </p>
     <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: #333; background: white; padding: 12px; border-radius: 8px;">
-      <tr><td style="padding: 6px 12px; color: #666;">お客様</td><td style="padding: 6px 12px;"><strong>${est.customer_name || "-"}</strong> 様</td></tr>
-      <tr><td style="padding: 6px 12px; color: #666;">メール</td><td style="padding: 6px 12px;">${est.customer_email || "-"}</td></tr>
-      <tr><td style="padding: 6px 12px; color: #666;">電話</td><td style="padding: 6px 12px;">${est.customer_phone || "-"}</td></tr>
+      <tr><td style="padding: 6px 12px; color: #666;">お客様</td><td style="padding: 6px 12px;"><strong>${esc(est.customer_name || "-")}</strong> 様</td></tr>
+      <tr><td style="padding: 6px 12px; color: #666;">メール</td><td style="padding: 6px 12px;">${esc(est.customer_email || "-")}</td></tr>
+      <tr><td style="padding: 6px 12px; color: #666;">電話</td><td style="padding: 6px 12px;">${esc(est.customer_phone || "-")}</td></tr>
       <tr><td style="padding: 6px 12px; color: #666;">店舗</td><td style="padding: 6px 12px;">${shopName}</td></tr>
       <tr><td style="padding: 6px 12px; color: #666;">経過時間</td><td style="padding: 6px 12px;"><strong style="color: #DC2626;">${hoursSinceRequest}時間</strong></td></tr>
     </table>
     <div style="margin: 20px 0 0; padding: 12px; background: white; border-radius: 8px; font-size: 12px; color: #555;">
       <strong>ご依頼内容（抜粋）:</strong><br/>
-      ${String(est.request_content || "").slice(0, 200).replace(/\n/g, "<br/>")}${(est.request_content || "").length > 200 ? "..." : ""}
+      ${esc(String(est.request_content || "").slice(0, 200)).replace(/\n/g, "<br/>")}${(est.request_content || "").length > 200 ? "..." : ""}
     </div>
     <div style="margin-top: 20px; text-align: center;">
       <a href="${BASE_URL}/staff/estimates" style="display: inline-block; padding: 12px 24px; background: #D97706; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 13px;">
@@ -173,8 +230,8 @@ export async function GET(request) {
           return `
 <tr style="border-bottom: 1px solid #FEE2D6;">
   <td style="padding: 10px 8px; vertical-align: top;">
-    <div style="font-weight: bold; color: #2D4B3E;">${est.customer_name || "-"} 様</div>
-    <div style="font-size: 11px; color: #666;">${est.customer_email || "メール未登録"}</div>
+    <div style="font-weight: bold; color: #2D4B3E;">${esc(est.customer_name || "-")} 様</div>
+    <div style="font-size: 11px; color: #666;">${esc(est.customer_email || "メール未登録")}</div>
     ${est.customer_phone ? `<div style="font-size: 11px; color: #666;">TEL: ${est.customer_phone}</div>` : ""}
   </td>
   <td style="padding: 10px 8px; vertical-align: top; text-align: right; white-space: nowrap;">

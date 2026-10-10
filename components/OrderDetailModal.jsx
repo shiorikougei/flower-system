@@ -2214,6 +2214,12 @@ export default function OrderDetailModal({
 
             <div className="bg-white p-6 md:p-8 rounded-[32px] border-2 border-[#2D4B3E]/20 shadow-md space-y-6">
               <h3 className="text-[16px] font-black text-[#2D4B3E] border-b border-[#EAEAEA] pb-3 flex items-center gap-2"><CreditCard size={20}/> お支払い情報</h3>
+              {/* [2026-10 A11] カード決済が失敗したとき（あとで払い直して入金済になった場合は出さない） */}
+              {modalData.cardPaymentFailedAt && order?.payment_status !== 'paid' && (
+                <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 text-[12px] text-amber-900 font-bold">
+                  カード決済が完了しませんでした（{new Date(modalData.cardPaymentFailedAt).toLocaleString('ja-JP')}）。お客様に確認してください。
+                </div>
+              )}
               {/* [セキュリティ 2026-10] カード決済の金額が注文の合計と違ったとき */}
               {modalData.paymentAmountMismatch && (
                 <div className="bg-red-50 border border-red-300 rounded-xl p-3 text-[12px] text-red-800 font-bold">

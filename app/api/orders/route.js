@@ -692,6 +692,13 @@ export async function POST(request) {
           order_id: orderId,
           tenant_id: String(tenantId),
         },
+        // [2026-10 A11] 決済の失敗の知らせ（payment_intent.payment_failed）でも注文が分かるように、同じ情報を付ける
+        payment_intent_data: {
+          metadata: {
+            order_id: orderId,
+            tenant_id: String(tenantId),
+          },
+        },
       },
       {
         stripeAccount: stripeAccountId,

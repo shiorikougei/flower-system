@@ -239,9 +239,23 @@ export async function POST(request) {
         const orderId = pi.metadata?.order_id;
         if (!orderId) break;
 
+        // [2026-10 A11] この注文の決済か確かめてから「失敗」にする。すでに入金済みなら変えない
+        //   （同じ決済画面でカードを変えて払い直すと、あとで checkout.session.completed が来て入金済になる）
+        const { data: failRow } = await supabaseAdmin
+          .from('orders')
+          .select('tenant_id, payment_status, order_data')
+          .eq('id', orderId)
+          .maybeSingle();
+        if (!failRow) break;
+        if (pi.metadata?.tenant_id && String(pi.metadata.tenant_id) !== String(failRow.tenant_id)) break;
+        if (failRow.payment_status === 'paid') break;
+        const reason = pi.last_payment_error?.message || '';
         await supabaseAdmin
           .from('orders')
-          .update({ payment_status: 'failed' })
+          .update({
+            payment_status: 'failed',
+            order_data: { ...(failRow.order_data || {}), cardPaymentFailedAt: new Date().toISOString(), cardPaymentFailedReason: String(reason).slice(0, 200) },
+          })
           .eq('id', orderId);
         break;
       }
