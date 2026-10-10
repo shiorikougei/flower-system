@@ -139,6 +139,12 @@ export async function POST(request) {
       orderData.pickupFee = 0;
       orderData.estimateVersionId = chosen.id;
       orderData.estimateVersionNo = chosen.version_no;
+      // [2026-10 B7] 見積の参考写真を注文にも残す（写真の URL を写すだけ。写真ファイル・見積はそのまま）
+      const refImages = Array.isArray(est.reference_images)
+        ? est.reference_images.filter(u => typeof u === 'string' && /^https?:\/\//.test(u)).slice(0, 10)
+        : [];
+      if (refImages.length > 0) orderData.referenceImages = refImages;
+      else delete orderData.referenceImages;
     }
 
     // ---- 金額の再計算（クライアントの数字を信用しない）----
