@@ -26,6 +26,10 @@ const TYPE_LABELS = {
 
 import { rateLimit, getClientIp } from '@/utils/rateLimit';
 
+// [セキュリティ 2026-10] メール本文に入れる値はすべてエスケープする（ログインなしで呼べるため）
+const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const MAX_METADATA_CHARS = 2000;
+
 export async function POST(request) {
   try {
     // レート制限（IP, 5件/分, Redis 永続化）
@@ -48,6 +52,20 @@ export async function POST(request) {
     }
 
     if (!type || !subject) return NextResponse.json({ error: 'type/subject必須' }, { status: 400 });
+    // [セキュリティ 2026-10] 種類は決まったものだけ。店舗名・ID・追加情報は長さを制限
+    if (!Object.prototype.hasOwnProperty.call(TYPE_LABELS, type)) {
+      return NextResponse.json({ error: '種類が不正です' }, { status: 400 });
+    }
+    if (String(tenantId || '').length > 64 || String(tenantName || '').length > 100) {
+      return NextResponse.json({ error: '入力が長すぎます' }, { status: 400 });
+    }
+    let metaText = '';
+    if (metadata) {
+      try { metaText = JSON.stringify(metadata, null, 2); } catch { metaText = ''; }
+      if (metaText.length > MAX_METADATA_CHARS) {
+        return NextResponse.json({ error: '追加情報が大きすぎます' }, { status: 400 });
+      }
+    }
 
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -60,16 +78,16 @@ export async function POST(request) {
 <body style="margin:0;padding:0;background:#FBFAF9;font-family:'Hiragino Sans',sans-serif;color:#111;line-height:1.7;">
   <div style="max-width:600px;margin:0 auto;background:white;padding:40px 24px;">
     <div style="background:${type === 'cancel' ? '#fef2f2' : type === 'upgrade' ? '#f0fdf4' : '#f0f9ff'};padding:8px 12px;border-radius:6px;display:inline-block;font-size:11px;font-weight:bold;color:${type === 'cancel' ? '#dc2626' : type === 'upgrade' ? '#15803d' : '#2563eb'};">
-      ${typeLabel}
+      ${esc(typeLabel)}
     </div>
-    <h1 style="font-size:18px;color:#2D4B3E;margin:12px 0 16px;">${subject}</h1>
+    <h1 style="font-size:18px;color:#2D4B3E;margin:12px 0 16px;">${esc(subject)}</h1>
     <div style="background:#FBFAF9;padding:12px;border-radius:8px;margin-bottom:16px;">
       <p style="font-size:11px;color:#999;margin:0;">店舗:</p>
-      <p style="font-size:14px;font-weight:bold;margin:2px 0 0;">${tenantName || '(不明)'}</p>
-      <p style="font-size:10px;color:#999;font-family:monospace;margin:4px 0 0;">ID: ${tenantId || '-'}</p>
+      <p style="font-size:14px;font-weight:bold;margin:2px 0 0;">${esc(tenantName || '(不明)')}</p>
+      <p style="font-size:10px;color:#999;font-family:monospace;margin:4px 0 0;">ID: ${esc(tenantId || '-')}</p>
     </div>
-    <p style="font-size:13px;white-space:pre-line;">${body || ''}</p>
-    ${metadata ? `<pre style="background:#f4f4f4;padding:12px;border-radius:6px;font-size:10px;overflow-x:auto;">${JSON.stringify(metadata, null, 2)}</pre>` : ''}
+    <p style="font-size:13px;white-space:pre-line;">${esc(body || '')}</p>
+    ${metaText ? `<pre style="background:#f4f4f4;padding:12px;border-radius:6px;font-size:10px;overflow-x:auto;">${esc(metaText)}</pre>` : ''}
     <p style="font-size:11px;color:#999;margin-top:24px;padding-top:16px;border-top:1px solid #EAEAEA;">
       ※このメールは FLORIX システムから自動送信されています。<br/>
       対応はオーナーページから行ってください: https://noodleflorix.com/owner
@@ -78,7 +96,7 @@ export async function POST(request) {
 </body></html>`;
 
     const from = `FLORIX システム通知 <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
-    const result = await sendEmail({ to: ADMIN_EMAIL, subject: `[${typeLabel}] ${subject}`, html, from });
+    const result = await sendEmail({ to: ADMIN_EMAIL, subject: `[${typeLabel}] ${String(subject).replace(/[\r\n]+/g, ' ')}`, html, from });
 
     // DB にも記録（ownerページで管理可能に）
     try {
@@ -97,13 +115,13 @@ export async function POST(request) {
       };
       // タイプごとに別配列に格納
       if (type === 'upgrade' || type === 'feature_change') {
-        const upgradeRequests = [newReq, ...(ownerData.upgradeRequests || [])];
+        const upgradeRequests = [newReq, ...(ownerData.upgradeRequests || [])].slice(0, 500);
         await supabaseAdmin.from('app_settings').upsert({
           id: 'nocolde_owner',
           settings_data: { ...ownerData, upgradeRequests },
         });
       } else {
-        const clientRequests = [newReq, ...(ownerData.clientRequests || [])];
+        const clientRequests = [newReq, ...(ownerData.clientRequests || [])].slice(0, 500);
         await supabaseAdmin.from('app_settings').upsert({
           id: 'nocolde_owner',
           settings_data: { ...ownerData, clientRequests },
@@ -114,6 +132,6 @@ export async function POST(request) {
     return NextResponse.json({ ok: true, mailed: !result.error });
   } catch (err) {
     console.error('[admin/notify] error:', err);
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
   }
 }

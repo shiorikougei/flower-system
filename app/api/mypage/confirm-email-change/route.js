@@ -132,6 +132,6 @@ export async function POST(request) {
     });
   } catch (err) {
     console.error('[confirm-email-change] error:', err);
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
   }
 }

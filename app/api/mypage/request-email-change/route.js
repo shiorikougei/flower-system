@@ -137,6 +137,6 @@ export async function POST(request) {
     return NextResponse.json({ sent: true });
   } catch (err) {
     console.error('[request-email-change] error:', err);
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
   }
 }

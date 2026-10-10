@@ -64,7 +64,7 @@ export async function POST(request) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('[customer-set-password] error:', err);
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
   }
 }
 
@@ -86,6 +86,6 @@ export async function DELETE(request) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
   }
 }

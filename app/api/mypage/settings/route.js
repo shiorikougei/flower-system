@@ -46,6 +46,6 @@ export async function GET(request) {
       },
     });
   } catch (err) {
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
   }
 }

@@ -32,6 +32,6 @@ export async function GET(request) {
     return NextResponse.json({ items: images });
   } catch (err) {
     console.error('[portfolio/list] error:', err);
-    return NextResponse.json({ items: [], error: err.message });
+    return NextResponse.json({ items: [] });
   }
 }

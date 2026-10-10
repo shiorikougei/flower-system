@@ -99,6 +99,6 @@ export async function POST(request) {
     return NextResponse.json({ token, expiresAt });
   } catch (err) {
     console.error('[customer-login] error:', err);
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
   }
 }
