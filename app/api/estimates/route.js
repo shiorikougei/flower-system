@@ -166,7 +166,7 @@ export async function POST(request) {
     if (Array.isArray(referenceImages) && referenceImages.length > 0) {
       refImgs = referenceImages
         // [セキュリティ 2026-10] http(s) の URL だけ保存する
-        .filter(u => typeof u === 'string' && /^https?:///i.test(u) && u.length <= 1000)
+        .filter(u => typeof u === 'string' && /^https?:\/\//i.test(u) && u.length <= 1000)
         .slice(0, 10);
     }
 
@@ -258,7 +258,7 @@ export async function POST(request) {
         if (rd.otherNotes) rows.push(['その他特記事項', escHtml(rd.otherNotes)]);
         // 参考画像のサムネイル
         // [セキュリティ 2026-10] http(s) の URL だけ・エスケープして入れる
-        const refImgs = (Array.isArray(referenceImages) ? referenceImages : []).filter(u => typeof u === 'string' && /^https?:///i.test(u)).slice(0, 10);
+        const refImgs = (Array.isArray(referenceImages) ? referenceImages : []).filter(u => typeof u === 'string' && /^https?:\/\//i.test(u)).slice(0, 10);
         if (refImgs.length > 0) {
           const imgsHtml = refImgs.map(u => `<a href="${escHtml(u)}" target="_blank" style="display:inline-block;margin:4px;"><img src="${escHtml(u)}" alt="参考画像" style="max-width:120px;max-height:120px;border-radius:8px;border:1px solid #eaeaea;object-fit:cover;"/></a>`).join('');
           rows.push([`参考画像 (${refImgs.length}枚)`, imgsHtml]);

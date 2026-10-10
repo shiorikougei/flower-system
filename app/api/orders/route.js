@@ -392,8 +392,7 @@ export async function POST(request) {
 
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.noodleflorix.com';
         const fromEstimate = !!orderData?.fromEstimate;
-        const customerName = String(orderData.customerInfo?.name || '').replace(/[
-]+/g, ' ');
+        const customerName = String(orderData.customerInfo?.name || '').replace(/[\r\n]+/g, ' ');
         const customerEmail = orderData.customerInfo?.email || '';
         const customerPhone = orderData.customerInfo?.phone || '';
         const total = (orderData.totalAmount || 0);
