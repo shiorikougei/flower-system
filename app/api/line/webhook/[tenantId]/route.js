@@ -254,6 +254,6 @@ export async function POST(request, { params }) {
   } catch (err) {
     // ★ 例外時も200を返してLINEの再送ループを防ぐ (本番のエラーログには記録)
     console.error('[line/webhook] error:', err);
-    return NextResponse.json({ ok: true, error: err.message || 'サーバーエラー' });
+    return NextResponse.json({ ok: true });
   }
 }

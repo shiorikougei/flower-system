@@ -392,7 +392,7 @@ export async function POST(request) {
 
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.noodleflorix.com';
         const fromEstimate = !!orderData?.fromEstimate;
-        const customerName = orderData.customerInfo?.name || '';
+        const customerName = String(orderData.customerInfo?.name || '').replace(/[\r\n]+/g, ' ');
         const customerEmail = orderData.customerInfo?.email || '';
         const customerPhone = orderData.customerInfo?.phone || '';
         const total = (orderData.totalAmount || 0);
@@ -412,14 +412,14 @@ export async function POST(request) {
 
     <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: #333;">
       <tr><td style="padding: 6px 0; color: #666;">注文ID</td><td style="padding: 6px 0;"><strong>${String(orderId).slice(0, 8).toUpperCase()}</strong></td></tr>
-      <tr><td style="padding: 6px 0; color: #666;">店舗</td><td style="padding: 6px 0;">${shopName}</td></tr>
-      <tr><td style="padding: 6px 0; color: #666;">お客様</td><td style="padding: 6px 0;"><strong>${customerName}</strong> 様</td></tr>
-      <tr><td style="padding: 6px 0; color: #666;">メール</td><td style="padding: 6px 0;">${customerEmail || '-'}</td></tr>
-      <tr><td style="padding: 6px 0; color: #666;">電話</td><td style="padding: 6px 0;">${customerPhone || '-'}</td></tr>
-      <tr><td style="padding: 6px 0; color: #666;">受取方法</td><td style="padding: 6px 0;">${receiveMethodLabel}</td></tr>
-      <tr><td style="padding: 6px 0; color: #666;">納期</td><td style="padding: 6px 0;">${orderData.selectedDate || '未指定'} ${orderData.selectedTime || ''}</td></tr>
+      <tr><td style="padding: 6px 0; color: #666;">店舗</td><td style="padding: 6px 0;">${escapeHtml(shopName)}</td></tr>
+      <tr><td style="padding: 6px 0; color: #666;">お客様</td><td style="padding: 6px 0;"><strong>${escapeHtml(customerName)}</strong> 様</td></tr>
+      <tr><td style="padding: 6px 0; color: #666;">メール</td><td style="padding: 6px 0;">${escapeHtml(customerEmail || '-')}</td></tr>
+      <tr><td style="padding: 6px 0; color: #666;">電話</td><td style="padding: 6px 0;">${escapeHtml(customerPhone || '-')}</td></tr>
+      <tr><td style="padding: 6px 0; color: #666;">受取方法</td><td style="padding: 6px 0;">${escapeHtml(receiveMethodLabel)}</td></tr>
+      <tr><td style="padding: 6px 0; color: #666;">納期</td><td style="padding: 6px 0;">${escapeHtml(orderData.selectedDate || '未指定')} ${escapeHtml(orderData.selectedTime || '')}</td></tr>
       <tr><td style="padding: 6px 0; color: #666;">合計</td><td style="padding: 6px 0; font-size: 16px; color: #2D4B3E;"><strong>¥${Number(total).toLocaleString()}</strong> (税込)</td></tr>
-      <tr><td style="padding: 6px 0; color: #666;">支払方法</td><td style="padding: 6px 0;">${orderData.paymentStatus || paymentMethod || '-'}</td></tr>
+      <tr><td style="padding: 6px 0; color: #666;">支払方法</td><td style="padding: 6px 0;">${escapeHtml(orderData.paymentStatus || paymentMethod || '-')}</td></tr>
     </table>
 
     <div style="margin-top: 20px; text-align: center;">
@@ -692,6 +692,13 @@ export async function POST(request) {
           order_id: orderId,
           tenant_id: String(tenantId),
         },
+        // [2026-10 A11] 決済の失敗の知らせ（payment_intent.payment_failed）でも注文が分かるように、同じ情報を付ける
+        payment_intent_data: {
+          metadata: {
+            order_id: orderId,
+            tenant_id: String(tenantId),
+          },
+        },
       },
       {
         stripeAccount: stripeAccountId,
@@ -713,6 +720,6 @@ export async function POST(request) {
     return NextResponse.json({ orderId, checkoutUrl: session.url });
   } catch (err) {
     console.error('[/api/orders] error:', err);
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
   }
 }

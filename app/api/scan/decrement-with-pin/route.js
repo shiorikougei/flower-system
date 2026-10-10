@@ -10,13 +10,21 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { rateLimit, getClientIp } from '@/utils/rateLimit';
+import crypto from 'crypto';
 
 export const runtime = 'nodejs';
 
+// [セキュリティ 2026-10] 比べる時間で中身が推測されないように、長さをそろえて比べる
 function comparePin(inputPin, storedValue) {
   if (!storedValue) return false;
-  return String(inputPin) === String(storedValue);
+  const a = crypto.createHash('sha256').update(String(inputPin)).digest();
+  const b = crypto.createHash('sha256').update(String(storedValue)).digest();
+  return crypto.timingSafeEqual(a, b);
 }
+
+// [セキュリティ 2026-10] お店ごとの失敗回数の上限（IP を変えながらの総当たり対策）: 10 分に 10 回まで
+const TENANT_FAIL_WINDOW_MIN = 10;
+const TENANT_FAIL_MAX = 10;
 
 export async function POST(request) {
   try {
@@ -60,6 +68,20 @@ export async function POST(request) {
     }
 
     const tenantId = product.tenant_id;
+
+    // 最近の PIN の失敗が多いお店は、しばらく受け付けない（失敗は audit_log に残している）
+    {
+      const since = new Date(Date.now() - TENANT_FAIL_WINDOW_MIN * 60 * 1000).toISOString();
+      const { count } = await supabaseAdmin
+        .from('audit_log')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .eq('action', 'scan_pin_failed')
+        .gte('created_at', since);
+      if ((count || 0) >= TENANT_FAIL_MAX) {
+        return NextResponse.json({ ok: false, error: 'PINの入力ミスが続いたため、しばらく受け付けていません。10分ほどしてからお試しください。' }, { status: 429 });
+      }
+    }
 
     // テナントのスタッフリスト取得
     const { data: settingsRow } = await supabaseAdmin

@@ -4,6 +4,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { DEFAULT_FAQ_ITEMS, groupByCategory, buildFaqJsonLd } from "@/utils/faqData";
 import FaqClient from "./client";
+import { safeJsonLd } from "@/utils/jsonLd"; // [セキュリティ 2026-10] 構造化データの安全な埋め込み
 
 export const revalidate = 3600;
 
@@ -67,7 +68,7 @@ export default async function FaqPage({ params }) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
       />
       <FaqClient
         grouped={grouped}

@@ -165,7 +165,8 @@ export async function POST(request) {
     let refImgs = null;
     if (Array.isArray(referenceImages) && referenceImages.length > 0) {
       refImgs = referenceImages
-        .filter(u => typeof u === 'string' && u.length > 0)
+        // [セキュリティ 2026-10] http(s) の URL だけ保存する
+        .filter(u => typeof u === 'string' && /^https?:\/\//i.test(u) && u.length <= 1000)
         .slice(0, 10);
     }
 
@@ -256,9 +257,10 @@ export async function POST(request) {
         }
         if (rd.otherNotes) rows.push(['その他特記事項', escHtml(rd.otherNotes)]);
         // 参考画像のサムネイル
-        const refImgs = Array.isArray(referenceImages) ? referenceImages : [];
+        // [セキュリティ 2026-10] http(s) の URL だけ・エスケープして入れる
+        const refImgs = (Array.isArray(referenceImages) ? referenceImages : []).filter(u => typeof u === 'string' && /^https?:\/\//i.test(u)).slice(0, 10);
         if (refImgs.length > 0) {
-          const imgsHtml = refImgs.map(u => `<a href="${u}" target="_blank" style="display:inline-block;margin:4px;"><img src="${u}" alt="参考画像" style="max-width:120px;max-height:120px;border-radius:8px;border:1px solid #eaeaea;object-fit:cover;"/></a>`).join('');
+          const imgsHtml = refImgs.map(u => `<a href="${escHtml(u)}" target="_blank" style="display:inline-block;margin:4px;"><img src="${escHtml(u)}" alt="参考画像" style="max-width:120px;max-height:120px;border-radius:8px;border:1px solid #eaeaea;object-fit:cover;"/></a>`).join('');
           rows.push([`参考画像 (${refImgs.length}枚)`, imgsHtml]);
         }
 
@@ -306,7 +308,7 @@ export async function POST(request) {
     return NextResponse.json({ ok: true, estimateId: data.id });
   } catch (err) {
     console.error('[estimates POST]', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
   }
 }
 
@@ -788,6 +790,6 @@ export async function PATCH(request) {
     return NextResponse.json({ error: '不正なaction' }, { status: 400 });
   } catch (err) {
     console.error('[estimates PATCH]', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
   }
 }

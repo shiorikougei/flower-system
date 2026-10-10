@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import Breadcrumbs from "@/components/Breadcrumbs";
+import { safeJsonLd } from "@/utils/jsonLd"; // [セキュリティ 2026-10] 構造化データの安全な埋め込み
 
 export const revalidate = 3600;
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.noodleflorix.com";
@@ -32,11 +33,17 @@ function renderMarkdown(md) {
   html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
 
-  // リンク [text](url)
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-[#2D4B3E] underline" target="_blank" rel="noopener">$1</a>');
+  // [セキュリティ 2026-10] リンク・画像の URL は http(s) と / で始まるものだけ。" は &quot; にする（javascript: などを防ぐ）
+  const safeUrl = (u) => {
+    const v = String(u || '').trim();
+    if (!/^(https?:\/\/|\/)/i.test(v)) return '#';
+    return v.replace(/"/g, '&quot;');
+  };
+  // 画像 ![alt](url)（リンクより先に処理する）
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (m, alt, url) => `<img src="${safeUrl(url)}" alt="${String(alt).replace(/"/g, '&quot;')}" class="rounded-xl my-4 w-full" loading="lazy" />`);
 
-  // 画像 ![alt](url)
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="rounded-xl my-4 w-full" loading="lazy" />');
+  // リンク [text](url)
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, text, url) => `<a href="${safeUrl(url)}" class="text-[#2D4B3E] underline" target="_blank" rel="noopener">${text}</a>`);
 
   // 番号付きリスト
   html = html.replace(/(?:^\d+\. .*$\n?)+/gm, (match) => {
@@ -172,7 +179,7 @@ export default async function BlogPostPage({ params }) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(articleJsonLd) }}
       />
       <main className="min-h-screen bg-[#FBFAF9] font-sans text-[#111] pb-32">
         <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-[#EAEAEA]">

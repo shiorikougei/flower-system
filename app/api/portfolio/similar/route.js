@@ -84,6 +84,6 @@ export async function GET(request) {
     return NextResponse.json({ items: result, totalChecked: allImages.length });
   } catch (err) {
     console.error('[portfolio/similar] error:', err);
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
   }
 }

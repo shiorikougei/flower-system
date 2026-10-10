@@ -8,6 +8,7 @@
 //   - お客様はそのリンクをクリックすると注文履歴ページに自動ログインされる
 
 import { NextResponse } from 'next/server';
+import { rateLimit, getClientIp } from '@/utils/rateLimit';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { sendEmail, shopContactInfo } from '@/utils/email';
@@ -17,9 +18,18 @@ const TOKEN_EXPIRY_HOURS = 24;
 
 export async function POST(request) {
   try {
+    // [セキュリティ 2026-10] 送りすぎ防止（同じ IP から 10 分に 5 回まで）
+    const allowed = await rateLimit({ key: `magiclink:${getClientIp(request)}`, max: 5, windowSec: 600 });
+    if (!allowed) {
+      return NextResponse.json({ error: '短い時間に何度も送信されています。しばらくしてからお試しください。' }, { status: 429 });
+    }
     const { tenantId, shopId, email } = await request.json();
     if (!tenantId || !email) {
       return NextResponse.json({ error: '必須項目が不足しています' }, { status: 400 });
+    }
+    // [セキュリティ 2026-10] リンクに入る値の形を確かめる
+    if (!/^[a-z0-9][a-z0-9_-]{0,63}$/i.test(String(tenantId)) || (shopId && !/^[a-z0-9_-]{1,64}$/i.test(String(shopId)))) {
+      return NextResponse.json({ error: '入力が正しくありません' }, { status: 400 });
     }
     const normalizedEmail = String(email).toLowerCase().trim();
 
@@ -81,7 +91,10 @@ export async function POST(request) {
 
     // Magic Link URL
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
-    const magicUrl = `${appUrl}/order/${tenantId}/${shopId || 'default'}/mypage?token=${token}`;
+    // [セキュリティ 2026-10] お店に登録されているショップだけをリンクに使う
+    const knownShopIds = (settingsRow?.settings_data?.shops || []).map(s => String(s.id));
+    const safeShopId = shopId && knownShopIds.includes(String(shopId)) ? String(shopId) : (knownShopIds[0] || 'default');
+    const magicUrl = `${appUrl}/order/${encodeURIComponent(tenantId)}/${encodeURIComponent(safeShopId)}/mypage?token=${encodeURIComponent(token)}`;
 
     // テンプレートシステムで送信
     const shopIdForLookup = settingsRow?.settings_data?.shops?.[0]?.id;
@@ -115,7 +128,7 @@ export async function POST(request) {
     return NextResponse.json({ sent: true });
   } catch (err) {
     console.error('[customer-magiclink] error:', err);
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
   }
 }
 

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { Package } from "lucide-react";
+import { safeJsonLd } from "@/utils/jsonLd"; // [セキュリティ 2026-10] 構造化データの安全な埋め込み
 
 export const revalidate = 3600;
 
@@ -125,7 +126,7 @@ export default async function CategoryPage({ params }) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(itemListJsonLd) }}
       />
       <main className="min-h-screen bg-[#FBFAF9] font-sans text-[#111111] pb-32">
         {/* ヘッダー */}

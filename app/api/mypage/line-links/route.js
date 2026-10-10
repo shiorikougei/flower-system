@@ -42,7 +42,7 @@ export async function GET(request) {
 
     return NextResponse.json({ items: data || [] });
   } catch (err) {
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
   }
 }
 
@@ -72,7 +72,7 @@ export async function PATCH(request) {
 
     return NextResponse.json({ ok: true, preference });
   } catch (err) {
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
   }
 }
 
@@ -98,6 +98,6 @@ export async function DELETE(request) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
   }
 }
