@@ -477,7 +477,14 @@ export default function OrderDetailModal({
         //    合計文字数 = メッセージカード + 社内メモ + お客様備考
         // [2026-10 B1] メッセージカードと立札はどちらか一方だけ。立札の注文では、切り替える前に入力されたメッセージは印刷しない（データはそのまま）
         const cardText = modalData.cardType === '立札' ? '' : (modalData.cardMessage || '');
-        const noteText = modalData.note || '';
+        // [2026-10] 見積から作られた注文の社内メモには、見積の回答文がそのまま入っている。
+        //   同じ文章は「見積のやり取り」に載るので、社内メモ側では印刷しない（保存されているメモはそのまま）
+        const noteText = (() => {
+          const raw = modalData.note || '';
+          const reply = String(estimateCheck?.replyMessage || '').trim();
+          if (!modalData.fromEstimate || !reply || !raw.includes(reply)) return raw;
+          return raw.replace(reply, '').replace(/\n{3,}/g, '\n\n').trim();
+        })();
         const purposeNote = modalData.purposeNote || '';
         // ★ [帳票改修 2026-10] 用紙が足りなければ次の用紙に続くため、文字は縮小しない（老眼でも読める大きさを維持）
         const sizeCls = '';
@@ -1234,10 +1241,33 @@ export default function OrderDetailModal({
             </div>
           ` : ''}
           <script>
-            // ★ [帳票改修 2026-10] 受注書・控え: 「詳細」が 1 枚目に収まれば 1 枚、収まらなければ 2 枚（1/2・2/2）にする
+            // ★ [帳票改修 2026-10] 受注書・控え: 「詳細」が 1 枚目に収まれば 1 枚、収まらなければ必要な枚数に分ける（1/3・2/3・3/3 など）
+            //    まとまりの途中では分けず、1 枚に収まらない長いまとまりだけ途中で分けて「（続き）」を付ける
             //    一番下の欄（担当者記入欄 / 店舗情報）は最後の用紙の一番下に置く
             function layoutFullSlips() {
               var fits = function (el) { return el.scrollHeight <= el.clientHeight + 1; };
+              // 1 枚に収まらない長いまとまりを、収まるところで 2 つに分ける（後ろ半分を返す）
+              var splitToFit = function (block, slip) {
+                var label = block.querySelector('.fullslip-note-label');
+                var cont = block.cloneNode(false);
+                var label2 = null;
+                if (label) { label2 = label.cloneNode(true); label2.textContent = label.textContent + '（続き）'; cont.appendChild(label2); }
+                var putFront = function (el) { cont.insertBefore(el, label2 ? label2.nextSibling : cont.firstChild); };
+                var kids = function () { return Array.prototype.filter.call(block.children, function (c) { return c !== label; }); };
+                // まず中の段落（お客様のご依頼・お店の回答など）ごとに後ろへ送る
+                while (!fits(slip) && kids().length > 1) putFront(kids().pop());
+                var k = kids();
+                if (k.length && k[k.length - 1].classList.contains('fs-ex-head') && k.length > 1) putFront(k.pop());
+                // それでも入らなければ、文章を行ごとに分ける
+                var text = kids().filter(function (c) { return c.classList.contains('fullslip-note-text'); }).pop();
+                if (!fits(slip) && text) {
+                  var lines = text.textContent.split('\\n');
+                  var rest = [];
+                  while (!fits(slip) && lines.length > 1) { rest.unshift(lines.pop()); text.textContent = lines.join('\\n'); }
+                  if (rest.length) { var t2 = text.cloneNode(false); t2.textContent = rest.join('\\n'); putFront(t2); }
+                }
+                return cont.children.length > (label2 ? 1 : 0) ? cont : null;
+              };
               document.querySelectorAll('[data-fs-role="main"]').forEach(function (mainPage) {
                 if (mainPage.getAttribute('data-fs-done')) return;
                 mainPage.setAttribute('data-fs-done', '1');
@@ -1248,14 +1278,46 @@ export default function OrderDetailModal({
                 var detailSlip = detail.querySelector('.slip-full');
                 var more = detailSlip.querySelector('.fullslip-more');
                 var footer = mainSlip.querySelector('.fs-footer-slot');
+                // 「詳細」が 1 枚目に収まれば 1 枚で終わり
                 mainSlip.querySelector('.fs-detail-anchor').appendChild(more);
                 if (fits(mainSlip)) { detail.parentNode.removeChild(detail); return; }
-                var detailNo = detailSlip.querySelector('.fs-pageno');
-                detailSlip.insertBefore(more, detailNo);
-                detailSlip.insertBefore(footer, detailNo);
-                mainSlip.querySelector('.fs-pageno').textContent = '1 / 2';
-                detailNo.textContent = '2 / 2';
-                if (!fits(detailSlip)) detail.classList.add('fs-overflow');
+                detailSlip.insertBefore(more, detailSlip.querySelector('.fs-pageno'));
+                // 収まらなければ、2 枚目以降にまとまりごとに入れていく
+                var title = more.querySelector('.fullslip-more-title');
+                var queue = Array.prototype.filter.call(more.children, function (c) { return c !== title; });
+                queue.forEach(function (b) { more.removeChild(b); });
+                var template = detail.cloneNode(true);
+                var pages = [mainPage, detail];
+                var cur = detail, curSlip = detailSlip, curMore = more;
+                var addPage = function () {
+                  var p = template.cloneNode(true);
+                  var t = p.querySelector('.fullslip-more-title');
+                  if (t && t.firstChild) t.firstChild.textContent = '詳細（続き）　';
+                  cur.parentNode.insertBefore(p, cur.nextSibling);
+                  cur = p; curSlip = p.querySelector('.slip-full'); curMore = p.querySelector('.fullslip-more');
+                  pages.push(p);
+                };
+                var guard = 0;
+                while (queue.length && guard++ < 200) {
+                  var b = queue.shift();
+                  curMore.appendChild(b);
+                  if (fits(curSlip)) continue;
+                  var alone = curMore.children.length === (title ? 2 : 1);
+                  if (!alone) { curMore.removeChild(b); addPage(); queue.unshift(b); continue; }
+                  var rest = splitToFit(b, curSlip);
+                  if (rest) { addPage(); queue.unshift(rest); } else { cur.classList.add('fs-overflow'); }
+                }
+                // 一番下の欄は最後の用紙の一番下に。入らなければもう 1 枚
+                curSlip.insertBefore(footer, curSlip.querySelector('.fs-pageno'));
+                if (!fits(curSlip)) {
+                  curSlip.removeChild(footer);
+                  addPage();
+                  curSlip.insertBefore(footer, curSlip.querySelector('.fs-pageno'));
+                }
+                pages.forEach(function (p, i) {
+                  var no = p.querySelector('.fs-pageno');
+                  if (no) no.textContent = (i + 1) + ' / ' + pages.length;
+                });
               });
             }
             window.layoutFullSlips = layoutFullSlips;

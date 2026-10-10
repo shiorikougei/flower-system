@@ -13,6 +13,7 @@ import HelpTooltip from '@/components/HelpTooltip';
 import ReleaseNotesCard from '@/components/ReleaseNotesCard';
 // [2026-10 C2] カード決済が終わらないまま 20 分たった注文は表示しない（データはそのまま）
 import { visibleOrders } from '@/utils/orderVisibility';
+import SettingsReminderCard from '@/components/SettingsReminderCard';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -252,6 +253,9 @@ export default function DashboardPage() {
 
         {/* ★ お知らせ（更新情報）: utils/releaseNotes.js に追加すると表示される */}
         <ReleaseNotesCard />
+
+        {/* [2026-10] 設定が足りないときのお知らせ（お問い合わせ用メールアドレスなど）。入力すると消える */}
+        <SettingsReminderCard />
 
         {/* ★ 勤怠カード（TOP配置） */}
         <div className="bg-gradient-to-br from-[#117768]/5 to-[#2D4B3E]/10 border border-[#117768]/20 rounded-2xl p-5 md:p-6">
