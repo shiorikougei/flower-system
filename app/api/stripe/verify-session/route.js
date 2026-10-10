@@ -85,6 +85,21 @@ export async function POST(request) {
         })
         .eq('id', orderId);
 
+      // [2026-10 C6] 見積からのカード払いは、決済が終わったら見積を「確定済み」にする（webhook が届かないときの保険）
+      const paidOd = order.order_data || {};
+      if (paidOd.fromEstimate && paidOd.estimateId) {
+        try {
+          await supabaseAdmin
+            .from('estimates')
+            .update({ status: 'converted', order_id: orderId })
+            .eq('id', String(paidOd.estimateId))
+            .eq('tenant_id', String(order.tenant_id))
+            .is('order_id', null);
+        } catch (e) {
+          console.warn('[verify-session] 見積の確定済みへの更新に失敗:', e?.message);
+        }
+      }
+
       // EC注文の場合は在庫減算（Webhookが届かなかった時の保険、RPC関数で原子的に）
       const cartItems = order.order_data?.cartItems;
       if (Array.isArray(cartItems) && cartItems.length > 0) {

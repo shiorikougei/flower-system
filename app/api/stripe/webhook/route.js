@@ -115,6 +115,22 @@ export async function POST(request) {
 
         if (error) console.error('orders更新失敗:', error);
 
+        // [2026-10 C6] 見積からのカード払いは、決済が終わったここで見積を「確定済み」にする
+        //   （すでに別の注文と結び付いている見積は上書きしない）
+        const paidOd = orderRow?.order_data || {};
+        if (!error && paidOd.fromEstimate && paidOd.estimateId) {
+          try {
+            await supabaseAdmin
+              .from('estimates')
+              .update({ status: 'converted', order_id: orderId })
+              .eq('id', String(paidOd.estimateId))
+              .eq('tenant_id', String(orderRow.tenant_id))
+              .is('order_id', null);
+          } catch (e) {
+            console.warn('[webhook] 見積の確定済みへの更新に失敗:', e?.message);
+          }
+        }
+
         // クレカ決済成功メール送信（テンプレートシステム経由）
         try {
           const customerEmail = orderRow?.order_data?.customerInfo?.email;

@@ -28,6 +28,8 @@ export default function EstimateAcceptPage() {
   const [sendingRevision, setSendingRevision] = useState(false);
   const [revisionError, setRevisionError] = useState('');
   const [revisionSent, setRevisionSent] = useState(false);
+  // [2026-10 C6] カードの決済画面から戻ってきた
+  const [checkoutCancelled, setCheckoutCancelled] = useState(false);
 
   // ★ ご注文確定に必要な追加情報
   const [orderForm, setOrderForm] = useState({
@@ -63,8 +65,22 @@ export default function EstimateAcceptPage() {
       try {
         // ★ [セキュリティ] 一覧取得は認証必須化されたため、id 指定で 1件取得に変更
         // [2026-10] メールのリンクに付いているお客様用の鍵（?t=）も一緒に送る
-        const t = new URLSearchParams(window.location.search).get('t') || '';
+        const sp = new URLSearchParams(window.location.search);
+        const t = sp.get('t') || '';
         setAccessToken(t);
+        // [2026-10 C6] カードの決済画面で「戻る」を押して戻ってきたとき
+        if (sp.get('payment') === 'cancel' && sp.get('order_id')) {
+          try {
+            await fetch('/api/estimates', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: estimateId, action: 'cancel_card_checkout', customerToken: t, orderId: sp.get('order_id') }),
+            });
+          } catch { /* 無効にできなくても見積は表示する */ }
+          setCheckoutCancelled(true);
+          // 再読み込みで繰り返さないよう、アドレスから外す（お客様用の鍵は残す）
+          window.history.replaceState(null, '', `${window.location.pathname}${t ? `?t=${encodeURIComponent(t)}` : ''}`);
+        }
         const [estRes, settingsRes] = await Promise.all([
           fetch(`/api/estimates?id=${encodeURIComponent(estimateId)}${t ? `&t=${encodeURIComponent(t)}` : ''}`).then(r => r.json()),
           fetchPublicSettings(tenantId),
@@ -714,7 +730,20 @@ export default function EstimateAcceptPage() {
           </div>
         )}
 
-        <button onClick={handleAccept} disabled={accepting}
+        {/* [2026-10 C6] カードのお支払い手続き中は、もう一度のご注文を止める */}
+        {estimate.pendingCardPayment && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[12px] text-amber-900 leading-relaxed">
+            このお見積もりは、ただいまカードのお支払い手続き中です。お支払いが終わると、ご注文の確定のメールをお送りします。<br/>
+            お支払いを完了していない場合は、{new Date(estimate.pendingCardPayment.until).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' })} ごろ以降に、このページを開き直してご注文ください。
+          </div>
+        )}
+        {checkoutCancelled && !estimate.pendingCardPayment && (
+          <div className="bg-sky-50 border border-sky-200 rounded-xl p-3 text-[12px] text-sky-900 leading-relaxed">
+            カードのお支払いは完了していません。内容をご確認のうえ、もう一度ご注文ください。
+          </div>
+        )}
+
+        <button onClick={handleAccept} disabled={accepting || !!estimate.pendingCardPayment}
           className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-[14px] flex items-center justify-center gap-2 disabled:opacity-50 shadow-md">
           <CheckCircle2 size={16}/> {accepting ? '確定中...' : (orderForm.paymentMethod === 'card' ? '決済へ進む →' : 'この内容で正式に注文する')}
         </button>

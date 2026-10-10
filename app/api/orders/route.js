@@ -19,7 +19,7 @@ import { sendLineParallelToEmail } from '@/utils/line';
 import { createMypageMagicUrl } from '@/utils/mypageLink';
 import { rateLimit, getClientIp } from '@/utils/rateLimit';
 import { validateOrderData } from '@/utils/orderValidator';
-import { loadVersions, amountsFromVersion, isValidCustomerToken } from '@/utils/estimateThread';
+import { loadVersions, amountsFromVersion, isValidCustomerToken, findPendingCardOrder } from '@/utils/estimateThread';
 
 export async function POST(request) {
   try {
@@ -138,6 +138,12 @@ export async function POST(request) {
       }
       if (est.expires_at && new Date(est.expires_at) < new Date()) {
         return NextResponse.json({ error: 'お見積もりの有効期限が切れています' }, { status: 400 });
+      }
+      // [2026-10 C6] 同じ見積からのカード決済が手続き中のときは、二重のご注文を防ぐ
+      const pendingCard = await findPendingCardOrder(supabaseAdmin, est);
+      if (pendingCard) {
+        const until = new Date(pendingCard.until).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' });
+        return NextResponse.json({ error: `このお見積もりはカードのお支払い手続き中です。お支払いが終わっていない場合は、${until} ごろ以降にもう一度お試しください` }, { status: 400 });
       }
       let versions = [];
       try {
@@ -372,7 +378,8 @@ export async function POST(request) {
     const orderId = inserted.id;
 
     // ★ お見積もり経由の場合、estimates テーブルを converted に
-    if (orderData?.fromEstimate && orderData?.estimateId) {
+    // [2026-10 C6] カード払いは決済が終わったとき（Stripe の webhook）に確定済みにする。ここでは店頭払いなどだけ
+    if (orderData?.fromEstimate && orderData?.estimateId && !(paymentMethod === 'card' && !isStaffEntered)) {
       try {
         await supabaseAdmin
           .from('estimates')
@@ -682,9 +689,13 @@ export async function POST(request) {
       ];
     }
 
+    // [2026-10 C6] 見積からの注文は、決済画面で「戻る」を押したら見積のページに戻す
+    const estimateBackUrl = (orderData?.fromEstimate && orderData?.estimateId)
+      ? `${APP_URL}/order/${tenantId}/${shopId}/estimate/${encodeURIComponent(orderData.estimateId)}?${body.estimateToken ? `t=${encodeURIComponent(body.estimateToken)}&` : ''}payment=cancel&order_id=${orderId}`
+      : null;
     const cancelUrl = isEcOrder
       ? `${APP_URL}/order/${tenantId}/${shopId}/cart?payment=cancel&order_id=${orderId}`
-      : `${APP_URL}/order/${tenantId}/${shopId}?payment=cancel&order_id=${orderId}`;
+      : (estimateBackUrl || `${APP_URL}/order/${tenantId}/${shopId}?payment=cancel&order_id=${orderId}`);
 
     // ★ EC注文なら success_url に from=ec を付ける（サンクスページの戻り先制御用）
     const successUrl = isEcOrder
