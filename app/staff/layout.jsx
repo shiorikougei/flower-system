@@ -320,25 +320,16 @@ export default function StaffLayout({ children }) {
     if (!feedbackText.trim()) return;
     setIsSending(true);
     try {
-      const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
-      const ownerData = data?.settings_data || {};
-      const currentFeedbacks = ownerData.clientRequests || [];
-
-      const newFeedback = {
-        id: `fb_${Date.now()}`,
-        tenantId: 'current_shop',
-        tenantName: appName,
-        type: feedbackType,
-        text: feedbackText,
-        date: new Date().toISOString().split('T')[0],
-        status: 'new'
-      };
-
-      await supabase.from('app_settings').upsert({
-        id: 'nocolde_owner',
-        settings_data: { ...ownerData, clientRequests: [newFeedback, ...currentFeedbacks] }
+      // [セキュリティ 2026-10] 送信はサーバー経由（ブラウザから管理データを直接書き換えない）
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/staff/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+        body: JSON.stringify({ type: feedbackType, text: feedbackText, tenantName: appName }),
       });
-      
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(result.error || '送信に失敗しました');
+
       alert('フィードバックを送信しました！ご協力ありがとうございます。');
       setShowFeedback(false);
       setFeedbackText('');
