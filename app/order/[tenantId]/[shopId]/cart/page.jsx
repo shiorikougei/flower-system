@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
 import { ShoppingCart, Plus, Minus, Trash2, ChevronLeft, Package, AlertCircle, Gift, Mail, Pen } from 'lucide-react';
 import { getCart, updateQty, removeFromCart, getCartTotal, calcOptionsTotal } from '@/utils/cart';
+// [セキュリティ 2026-10] 店舗設定は秘密の項目を除いた /api/public/settings から読む
+import { fetchPublicSettings } from '@/utils/fetchPublicSettings';
 
 export default function CartPage() {
   const params = useParams();
@@ -32,7 +34,7 @@ export default function CartPage() {
 
   async function loadSettings() {
     try {
-      const { data } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
+      const { data } = await fetchPublicSettings(tenantId);
       if (data?.settings_data) {
         setAppSettings(data.settings_data);
         const s = data.settings_data.stripe;

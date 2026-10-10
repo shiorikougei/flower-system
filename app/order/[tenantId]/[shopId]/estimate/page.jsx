@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
 import { ChevronLeft, Send, CheckCircle2, ImagePlus, X, Loader2, AlertCircle, Truck, MapPin, Lightbulb, MessageCircle, Mail, Smartphone, ClipboardList, Link as LinkIcon } from 'lucide-react';
 import { validateImageFile } from '@/utils/fileValidation';
+// [セキュリティ 2026-10] 店舗設定は秘密の項目を除いた /api/public/settings から読む
+import { fetchPublicSettings } from '@/utils/fetchPublicSettings';
 
 // ★ ヒアリング選択肢
 const PURPOSE_OPTIONS = [
@@ -194,7 +196,7 @@ export default function EstimatePage() {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
+        const { data } = await fetchPublicSettings(tenantId);
         if (data?.settings_data) setAppSettings(data.settings_data);
       } catch {}
     })();

@@ -6,6 +6,8 @@ import { supabase } from '@/utils/supabase';
 import { ShoppingCart, Plus, Minus, Package, X, ChevronLeft, Search, Sparkles, Bell, CheckCircle2, Flower2, Flower, Cake, Leaf, Heart, Gift, Mail, Pen, AlertCircle, HelpCircle, BookOpen, MessageCircle } from 'lucide-react';
 import { getCart, addToCart, getCartCount } from '@/utils/cart';
 import Breadcrumbs from '@/components/Breadcrumbs';
+// [セキュリティ 2026-10] 店舗設定は秘密の項目を除いた /api/public/settings から読む
+import { fetchPublicSettings } from '@/utils/fetchPublicSettings';
 
 export default function ShopCatalogPage() {
   const params = useParams();
@@ -41,7 +43,7 @@ export default function ShopCatalogPage() {
     setIsLoading(true);
     try {
       const [settingsRes, productsRes] = await Promise.all([
-        supabase.from('app_settings').select('settings_data').eq('id', tenantId).single(),
+        fetchPublicSettings(tenantId),
         // 在庫切れ商品も含めて取得し、UIで「在庫切れ + 通知登録」を出す
         supabase.from('products').select('*').eq('tenant_id', tenantId).eq('is_active', true).order('display_order', { ascending: true })
       ]);

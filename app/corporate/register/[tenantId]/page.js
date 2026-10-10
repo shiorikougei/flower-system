@@ -4,6 +4,8 @@ import { useRouter, useSearchParams, useParams } from 'next/navigation'; // ★ 
 import { supabase } from '@/utils/supabase';
 import { Building2, Mail, Lock, User, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+// [セキュリティ 2026-10] 店舗設定は秘密の項目を除いた /api/public/settings から読む
+import { fetchPublicSettings } from '@/utils/fetchPublicSettings';
 
 // URLを読み取る処理（useSearchParams）を含むメインコンテンツを分離
 function RegisterContent() {
@@ -31,7 +33,7 @@ function RegisterContent() {
     async function fetchShopName() {
       if (!tenantId || tenantId === 'default') return;
       try {
-        const { data } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
+        const { data } = await fetchPublicSettings(tenantId);
         if (data?.settings_data?.generalConfig?.appName) {
           setShopName(data.settings_data.generalConfig.appName);
         }

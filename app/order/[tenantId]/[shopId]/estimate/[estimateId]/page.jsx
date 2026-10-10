@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
 import { CheckCircle2, AlertCircle, ChevronLeft, CreditCard, Banknote, Clock, Calendar, Lightbulb, FileText, ClipboardList, Mail, Send } from 'lucide-react';
 import TatefudaFreeInput from '@/components/TatefudaFreeInput';
+// [セキュリティ 2026-10] 店舗設定は秘密の項目を除いた /api/public/settings から読む
+import { fetchPublicSettings } from '@/utils/fetchPublicSettings';
 
 export default function EstimateAcceptPage() {
   const params = useParams();
@@ -65,7 +67,7 @@ export default function EstimateAcceptPage() {
         setAccessToken(t);
         const [estRes, settingsRes] = await Promise.all([
           fetch(`/api/estimates?id=${encodeURIComponent(estimateId)}${t ? `&t=${encodeURIComponent(t)}` : ''}`).then(r => r.json()),
-          supabase.from('app_settings').select('settings_data').eq('id', tenantId).single(),
+          fetchPublicSettings(tenantId),
         ]);
         const found = (estRes.estimates || []).find(e => e.id === estimateId);
         if (!found) setError('お見積もりが見つかりません');

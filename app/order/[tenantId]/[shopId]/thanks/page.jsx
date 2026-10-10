@@ -3,6 +3,8 @@ import { useState, useEffect, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { CheckCircle2, AlertCircle, Phone } from 'lucide-react';
+// [セキュリティ 2026-10] 店舗設定は秘密の項目を除いた /api/public/settings から読む
+import { fetchPublicSettings } from '@/utils/fetchPublicSettings';
 
 function ThanksContent() {
   const params = useParams();
@@ -23,11 +25,7 @@ function ThanksContent() {
   useEffect(() => {
     async function fetchSettings() {
       try {
-        const { data, error } = await supabase
-          .from('app_settings')
-          .select('settings_data')
-          .eq('id', tenantId)
-          .single();
+        const { data, error } = await fetchPublicSettings(tenantId);
         if (error) throw error;
         if (data && data.settings_data) setAppSettings(data.settings_data);
       } catch (err) {

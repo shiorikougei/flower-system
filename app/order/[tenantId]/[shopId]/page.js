@@ -4,6 +4,8 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/utils/supabase';
 import { Sparkles, ShoppingBag, ChevronRight, History, User, HelpCircle, BookOpen } from 'lucide-react';
+// [セキュリティ 2026-10] 店舗設定は秘密の項目を除いた /api/public/settings から読む
+import { fetchPublicSettings } from '@/utils/fetchPublicSettings';
 
 // ★ お客様の最初の入口：オーダーメイド / 完成品 の2択
 //   従来の /page.js（カスタム注文フォーム）は /custom/page.js に移動
@@ -19,11 +21,7 @@ export default function OrderEntryPage() {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await supabase
-          .from('app_settings')
-          .select('settings_data')
-          .eq('id', tenantId)
-          .single();
+        const { data } = await fetchPublicSettings(tenantId);
         if (data?.settings_data) setAppSettings(data.settings_data);
       } catch (e) {}
     })();

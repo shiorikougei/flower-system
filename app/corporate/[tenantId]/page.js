@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { isFreeTatefuda, tatefudaRows } from '@/utils/tatefuda';
+// [セキュリティ 2026-10] 店舗設定は秘密の項目を除いた /api/public/settings から読む
+import { fetchPublicSettings } from '@/utils/fetchPublicSettings';
 
 export default function CorporateDashboardPage() {
   const router = useRouter();
@@ -67,7 +69,7 @@ export default function CorporateDashboardPage() {
       try {
         const [ordersRes, settingsRes] = await Promise.all([
           supabase.from('orders').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
-          supabase.from('app_settings').select('settings_data').eq('id', tenantId).single()
+          fetchPublicSettings(tenantId)
         ]);
 
         if (ordersRes.data) {
