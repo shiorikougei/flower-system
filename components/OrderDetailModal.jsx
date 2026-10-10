@@ -407,7 +407,7 @@ export default function OrderDetailModal({
       // ★ 注文の shopId に一致する店舗を優先で取得。なければ先頭店舗
       const shop = (appSettings?.shops || []).find(s => String(s.id) === String(modalData.shopId)) || (appSettings?.shops || [])[0] || {};
       const shopName = shop.name || appSettings?.generalConfig?.appName || '花・花OHANA！';
-      const shopLogoUrl = appSettings?.generalConfig?.logoUrl || '';
+      const shopLogoUrl = /^https?:\/\//i.test(String(appSettings?.generalConfig?.logoUrl || '')) ? appSettings.generalConfig.logoUrl : '';
       const shopZip = shop.zip || '0010025';
       const shopAddress = shop.address || '北海道札幌市北区北２５条西４丁目３−８ クレアノース25 1階';
       const shopTel = shop.phone || '011-600-1878';
@@ -419,7 +419,8 @@ export default function OrderDetailModal({
         return map[type] || '#444444';
       };
 
-      const renderHeaderMeta = () => `<div class="meta-area"><div>伝票：${safeId}    受付：${safeFormatDate(order.created_at, false)}</div><div>お渡し：${receiveMethodStr}    希望日：${datePart}</div><div>入金状況：${paymentStatus}</div></div>`;
+      // [セキュリティ 2026-10] 希望日・入金状況などはお客様の注文データから来るため、必ずエスケープする
+      const renderHeaderMeta = () => `<div class="meta-area"><div>伝票：${safeId}    受付：${safeFormatDate(order.created_at, false)}</div><div>お渡し：${formatText(receiveMethodStr)}    希望日：${formatText(datePart)}</div><div>入金状況：${formatText(paymentStatus)}</div></div>`;
 
       // ★ A4フル 受注書専用テンプレート（老眼でも見えるサイズ、A4全体をバランスよく使用）
       // ★ [A7] 受注書の記入欄の「済」は「請求」（入金済み）だけに付ける（2026-10-05 しーちゃん決定）
@@ -848,7 +849,7 @@ export default function OrderDetailModal({
             const entry = history.find(h => h.status === statusLabel);
             const staff = entry ? entry.staff : '';
             const shortLabel = statusLabel.length > 4 ? statusLabel.substring(0, 4) : statusLabel;
-            return `<div class="check-group"><div class="check-label">${shortLabel}</div><div class="check-box ${staff ? 'filled' : ''}">${staff}</div></div>`;
+            return `<div class="check-group"><div class="check-label">${formatText(shortLabel)}</div><div class="check-box ${staff ? 'filled' : ''}">${formatText(staff)}</div></div>`;
           }).join('');
         }
         // ★ 納品書のみ: お店のホームページQR（店舗設定の「ホームページURL」が空なら出さない）
@@ -858,9 +859,9 @@ export default function OrderDetailModal({
         return `
           <div class="footer" style="border-top-color:${hidePrice ? '#888' : '#bbb'}">
             <div class="shop-block">
-              <div class="shop-name">${shopName}</div>
-              <div>〒${shopZip} ${shopAddress}</div>
-              <div>TEL: ${shopTel}${shopInvoice ? ` (${shopInvoice})` : ''}</div>
+              <div class="shop-name">${formatText(shopName)}</div>
+              <div>〒${formatText(shopZip)} ${formatText(shopAddress)}</div>
+              <div>TEL: ${formatText(shopTel)}${shopInvoice ? ` (${formatText(shopInvoice)})` : ''}</div>
             </div>
             <div class="footer-actions">${qrHtml}${footerActionsHtml}</div>
           </div>
@@ -920,7 +921,7 @@ export default function OrderDetailModal({
             <!-- タイトル下：ロゴ（大きめ・中央） -->
             ${shopLogoUrl ? `
               <div style="text-align:center; margin-top:8mm; padding-bottom:6mm; border-bottom:0.5pt dashed #bbb;">
-                <img src="${shopLogoUrl}" alt="${formatText(shopName)}" style="max-height:25mm; max-width:90mm; object-fit:contain; margin:0 auto; display:block;" />
+                <img src="${formatText(shopLogoUrl)}" alt="${formatText(shopName)}" style="max-height:25mm; max-width:90mm; object-fit:contain; margin:0 auto; display:block;" />
               </div>
             ` : `<div style="margin-top:8mm; padding-bottom:6mm; border-bottom:0.5pt dashed #bbb;"></div>`}
 
@@ -950,7 +951,7 @@ export default function OrderDetailModal({
             <!-- 下部：店舗情報（左にロゴ + 店名） -->
             <div style="margin-top:auto; padding-top:8mm; border-top:0.5pt dashed #bbb; text-align:center;">
               <div style="display:flex; align-items:center; justify-content:center; gap:3mm; margin-bottom:3mm;">
-                ${shopLogoUrl ? `<img src="${shopLogoUrl}" alt="" style="height:8mm; max-width:18mm; object-fit:contain;" />` : ''}
+                ${shopLogoUrl ? `<img src="${formatText(shopLogoUrl)}" alt="" style="height:8mm; max-width:18mm; object-fit:contain;" />` : ''}
                 <div style="font-size:14pt; font-weight:900; color:#222; letter-spacing:0.15em;">${formatText(shopName)}</div>
               </div>
               <div style="font-size:9pt; color:#555; line-height:1.7;">

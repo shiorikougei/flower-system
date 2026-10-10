@@ -11,6 +11,8 @@ import {
   Plus, Minus, AlertCircle, AlertTriangle, CheckCircle2, Loader2,
   Tag, Lock, X, RefreshCw, Package,
 } from 'lucide-react';
+// [セキュリティ 2026-10] 店舗設定は秘密の項目を除いた /api/public/settings から読む
+import { fetchPublicSettings } from '@/utils/fetchPublicSettings';
 
 export default function ScanPage() {
   const params = useParams();
@@ -51,11 +53,7 @@ export default function ScanPage() {
       setProduct(productData);
 
       // 店舗名取得
-      const { data: settingsRow } = await supabase
-        .from('app_settings')
-        .select('settings_data')
-        .eq('id', productData.tenant_id)
-        .single();
+      const { data: settingsRow } = await fetchPublicSettings(productData.tenant_id);
       const settings = settingsRow?.settings_data || {};
       setShopName(settings.shops?.[0]?.name || settings.generalConfig?.appName || 'お花屋さん');
     } catch (e) {

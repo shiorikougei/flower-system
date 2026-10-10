@@ -9,6 +9,8 @@ import TatefudaPreview from '@/components/TatefudaPreview';
 import TatefudaFreeInput from '@/components/TatefudaFreeInput';
 import { getAvailableTateOptions } from '@/utils/tateMaster';
 import DatePicker from '@/components/DatePicker';
+// [セキュリティ 2026-10] 店舗設定は秘密の項目を除いた /api/public/settings から読む
+import { fetchPublicSettings } from '@/utils/fetchPublicSettings';
 
 // ★ 時間スロットを店舗営業時間でフィルタするヘルパー
 const TIME_RANGE_RE = /(\d{1,2}):(\d{2})\s*[-〜]\s*(\d{1,2}):(\d{2})/;
@@ -226,7 +228,7 @@ function OrderFormContent() {
         }
 
         const [settingsRes, galleryRes] = await Promise.all([
-          supabase.from('app_settings').select('settings_data').eq('id', tenantId).single(),
+          fetchPublicSettings(tenantId),
           // ★ ギャラリーは公開APIで取得（anonでもRLS気にせず確実に取得できる）
           fetch(`/api/portfolio/list?tenantId=${encodeURIComponent(tenantId)}`).then(r => r.json()).catch(() => ({ items: [] })),
         ]);

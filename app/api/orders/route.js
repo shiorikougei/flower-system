@@ -90,6 +90,25 @@ export async function POST(request) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
+    // ---- [セキュリティ 2026-10] お店（スタッフ・サーバー）だけが決める項目は、お客様の注文からは受け付けない ----
+    //   例: 「入金済」の表示、対応履歴、担当スタッフ、完成写真、管理番号など。
+    //   お客様の画面はこれらを送らないので、ふだんの注文には影響しない（送られてきたら捨てる）
+    if (!isStaffEntered) {
+      const STAFF_ONLY_FIELDS = [
+        'paymentStatus', 'paidAmount', 'paidAt', 'paymentHistory',
+        'statusHistory', 'currentStatus', 'history',
+        'completionImages', 'completionImage',
+        'attributedStaffId', 'attributedStaffName', 'staffName',
+        'managementNo', 'ecBoxFee', 'amountCorrections', 'correctionHistory',
+        'referenceImages', 'estimateVersionNo', 'isCancelled', 'cancelReason',
+        'stripeCheckoutSessionId', 'stripePaymentIntentId',
+      ];
+      for (const k of STAFF_ONLY_FIELDS) delete orderData[k];
+      orderData.isStaffEntered = false;
+      // 見積からの注文は estimateId が必要（無ければ「見積から」の扱いにしない）
+      if (orderData.fromEstimate && !orderData.estimateId) orderData.fromEstimate = false;
+    }
+
     // Service Role で書き込み（RLSをバイパス）
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return NextResponse.json({ error: 'サーバー設定エラー（SUPABASE_SERVICE_ROLE_KEY未設定）' }, { status: 500 });
@@ -326,8 +345,9 @@ export async function POST(request) {
       },
       payment_status: initialPaymentStatus,
       // [業務-3] 担当者個人受付の場合の売上帰属（NULL OK）
-      attributed_staff_id: orderData.attributedStaffId || null,
-      attributed_staff_name: orderData.attributedStaffName || null,
+      // [セキュリティ 2026-10] 担当スタッフの売上帰属はスタッフ代理入力のときだけ（お客様の注文からは受け付けない）
+      attributed_staff_id: isStaffEntered ? (orderData.attributedStaffId || null) : null,
+      attributed_staff_name: isStaffEntered ? (orderData.attributedStaffName || null) : null,
     };
 
     const { data: inserted, error: insertErr } = await supabaseAdmin

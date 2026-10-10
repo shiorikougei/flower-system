@@ -6,6 +6,8 @@ import { Calendar, Package, ChevronRight, Store, Truck, Building2, AlertCircle, 
 import TatefudaPreview from '@/components/TatefudaPreview';
 import TatefudaFreeInput from '@/components/TatefudaFreeInput';
 import { getTateOptions } from '@/utils/tateMaster';
+// [セキュリティ 2026-10] 店舗設定は秘密の項目を除いた /api/public/settings から読む
+import { fetchPublicSettings } from '@/utils/fetchPublicSettings';
 
 export default function CorporateOrderPage() {
   const router = useRouter();
@@ -131,8 +133,8 @@ export default function CorporateOrderPage() {
         }
 
         const [settingsRes, galleryRes] = await Promise.all([
-          supabase.from('app_settings').select('settings_data').eq('id', tenantId).single(),
-          supabase.from('app_settings').select('settings_data').eq('id', `${tenantId}_gallery`).single()
+          fetchPublicSettings(tenantId),
+          fetchPublicSettings(`${tenantId}_gallery`)
         ]);
 
         if (settingsRes.data?.settings_data) {
