@@ -2,7 +2,7 @@
 // POST /api/orders
 //
 // Body: { tenantId, shopId, orderData, paymentMethod }
-//   paymentMethod: 'card' | 'bank_transfer' | 'cod'
+//   paymentMethod: 'card' | 'store'（[2026-10 C3/C4] 銀行振込は廃止。店頭払いは店頭受取のときだけ）
 //
 // 動作:
 //   1. 入力の最低限のバリデーション
@@ -80,8 +80,12 @@ export async function POST(request) {
     }
 
     // ★ paymentMethod 検証: スタッフ代理時のみ緩和
-    if (!isStaffEntered && !['card', 'bank_transfer'].includes(paymentMethod)) {
-      return NextResponse.json({ error: 'paymentMethod が不正' }, { status: 400 });
+    // [2026-10 C3] 銀行振込は受け付けない / [C4] 店頭払い（store）は店頭受取のときだけ
+    if (!isStaffEntered && !['card', 'store'].includes(paymentMethod)) {
+      return NextResponse.json({ error: 'お支払い方法を選び直してください（銀行振込は終了しました）' }, { status: 400 });
+    }
+    if (!isStaffEntered && paymentMethod === 'store' && orderData.receiveMethod !== 'pickup') {
+      return NextResponse.json({ error: '店頭でのお支払いは、店頭でお受け取りの場合のみご利用いただけます' }, { status: 400 });
     }
 
     // ---- 詳細バリデーション（DoS・XSS・不正入力防止）----
@@ -331,12 +335,17 @@ export async function POST(request) {
     } else {
       initialPaymentStatus = paymentMethod === 'card' ? 'processing' : 'unpaid';
     }
+    // [2026-10 C5] 店頭払いで税込 22,000 円を超える注文は、お店からの電話確認のあとで確定する
+    const STORE_PAY_PHONE_CHECK_OVER = 22000;
+    const needsPhoneCheck = !isStaffEntered && paymentMethod === 'store' && totalAmount > STORE_PAY_PHONE_CHECK_OVER;
+    if (!isStaffEntered) delete orderData.phoneConfirmation;
     const orderRecord = {
       tenant_id: String(tenantId),
       order_data: {
         ...orderData,
         paymentMethod,
         totalAmount,
+        ...(needsPhoneCheck ? { phoneConfirmation: { status: 'pending', requestedAt: new Date().toISOString() } } : {}),
         status: 'new',
         managementNo,  // ★ 管理番号
         ecBoxFee,      // ★ EC箱代
@@ -419,7 +428,8 @@ export async function POST(request) {
       <tr><td style="padding: 6px 0; color: #666;">受取方法</td><td style="padding: 6px 0;">${escapeHtml(receiveMethodLabel)}</td></tr>
       <tr><td style="padding: 6px 0; color: #666;">納期</td><td style="padding: 6px 0;">${escapeHtml(orderData.selectedDate || '未指定')} ${escapeHtml(orderData.selectedTime || '')}</td></tr>
       <tr><td style="padding: 6px 0; color: #666;">合計</td><td style="padding: 6px 0; font-size: 16px; color: #2D4B3E;"><strong>¥${Number(total).toLocaleString()}</strong> (税込)</td></tr>
-      <tr><td style="padding: 6px 0; color: #666;">支払方法</td><td style="padding: 6px 0;">${escapeHtml(orderData.paymentStatus || paymentMethod || '-')}</td></tr>
+      <tr><td style="padding: 6px 0; color: #666;">支払方法</td><td style="padding: 6px 0;">${escapeHtml(paymentMethod === 'store' ? '店頭でお支払い（お受け取りの際）' : (orderData.paymentStatus || paymentMethod || '-'))}</td></tr>
+      ${needsPhoneCheck ? `<tr><td colspan="2" style="padding: 10px; background: #FEF3C7; color: #92400E; font-weight: bold;">【電話確認が必要】税込 22,000 円を超える店頭払いのご注文です。お客様にお電話でご予約の確認をしてから、注文詳細の「電話確認OK」を押してください。</td></tr>` : ''}
     </table>
 
     <div style="margin-top: 20px; text-align: center;">
@@ -474,6 +484,10 @@ export async function POST(request) {
         const paymentLabelMap = {
           card: 'クレジットカード決済（決済完了）',
           bank_transfer: '銀行振込',
+          // [2026-10 C4/C5] 店頭払い
+          store: needsPhoneCheck
+            ? '店頭でお支払い（お受け取りの際）\n※ ご注文金額が税込 22,000 円を超えるため、お店からお電話でご予約の確認をさせていただいたうえで確定いたします。\n※ お電話で確認ができない場合は、クレジットカードでのお支払いのご案内をメールでお送りします。期限までにお支払いがない場合は、キャンセルとなります。'
+            : '店頭でお支払い（お受け取りの際）',
         };
         // ★ スタッフ代理入力: order_data.paymentStatusの日本語ラベルを優先
         const paymentLabel = isStaffEntered && orderData.paymentStatus

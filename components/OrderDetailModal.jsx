@@ -167,9 +167,40 @@ export default function OrderDetailModal({
     return () => { cancelled = true; };
   }, [order, appSettings]);
 
+  // [2026-10 C5] 電話確認の操作のあと、画面を描き直すため
+  const [, setPhoneCheckTick] = useState(0);
+  const [phoneCheckBusy, setPhoneCheckBusy] = useState(false);
+
   if (!order) return null;
 
   const modalData = order.order_data || {};
+  const handlePhoneCheck = async (action) => {
+    const msg = action === 'confirm'
+      ? 'お客様に電話で確認できましたか？\n「OK」で注文を確定します（店頭でのお支払いのまま）。'
+      : 'お客様にクレジットカードでのお支払いのご案内（決済のリンク）をメールで送ります。\n期限（約24時間）までにお支払いがない場合は、自動でキャンセル扱いになります。\n送りますか？';
+    if (!window.confirm(msg)) return;
+    setPhoneCheckBusy(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/staff/phone-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+        body: JSON.stringify({ orderId: order.id, action, staffName: getCurrentStaff()?.name || '' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || '処理に失敗しました');
+      const pc = { ...(order.order_data.phoneConfirmation || {}) };
+      if (action === 'confirm') { pc.status = 'confirmed'; pc.confirmedAt = new Date().toISOString(); }
+      else { pc.status = 'card_link_sent'; pc.cardLinkExpiresAt = data.expiresAt; order.order_data.paymentMethod = 'card'; }
+      order.order_data.phoneConfirmation = pc;
+      setPhoneCheckTick(t => t + 1);
+      alert(action === 'confirm' ? '注文を確定しました' : (data.mailed ? 'カード払いのご案内をメールで送りました' : 'カード払いのご案内を作りました（メールは送信されていません。お電話でご案内してください）'));
+    } catch (e) {
+      alert('エラー: ' + e.message);
+    } finally {
+      setPhoneCheckBusy(false);
+    }
+  };
   const modalTargetInfo = modalData.isRecipientDifferent ? (modalData.recipientInfo || {}) : (modalData.customerInfo || {});
   const isSagawa = modalData.receiveMethod === 'sagawa';
   const isPickup = modalData.receiveMethod === 'pickup';
@@ -204,6 +235,7 @@ export default function OrderDetailModal({
     const map = {
       card: 'クレジットカード決済',
       bank_transfer: '銀行振込',
+      store: '店頭でお支払い（お受け取り時）', // [2026-10 C4]
       cash: '現金',
       cod: '代金引換',
       paid_card: '前払い済み（カード）',
@@ -396,7 +428,7 @@ export default function OrderDetailModal({
       const timePart = modalData.selectedTime || '未指定';
 
       // ★ paymentMethod を日本語表記に変換（受注書で「card」等の英語表示を防止）
-      const paymentMethodMap = { card: 'クレジットカード', bank_transfer: '銀行振込', cash: '現金' };
+      const paymentMethodMap = { card: 'クレジットカード', bank_transfer: '銀行振込', cash: '現金', store: '店頭払い' };
       const paymentMethodJp = paymentMethodMap[modalData.paymentMethod] || modalData.paymentMethod || '';
 
       // ★ [BUGFIX] 重複表示防止: modalData.paymentStatus に既に「入金済（クレジットカード）」等が入っている場合はそのまま使う
@@ -2214,6 +2246,34 @@ export default function OrderDetailModal({
 
             <div className="bg-white p-6 md:p-8 rounded-[32px] border-2 border-[#2D4B3E]/20 shadow-md space-y-6">
               <h3 className="text-[16px] font-black text-[#2D4B3E] border-b border-[#EAEAEA] pb-3 flex items-center gap-2"><CreditCard size={20}/> お支払い情報</h3>
+              {/* [2026-10 C5] 店頭払い・税込 22,000 円超: 電話確認 */}
+              {modalData.phoneConfirmation?.status === 'pending' && (
+                <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 space-y-3">
+                  <p className="text-[13px] font-bold text-amber-900">電話確認が必要なご注文です（店頭払い・税込 22,000 円超）</p>
+                  <p className="text-[12px] text-amber-900 leading-relaxed">お客様にお電話でご予約の確認をしてください。確認できなかった場合は、カード払いのご案内を送ります（期限までにお支払いがなければキャンセル扱い）。</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" disabled={phoneCheckBusy} onClick={() => handlePhoneCheck('confirm')}
+                      className="h-10 px-4 rounded-lg bg-[#2D4B3E] text-white text-[12px] font-bold disabled:opacity-50">電話確認OK（注文を確定）</button>
+                    <button type="button" disabled={phoneCheckBusy} onClick={() => handlePhoneCheck('send_card_link')}
+                      className="h-10 px-4 rounded-lg bg-white border border-amber-400 text-amber-900 text-[12px] font-bold disabled:opacity-50">確認できない → カード払いのご案内を送る</button>
+                  </div>
+                </div>
+              )}
+              {modalData.phoneConfirmation?.status === 'confirmed' && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-[12px] text-emerald-800 font-bold">
+                  電話確認済み（店頭でお支払い）{modalData.phoneConfirmation.confirmedAt ? `・${new Date(modalData.phoneConfirmation.confirmedAt).toLocaleString('ja-JP')}` : ''}
+                </div>
+              )}
+              {modalData.phoneConfirmation?.status === 'card_link_sent' && order?.payment_status !== 'paid' && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[12px] text-amber-900 font-bold">
+                  カード払いのご案内を送信済み。お支払いの期限: {modalData.phoneConfirmation.cardLinkExpiresAt ? new Date(modalData.phoneConfirmation.cardLinkExpiresAt).toLocaleString('ja-JP') : '-'}（過ぎるとキャンセル扱い）
+                </div>
+              )}
+              {modalData.phoneConfirmation?.status === 'cancelled' && (
+                <div className="bg-gray-100 border border-gray-300 rounded-xl p-3 text-[12px] text-gray-700 font-bold">
+                  カード払いの期限までにお支払いがなかったため、キャンセル扱いになりました。
+                </div>
+              )}
               {/* [2026-10 A11] カード決済が失敗したとき（あとで払い直して入金済になった場合は出さない） */}
               {modalData.cardPaymentFailedAt && order?.payment_status !== 'paid' && (
                 <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 text-[12px] text-amber-900 font-bold">

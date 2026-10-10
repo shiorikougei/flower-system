@@ -75,6 +75,9 @@ function ThanksContent() {
 
   // クレジットカード決済成功フラグ
   const isCardPaid = paymentResult === 'success';
+  // [2026-10 C3/C4] 支払い方法（注文フォームから渡される）。振込先は銀行振込の注文のときだけ出す
+  const payKind = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('pay') : null;
+  const needsPhoneCheck = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('phone') === '1';
 
   return (
     <div className="min-h-screen bg-[#FBFAF9] flex flex-col font-sans text-[#111111]">
@@ -138,7 +141,25 @@ function ThanksContent() {
           )}
 
           {/* ★ カード決済「以外」かつ 銀行振込情報がある場合のみ表示 */}
-          {!isCardPaid && bankInfo && (
+          {/* [2026-10 C4/C5] 店頭でお支払い */}
+          {!isCardPaid && payKind === 'store' && (
+            <div className="mt-10 mb-8 w-full text-left bg-[#FBFAF9] p-6 md:p-8 rounded-2xl border border-[#EAEAEA] space-y-3">
+              <h2 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2 text-center">お支払いについて</h2>
+              <p className="text-[13px] text-[#333] text-center">店頭でお受け取りの際にお支払いください。</p>
+              {needsPhoneCheck && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <p className="text-[12px] text-amber-900 leading-relaxed">
+                    ご注文金額が税込 22,000 円を超えるため、<strong>お店からお電話でご予約の確認</strong>をさせていただいたうえで確定いたします。<br/>
+                    お電話で確認ができない場合は、クレジットカードでのお支払いのご案内をメールでお送りします。期限までにお支払いがない場合は、キャンセルとなります。
+                  </p>
+                </div>
+              )}
+              {shopPhone && <p className="text-[12px] text-[#555] text-center">お店の電話番号: <strong>{shopPhone}</strong></p>}
+            </div>
+          )}
+
+          {/* ★ 振込先は、銀行振込の注文のときだけ（[2026-10 C3] 新しい注文では銀行振込は選べない） */}
+          {!isCardPaid && payKind === 'bank_transfer' && bankInfo && (
             <div className="mt-10 mb-8 w-full text-left bg-[#FBFAF9] p-6 md:p-8 rounded-2xl border border-[#EAEAEA] space-y-4">
               <h2 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2 text-center">お支払いについて</h2>
               <div className="space-y-3">
