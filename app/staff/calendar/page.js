@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import HelpTooltip from '@/components/HelpTooltip';
 import OrderDetailModal from '@/components/OrderDetailModal'; 
+// [2026-10 C2] カード決済が終わらないまま 20 分たった注文は表示しない（データはそのまま）
+import { visibleOrders } from '@/utils/orderVisibility';
 
 export default function CalendarPage() {
   const [orders, setOrders] = useState([]);
@@ -43,7 +45,7 @@ export default function CalendarPage() {
         const cachedSettings = sessionStorage.getItem(CACHE_KEY_SETTINGS);
         
         if (cachedOrders && cachedSettings) {
-          setOrders(JSON.parse(cachedOrders));
+          setOrders(visibleOrders(JSON.parse(cachedOrders)));
           setAppSettings(JSON.parse(cachedSettings));
           setIsLoading(false);
           fetchLatestDataSilently(tId, CACHE_KEY_ORDERS);
@@ -62,7 +64,7 @@ export default function CalendarPage() {
       if (error) throw error;
       
       const latestOrders = ordersData || [];
-      setOrders(latestOrders);
+      setOrders(visibleOrders(latestOrders));
       sessionStorage.setItem(CACHE_KEY_ORDERS, JSON.stringify(latestOrders));
       
     } catch (error) {
@@ -77,7 +79,7 @@ export default function CalendarPage() {
       // ★ セキュリティ修正: tenant_id でフィルタ
       const { data: ordersData } = await supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false });
       if (ordersData) {
-        setOrders(ordersData);
+        setOrders(visibleOrders(ordersData));
         sessionStorage.setItem(cacheKey, JSON.stringify(ordersData));
       }
     } catch (error) {

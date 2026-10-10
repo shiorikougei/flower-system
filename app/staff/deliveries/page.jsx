@@ -18,6 +18,8 @@ import {
   CheckCircle2,
   RotateCcw
 } from 'lucide-react';
+// [2026-10 C2] カード決済が終わらないまま 20 分たった注文は表示しない（データはそのまま）
+import { visibleOrders } from '@/utils/orderVisibility';
 
 export default function DeliveriesPage() {
   const [orders, setOrders] = useState([]);
@@ -54,7 +56,7 @@ export default function DeliveriesPage() {
       ]);
 
       if (ordersRes.error) throw ordersRes.error;
-      setOrders(ordersRes.data || []);
+      setOrders(visibleOrders(ordersRes.data || []));
       if (settingsRes.data?.settings_data) setAppSettings(settingsRes.data.settings_data);
     } catch (error) {
       console.error('データ取得に失敗しました', error);
@@ -74,7 +76,7 @@ export default function DeliveriesPage() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setOrders(data || []);
+      setOrders(visibleOrders(data || []));
     } catch (error) {
       console.error('受注データの取得に失敗しました', error);
     } finally {

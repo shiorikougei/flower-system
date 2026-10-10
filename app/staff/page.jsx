@@ -11,6 +11,8 @@ import { getCurrentStaff } from '@/utils/staffRole';
 import { clockIn, clockOut, breakStart, breakEnd } from '@/utils/attendance';
 import HelpTooltip from '@/components/HelpTooltip';
 import ReleaseNotesCard from '@/components/ReleaseNotesCard';
+// [2026-10 C2] カード決済が終わらないまま 20 分たった注文は表示しない（データはそのまま）
+import { visibleOrders } from '@/utils/orderVisibility';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -125,7 +127,7 @@ export default function DashboardPage() {
           .limit(100);
         if (error) throw error;
 
-        const fetchedOrders = data || [];
+        const fetchedOrders = visibleOrders(data || []);
         setOrders(fetchedOrders);
 
         // ★ 未回答の見積依頼を取得 (失敗してもダッシュボード自体は表示)
