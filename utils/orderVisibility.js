@@ -12,6 +12,8 @@ function isCardAwaitingPayment(order) {
   const d = order.order_data || {};
   if (d.paymentMethod !== 'card') return false;
   if (d.isStaffEntered) return false;
+  // [2026-10 C5] 電話確認から「カード払いのご案内」を送った注文は、期限（24 時間）まで一覧に出す
+  if (d.phoneConfirmation) return false;
   if (!['processing', 'failed'].includes(order.payment_status)) return false;
   // スタッフが入金済みにした・ステータスを動かした注文は対象外
   if (/入金済|前払い済み/.test(String(d.paymentStatus || ''))) return false;
