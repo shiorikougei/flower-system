@@ -51,14 +51,14 @@ export default function OwnerDashboard() {
   const loadOwnerData = async () => {
     setIsLoading(true);
     try {
-      const { data: ownerMeta } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
+      const { data: ownerMeta } = await ownerGetSettings('nocolde_owner');
       if (ownerMeta?.settings_data) {
         setInvitations(ownerMeta.settings_data.invitations || []);
         setUpgradeRequests(ownerMeta.settings_data.upgradeRequests || []);
         setClientRequests(ownerMeta.settings_data.clientRequests || []);
       }
 
-      const { data: allRows, error: scanError } = await supabase.from('app_settings').select('*');
+      const { data: allRows, error: scanError } = await ownerListSettings();
       if (scanError) throw scanError;
 
       const shopTenants = allRows
@@ -91,22 +91,22 @@ export default function OwnerDashboard() {
     if (isAuth) loadOwnerData();
   }, [isAuth]);
 
-  const handleLogin = () => {
-    if (password === 'nocolde2026') setIsAuth(true);
-    else alert('アクセス権限がありません。');
+  // [セキュリティ 2026-10] パスワードはサーバーで確認する（ブラウザのコードにパスワードを書かない）
+  const handleLogin = async () => {
+    if (!password) { alert('パスワードを入力してください'); return; }
+    const res = await ownerListSettings();
+    if (res.error) { alert(res.status === 401 || res.status === 403 ? 'アクセス権限がありません。' : '確認に失敗しました。時間をおいて再度お試しください。'); return; }
+    setIsAuth(true);
   };
 
   const saveOwnerMetaData = async (updatedInvitations = invitations, updatedUpgrades = upgradeRequests, updatedFeedbacks = clientRequests) => {
     setIsSaving(true);
     try {
-      await supabase.from('app_settings').upsert({ 
-        id: 'nocolde_owner', 
-        settings_data: { 
+      await ownerSaveSettings('nocolde_owner', {
           invitations: updatedInvitations,
           upgradeRequests: updatedUpgrades,
-          clientRequests: updatedFeedbacks
-        } 
-      });
+          clientRequests: updatedFeedbacks,
+        });
       setInvitations(updatedInvitations);
       setUpgradeRequests(updatedUpgrades);
       setClientRequests(updatedFeedbacks);
@@ -128,14 +128,14 @@ export default function OwnerDashboard() {
 
     setIsSaving(true);
     try {
-      const { data: current } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
+      const { data: current } = await ownerGetSettings(tenantId);
       const currentSettings = current?.settings_data || {};
       const currentFeatures = currentSettings.features || { b2b: false, deliveryOutsource: false };
       
       const nextFeatures = { ...currentFeatures, [featureKey]: !currentFeatures[featureKey] };
       const nextData = { ...currentSettings, features: nextFeatures };
       
-      await supabase.from('app_settings').update({ settings_data: nextData }).eq('id', tenantId);
+      await ownerSaveSettings(tenantId, nextData);
     } catch (e) { 
       alert('通信エラーで保存できませんでした。'); 
       loadOwnerData();
@@ -157,9 +157,9 @@ export default function OwnerDashboard() {
     
     setIsSaving(true);
     try {
-      const { data: current } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
+      const { data: current } = await ownerGetSettings(tenantId);
       const nextData = { ...(current?.settings_data || {}), status: newStatus };
-      await supabase.from('app_settings').update({ settings_data: nextData }).eq('id', tenantId);
+      await ownerSaveSettings(tenantId, nextData);
     } catch (e) {
       alert('更新に失敗しました。');
       loadOwnerData();
@@ -175,9 +175,9 @@ export default function OwnerDashboard() {
   const handleSavePrice = async (tenantId, newPrice) => {
     setSavingPriceId(tenantId);
     try {
-      const { data: current } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
+      const { data: current } = await ownerGetSettings(tenantId);
       const nextData = { ...(current?.settings_data || {}), monthlyPrice: Number(newPrice) };
-      await supabase.from('app_settings').update({ settings_data: nextData }).eq('id', tenantId);
+      await ownerSaveSettings(tenantId, nextData);
       alert('月額料金を更新しました！');
     } catch (e) {
       console.error(e);
@@ -229,7 +229,7 @@ export default function OwnerDashboard() {
     if (!isAuth) return;
     (async () => {
       try {
-        const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
+        const { data } = await ownerGetSettings('nocolde_owner');
         const s = data?.settings_data || {};
         if (s.pricingConfig) setPricingConfig({
           ...DEFAULT_PRICING,
@@ -260,16 +260,13 @@ export default function OwnerDashboard() {
           try {
             const entries = Object.entries(s.tenantBilling);
             for (const [tid, billing] of entries) {
-              const { data: tData } = await supabase.from('app_settings').select('settings_data').eq('id', tid).single();
+              const { data: tData } = await ownerGetSettings(tid);
               if (tData?.settings_data) {
                 const next = { ...tData.settings_data, subscriptionBilling: billing };
-                await supabase.from('app_settings').update({ settings_data: next }).eq('id', tid);
+                await ownerSaveSettings(tid, next);
               }
             }
-            await supabase.from('app_settings').upsert({
-              id: 'nocolde_owner',
-              settings_data: { ...s, billingMirroredAt: new Date().toISOString() },
-            });
+            await ownerSaveSettings('nocolde_owner', { ...s, billingMirroredAt: new Date().toISOString() });
           } catch (e) { console.warn('billing mirror failed', e); }
         }
       } catch {}
@@ -279,10 +276,32 @@ export default function OwnerDashboard() {
   // 入金記録ハンドラ
   const reloadInvoices = async () => {
     try {
-      const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
+      const { data } = await ownerGetSettings('nocolde_owner');
       setInvoices(data?.settings_data?.invoices || []);
     } catch {}
   };
+  // [セキュリティ 2026-10] 設定の読み書きはサーバー（オーナー確認つき）経由。ブラウザから app_settings を直接触らない
+  const ownerFetch = async (url, init = {}) => {
+    const res = await fetch(url, { ...init, headers: { ...(await authHeaders()), ...(init.headers || {}) } });
+    const json = await res.json().catch(() => ({}));
+    return { res, json };
+  };
+  const ownerGetSettings = async (id) => {
+    const { res, json } = await ownerFetch(`/api/admin/app-settings?id=${encodeURIComponent(id)}`);
+    if (!res.ok) return { data: null, error: { message: json.error || 'error' }, status: res.status };
+    return { data: json.settings_data ? { settings_data: json.settings_data } : null, error: null };
+  };
+  const ownerListSettings = async () => {
+    const { res, json } = await ownerFetch('/api/admin/app-settings');
+    if (!res.ok) return { data: null, error: { message: json.error || 'error' }, status: res.status };
+    return { data: json.rows || [], error: null };
+  };
+  const ownerSaveSettings = async (id, settings_data) => {
+    const { res, json } = await ownerFetch('/api/admin/app-settings', { method: 'PUT', body: JSON.stringify({ id, settings_data }) });
+    if (!res.ok) throw new Error(json.error || '保存に失敗しました');
+    return { error: null };
+  };
+
   const authHeaders = async () => {
     // ★ Supabaseセッションがあればトークン、無ければオーナーパスワードを送る
     const { data: { session } } = await supabase.auth.getSession();
@@ -336,9 +355,9 @@ export default function OwnerDashboard() {
 
   const savePricingConfig = async () => {
     try {
-      const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
+      const { data } = await ownerGetSettings('nocolde_owner');
       const next = { ...(data?.settings_data || {}), pricingConfig };
-      await supabase.from('app_settings').upsert({ id: 'nocolde_owner', settings_data: next });
+      await ownerSaveSettings('nocolde_owner', next);
       alert('料金マスターを保存しました');
     } catch (e) { alert('保存失敗: ' + e.message); }
   };
@@ -346,9 +365,9 @@ export default function OwnerDashboard() {
   // [LP-#41] LP料金保存
   const saveLpPricing = async () => {
     try {
-      const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
+      const { data } = await ownerGetSettings('nocolde_owner');
       const next = { ...(data?.settings_data || {}), lpPricing };
-      await supabase.from('app_settings').upsert({ id: 'nocolde_owner', settings_data: next });
+      await ownerSaveSettings('nocolde_owner', next);
       alert('LP料金を保存しました。\n\n※ トップページへの反映には最大1時間かかります（キャッシュ）');
     } catch (e) { alert('保存失敗: ' + e.message); }
   };
@@ -394,9 +413,9 @@ export default function OwnerDashboard() {
   // ★ [LP-#45] LP画像 保存
   const saveLpImages = async () => {
     try {
-      const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
+      const { data } = await ownerGetSettings('nocolde_owner');
       const next = { ...(data?.settings_data || {}), lpImages };
-      await supabase.from('app_settings').upsert({ id: 'nocolde_owner', settings_data: next });
+      await ownerSaveSettings('nocolde_owner', next);
       alert('LP画像を保存しました。\n\n※ トップページへの反映には最大1時間かかります（キャッシュ）');
     } catch (e) { alert('保存失敗: ' + e.message); }
   };
@@ -450,14 +469,14 @@ export default function OwnerDashboard() {
     setTenantBilling(next);
     try {
       // (1) オーナーデータに保存
-      const { data } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
+      const { data } = await ownerGetSettings('nocolde_owner');
       const settings = { ...(data?.settings_data || {}), tenantBilling: next };
-      await supabase.from('app_settings').upsert({ id: 'nocolde_owner', settings_data: settings });
+      await ownerSaveSettings('nocolde_owner', settings);
 
       // (2) 該当テナントの settings にもミラー（アップグレードモーダル等で参照するため）
-      const { data: tData } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
+      const { data: tData } = await ownerGetSettings(tenantId);
       const tNext = { ...(tData?.settings_data || {}), subscriptionBilling: next[tenantId] || {} };
-      await supabase.from('app_settings').update({ settings_data: tNext }).eq('id', tenantId);
+      await ownerSaveSettings(tenantId, tNext);
     } catch (e) { console.warn(e); }
   };
 
@@ -629,7 +648,7 @@ export default function OwnerDashboard() {
     setIsLoadingUsage(true);
     try {
       // pricing
-      const { data: ownerRow } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
+      const { data: ownerRow } = await ownerGetSettings('nocolde_owner');
       const cfg = ownerRow?.settings_data?.aiPricingConfig;
       const pricing = {
         freeQuotaPerMonth: Number(cfg?.freeQuotaPerMonth ?? 100),
@@ -638,7 +657,8 @@ export default function OwnerDashboard() {
       setAiPricing(pricing);
 
       // 全テナント
-      const { data: rows } = await supabase.from('app_settings').select('id, settings_data').neq('id', 'nocolde_owner');
+      const { data: allRows } = await ownerListSettings();
+      const rows = (allRows || []).filter(r => r.id !== 'nocolde_owner');
       const list = (rows || [])
         .filter(r => !['gallery', 'default'].includes(r.id) && !r.id.endsWith('_gallery'))
         .map(r => {
@@ -749,9 +769,9 @@ export default function OwnerDashboard() {
 
   const saveAiPricing = async () => {
     try {
-      const { data: ownerRow } = await supabase.from('app_settings').select('settings_data').eq('id', 'nocolde_owner').single();
+      const { data: ownerRow } = await ownerGetSettings('nocolde_owner');
       const nextData = { ...(ownerRow?.settings_data || {}), aiPricingConfig: aiPricing };
-      await supabase.from('app_settings').upsert({ id: 'nocolde_owner', settings_data: nextData });
+      await ownerSaveSettings('nocolde_owner', nextData);
       alert('料金プランを保存しました');
       loadUsage(usageMonth);
     } catch (e) {
@@ -797,14 +817,14 @@ export default function OwnerDashboard() {
     setIsSaving(true);
     try {
       for (const t of tenants) {
-        const { data: current } = await supabase.from('app_settings').select('settings_data').eq('id', t.id).single();
+        const { data: current } = await ownerGetSettings(t.id);
         const nextData = {
           ...(current?.settings_data || {}),
           aiPrompt: t.aiPrompt,
           captionPrompt: t.captionPrompt,
           showPriceInCaption: t.showPriceInCaption,
         };
-        await supabase.from('app_settings').update({ settings_data: nextData }).eq('id', t.id);
+        await ownerSaveSettings(t.id, nextData);
       }
       alert('すべてのプロンプトを保存しました。');
     } catch(e) {
@@ -821,9 +841,9 @@ export default function OwnerDashboard() {
 
     setIsSaving(true);
     try {
-      await supabase.from('app_settings').delete().eq('id', tenantId);
-      setTenants(tenants.filter(t => t.id !== tenantId));
-      alert(`${target.name} を削除しました。`);
+      // [セキュリティ 2026-10] 画面からのテナント削除は止めている（データを消す操作は、確認のうえ Supabase の管理画面で行う）
+      alert(`${target.name} の削除は、この画面からはできなくなりました。\n本当に削除が必要な場合は、開発担当に依頼してください。`);
+      return;
     } catch (e) {
       alert('削除中にエラーが発生しました。');
     } finally {
@@ -838,10 +858,10 @@ export default function OwnerDashboard() {
       // (1) ランダム生成
       const newPassword = String(Math.floor(100000 + Math.random() * 900000));
       // (2) 対象テナントの settings_data.generalConfig.systemPassword を更新
-      const { data } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
+      const { data } = await ownerGetSettings(tenantId);
       const settings = data?.settings_data || {};
       const generalConfig = { ...(settings.generalConfig || {}), systemPassword: newPassword };
-      await supabase.from('app_settings').update({ settings_data: { ...settings, generalConfig } }).eq('id', tenantId);
+      await ownerSaveSettings(tenantId, { generalConfig });
       // (3) 送付先メアド取得 (請求先 or オーナーAuthメアド)
       const billing = tenantBilling[tenantId] || {};
       const toEmail = billing.billingEmail || prompt('送付先メールアドレスを入力してください（請求先メール未設定）');
@@ -923,9 +943,9 @@ export default function OwnerDashboard() {
 
     setIsSaving(true);
     try {
-      const { error } = await supabase.from('orders').delete().not('id', 'is', null);
-      if (error) throw error;
-      alert('すべての注文データをクリーンアップしました！');
+      // [セキュリティ 2026-10] 本番運用中のため、画面から注文をまとめて削除する操作は止めている（データは消さない）
+      alert('本番で運用中のため、注文データの一括削除はこの画面からはできなくなりました。');
+      return;
     } catch (e) {
       alert('注文データのクリーンアップに失敗しました。\n(SupabaseのTable Editorから直接削除してください)');
     } finally {

@@ -11,6 +11,10 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
+  // [セキュリティ 2026-10] 本番運用中のため、テーブルをまとめて削除するこの機能は止めている（常に 403）。
+  //   データの削除が必要なときは、確認のうえ Supabase の管理画面で手作業で行う
+  return NextResponse.json({ error: "この機能は停止しています" }, { status: 403 });
+  // eslint-disable-next-line no-unreachable
   try {
     // NocoLdeスーパー管理者のみ実行可
     const auth = await requireOwner(request);
