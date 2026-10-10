@@ -5,10 +5,15 @@
 
 import { NextResponse } from 'next/server';
 import { rateLimit, getClientIp } from '@/utils/rateLimit';
+import { requireTenantStaff } from '@/utils/adminAuth';
+import { safeFetchText } from '@/utils/safeFetch';
 
 export const runtime = 'nodejs';
 
 export async function POST(request) {
+  // [セキュリティ 2026-10] スタッフだけが使える（作品管理の画面から呼ぶ）
+  const auth = await requireTenantStaff(request);
+  if (!auth.ok) return auth.response;
   try {
     const ip = getClientIp(request);
     const allowed = await rateLimit({ key: `extract-url:${ip}`, max: 30, windowSec: 60 });
@@ -29,11 +34,15 @@ export async function POST(request) {
     }
 
     // メタ情報を取得
-    const html = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; FLORIX-bot/1.0; +https://noodleflorix.com)',
-      },
-    }).then(r => r.ok ? r.text() : '');
+    // [セキュリティ 2026-10] 社内・ローカルのアドレスには行かない・時間と大きさの上限つき
+    let html = '';
+    try {
+      html = await safeFetchText(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FLORIX-bot/1.0; +https://noodleflorix.com)' },
+      });
+    } catch (e) {
+      return NextResponse.json({ error: 'このURLは読み込めません' }, { status: 400 });
+    }
 
     if (!html) {
       return NextResponse.json({ error: 'ページが取得できませんでした' }, { status: 500 });

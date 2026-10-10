@@ -5,6 +5,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import ProductDetailClient from "./client";
+import { safeJsonLd } from "@/utils/jsonLd"; // [セキュリティ 2026-10] 構造化データの安全な埋め込み
 
 export const revalidate = 3600; // 1時間キャッシュ
 
@@ -194,15 +195,15 @@ export default async function ProductPage({ params }) {
       {/* SEO 構造化データ */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(productJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(businessJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(businessJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }}
       />
       {/* 実際のUI */}
       <ProductDetailClient

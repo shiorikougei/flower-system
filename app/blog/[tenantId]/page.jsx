@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import Breadcrumbs from "@/components/Breadcrumbs";
+import { safeJsonLd } from "@/utils/jsonLd"; // [セキュリティ 2026-10] 構造化データの安全な埋め込み
 
 export const revalidate = 3600;
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.noodleflorix.com";
@@ -78,7 +79,7 @@ export default async function BlogIndexPage({ params }) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(itemListJsonLd) }}
       />
       <main className="min-h-screen bg-[#FBFAF9] font-sans text-[#111] pb-32">
         <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-[#EAEAEA]">

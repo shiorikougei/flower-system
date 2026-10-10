@@ -9,6 +9,7 @@
 //   - 「ユーザーが存在しない」と「パスワード不一致」を区別せず汎用エラー
 
 import { NextResponse } from 'next/server';
+import { rateLimit, getClientIp } from '@/utils/rateLimit';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
@@ -21,6 +22,10 @@ export const runtime = 'nodejs';
 
 export async function POST(request) {
   try {
+    // [セキュリティ 2026-10] 回数制限（総当たり・大量の問い合わせ対策）
+    if (!(await rateLimit({ key: `customer_login:${getClientIp(request)}`, max: 20, windowSec: 600 }))) {
+      return NextResponse.json({ error: '短い時間に何度も試されています。しばらくしてからお試しください。' }, { status: 429 });
+    }
     const { tenantId, email, password } = await request.json();
     if (!tenantId || !email || !password) {
       return NextResponse.json({ error: '必須項目が不足' }, { status: 400 });

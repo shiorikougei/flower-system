@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from '@/utils/email';
 import { escapeHtml } from '@/utils/emailTemplates';
 import { rateLimit, getClientIp } from '@/utils/rateLimit';
+import { requireTenantStaff } from '@/utils/adminAuth';
 
 export async function POST(request) {
   try {
@@ -27,6 +28,9 @@ export async function POST(request) {
     );
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: '認証失敗' }, { status: 401 });
+    // [セキュリティ 2026-10] お店のスタッフだけが使える（法人のお客様アカウントなどは不可）
+    const staffAuth = await requireTenantStaff(request);
+    if (!staffAuth.ok || !staffAuth.tenant_id) return NextResponse.json({ error: '権限がありません' }, { status: 403 });
 
     const body = await request.json();
     const { email, ccEmails, shopName: providedShopName } = body;
@@ -37,7 +41,7 @@ export async function POST(request) {
     }
 
     const ccList = Array.isArray(ccEmails)
-      ? ccEmails.filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))
+      ? ccEmails.filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)).slice(0, 5)
       : [];
 
     const shopName = providedShopName || 'FLORIX';

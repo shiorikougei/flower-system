@@ -2214,6 +2214,12 @@ export default function OrderDetailModal({
 
             <div className="bg-white p-6 md:p-8 rounded-[32px] border-2 border-[#2D4B3E]/20 shadow-md space-y-6">
               <h3 className="text-[16px] font-black text-[#2D4B3E] border-b border-[#EAEAEA] pb-3 flex items-center gap-2"><CreditCard size={20}/> お支払い情報</h3>
+              {/* [セキュリティ 2026-10] カード決済の金額が注文の合計と違ったとき */}
+              {modalData.paymentAmountMismatch && (
+                <div className="bg-red-50 border border-red-300 rounded-xl p-3 text-[12px] text-red-800 font-bold">
+                  カード決済の金額（¥{Number(modalData.paymentAmountMismatch.paid).toLocaleString()}）が、注文の合計（¥{Number(modalData.paymentAmountMismatch.expected).toLocaleString()}）と違います。制作の前に確認してください。
+                </div>
+              )}
               <div className="space-y-3 text-[13px] md:text-[14px] font-medium text-[#555555]">
                 <div className="flex justify-between items-center"><span>商品代 (税抜):</span><span className="font-black text-[#111111] text-[16px]">¥{getTotals(modalData).item.toLocaleString()}</span></div>
                 {/* ★ 内訳: feeBreakdown があれば各内訳を別行で、なければ従来通り合算 */}

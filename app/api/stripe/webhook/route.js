@@ -61,9 +61,26 @@ export async function POST(request) {
         // 既存の order_data を取得して paymentStatus も "入金済" に更新
         const { data: orderRow } = await supabaseAdmin
           .from('orders')
-          .select('order_data, payment_status')
+          .select('order_data, payment_status, tenant_id, stripe_checkout_session_id')
           .eq('id', orderId)
           .single();
+
+        // [セキュリティ 2026-10] 決済の知らせが、この注文のものかを確かめる
+        //   - 注文が存在する / 店舗が一致する / 保存してある決済セッションと一致する
+        if (!orderRow) { console.warn('[webhook] 注文が見つかりません:', orderId); break; }
+        if (session.metadata?.tenant_id && String(session.metadata.tenant_id) !== String(orderRow.tenant_id)) {
+          console.error('[webhook] 店舗が一致しないため処理しません:', orderId); break;
+        }
+        if (orderRow.stripe_checkout_session_id && orderRow.stripe_checkout_session_id !== session.id) {
+          console.error('[webhook] 決済セッションが一致しないため処理しません:', orderId); break;
+        }
+        if (event.account) {
+          const { data: acctRow } = await supabaseAdmin.from('app_settings').select('settings_data').eq('id', orderRow.tenant_id).maybeSingle();
+          const expectedAcct = acctRow?.settings_data?.stripe?.accountId;
+          if (expectedAcct && expectedAcct !== event.account) {
+            console.error('[webhook] Stripe のアカウントが一致しないため処理しません:', orderId); break;
+          }
+        }
 
         // 二重処理防止: 既に paid 済みなら何もしない
         if (orderRow?.payment_status === 'paid') {
@@ -75,6 +92,12 @@ export async function POST(request) {
           ...(orderRow?.order_data || {}),
           paymentStatus: '入金済（クレジットカード）',
         };
+        // [セキュリティ 2026-10] 支払われた金額が注文の合計と違うときは、印を残してスタッフが気づけるようにする
+        const expectedTotal = Number(orderRow?.order_data?.totalAmount) || 0;
+        if (typeof session.amount_total === 'number' && expectedTotal > 0 && session.amount_total !== expectedTotal) {
+          console.error('[webhook] 支払額と注文の合計が違います:', orderId, session.amount_total, expectedTotal);
+          newOrderData.paymentAmountMismatch = { expected: expectedTotal, paid: session.amount_total, at: new Date().toISOString() };
+        }
 
         const { error } = await supabaseAdmin
           .from('orders')

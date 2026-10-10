@@ -298,9 +298,10 @@ function PortfolioPageInner() {
 
     for (let i = 0; i < urls.length; i++) {
       try {
+        const { data: { session: extractSession } } = await supabase.auth.getSession();
         const res = await fetch('/api/portfolio/extract-from-url', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${extractSession?.access_token || ''}` },
           body: JSON.stringify({ url: urls[i] }),
         });
         const data = await res.json();

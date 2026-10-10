@@ -5,6 +5,7 @@
 // DELETE /api/customer-set-password   Body: { token }                → 解除
 
 import { NextResponse } from 'next/server';
+import { rateLimit, getClientIp } from '@/utils/rateLimit';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 
@@ -34,6 +35,10 @@ function validatePassword(pw) {
 
 export async function POST(request) {
   try {
+    // [セキュリティ 2026-10] 回数制限（総当たり・大量の問い合わせ対策）
+    if (!(await rateLimit({ key: `customer_set_pw:${getClientIp(request)}`, max: 10, windowSec: 600 }))) {
+      return NextResponse.json({ error: '短い時間に何度も試されています。しばらくしてからお試しください。' }, { status: 429 });
+    }
     const { token, newPassword } = await request.json();
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,

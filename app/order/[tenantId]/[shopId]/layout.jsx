@@ -1,6 +1,7 @@
 // [SEO-#2 #5] 各店舗ページの動的メタタグ + LocalBusiness JSON-LD
 
 import { createClient } from "@supabase/supabase-js";
+import { safeJsonLd } from "@/utils/jsonLd"; // [セキュリティ 2026-10] 構造化データの安全な埋め込み
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.noodleflorix.com";
 
@@ -140,7 +141,7 @@ export default async function ShopLayout({ children, params }) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(businessJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(businessJsonLd) }}
       />
       {children}
     </>
