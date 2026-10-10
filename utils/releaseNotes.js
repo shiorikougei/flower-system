@@ -15,6 +15,16 @@ export const SHOW_DAYS = 30;
 
 export const RELEASE_NOTES = [
   {
+    id: '2026-10-estimate-photos-list',
+    date: '2026-10-10',
+    title: '見積の参考写真が受注一覧でも見られるようになりました',
+    items: [
+      '見積から作られた注文には、受注一覧にお客様の参考写真が小さく 1 枚表示されます（複数あるときは枚数も表示）。',
+      'これからの注文では、見積の参考写真が注文にも残ります。見積をゴミ箱に移しても、注文詳細から写真を見られます。',
+    ],
+    helpArticleId: 'order_from_estimate',
+  },
+  {
     id: '2026-10-pickup-done-mail',
     date: '2026-10-05',
     title: '店頭お渡し完了のメールが自動で届くようになりました',

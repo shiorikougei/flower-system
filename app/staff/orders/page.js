@@ -19,6 +19,38 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState(null); 
   const [appSettings, setAppSettings] = useState(null);
   const [currentTenantId, setCurrentTenantId] = useState(null);
+  // [2026-10 B6] 見積の参考写真（一覧の小さな写真）。{ [estimateId]: string[] }
+  //   新しい注文は order_data.referenceImages を使う。古い注文は見積から読むだけ（注文データには保存しない）
+  const [estimateImages, setEstimateImages] = useState({});
+  useEffect(() => {
+    const ids = [...new Set(orders
+      .map(o => o.order_data || {})
+      .filter(d => d.fromEstimate && d.estimateId && !(Array.isArray(d.referenceImages) && d.referenceImages.length > 0))
+      .map(d => String(d.estimateId)))]
+      .filter(id => !(id in estimateImages))
+      .slice(0, 100);
+    if (ids.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const res = await fetch(`/api/staff/estimate-images?ids=${encodeURIComponent(ids.join(','))}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const next = {};
+        ids.forEach(id => { next[id] = data?.images?.[id] || []; });
+        setEstimateImages(prev => ({ ...prev, ...next }));
+      } catch (e) {
+        console.warn('[orders] 見積写真の取得に失敗:', e?.message);
+      }
+    })();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders]);
 
   useEffect(() => {
     async function initData() {
@@ -476,6 +508,21 @@ export default function OrdersPage() {
                     <div className="text-[13px] font-bold text-[#D97D54] flex items-center gap-1.5">
                       <Calendar size={16} /> 納品日: {d.selectedDate || '未指定'} {d.selectedTime && `(${d.selectedTime})`}
                     </div>
+
+                    {/* [2026-10 B6] 見積の参考写真（小さく 1 枚。複数あるときは枚数） */}
+                    {(() => {
+                      if (!d.fromEstimate) return null;
+                      const refImgs = (Array.isArray(d.referenceImages) && d.referenceImages.length > 0)
+                        ? d.referenceImages
+                        : (estimateImages[String(d.estimateId)] || []);
+                      if (refImgs.length === 0) return null;
+                      return (
+                        <div className="mt-2 flex items-center gap-2">
+                          <img src={refImgs[0]} alt="見積の参考写真" loading="lazy" className="w-14 h-14 rounded-lg object-cover border border-[#EAEAEA] bg-[#FBFAF9]"/>
+                          <span className="text-[11px] font-bold text-[#555]">見積の参考写真{refImgs.length > 1 ? `（ほか${refImgs.length - 1}枚）` : ''}</span>
+                        </div>
+                      );
+                    })()}
 
                     {/* ★ オーダー内容サマリー（用途・カラー・イメージ・立札・カード・お届け先） */}
                     {(() => {
