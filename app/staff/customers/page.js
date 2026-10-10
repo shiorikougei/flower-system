@@ -10,6 +10,8 @@ import {
 import FeatureGate from '@/components/FeatureGate';
 import HelpTooltip from '@/components/HelpTooltip';
 import { tatefudaText } from '@/utils/tatefuda';
+// [2026-10 C2] カード決済が終わらないまま 20 分たった注文は表示しない（データはそのまま）
+import { visibleOrders } from '@/utils/orderVisibility';
 
 export default function CustomersPage() {
   return (
@@ -69,7 +71,7 @@ function CustomersPageContent() {
       const cached = sessionStorage.getItem(CACHE_KEY);
       if (cached) {
         try {
-          setOrders(JSON.parse(cached));
+          setOrders(visibleOrders(JSON.parse(cached)));
           setIsLoading(false);
         } catch (e) {
           console.error("キャッシュパース失敗", e);
@@ -83,7 +85,7 @@ function CustomersPageContent() {
       if (error) throw error;
 
       const fetchedOrders = data || [];
-      setOrders(fetchedOrders);
+      setOrders(visibleOrders(fetchedOrders));
       sessionStorage.setItem(CACHE_KEY, JSON.stringify(fetchedOrders));
     } catch (error) {
       console.error('取得エラー:', error.message);

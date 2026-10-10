@@ -662,6 +662,9 @@ export async function POST(request) {
         mode: 'payment',
         payment_method_types: ['card'],
         line_items,
+        // [2026-10 C2] 決済ページの有効時間を約 30 分に（Stripe の下限が 30 分のため、余裕を見て 31 分）
+        //   これより後は支払えない。20 分たった未決済の注文は受注一覧などに出さない（utils/orderVisibility.js）
+        expires_at: Math.floor(Date.now() / 1000) + 31 * 60,
         success_url: successUrl,
         cancel_url: cancelUrl,
         customer_email: orderData.customerInfo?.email || undefined,

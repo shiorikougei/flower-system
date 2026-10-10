@@ -10,6 +10,8 @@ import FeatureGate from '@/components/FeatureGate';
 import HelpTooltip from '@/components/HelpTooltip';
 import OrderDetailModal from '@/components/OrderDetailModal';
 import { getCurrentStaff } from '@/utils/staffRole';
+// [2026-10 C2] カード決済が終わらないまま 20 分たった注文は表示しない（データはそのまま）
+import { visibleOrders } from '@/utils/orderVisibility';
 
 export default function SalesPage() {
   return <FeatureGate feature="sales" label="売上管理"><SalesPageInner/></FeatureGate>;
@@ -59,7 +61,7 @@ function SalesPageInner() {
         supabase.from('app_settings').select('settings_data').eq('id', tId).single(),
       ]);
       if (ordersRes.error) throw ordersRes.error;
-      setOrders(ordersRes.data || []);
+      setOrders(visibleOrders(ordersRes.data || []));
       if (settingsRes.data?.settings_data) setAppSettings(settingsRes.data.settings_data);
 
       // [業務-3] 権限判定: owner/manager のみ担当者別ビュー可

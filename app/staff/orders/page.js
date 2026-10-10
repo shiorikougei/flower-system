@@ -9,6 +9,7 @@ import { logAction } from '@/utils/auditLog';
 import HelpTooltip from '@/components/HelpTooltip';
 import { ensureOperationAllowed } from '@/utils/staffRole';
 import { tatefudaText } from '@/utils/tatefuda';
+import { isAbandonedCardOrder, isCardPaymentPending, UNPAID_CARD_HIDE_MINUTES } from '@/utils/orderVisibility';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -19,6 +20,8 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState(null); 
   const [appSettings, setAppSettings] = useState(null);
   const [currentTenantId, setCurrentTenantId] = useState(null);
+  // [2026-10 C2] 「決済が完了していない注文」を見ているとき true
+  const [showAbandoned, setShowAbandoned] = useState(false);
   // [2026-10 B6] 見積の参考写真（一覧の小さな写真）。{ [estimateId]: string[] }
   //   新しい注文は order_data.referenceImages を使う。古い注文は見積から読むだけ（注文データには保存しない）
   const [estimateImages, setEstimateImages] = useState({});
@@ -252,7 +255,11 @@ export default function OrdersPage() {
   //    - 未完了 : お渡し前のもの全部（入金状態問わず、まだ何かやることがある）
   //    - 未入金 : お渡し完了 かつ 未入金（入金だけ待ってる）
   //    - アーカイブ : お渡し完了 かつ (入金完了 or キャンセル)
-  const baseFilteredOrders = orders.filter(order => {
+  // [2026-10 C2] カード決済が終わらないまま 20 分たった注文は一覧に出さない（データはそのまま）。
+  //   「決済が完了していない注文」を開いたときだけ、それらを表示する
+  const abandonedOrders = orders.filter(o => isAbandonedCardOrder(o));
+  const baseFilteredOrders = showAbandoned ? abandonedOrders : orders.filter(order => {
+    if (isAbandonedCardOrder(order)) return false;
     const status = order?.order_data?.status || 'new';
     const isCompletedKeyword = /完了|引き渡し|発送済/.test(String(status));
     const isWorkflowCompleted = status === 'completed' || status === '完了' || status === 'キャンセル' || isCompletedKeyword;
@@ -426,6 +433,15 @@ export default function OrdersPage() {
       </div>
 
       <main className="max-w-[1000px] mx-auto p-6 space-y-4 pt-8">
+        {/* [2026-10 C2] 決済が完了していない注文を見ているときの説明 */}
+        {showAbandoned && (
+          <div className="bg-sky-50 border border-sky-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-[12px] text-sky-900 leading-relaxed min-w-0 flex-1">
+              <strong>決済が完了していない注文</strong>（カード払いを選んでから{UNPAID_CARD_HIDE_MINUTES}分たっても決済が終わっていないもの）を表示しています。ふだんの受注一覧・カレンダー・印刷には出ません。
+            </p>
+            <button type="button" onClick={() => setShowAbandoned(false)} className="h-9 px-4 rounded-lg bg-white border border-sky-300 text-sky-900 text-[12px] font-bold">受注一覧に戻る</button>
+          </div>
+        )}
         {isLoading ? (
           <div className="text-center py-20 text-[#2D4B3E] font-bold animate-pulse">読み込み中...</div>
         ) : filteredOrders.length === 0 ? (
@@ -474,6 +490,13 @@ export default function OrdersPage() {
                       ) : (
                         <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded border border-green-200 flex items-center gap-1">
                           <CheckCircle2 size={12}/> {displayStatus}
+                        </span>
+                      )}
+
+                      {/* [2026-10 C2] カード決済がまだ終わっていない注文 */}
+                      {(isCardPaymentPending(order) || isAbandonedCardOrder(order)) && (
+                        <span className="text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200 px-2 py-1 rounded flex items-center gap-1">
+                          {isAbandonedCardOrder(order) ? '決済未完了' : 'カード決済待ち'}
                         </span>
                       )}
 
@@ -588,6 +611,21 @@ export default function OrdersPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+        {/* [2026-10 C2] 決済が完了していない注文（一覧から外したもの）を確認するリンク */}
+        {!isLoading && (abandonedOrders.length > 0 || showAbandoned) && (
+          <div className="pt-6 text-center space-y-2">
+            {showAbandoned && (
+              <p className="text-[12px] text-[#555] leading-relaxed">
+                カード払いを選んだあと、{UNPAID_CARD_HIDE_MINUTES}分たっても決済が完了していない注文です。受注一覧・カレンダー・印刷には出ていません（データは残っています）。<br/>
+                あとから決済が完了すると、自動で「入金済」になって一覧に戻ります。
+              </p>
+            )}
+            <button type="button" onClick={() => { setShowAbandoned(v => !v); setProductFilter('all'); }}
+              className="text-[12px] font-bold text-[#555] underline hover:text-[#2D4B3E]">
+              {showAbandoned ? '受注一覧に戻る' : `決済が完了していない注文（${abandonedOrders.length}件）`}
+            </button>
           </div>
         )}
       </main>
