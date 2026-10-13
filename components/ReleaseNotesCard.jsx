@@ -59,49 +59,52 @@ export default function ReleaseNotesCard() {
   const { notes } = useUnseenReleaseNotes();
   if (notes.length === 0) return null;
 
+  // [2026-10] 1 枚のカードにまとめ、日付ごとに見出しだけを小さく並べる（押すと内容が開く）
   return (
-    <div className="space-y-3">
-      {notes.map((g) => (
-        <div key={g.date} className="bg-white border-2 border-[#117768]/30 rounded-2xl p-5 md:p-6 shadow-sm">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#117768]/10 text-[#117768] flex items-center justify-center shrink-0">
-              <Megaphone size={18} />
+    <section aria-label="お知らせ（更新情報）" className="bg-white border border-[#117768]/30 rounded-2xl px-4 py-3 md:px-5">
+      <p className="flex items-center gap-1.5 text-[13px] font-bold text-[#117768]">
+        <Megaphone size={15} aria-hidden="true" /> お知らせ（更新情報）
+        <span className="font-normal text-[#5C6660]">・見出しを押すと内容が開きます</span>
+      </p>
+      <div className="mt-1 divide-y divide-[#E6E2DA]">
+        {notes.map((g) => (
+          <div key={g.date} className="py-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="ui-num text-[13px] font-bold text-[#5C6660]">{g.date.replace(/-/g, '/')}</span>
+              <button
+                onClick={() => markSeen(g.ids)}
+                className="px-3 h-8 rounded-lg border border-[#2D4B3E] text-[#2D4B3E] text-[13px] font-bold hover:bg-[#2D4B3E] hover:text-white"
+              >
+                確認しました
+              </button>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-bold text-[#117768] tracking-widest">お知らせ（更新情報） {g.date.replace(/-/g, '/')}</p>
-              <div className="mt-1 divide-y divide-[#EAEAEA]">
-                {g.entries.map((n) => (
-                  <div key={n.id} className="py-3 first:pt-0 last:pb-0">
-                    <h2 className="text-[16px] font-bold text-[#2D4B3E]">{n.title}</h2>
-                    <ul className="mt-2 space-y-2">
-                      {n.items.map((item, i) => (
-                        <li key={i} className="text-[14px] text-[#333] leading-relaxed flex gap-2">
-                          <span className="text-[#117768] font-bold shrink-0">・</span>
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    {n.helpArticleId && (
-                      <Link href={`/staff/help#${n.helpArticleId}`} className="mt-2 inline-flex items-center gap-1 text-[13px] font-bold text-[#117768] hover:underline">
-                        詳しい使い方を見る <ChevronRight size={14} />
-                      </Link>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 flex justify-end">
-                <button
-                  onClick={() => markSeen(g.ids)}
-                  className="px-4 h-10 rounded-xl bg-[#2D4B3E] text-white text-[13px] font-bold hover:bg-[#1f352b]"
-                >
-                  確認しました
-                </button>
-              </div>
-            </div>
+            {g.entries.map((n) => (
+              <details key={n.id} className="group">
+                <summary className="list-none [&::-webkit-details-marker]:hidden cursor-pointer min-h-[34px] flex items-center gap-1.5 py-1">
+                  <ChevronRight size={15} className="text-[#117768] shrink-0 transition-transform group-open:rotate-90" aria-hidden="true" />
+                  <h2 className="text-[14px] font-bold text-[#2D4B3E] leading-snug">{n.title}</h2>
+                </summary>
+                <div className="pl-[22px] pb-2">
+                  <ul className="space-y-1">
+                    {n.items.map((item, i) => (
+                      <li key={i} className="text-[14px] text-[#1F2A24] leading-relaxed flex gap-1.5">
+                        <span className="text-[#117768] font-bold shrink-0">・</span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {n.helpArticleId && (
+                    <Link href={`/staff/help#${n.helpArticleId}`} className="mt-1 inline-flex items-center gap-1 text-[13px] font-bold text-[#117768] hover:underline">
+                      詳しい使い方を見る <ChevronRight size={13} />
+                    </Link>
+                  )}
+                </div>
+              </details>
+            ))}
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

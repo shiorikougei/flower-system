@@ -8,7 +8,9 @@ import {
 } from 'lucide-react';
 import FeatureGate from '@/components/FeatureGate';
 import HelpTooltip from '@/components/HelpTooltip';
-import OrderDetailModal from '@/components/OrderDetailModal';
+import dynamic from 'next/dynamic';
+// [2026-10] 注文詳細（大きな部品）は、開いたときに初めて読み込む
+const OrderDetailModal = dynamic(() => import('@/components/OrderDetailModal'), { ssr: false });
 import { getCurrentStaff } from '@/utils/staffRole';
 // [2026-10 C2] カード決済が終わらないまま 20 分たった注文は表示しない（データはそのまま）
 import { visibleOrders } from '@/utils/orderVisibility';

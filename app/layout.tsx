@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Shippori_Mincho, Zen_Kaku_Gothic_New, Outfit } from "next/font/google";
+import { Geist, Geist_Mono, Shippori_Mincho, Zen_Kaku_Gothic_New, Outfit, BIZ_UDPGothic } from "next/font/google";
 import "./globals.css";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import WebVitals from "@/components/WebVitals";
@@ -24,6 +24,13 @@ const shipporiMincho = Shippori_Mincho({
 const zenKakuGothic = Zen_Kaku_Gothic_New({
   variable: "--font-zen-kaku",
   weight: ["400", "500", "700"],
+  subsets: ["latin"],
+  display: "swap",
+});
+// [2026-10 画面リニューアル] スタッフ画面の文字（読みやすさを重視した UD フォント）
+const bizUdGothic = BIZ_UDPGothic({
+  variable: "--font-biz-ud",
+  weight: ["400", "700"],
   subsets: ["latin"],
   display: "swap",
 });
@@ -71,7 +78,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${shipporiMincho.variable} ${zenKakuGothic.variable} ${outfit.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${shipporiMincho.variable} ${zenKakuGothic.variable} ${outfit.variable} ${bizUdGothic.variable} antialiased`}
       >
         <GoogleAnalytics />
         <WebVitals />

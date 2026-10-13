@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
+import { getStaffTenant, getStaffSettings } from '@/utils/staffContext';
 import { ChevronLeft, Send, CheckCircle, XCircle, RefreshCw, Mail, Phone, Trash2, RotateCcw } from 'lucide-react';
 
 export default function EstimatesPage() {
@@ -29,10 +30,10 @@ export default function EstimatesPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      // [2026-10] ログイン・お店・設定の読み込みは左のメニューと共通（utils/staffContext.js）
+      const { session, tenantId: tId } = await getStaffTenant();
       if (!session) return;
-      const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
-      setTenantId(profile?.tenant_id);
+      setTenantId(tId);
     })();
   }, []);
 
@@ -40,8 +41,9 @@ export default function EstimatesPage() {
     if (tenantId) {
       loadEstimates();
       // ★ 料金計算用に店舗設定を取得
-      supabase.from('app_settings').select('settings_data').eq('id', tenantId).single()
-        .then(({ data }) => setAppSettings(data?.settings_data || null));
+      getStaffSettings(tenantId)
+        .then((settingsData) => setAppSettings(settingsData || null))
+        .catch(() => setAppSettings(null));
     }
   }, [tenantId]);
 
