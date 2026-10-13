@@ -80,7 +80,9 @@ export async function POST(request) {
       createdAtIso,
     });
 
-    await auth.supabaseAdmin.from('audit_log').insert({
+    // [2026-10] 保存に失敗しても気づけなかったため、結果を確かめる。
+    //   改ざん検知用の列（row_hash / prev_hash）がまだ無いデータベースでは、その列を除いて保存する
+    const baseRow = {
       tenant_id: auth.tenantId,
       staff_name: staffName || '未選択',
       staff_role: staffRole || null,
@@ -90,9 +92,15 @@ export async function POST(request) {
       description: description || null,
       metadata: metadata || null,
       created_at: createdAtIso,
-      row_hash: rowHash,
-      prev_hash: prevHash,
-    });
+    };
+    let { error: insErr } = await auth.supabaseAdmin.from('audit_log').insert({ ...baseRow, row_hash: rowHash, prev_hash: prevHash });
+    if (insErr && /row_hash|prev_hash|column/i.test(insErr.message || '')) {
+      ({ error: insErr } = await auth.supabaseAdmin.from('audit_log').insert(baseRow));
+    }
+    if (insErr) {
+      console.error('[audit-log POST] 保存に失敗:', insErr.message);
+      return NextResponse.json({ error: '操作履歴の保存に失敗しました' }, { status: 500 });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {
