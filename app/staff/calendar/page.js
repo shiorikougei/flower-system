@@ -237,7 +237,7 @@ export default function CalendarPage() {
   for (let i = 1; i <= daysInMonth; i++) calendarDays.push(i);
 
   const renderDay = (day, index) => {
-    if (!day) return <div key={`empty-${index}`} className="min-h-[80px] md:min-h-[120px] bg-[#FBFAF9]/50 border-r border-b border-[#EAEAEA]"></div>;
+    if (!day) return <div key={`empty-${index}`} className="min-h-[80px] md:min-h-[120px] bg-[#FAFAF7]/50 border-r border-b border-[#E6E2DA]"></div>;
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     
     const dayEvents = calendarEvents[dateStr] || []; 
@@ -252,8 +252,8 @@ export default function CalendarPage() {
     });
 
     return (
-      <div key={day} className={`min-h-[80px] md:min-h-[120px] p-1 md:p-2 border-r border-b border-[#EAEAEA] bg-white transition-all hover:bg-gray-50/50 ${isToday ? 'bg-[#2D4B3E]/5' : ''}`}>
-        <div className={`text-[10px] md:text-[11px] font-bold mb-1 md:mb-2 flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full mx-auto ${isToday ? 'bg-[#2D4B3E] text-white' : 'text-[#555555]'}`}>{day}</div>
+      <div key={day} className={`min-h-[80px] md:min-h-[120px] p-1 md:p-2 border-r border-b border-[#E6E2DA] bg-white transition-all hover:bg-gray-50/50 ${isToday ? 'bg-[#2D4B3E]/5' : ''}`}>
+        <div className={`text-[12px] md:text-[13px] font-bold mb-1 md:mb-2 flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full mx-auto ${isToday ? 'bg-[#2D4B3E] text-white' : 'text-[#3B4640]'}`}>{day}</div>
         <div className="space-y-1 max-h-[80px] md:max-h-[100px] overflow-y-auto hide-scrollbar">
           {dayEvents.map((ev, idx) => {
              const d = ev.order.order_data;
@@ -280,7 +280,7 @@ export default function CalendarPage() {
                <div 
                  key={`${ev.order.id}-${idx}`} 
                  onClick={() => setSelectedOrder(ev.order)} 
-                 className={`text-[8px] md:text-[10px] p-1 md:p-1.5 rounded cursor-pointer truncate transition-all ${badgeColor} ${isCompleted ? 'opacity-40 line-through' : ''}`}
+                 className={`text-[11px] md:text-[12px] p-1 md:p-1.5 rounded cursor-pointer truncate transition-all ${badgeColor} ${isCompleted ? 'opacity-40 line-through' : ''}`}
                >
                  <span className="font-bold">{timeLabel}</span> <span className="hidden sm:inline">{d.customerInfo?.name}</span><span className="sm:hidden">{d.customerInfo?.name?.substring(0,2)}..</span>
                </div>
@@ -293,15 +293,15 @@ export default function CalendarPage() {
 
   return (
     <div className="pb-32 font-sans">
-      <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] flex flex-col md:flex-row md:items-center justify-between px-4 md:px-8 py-3 md:h-20 gap-3 sticky top-0 z-10">
+      <header className="bg-[#F6F4EF]/95 backdrop-blur border-b border-[#E0DCD3] flex flex-col md:flex-row md:items-center justify-between px-4 md:px-10 pt-5 pb-4 gap-3 sticky top-0 z-10">
         <div className="flex items-center justify-between w-full md:w-auto">
-          <h1 className="text-[16px] md:text-[18px] font-bold tracking-tight text-[#2D4B3E] flex items-center gap-2">納品カレンダー <HelpTooltip articleId="order_status"/></h1>
-          <button onClick={() => fetchData(true)} className="md:hidden flex items-center gap-1 px-3 py-1.5 bg-white border border-[#EAEAEA] rounded-lg text-[10px] font-bold text-[#555555] hover:border-[#2D4B3E] transition-all shadow-sm">
+          <h1 className="text-[24px] md:text-[28px] font-bold tracking-[0.02em] text-[#1F2A24] flex items-center gap-2">納品カレンダー <HelpTooltip articleId="order_status"/></h1>
+          <button onClick={() => fetchData(true)} className="md:hidden flex items-center gap-1 px-3 py-1.5 bg-white border border-[#E6E2DA] rounded-lg text-[12px] font-bold text-[#3B4640] hover:border-[#2D4B3E] transition-all shadow-sm">
             <RefreshCw size={12} /> 更新
           </button>
         </div>
         
-        <div className="hidden lg:flex flex-wrap gap-3 text-[10px] font-bold bg-[#FBFAF9] px-4 py-2 rounded-xl border border-[#EAEAEA]">
+        <div className="hidden lg:flex flex-wrap gap-3 text-[12px] font-bold bg-[#FAFAF7] px-4 py-2 rounded-xl border border-[#E6E2DA]">
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-green-600 shadow-sm"></span> 発送業務 (箱詰め)</span>
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-green-50 border border-green-200"></span> 業者お届け日</span>
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-blue-50 border border-blue-200"></span> 自社配達</span>
@@ -309,19 +309,19 @@ export default function CalendarPage() {
         </div>
 
         <div className="flex items-center justify-between w-full md:w-auto gap-4">
-          <div className="flex items-center gap-1 md:gap-2 bg-[#F7F7F7] p-1 rounded-xl border border-[#EAEAEA] w-full md:w-auto justify-between">
-            <button onClick={prevMonth} className="p-2 hover:bg-white rounded-lg transition-all text-[#555555]"><ChevronLeft size={16}/></button>
-            <span className="px-2 md:px-3 font-bold text-[12px] md:text-[13px] min-w-[90px] md:min-w-[100px] text-center">{currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月</span>
-            <button onClick={nextMonth} className="p-2 hover:bg-white rounded-lg transition-all text-[#555555]"><ChevronRight size={16}/></button>
+          <div className="flex items-center gap-1 md:gap-2 bg-[#F6F4EF] p-1 rounded-xl border border-[#E6E2DA] w-full md:w-auto justify-between">
+            <button onClick={prevMonth} className="p-2 hover:bg-white rounded-lg transition-all text-[#3B4640]"><ChevronLeft size={16}/></button>
+            <span className="px-2 md:px-3 font-bold text-[14px] md:text-[15px] min-w-[90px] md:min-w-[100px] text-center">{currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月</span>
+            <button onClick={nextMonth} className="p-2 hover:bg-white rounded-lg transition-all text-[#3B4640]"><ChevronRight size={16}/></button>
           </div>
-          <button onClick={() => fetchData(true)} className="hidden md:flex items-center gap-2 px-4 py-2 bg-white border border-[#EAEAEA] rounded-xl text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] transition-all shadow-sm shrink-0">
+          <button onClick={() => fetchData(true)} className="hidden md:flex items-center gap-2 px-4 py-2 bg-white border border-[#E6E2DA] rounded-xl text-[13px] font-bold text-[#3B4640] hover:border-[#2D4B3E] transition-all shadow-sm shrink-0">
             <RefreshCw size={14} /> 最新の情報に更新
           </button>
         </div>
       </header>
 
-      <div className="p-2 md:p-8 max-w-[1400px] mx-auto">
-        <div className="lg:hidden flex flex-wrap gap-2 text-[9px] font-bold bg-white p-3 rounded-xl border border-[#EAEAEA] mb-3 shadow-sm">
+      <div className="p-2 md:px-10 md:py-6 w-full">
+        <div className="lg:hidden flex flex-wrap gap-2 text-[12px] font-bold bg-white p-3 rounded-xl border border-[#E6E2DA] mb-3 shadow-sm">
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-green-600"></span> 発送</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-green-50 border border-green-200"></span> お届け</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-blue-50 border border-blue-200"></span> 配達</span>
@@ -329,12 +329,12 @@ export default function CalendarPage() {
         </div>
 
         {isLoading ? (
-          <div className="p-20 text-center text-[#999999] font-bold animate-pulse">データを読み込み中...</div>
+          <div className="p-20 text-center text-[#5C6660] font-bold animate-pulse">データを読み込み中...</div>
         ) : (
-          <div className="bg-white rounded-xl md:rounded-2xl border border-[#EAEAEA] shadow-sm overflow-hidden">
-            <div className="grid grid-cols-7 border-b border-[#EAEAEA] bg-[#FBFAF9]">
+          <div className="bg-white rounded-xl md:rounded-2xl border border-[#E6E2DA] shadow-sm overflow-hidden">
+            <div className="grid grid-cols-7 border-b border-[#E6E2DA] bg-[#FAFAF7]">
                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d, i) => (
-                 <div key={d} className={`p-2 md:p-3 text-center text-[8px] md:text-[10px] font-bold uppercase border-r border-[#EAEAEA] last:border-0 ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-[#999999]'}`}>{d}</div>
+                 <div key={d} className={`p-2 md:p-3 text-center text-[11px] md:text-[12px] font-bold uppercase border-r border-[#E6E2DA] last:border-0 ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-[#5C6660]'}`}>{d}</div>
                ))}
             </div>
             <div className="grid grid-cols-7">
