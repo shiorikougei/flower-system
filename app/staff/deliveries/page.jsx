@@ -267,7 +267,7 @@ export default function DeliveriesPage() {
                 ))}
               </div>
 
-              <div className="flex items-center bg-[#F9FAFB] border border-[#E6E2DA] rounded-xl px-1">
+              <div className="flex items-center bg-white border border-[#D5D0C6] rounded-xl px-1">
                 <button
                   onClick={() => changeDate(-1)}
                   className="p-2 text-[#5C6660] hover:text-[#2D4B3E] rounded-lg hover:bg-white"
@@ -333,11 +333,11 @@ export default function DeliveriesPage() {
             読み込み中...
           </div>
         ) : (
-          <div className="flex gap-4 p-4 md:p-6 h-full items-start w-max">
+          <div className="flex gap-4 p-4 md:px-10 md:py-6 h-full items-start w-max min-w-full">
             {groupedOrders.map(group => (
               <div
                 key={group.date}
-                className="w-[88vw] sm:w-[400px] shrink-0 flex flex-col bg-white rounded-2xl border border-[#E6E2DA] max-h-full overflow-hidden"
+                className="w-[88vw] sm:w-[360px] lg:w-auto lg:flex-1 lg:min-w-[320px] shrink-0 flex flex-col bg-white rounded-2xl border border-[#E6E2DA] max-h-full overflow-hidden"
               >
                 <div className="px-5 py-4 border-b border-[#E6E2DA] bg-[#FAFAFA] shrink-0">
                   <div className="flex items-center justify-between">

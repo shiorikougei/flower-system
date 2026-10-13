@@ -8,7 +8,7 @@ import {
   Tag, MessageSquare, CreditCard, CheckCircle2, Upload, ImageIcon,
   Edit3, ArrowRight, TrendingUp, TrendingDown, FileText, Bell, BellOff,
   Wallet, RefreshCw, Mail, Camera, Plus, Clock, ShoppingBag, History,
-  Save, ArrowDown, Gift, Pen, Lightbulb
+  Save, ArrowDown, Gift, Pen, Lightbulb, ChevronDown
 } from 'lucide-react';
 import TatefudaPreview from '@/components/TatefudaPreview';
 import { ensureOperationAllowed, getCurrentRole, getCurrentStaff } from '@/utils/staffRole';
@@ -27,21 +27,13 @@ const normalizeHomepageUrl = (raw) => {
 };
 
 // [2026-10 画面リニューアル] 社内メモ・お客様の備考の欄
-//   白い欄に、ふつうの太さの文字で表示する。長い文章は最初の数行だけ出し、「全文を表示」で開く（内容はそのまま）
+//   白い欄に、ふつうの太さの文字で表示する。見逃しがないよう、長い文章も省略せず全文を出す
 function NoteBlock({ label, tone, text }) {
-  const [open, setOpen] = useState(false);
-  const lines = String(text || '').split('\n').length;
-  const isLong = lines > 6 || String(text || '').length > 240;
   const tag = tone === 'memo' ? 'bg-[#FFF3C4] text-[#6B4E00]' : 'bg-[#E6F0F4] text-[#1D5670]';
   return (
     <section className="bg-white rounded-2xl border border-[#E6E2DA] p-5 mb-4">
       <h3 className="mb-2"><span className={`inline-flex items-center h-7 px-2.5 rounded-md text-[13px] font-bold ${tag}`}>{label}</span></h3>
-      <p className="text-[15px] text-[#1F2A24] whitespace-pre-wrap leading-[1.8]" style={isLong && !open ? { maxHeight: '10.8em', overflow: 'hidden' } : undefined}>{text}</p>
-      {isLong && (
-        <button type="button" onClick={() => setOpen(v => !v)} className="mt-2 min-h-[36px] text-[14px] font-bold text-[#2D4B3E] underline">
-          {open ? '閉じる' : '全文を表示'}
-        </button>
-      )}
+      <p className="text-[15px] text-[#1F2A24] whitespace-pre-wrap leading-[1.8]">{text}</p>
     </section>
   );
 }
@@ -86,6 +78,8 @@ export default function OrderDetailModal({
 
   // ★ 新規追加：メールテンプレート選択メニューの表示状態
   const [showMailTemplates, setShowMailTemplates] = useState(false);
+  // [2026-10 画面リニューアル] 上の「その他」メニュー
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   // ★ 入金確認モーダル（銀行振込の手動入金確認 + 納品日変更 + 自動メール送信）
   const [showPaymentConfirmModal, setShowPaymentConfirmModal] = useState(false);
@@ -1607,101 +1601,62 @@ export default function OrderDetailModal({
     // ★ モーダルクリック時にドロップダウンを閉じる処理を追加
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#1F2A24]/60 backdrop-blur-sm p-3 md:p-4 animate-in fade-in" onClick={onClose}>
       <div 
-        className="bg-[#FAFAF7] rounded-[24px] md:rounded-[32px] w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative flex flex-col" 
-        onClick={(e) => { e.stopPropagation(); setShowMailTemplates(false); }}
+        className="bg-[#FAFAF7] rounded-[24px] md:rounded-[32px] w-full max-w-4xl xl:max-w-[1360px] max-h-[92vh] overflow-y-auto shadow-2xl relative flex flex-col" 
+        onClick={(e) => { e.stopPropagation(); setShowMailTemplates(false); setShowMoreMenu(false); }}
       >
         
-        <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-[#E6E2DA] p-4 md:p-6 flex flex-wrap items-center justify-between gap-3 z-20 rounded-t-[24px] md:rounded-t-[32px]">
-          <div>
-            <div className="flex items-center gap-3">
-              <h2 className="text-[16px] md:text-[18px] font-black text-[#2D4B3E]">注文詳細</h2>
-              <span className={`px-2 py-0.5 rounded text-[12px] font-bold ${modalData.status === 'completed' || modalData.status === '完了' ? 'bg-gray-100 text-gray-500' : 'bg-orange-50 text-orange-600 border border-orange-100'}`}>
-                {modalData.status === 'completed' || modalData.status === '完了' ? '完了' : '未完了'}
-              </span>
-              
-              {isUnpaid ? (
-                <span className="text-[12px] font-bold bg-[#B9562F]/10 text-[#B9562F] px-2 py-0.5 rounded border border-[#B9562F]/20 flex items-center gap-1">
-                  <AlertCircle size={12}/> {currentPaymentStatus}
+        <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-[#E6E2DA] px-4 md:px-6 pt-4 md:pt-5 pb-3 z-20 rounded-t-[24px] md:rounded-t-[32px] space-y-3">
+          {/* 1 段目: タイトル・状態・受付日時 / 閉じる */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-[20px] md:text-[22px] font-bold text-[#1F2A24]">注文詳細</h2>
+                <span className={`inline-flex items-center h-7 px-2.5 rounded-full text-[13px] font-bold ${(modalData.status === 'completed' || modalData.status === '完了') ? 'bg-[#F1EEE7] text-[#3B4640]' : 'bg-[#FBEBE3] text-[#A2471F]'}`}>
+                  {(modalData.status === 'completed' || modalData.status === '完了') ? '完了' : '未完了'}
                 </span>
-              ) : (
-                <span className="text-[12px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded border border-green-200 flex items-center gap-1">
-                  <CheckCircle2 size={12}/> {currentPaymentStatus}
-                </span>
-              )}
+                {isUnpaid ? (
+                  <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[13px] font-bold bg-[#FBEBE3] text-[#A2471F]">
+                    <AlertCircle size={13}/> {currentPaymentStatus}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[13px] font-bold bg-[#E4F1EA] text-[#1E6B47]">
+                    <CheckCircle2 size={13}/> {currentPaymentStatus}
+                  </span>
+                )}
+              </div>
+              <p className="text-[13px] text-[#5C6660] mt-1 flex items-center gap-x-3 gap-y-1 flex-wrap">
+                <span>受付: {safeFormatDate(order.created_at, true)}</span>
+                {modalData.managementNo && <span className="ui-num font-bold text-[#2D4B3E]">管理番号: {modalData.managementNo}</span>}
+                <span>ID: {order.id.slice(0, 8)}</span>
+              </p>
             </div>
-            <p className="text-[12px] md:text-[13px] text-[#5C6660] font-bold mt-1">
-              受付: {safeFormatDate(order.created_at, true)}
-              {modalData.managementNo && <span className="ml-2 px-2 py-0.5 bg-[#2D4B3E]/10 text-[#2D4B3E] rounded-full font-mono">管理番号: {modalData.managementNo}</span>}
-              <span className="ml-2 text-[#bbb]">ID: {order.id.slice(0, 8)}</span>
-            </p>
+            <button onClick={onClose} aria-label="閉じる" className="shrink-0 w-11 h-11 bg-white border border-[#D5D0C6] rounded-full flex items-center justify-center text-[#3B4640] hover:bg-[#F6F4EF] transition-colors">
+              <X size={20} />
+            </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 ml-auto">
-            {modalData.customerInfo?.email && (
-              <a
-                href={`/staff/customers?email=${encodeURIComponent(modalData.customerInfo.email)}`}
-                className="flex items-center gap-1.5 px-3 py-2 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[12px] md:text-[13px] font-bold text-[#3B4640] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all"
-                title="このお客様の顧客カルテを開く"
-              >
-                <User size={14} /> <span className="hidden sm:inline">顧客カルテ</span>
-              </a>
-            )}
-            <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all">
-              <Printer size={14} /> <span className="hidden sm:inline">印刷 / PDF出力</span>
+          {/* 2 段目: よく使うボタン + その他 */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => onArchive(order.id, modalData.status !== 'completed' && modalData.status !== '完了')} className={`inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-[14px] font-bold transition-all ${(modalData.status === 'completed' || modalData.status === '完了') ? 'bg-white border border-[#D5D0C6] text-[#1F2A24] hover:border-[#2D4B3E]' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b]'}`}>
+              {(modalData.status === 'completed' || modalData.status === '完了') ? <RotateCcw size={16}/> : <Archive size={16}/>}
+              {(modalData.status === 'completed' || modalData.status === '完了') ? '未完了に戻す' : '完了にする'}
             </button>
 
-            {/* [注文-4] 金額訂正ボタン（オーナーのみ） */}
-            {isOwner && (
-              <button
-                onClick={() => {
-                  setCorrectionItemPrice(String(modalData.itemPrice || ''));
-                  setCorrectionFee(String((Number(modalData.calculatedFee) || 0) + (Number(modalData.pickupFee) || 0)));
-                  setCorrectionReason('');
-                  setCorrectionNotifyMode('correction');
-                  setCorrectionNotifyStore(true);
-                  setCorrectionMarkAsPaid(false);
-                  setShowAmountCorrection(true);
-                }}
-                className="flex items-center gap-1.5 px-3 py-2 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[12px] md:text-[13px] font-bold text-[#3B4640] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all"
-                title="注文金額を訂正（オーナー権限）"
-              >
-                <Edit3 size={14}/> <span className="hidden sm:inline">金額訂正</span>
-              </button>
-            )}
+            {/* ★ 注文内容・日程の編集ボタン */}
+            <button onClick={openEditModal} className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-[14px] font-bold transition-all bg-white border border-[#D5D0C6] text-[#1F2A24] hover:border-[#2D4B3E] hover:text-[#2D4B3E]">
+              <Edit3 size={16}/> 内容を編集
+            </button>
 
-            {/* [業務-5] 完成写真メール 後から送信ボタン（既に写真がアップロード済みの注文のみ） */}
-            {(() => {
-              const hasImages = (Array.isArray(modalData.completionImages) && modalData.completionImages.length > 0) || !!modalData.completionImage;
-              const customerEmail = modalData.customerInfo?.email;
-              if (!hasImages || !customerEmail) return null;
-              const allImages = Array.isArray(modalData.completionImages) && modalData.completionImages.length > 0
-                ? modalData.completionImages
-                : [modalData.completionImage];
-              return (
-                <button
-                  onClick={() => {
-                    setCompletionDeliveryDate(modalData.selectedDate || '');
-                    setCompletionDeliveryTime(modalData.selectedTime || '');
-                    setCompletionMailPreview({ images: allImages, customerEmail });
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-[#FFF8E1] border border-[#F9C846] rounded-xl text-[12px] md:text-[13px] font-bold text-[#8B6F2C] hover:bg-[#FFEFC2] transition-all"
-                  title="完成写真メールを今から送信"
-                >
-                  <Send size={14} /> <span className="hidden sm:inline">完成写真メール送信</span>
-                </button>
-              );
-            })()}
-            
-            {/* ★ 新規追加：メール作成ボタン＆ドロップダウンメニュー */}
+            {/* ★ メール作成ボタン＆ドロップダウンメニュー */}
             {modalData.customerInfo?.email && (
               <div className="relative">
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setShowMailTemplates(!showMailTemplates); }} 
-                  className="flex items-center gap-1.5 px-3 py-2 bg-[#2D4B3E] text-white rounded-xl text-[12px] md:text-[13px] font-bold hover:bg-[#1f352b] transition-all shadow-sm"
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowMoreMenu(false); setShowMailTemplates(!showMailTemplates); }}
+                  aria-expanded={showMailTemplates}
+                  className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-[14px] font-bold transition-all bg-white border border-[#D5D0C6] text-[#1F2A24] hover:border-[#2D4B3E] hover:text-[#2D4B3E]"
                 >
-                  <Send size={14} /> <span className="hidden sm:inline">メール作成</span>
+                  <Send size={16} /> メール作成
                 </button>
-                
                 {showMailTemplates && (
                   <div className="absolute top-full right-0 mt-2 w-56 md:w-72 bg-white border border-[#E6E2DA] rounded-xl shadow-xl z-50 overflow-hidden" onClick={(e) => e.stopPropagation()}>
                     <div className="bg-[#FAFAF7] px-4 py-2 border-b border-[#E6E2DA] text-[12px] font-bold text-[#5C6660]">
@@ -1738,30 +1693,86 @@ export default function OrderDetailModal({
                 )}
               </div>
             )}
-            
-            <div className="w-[1px] h-6 bg-[#E6E2DA] mx-1"></div>
 
-            {/* ★ 注文内容・日程の編集ボタン */}
-            <button onClick={openEditModal} className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-[12px] md:text-[13px] font-bold text-amber-700 hover:bg-amber-100 transition-all shadow-sm">
-              <Edit3 size={14}/> <span className="hidden sm:inline">内容を編集</span>
+            <button onClick={handlePrint} className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-[14px] font-bold transition-all bg-white border border-[#D5D0C6] text-[#1F2A24] hover:border-[#2D4B3E] hover:text-[#2D4B3E]">
+              <Printer size={16} /> 印刷 / PDF出力
             </button>
 
-            <button onClick={() => onArchive(order.id, modalData.status !== 'completed' && modalData.status !== '完了')} className={`flex items-center gap-1.5 px-3 py-2 text-[12px] md:text-[13px] font-bold rounded-xl transition-all shadow-sm ${modalData.status === 'completed' || modalData.status === '完了' ? 'bg-white border border-[#E6E2DA] text-[#3B4640]' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b]'}`}>
-              {modalData.status === 'completed' || modalData.status === '完了' ? <RotateCcw size={14}/> : <Archive size={14}/>}
-              <span className="hidden sm:inline">{modalData.status === 'completed' || modalData.status === '完了' ? '未完了に戻す' : '完了にする'}</span>
-            </button>
+            {/* その他（顧客カルテ・金額訂正・完成写真メール送信・削除） */}
+            <div className="relative">
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowMailTemplates(false); setShowMoreMenu(v => !v); }}
+                aria-expanded={showMoreMenu}
+                className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-[14px] font-bold transition-all bg-white border border-[#D5D0C6] text-[#1F2A24] hover:border-[#2D4B3E] hover:text-[#2D4B3E]"
+              >
+                その他 <ChevronDown size={16} />
+              </button>
+              {showMoreMenu && (
+                <div className="absolute top-full left-0 mt-2 bg-white border border-[#E6E2DA] rounded-xl shadow-xl z-50 overflow-hidden py-1 whitespace-nowrap" style={{ minWidth: 240 }} onClick={(e) => e.stopPropagation()}>
+                  {modalData.customerInfo?.email && (
+                    <a
+                      href={`/staff/customers?email=${encodeURIComponent(modalData.customerInfo.email)}`}
+                      className="w-full text-left flex items-center gap-2 px-4 min-h-[44px] text-[14px] font-bold text-[#1F2A24] hover:bg-[#F6F4EF]"
+                    >
+                      <User size={16} /> 顧客カルテを開く
+                    </a>
+                  )}
 
-            <button onClick={() => onDelete(order.id)} className="flex items-center gap-1.5 px-3 py-2 bg-red-50 border border-red-100 rounded-xl text-[12px] md:text-[13px] font-bold text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm ml-1">
-              <Trash2 size={14} /> 削除
-            </button>
-            
-            <button onClick={onClose} className="w-8 h-8 md:w-10 md:h-10 bg-[#FAFAF7] border border-[#E6E2DA] rounded-full flex items-center justify-center text-[#3B4640] font-bold hover:bg-[#E6E2DA] transition-colors ml-1">
-              <X size={18} />
-            </button>
+                  {/* [注文-4] 金額訂正（オーナーのみ） */}
+                  {isOwner && (
+                    <button
+                      onClick={() => {
+                        setShowMoreMenu(false);
+                        setCorrectionItemPrice(String(modalData.itemPrice || ''));
+                        setCorrectionFee(String((Number(modalData.calculatedFee) || 0) + (Number(modalData.pickupFee) || 0)));
+                        setCorrectionReason('');
+                        setCorrectionNotifyMode('correction');
+                        setCorrectionNotifyStore(true);
+                        setCorrectionMarkAsPaid(false);
+                        setShowAmountCorrection(true);
+                      }}
+                      className="w-full text-left flex items-center gap-2 px-4 min-h-[44px] text-[14px] font-bold text-[#1F2A24] hover:bg-[#F6F4EF]"
+                    >
+                      <Edit3 size={16}/> 金額訂正（オーナー）
+                    </button>
+                  )}
+
+                  {/* [業務-5] 完成写真メール 後から送信（既に写真がアップロード済みの注文のみ） */}
+                  {(() => {
+                    const hasImages = (Array.isArray(modalData.completionImages) && modalData.completionImages.length > 0) || !!modalData.completionImage;
+                    const customerEmail = modalData.customerInfo?.email;
+                    if (!hasImages || !customerEmail) return null;
+                    const allImages = Array.isArray(modalData.completionImages) && modalData.completionImages.length > 0
+                      ? modalData.completionImages
+                      : [modalData.completionImage];
+                    return (
+                      <button
+                        onClick={() => {
+                          setShowMoreMenu(false);
+                          setCompletionDeliveryDate(modalData.selectedDate || '');
+                          setCompletionDeliveryTime(modalData.selectedTime || '');
+                          setCompletionMailPreview({ images: allImages, customerEmail });
+                        }}
+                        className="w-full text-left flex items-center gap-2 px-4 min-h-[44px] text-[14px] font-bold text-[#1F2A24] hover:bg-[#F6F4EF]"
+                      >
+                        <Send size={16} /> 完成写真メールを送る
+                      </button>
+                    );
+                  })()}
+
+                  <div className="my-1 border-t border-[#E6E2DA]"></div>
+                  <button onClick={() => { setShowMoreMenu(false); onDelete(order.id); }} className="w-full text-left flex items-center gap-2 px-4 min-h-[44px] text-[14px] font-bold text-[#B42318] hover:bg-[#FDECEA]">
+                    <Trash2 size={16} /> この注文を削除
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-        
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8 text-left overflow-x-hidden">
+
+        {/* [2026-10 画面リニューアル] PC では左右 2 列（左: ステータス・入金・日付・お客様 / 右: オーダー内容・カード・履歴・メモ） */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8 xl:space-y-0 xl:grid xl:grid-cols-2 xl:gap-8 xl:items-start text-left overflow-x-hidden">
+          <div className="space-y-6 md:space-y-8 min-w-0">
           
           <div className="bg-white p-5 rounded-[24px] border border-[#E6E2DA] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className={`px-3 py-1.5 rounded-lg text-[13px] md:text-[14px] font-bold flex items-center gap-1 w-fit ${isPickup ? 'bg-orange-100 text-orange-700' : isDelivery ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
@@ -2064,6 +2075,8 @@ export default function OrderDetailModal({
             </div>
           </div>
 
+          </div>
+          <div className="space-y-6 md:space-y-8 min-w-0">
           {/* 置き配ご案内セクションは廃止（持ち戻りのみ運用） */}
 
           <div className="bg-white p-6 rounded-[24px] border border-[#E6E2DA] shadow-sm space-y-4">
@@ -2218,7 +2231,7 @@ export default function OrderDetailModal({
             {modalData.isBring === 'bring' && <div className="bg-orange-100 text-orange-700 px-3 py-2 rounded-xl text-[14px] font-bold mt-2 inline-block border border-orange-200">※お客様からのお花/器の持込あり</div>}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-6 pb-4">
             {modalData.cardType && modalData.cardType !== 'なし' && (
               <div className="bg-white p-6 rounded-[24px] border border-[#E6E2DA] shadow-sm space-y-4">
                 <h3 className="text-[15px] font-bold text-[#2D4B3E] border-b border-[#FAFAF7] pb-2 flex items-center gap-2"><MessageSquare size={18}/> 添付物: {modalData.cardType}</h3>
@@ -2442,6 +2455,7 @@ export default function OrderDetailModal({
           {modalData.purposeNote && (
             <NoteBlock label="お客様からの補足・備考" tone="customer" text={modalData.purposeNote} />
           )}
+          </div>
         </div>
       </div>
 
