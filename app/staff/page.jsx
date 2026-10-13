@@ -15,6 +15,8 @@ import ReleaseNotesCard from '@/components/ReleaseNotesCard';
 import { visibleOrders } from '@/utils/orderVisibility';
 import SettingsReminderCard from '@/components/SettingsReminderCard';
 import { isFeatureEnabled } from '@/utils/features';
+import { getStaffContext } from '@/utils/staffContext';
+import { orderTabOf } from '@/utils/orderTabs';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -37,20 +39,22 @@ export default function DashboardPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      // 現在出勤中のメンバー
-      const openRes = await fetch('/api/staff/attendance?openOnly=true', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      }).then(r => r.json()).catch(() => ({ items: [] }));
-      setOpenAttendance(openRes.items || []);
-
-      // 今月の自分の集計
+      // 現在出勤中のメンバーと、今月の自分の集計（同時に読み込む）
       const staff = getCurrentStaff();
-      if (staff?.name) {
-        const now = new Date();
-        const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-        const sumRes = await fetch(`/api/staff/attendance?staff=${encodeURIComponent(staff.name)}&from=${from}`, {
+      const now = new Date();
+      const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const [openRes, sumRes] = await Promise.all([
+        fetch('/api/staff/attendance?openOnly=true', {
           headers: { Authorization: `Bearer ${session.access_token}` },
-        }).then(r => r.json()).catch(() => ({ summary: [] }));
+        }).then(r => r.json()).catch(() => ({ items: [] })),
+        staff?.name
+          ? fetch(`/api/staff/attendance?staff=${encodeURIComponent(staff.name)}&from=${from}`, {
+              headers: { Authorization: `Bearer ${session.access_token}` },
+            }).then(r => r.json()).catch(() => ({ summary: [] }))
+          : Promise.resolve(null),
+      ]);
+      setOpenAttendance(openRes.items || []);
+      if (sumRes) {
         const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         setMyMonthSummary(sumRes.summary?.find(s => s.monthKey === monthKey) || null);
       }
@@ -61,8 +65,11 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setCurrentStaffState(getCurrentStaff());
-    loadAttendanceData();
   }, []);
+  // 勤怠管理がオンのお店だけ読み込む
+  useEffect(() => {
+    if (attendanceEnabled) loadAttendanceData();
+  }, [attendanceEnabled]);
 
   const handleClockIn = async () => {
     if (!currentStaff?.name) {
@@ -111,69 +118,75 @@ export default function DashboardPage() {
     async function fetchDashboardData() {
       try {
         // ★ セキュリティ修正: ログインユーザーのtenant_idを取得して、自店舗のデータだけを引く
-        const { data: { session } } = await supabase.auth.getSession();
+        // [2026-10] ログイン・お店・設定の読み込みは左のメニューと共通（utils/staffContext.js）
+        const { session, tenantId: tId, settings } = await getStaffContext();
         if (!session) {
           window.location.href = '/staff/login';
           return;
         }
-        const { data: profile, error: profileError } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
-        if (profileError) throw profileError;
-        const tId = profile.tenant_id;
         if (!tId) throw new Error('tenant_id が取得できませんでした');
-        try {
-          const { data: settingsRow } = await supabase.from('app_settings').select('settings_data').eq('id', tId).single();
-          setAttendanceEnabled(isFeatureEnabled(settingsRow?.settings_data, 'attendanceManagement'));
-        } catch { setAttendanceEnabled(false); }
+        setAttendanceEnabled(isFeatureEnabled(settings, 'attendanceManagement'));
 
         const todayStr = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
-        // ★ tenant_id でフィルタ + TOP表示には最新100件で十分（パフォーマンス改善）
-        const { data, error } = await supabase
-          .from('orders')
-          .select('id, tenant_id, created_at, payment_status, order_data')
-          .eq('tenant_id', tId)
-          .order('created_at', { ascending: false })
-          .limit(100);
-        if (error) throw error;
 
-        const fetchedOrders = visibleOrders(data || []);
-        setOrders(fetchedOrders);
-
-        // ★ 未回答の見積依頼を取得 (失敗してもダッシュボード自体は表示)
+        // ★ 未回答の見積依頼（失敗してもダッシュボード自体は表示。注文の読み込みと同時に）
         // ★ [セキュリティ] /api/estimates GET は認証必須化済みのため Bearer 必須
-        try {
-          const { data: { session: estSession } } = await supabase.auth.getSession();
-          const estRes = await fetch(`/api/estimates?tenantId=${encodeURIComponent(tId)}&status=pending`, {
-            headers: { Authorization: `Bearer ${estSession?.access_token || ''}` },
-          });
+        const estimatesPromise = fetch(`/api/estimates?tenantId=${encodeURIComponent(tId)}&status=pending`, {
+          headers: { Authorization: `Bearer ${session.access_token || ''}` },
+        }).then(async (estRes) => {
           if (estRes.ok) {
             const estData = await estRes.json();
             setPendingEstimates(estData.estimates || []);
           }
-        } catch (e) { console.warn('見積依頼取得失敗:', e); }
+        }).catch((e) => console.warn('見積依頼取得失敗:', e));
+
+        const [recentRes, allRes] = await Promise.all([
+          // ★ 最近の注文・新規注文・遅れている注文: 最新100件（中身つき）
+          supabase
+            .from('orders')
+            .select('id, tenant_id, created_at, payment_status, order_data')
+            .eq('tenant_id', tId)
+            .order('created_at', { ascending: false })
+            .limit(100),
+          // [2026-10] 件数（本日・未完了）は全部の注文から数える。数えるのに要る項目だけを読む
+          //   未完了の数え方は受注一覧の「未完了」と同じ（utils/orderTabs.js）
+          supabase
+            .from('orders')
+            .select('id, created_at, payment_status, status:order_data->>status, paymentStatus:order_data->>paymentStatus, paymentMethod:order_data->>paymentMethod, isStaffEntered:order_data->isStaffEntered, phoneConfirmation:order_data->phoneConfirmation, statusHistory:order_data->statusHistory, receiveMethod:order_data->>receiveMethod, shippingDate:order_data->>shippingDate, selectedDate:order_data->>selectedDate')
+            .eq('tenant_id', tId),
+        ]);
+        if (recentRes.error) throw recentRes.error;
+
+        const fetchedOrders = visibleOrders(recentRes.data || []);
+        setOrders(fetchedOrders);
+        setRecentOrders(fetchedOrders.slice(0, 5));
 
         let todayCount = 0;
         let uncompletedCount = 0;
-        const recent = [];
-
-        fetchedOrders.forEach(order => {
+        // 件数用の読み込みに失敗したときは、これまでどおり最新100件で数える
+        const countRows = allRes.error
+          ? fetchedOrders
+          : (allRes.data || []).map(r => ({
+              id: r.id, created_at: r.created_at, payment_status: r.payment_status,
+              order_data: {
+                status: r.status, paymentStatus: r.paymentStatus, paymentMethod: r.paymentMethod,
+                isStaffEntered: r.isStaffEntered, phoneConfirmation: r.phoneConfirmation, statusHistory: r.statusHistory,
+                receiveMethod: r.receiveMethod, shippingDate: r.shippingDate, selectedDate: r.selectedDate,
+              },
+            }));
+        countRows.forEach(order => {
           const d = order.order_data || {};
-          
-          if (d.status !== '完了' && d.status !== 'キャンセル' && d.status !== 'completed') {
-            uncompletedCount++;
-          }
-
-          // 業者配送なら「発送日」、それ以外は「納品日」を今日のタスク基準にする
+          if (orderTabOf(order) === '未完了') uncompletedCount++;
+          // 業者配送なら「発送日」、それ以外は「納品日」を今日のタスク基準にする（決済が終わっていないカード払いは数えない）
           const targetDate = d.receiveMethod === 'sagawa' ? (d.shippingDate || d.selectedDate) : d.selectedDate;
-
-          if (targetDate === todayStr && d.status !== 'キャンセル') {
+          if (targetDate === todayStr && d.status !== 'キャンセル' && orderTabOf(order) !== null) {
             todayCount++;
           }
-
-          if (recent.length < 5) recent.push(order);
         });
 
         setStats({ todayOrders: todayCount, uncompletedOrders: uncompletedCount });
-        setRecentOrders(recent);
+        setIsLoading(false);
+        await estimatesPromise;
       } catch (error) {
         console.error('データ取得エラー:', error.message);
       } finally {
@@ -244,7 +257,8 @@ export default function DashboardPage() {
   const todayDelivery = todayOrdersList.filter(o => o.order_data?.receiveMethod === 'delivery').length;
   const todaySagawa = todayOrdersList.filter(o => o.order_data?.receiveMethod === 'sagawa').length;
 
-  if (isLoading) return <div className="min-h-screen bg-[#F6F4EF] flex items-center justify-center text-[16px] text-[#2D4B3E] font-bold animate-pulse">読み込み中...</div>;
+  // [2026-10] 画面全体を「読み込み中」にせず、枠を先に出して数字は届いてから表示する
+  const num = (v) => (isLoading ? '…' : v);
 
   // [2026-10 画面リニューアル] 経過時間の表示（見積依頼）
   const agoText = (iso) => {
@@ -274,11 +288,11 @@ export default function DashboardPage() {
               <ChevronRight size={18} className="text-[#5C6660] group-hover:text-[#2D4B3E]" aria-hidden="true"/>
             </div>
             <div className="mt-2 flex items-end justify-between gap-4 flex-wrap">
-              <p className="flex items-baseline gap-1"><span className="ui-num text-[44px] font-bold leading-none text-[#1F2A24]">{stats.todayOrders}</span><span className="text-[15px] text-[#5C6660]">件</span></p>
+              <p className="flex items-baseline gap-1"><span className="ui-num text-[44px] font-bold leading-none text-[#1F2A24]">{num(stats.todayOrders)}</span><span className="text-[15px] text-[#5C6660]">件</span></p>
               <div className="flex gap-4 text-[14px] text-[#3B4640]">
-                <span className="inline-flex items-center gap-1"><Store size={15} aria-hidden="true"/>店頭 <span className="ui-num font-bold text-[16px] text-[#1F2A24]">{todayPickup}</span></span>
-                <span className="inline-flex items-center gap-1"><Truck size={15} aria-hidden="true"/>配達 <span className="ui-num font-bold text-[16px] text-[#1F2A24]">{todayDelivery}</span></span>
-                <span className="inline-flex items-center gap-1"><Package size={15} aria-hidden="true"/>発送 <span className="ui-num font-bold text-[16px] text-[#1F2A24]">{todaySagawa}</span></span>
+                <span className="inline-flex items-center gap-1"><Store size={15} aria-hidden="true"/>店頭 <span className="ui-num font-bold text-[16px] text-[#1F2A24]">{num(todayPickup)}</span></span>
+                <span className="inline-flex items-center gap-1"><Truck size={15} aria-hidden="true"/>配達 <span className="ui-num font-bold text-[16px] text-[#1F2A24]">{num(todayDelivery)}</span></span>
+                <span className="inline-flex items-center gap-1"><Package size={15} aria-hidden="true"/>発送 <span className="ui-num font-bold text-[16px] text-[#1F2A24]">{num(todaySagawa)}</span></span>
               </div>
             </div>
           </button>
@@ -288,14 +302,16 @@ export default function DashboardPage() {
               <span className="flex items-center gap-2 text-[14px] font-bold text-[#3B4640]"><Clock size={18} className="text-[#2D4B3E]" aria-hidden="true"/>未完了の注文総数</span>
               <ChevronRight size={18} className="text-[#5C6660] group-hover:text-[#2D4B3E]" aria-hidden="true"/>
             </div>
-            <p className="mt-2 flex items-baseline gap-1"><span className="ui-num text-[44px] font-bold leading-none text-[#1F2A24]">{stats.uncompletedOrders}</span><span className="text-[15px] text-[#5C6660]">件</span></p>
+            <p className="mt-2 flex items-baseline gap-1"><span className="ui-num text-[44px] font-bold leading-none text-[#1F2A24]">{num(stats.uncompletedOrders)}</span><span className="text-[15px] text-[#5C6660]">件</span></p>
           </button>
         </div>
 
         {/* 今日やること（見積の回答・新しい注文・遅れている注文）。色は「対応が必要」の赤茶だけ */}
         <section aria-labelledby="todo-title" className="bg-white rounded-2xl border border-[#E6E2DA]">
           <h2 id="todo-title" className="px-5 pt-4 pb-2 text-[17px] font-bold text-[#1F2A24]">今日やること</h2>
-          {!hasTodo ? (
+          {isLoading ? (
+            <p className="px-5 pb-5 text-[15px] text-[#5C6660] animate-pulse">読み込み中...</p>
+          ) : !hasTodo ? (
             <p className="px-5 pb-5 text-[15px] text-[#5C6660]">いま対応が必要なものはありません。</p>
           ) : (
             <div className="divide-y divide-[#E6E2DA]">
@@ -468,7 +484,9 @@ export default function DashboardPage() {
             <Link href="/staff/orders" className="inline-flex items-center gap-1 h-10 px-4 rounded-full bg-white border border-[#D5D0C6] text-[14px] font-bold text-[#2D4B3E] hover:border-[#2D4B3E]">すべて見る <ChevronRight size={15} aria-hidden="true"/></Link>
           </div>
           <div className="bg-white border border-[#E6E2DA] rounded-2xl overflow-hidden">
-            {recentOrders.length === 0 ? (
+            {isLoading ? (
+              <div className="p-12 text-center text-[15px] text-[#5C6660] font-bold animate-pulse">読み込み中...</div>
+            ) : recentOrders.length === 0 ? (
               <div className="p-12 text-center text-[15px] text-[#5C6660] font-bold">最近の注文はありません</div>
             ) : (
               <div className="divide-y divide-[#E6E2DA]">

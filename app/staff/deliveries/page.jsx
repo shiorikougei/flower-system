@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/utils/supabase';
+import { getStaffTenant, getStaffSettings } from '@/utils/staffContext';
 import {
   MapPin,
   Calendar,
@@ -38,26 +39,24 @@ export default function DeliveriesPage() {
   const initData = async () => {
     setIsLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      // [2026-10] ログイン・お店・設定の読み込みは左のメニューと共通（utils/staffContext.js）
+      const { session, tenantId: tId } = await getStaffTenant();
       if (!session) {
         window.location.href = '/staff/login';
         return;
       }
-      const { data: profile, error: profileError } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
-      if (profileError) throw profileError;
-      const tId = profile.tenant_id;
       if (!tId) throw new Error('tenant_id が取得できませんでした');
       setCurrentTenantId(tId);
 
-      const [ordersRes, settingsRes] = await Promise.all([
+      const [ordersRes, settingsData] = await Promise.all([
         supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false }),
         // ★ バグ修正: 'default' ではなく実際の tenant_id で settings を取得
-        supabase.from('app_settings').select('settings_data').eq('id', tId).single()
+        getStaffSettings(tId),
       ]);
 
       if (ordersRes.error) throw ordersRes.error;
       setOrders(visibleOrders(ordersRes.data || []));
-      if (settingsRes.data?.settings_data) setAppSettings(settingsRes.data.settings_data);
+      if (settingsData) setAppSettings(settingsData);
     } catch (error) {
       console.error('データ取得に失敗しました', error);
     } finally {

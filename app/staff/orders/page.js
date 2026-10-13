@@ -4,7 +4,11 @@ import { supabase } from '@/utils/supabase';
 import {
   Calendar, ChevronRight, Truck, Store, Package, AlertCircle, CheckCircle2
 } from 'lucide-react';
-import OrderDetailModal from '@/components/OrderDetailModal';
+import dynamic from 'next/dynamic';
+// [2026-10] 注文詳細（大きな部品）は、開いたときに初めて読み込む
+const OrderDetailModal = dynamic(() => import('@/components/OrderDetailModal'), { ssr: false });
+import { getStaffTenant, getStaffSettings } from '@/utils/staffContext';
+import { isOrderPaid, orderTabOf } from '@/utils/orderTabs';
 import { logAction } from '@/utils/auditLog';
 import HelpTooltip from '@/components/HelpTooltip';
 import { ensureOperationAllowed } from '@/utils/staffRole';
@@ -22,6 +26,10 @@ export default function OrdersPage() {
   const [currentTenantId, setCurrentTenantId] = useState(null);
   // [2026-10 C2] 「決済が完了していない注文」を見ているとき true
   const [showAbandoned, setShowAbandoned] = useState(false);
+  // [2026-10] アーカイブは新しい順に 10 件ずつ出す（「もっと見る」で増やす）
+  const ARCHIVE_PAGE = 10;
+  const [archiveLimit, setArchiveLimit] = useState(ARCHIVE_PAGE);
+  useEffect(() => { setArchiveLimit(ARCHIVE_PAGE); }, [filterMode, showAbandoned, productFilter, sortMode]);
   // [2026-10 B6] 見積の参考写真（一覧の小さな写真）。{ [estimateId]: string[] }
   //   新しい注文は order_data.referenceImages を使う。古い注文は見積から読むだけ（注文データには保存しない）
   const [estimateImages, setEstimateImages] = useState({});
@@ -58,16 +66,13 @@ export default function OrdersPage() {
   useEffect(() => {
     async function initData() {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        // [2026-10] ログイン・お店・設定の読み込みは左のメニューと共通（utils/staffContext.js）
+        const { session, tenantId: tId } = await getStaffTenant();
         if (!session) {
           window.location.href = '/staff/login';
           return;
         }
-
-        const { data: profile, error: profileError } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
-        if (profileError) throw profileError;
-        
-        const tId = profile.tenant_id;
+        if (!tId) throw new Error('tenant_id が取得できませんでした');
         setCurrentTenantId(tId);
 
         const CACHE_KEY_ORDERS = `florix_orders_cache_${tId}`;
@@ -88,14 +93,14 @@ export default function OrdersPage() {
           } catch (e) {}
         }
 
-        const [ordersRes, settingsRes] = await Promise.all([
+        const [ordersRes, settingsData] = await Promise.all([
           // ★ セキュリティ修正: tenant_id でフィルタ
           supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false }),
-          supabase.from('app_settings').select('settings_data').eq('id', tId).single()
+          getStaffSettings(tId),
         ]);
+        const settingsRes = { data: settingsData ? { settings_data: settingsData } : null };
 
         if (ordersRes.error) throw ordersRes.error;
-        if (settingsRes.error && settingsRes.error.code !== 'PGRST116') throw settingsRes.error;
 
         if (ordersRes.data) {
           setOrders(ordersRes.data);
@@ -245,11 +250,7 @@ export default function OrdersPage() {
 
   // ★ [業務-8] 入金済み判定ヘルパー
   //    payment_status === 'paid' or paymentStatus 文字列に「入金済」「前払い済み」を含む
-  const isOrderPaid = (order) => {
-    if (order?.payment_status === 'paid') return true;
-    const ps = String(order?.order_data?.paymentStatus || '');
-    return /入金済|前払い済み/.test(ps);
-  };
+  //    → utils/orderTabs.js の isOrderPaid（ホームの件数と共通）
 
   // ★ [業務-9] 3タブフィルタ
   //    - 未完了 : お渡し前のもの全部（入金状態問わず、まだ何かやることがある）
@@ -258,25 +259,8 @@ export default function OrdersPage() {
   // [2026-10 C2] カード決済が終わらないまま 20 分たった注文は一覧に出さない（データはそのまま）。
   //   「決済が完了していない注文」を開いたときだけ、それらを表示する
   const abandonedOrders = orders.filter(o => isAbandonedCardOrder(o));
-  const baseFilteredOrders = showAbandoned ? abandonedOrders : orders.filter(order => {
-    if (isAbandonedCardOrder(order)) return false;
-    const status = order?.order_data?.status || 'new';
-    const isCompletedKeyword = /完了|引き渡し|発送済/.test(String(status));
-    const isWorkflowCompleted = status === 'completed' || status === '完了' || status === 'キャンセル' || isCompletedKeyword;
-    const isPaid = isOrderPaid(order);
-    const isCancelled = status === 'キャンセル';
-
-    if (filterMode === '未完了') {
-      // お渡し前のもの全部（納品前なら未入金・入金済み問わず）
-      return !isWorkflowCompleted;
-    } else if (filterMode === '未入金') {
-      // お渡し完了 かつ 未入金 かつ 非キャンセル
-      return isWorkflowCompleted && !isPaid && !isCancelled;
-    } else {
-      // アーカイブ: お渡し完了 かつ (入金完了 or キャンセル)
-      return isWorkflowCompleted && (isPaid || isCancelled);
-    }
-  });
+  // 分け方は utils/orderTabs.js（ホームの「未完了の注文総数」と共通）
+  const baseFilteredOrders = showAbandoned ? abandonedOrders : orders.filter(order => orderTabOf(order) === filterMode);
 
   // ★ 一覧に存在する商品(お花の種類)の一覧（件数付き）
   const productOptions = (() => {
@@ -329,8 +313,14 @@ export default function OrdersPage() {
       const ts = new Date(`${dateStr}T${timeStr}:00`).getTime();
       return isNaN(ts) ? Number.POSITIVE_INFINITY : ts;
     };
+    // [2026-10] アーカイブは新しいものから（10 件ずつ出すため）
+    if (filterMode === 'アーカイブ' && !showAbandoned) {
+      return [...productFilteredOrders].sort((a, b) => parseDeliveryTs(b) - parseDeliveryTs(a));
+    }
     return [...productFilteredOrders].sort((a, b) => parseDeliveryTs(a) - parseDeliveryTs(b));
   })();
+  const isArchivePaged = filterMode === 'アーカイブ' && !showAbandoned;
+  const shownOrders = isArchivePaged ? filteredOrders.slice(0, archiveLimit) : filteredOrders;
 
   const safeFormatDate = (dateString, withTime = false) => {
     try {
@@ -475,7 +465,7 @@ export default function OrdersPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-2.5">
-            {filteredOrders.map(order => {
+            {shownOrders.map(order => {
               const d = order?.order_data || {};
               // ★ Stripe決済反映: DB の payment_status='paid' (Webhookで自動更新) を優先
               const isPaidByCard = order?.payment_status === 'paid';
@@ -602,18 +592,27 @@ export default function OrdersPage() {
             })}
           </div>
         )}
+        {/* [2026-10] アーカイブの続き */}
+        {!isLoading && isArchivePaged && filteredOrders.length > shownOrders.length && (
+          <div className="pt-2 text-center">
+            <button type="button" onClick={() => setArchiveLimit(n => n + ARCHIVE_PAGE)}
+              className="h-11 px-6 rounded-xl bg-white border border-[#D5D0C6] text-[14px] font-bold text-[#2D4B3E] hover:border-[#2D4B3E]">
+              もっと見る（残り {filteredOrders.length - shownOrders.length} 件）
+            </button>
+          </div>
+        )}
       </main>
 
       {/* ★ onUpdatePayment を新たに追加！ */}
-      <OrderDetailModal 
-        order={selectedOrder} 
+      {selectedOrder && <OrderDetailModal
+        order={selectedOrder}  
         appSettings={appSettings} 
         onClose={() => setSelectedOrder(null)} 
         onUpdateStatus={handleUpdateStatus} 
         onUpdatePayment={handleUpdatePayment} 
         onArchive={handleArchive} 
-        onDelete={handleDelete} 
-      />
+        onDelete={handleDelete}
+      />}
 
       <style jsx global>{`
         .hide-scrollbar::-webkit-scrollbar { display: none; }

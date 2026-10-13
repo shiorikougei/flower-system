@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AlertCircle, ChevronRight } from 'lucide-react';
-import { supabase } from '@/utils/supabase';
+import { getStaffContext } from '@/utils/staffContext';
 
 export default function SettingsReminderCard() {
   const [missingShops, setMissingShops] = useState([]);
@@ -15,12 +15,9 @@ export default function SettingsReminderCard() {
     let cancelled = false;
     (async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-        const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
-        if (!profile?.tenant_id) return;
-        const { data } = await supabase.from('app_settings').select('settings_data').eq('id', profile.tenant_id).single();
-        const shops = Array.isArray(data?.settings_data?.shops) ? data.settings_data.shops : [];
+        // [2026-10] ログイン・お店・設定の読み込みは共通（utils/staffContext.js）
+        const { settings } = await getStaffContext();
+        const shops = Array.isArray(settings?.shops) ? settings.shops : [];
         const missing = shops
           .filter(s => s && s.isActive !== false && !String(s.contactEmail || '').trim())
           .map(s => s.name || '店舗');

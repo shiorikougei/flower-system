@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
+import { getStaffTenant, getStaffSettings } from '@/utils/staffContext';
 import {
   Home, ClipboardList, PlusSquare, CalendarDays, Truck, Briefcase,
   Users, Building2, Settings, TrendingUp, Lock, Sparkles, MessageSquare, X, Send, Image as ImageIcon, ShoppingBag, UserCheck, ChevronDown, History, Clock, BookOpen, FileText
@@ -69,13 +70,9 @@ export default function StaffLayout({ children }) {
     async function fetchSettings() {
       try {
         // ★修正：セッションからログインユーザーのtenant_idを取得して、正しい店舗のデータを引っ張る！
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-
-        const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
-        if (!profile?.tenant_id) return;
-
-        const tenantId = profile.tenant_id;
+        // [2026-10] ログイン・お店・設定の読み込みはページと共通（utils/staffContext.js。同時に呼ばれても 1 回だけ）
+        const { session, tenantId } = await getStaffTenant();
+        if (!session || !tenantId) return;
 
         const cached = sessionStorage.getItem(`${SETTINGS_CACHE_KEY}_${tenantId}`);
         if (cached) {
@@ -83,10 +80,10 @@ export default function StaffLayout({ children }) {
         }
 
         // ★修正：'default'ではなく、実際のtenantIdで検索！
-        const { data } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
-        if (data?.settings_data) {
-          applySettings(data.settings_data);
-          sessionStorage.setItem(`${SETTINGS_CACHE_KEY}_${tenantId}`, JSON.stringify(data.settings_data));
+        const settingsData = await getStaffSettings(tenantId);
+        if (settingsData) {
+          applySettings(settingsData);
+          sessionStorage.setItem(`${SETTINGS_CACHE_KEY}_${tenantId}`, JSON.stringify(settingsData));
         }
       } catch (error) {
         console.error('設定の取得に失敗しました', error);
@@ -99,11 +96,9 @@ export default function StaffLayout({ children }) {
     let cancelled = false;
     (async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-        const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
-        if (!profile?.tenant_id) return;
-        const res = await fetch(`/api/estimates?tenantId=${encodeURIComponent(profile.tenant_id)}&count=revision_requested`, {
+        const { session, tenantId } = await getStaffTenant();
+        if (!session || !tenantId) return;
+        const res = await fetch(`/api/estimates?tenantId=${encodeURIComponent(tenantId)}&count=revision_requested`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
         if (!res.ok) return;

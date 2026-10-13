@@ -22,7 +22,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/utils/supabase';
+import { getStaffContext } from '@/utils/staffContext';
 import { Lock, Sparkles, ChevronLeft } from 'lucide-react';
 import { isFeatureEnabled } from '@/utils/features';
 
@@ -33,13 +33,10 @@ export default function FeatureGate({ feature, label, children }) {
     let cancelled = false;
     (async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { if (!cancelled) setState({ loading: false, enabled: false }); return; }
-        const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
-        const tenantId = profile?.tenant_id;
-        if (!tenantId) { if (!cancelled) setState({ loading: false, enabled: false }); return; }
-        const { data } = await supabase.from('app_settings').select('settings_data').eq('id', tenantId).single();
-        const ok = isFeatureEnabled(data?.settings_data, feature);
+        // [2026-10] ログイン・お店・設定の読み込みは共通（utils/staffContext.js）
+        const { session, tenantId, settings } = await getStaffContext();
+        if (!session || !tenantId) { if (!cancelled) setState({ loading: false, enabled: false }); return; }
+        const ok = isFeatureEnabled(settings, feature);
         if (!cancelled) setState({ loading: false, enabled: ok });
       } catch {
         if (!cancelled) setState({ loading: false, enabled: false });

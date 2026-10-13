@@ -1,11 +1,14 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-import { supabase } from '@/utils/supabase'; 
+import { supabase } from '@/utils/supabase';
+import { getStaffTenant, getStaffSettings } from '@/utils/staffContext'; 
 import {
   ChevronLeft, ChevronRight, RefreshCw, Calendar as CalendarIcon,
 } from 'lucide-react';
 import HelpTooltip from '@/components/HelpTooltip';
-import OrderDetailModal from '@/components/OrderDetailModal'; 
+import dynamic from 'next/dynamic';
+// [2026-10] 注文詳細（大きな部品）は、開いたときに初めて読み込む
+const OrderDetailModal = dynamic(() => import('@/components/OrderDetailModal'), { ssr: false });
 // [2026-10 C2] カード決済が終わらないまま 20 分たった注文は表示しない（データはそのまま）
 import { visibleOrders } from '@/utils/orderVisibility';
 
@@ -25,16 +28,13 @@ export default function CalendarPage() {
   const fetchData = async (forceRefresh = false) => {
     setIsLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      // [2026-10] ログイン・お店・設定の読み込みは左のメニューと共通（utils/staffContext.js）
+      const { session, tenantId: tId } = await getStaffTenant();
       if (!session) {
         window.location.href = '/staff/login';
         return;
       }
-
-      const { data: profile, error: profileError } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
-      if (profileError) throw profileError;
-      
-      const tId = profile.tenant_id;
+      if (!tId) throw new Error('tenant_id が取得できませんでした');
       setCurrentTenantId(tId);
 
       const CACHE_KEY_ORDERS = `florix_orders_cache_${tId}`;
@@ -53,14 +53,16 @@ export default function CalendarPage() {
         }
       }
 
-      const { data: settings } = await supabase.from('app_settings').select('settings_data').eq('id', tId).single();
-      if (settings) {
-        setAppSettings(settings.settings_data);
-        sessionStorage.setItem(CACHE_KEY_SETTINGS, JSON.stringify(settings.settings_data));
+      // 設定と注文を同時に読み込む
+      const [settingsData, { data: ordersData, error }] = await Promise.all([
+        getStaffSettings(tId),
+        // ★ セキュリティ修正: tenant_id でフィルタ
+        supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false }),
+      ]);
+      if (settingsData) {
+        setAppSettings(settingsData);
+        sessionStorage.setItem(CACHE_KEY_SETTINGS, JSON.stringify(settingsData));
       }
-
-      // ★ セキュリティ修正: tenant_id でフィルタ
-      const { data: ordersData, error } = await supabase.from('orders').select('*').eq('tenant_id', tId).order('created_at', { ascending: false });
       if (error) throw error;
       
       const latestOrders = ordersData || [];
@@ -343,16 +345,16 @@ export default function CalendarPage() {
       </div>
 
       {/* ★ onUpdatePayment を新たに追加！ */}
-      <OrderDetailModal 
-        order={selectedOrder} 
+      {selectedOrder && <OrderDetailModal
+        order={selectedOrder}  
         appSettings={appSettings} 
         onClose={() => setSelectedOrder(null)} 
         onUpdateStatus={handleUpdateStatus} 
         onUpdatePayment={handleUpdatePayment} 
         onArchive={handleArchive} 
-        onDelete={handleDelete} 
-      />
-      
+        onDelete={handleDelete}
+      />}
+            
       <style jsx global>{`
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

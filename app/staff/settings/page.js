@@ -271,6 +271,8 @@ export default function SettingsPage() {
         payrollConfig,
       };
       await supabase.from('app_settings').upsert({ id: currentTenantId, settings_data: payload });
+      // [2026-10] ほかの画面が使い回している設定を捨てて、次は保存した内容を読む（utils/staffContext.js）
+      import('@/utils/staffContext').then(({ invalidateStaffSettings }) => invalidateStaffSettings()).catch(() => {});
       showToast('success', '設定を保存しました');
       // ★ 操作履歴記録（動的import で循環依存回避）
       import('@/utils/auditLog').then(({ logAction }) => logAction({
