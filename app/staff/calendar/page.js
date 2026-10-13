@@ -1,4 +1,5 @@
 'use client';
+import { useRouter } from 'next/navigation';
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/utils/supabase';
 import { getStaffTenant, getStaffSettings } from '@/utils/staffContext'; 
@@ -17,6 +18,8 @@ export default function CalendarPage() {
   const [appSettings, setAppSettings] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  // [2026-10] 注文を開くと注文詳細のページへ
+  const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const [currentTenantId, setCurrentTenantId] = useState(null);
@@ -279,7 +282,7 @@ export default function CalendarPage() {
              return (
                <div 
                  key={`${ev.order.id}-${idx}`} 
-                 onClick={() => setSelectedOrder(ev.order)} 
+                 onClick={() => router.push(`/staff/orders/${ev.order.id}`)} 
                  className={`text-[11px] md:text-[12px] p-1 md:p-1.5 rounded cursor-pointer truncate transition-all ${badgeColor} ${isCompleted ? 'opacity-40 line-through' : ''}`}
                >
                  <span className="font-bold">{timeLabel}</span> <span className="hidden sm:inline">{d.customerInfo?.name}</span><span className="sm:hidden">{d.customerInfo?.name?.substring(0,2)}..</span>
