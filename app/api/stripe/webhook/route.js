@@ -92,6 +92,10 @@ export async function POST(request) {
           ...(orderRow?.order_data || {}),
           paymentStatus: '入金済（クレジットカード）',
         };
+        // [2026-10 C5] 電話確認からカード払いのご案内を送った注文は「カードで支払い済み」にする
+        if (newOrderData.phoneConfirmation?.status === 'card_link_sent') {
+          newOrderData.phoneConfirmation = { ...newOrderData.phoneConfirmation, status: 'paid_by_card', paidAt: new Date().toISOString() };
+        }
         // [セキュリティ 2026-10] 支払われた金額が注文の合計と違うときは、印を残してスタッフが気づけるようにする
         const expectedTotal = Number(orderRow?.order_data?.totalAmount) || 0;
         if (typeof session.amount_total === 'number' && expectedTotal > 0 && session.amount_total !== expectedTotal) {
@@ -134,7 +138,11 @@ export async function POST(request) {
               const item = Number(od.itemPrice) || (Array.isArray(od.cartItems) ? od.cartItems.reduce((s, c) => s + Number(c.price) * Number(c.qty), 0) : 0);
               const fee = Number(od.calculatedFee) || 0;
               const pickup = Number(od.pickupFee) || 0;
-              const total = (item + fee + pickup) + Math.floor((item + fee + pickup) * 0.1);
+              // [2026-10 A10] 合計は注文に保存してある金額（EC の箱代・オプション代を含む）を使う。無い古い注文だけ計算する
+              const ecBox = Number(od.ecBoxFee) || 0;
+              const total = Number(od.totalAmount) > 0
+                ? Number(od.totalAmount)
+                : (item + fee + pickup + ecBox) + Math.floor((item + fee + pickup + ecBox) * 0.1);
 
               // マイページURL（Magic Link）発行
               const mypageUrl = await createMypageMagicUrl({

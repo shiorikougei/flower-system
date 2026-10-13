@@ -36,7 +36,7 @@ export default function EstimateAcceptPage() {
     customerAddress1: '',
     customerAddress2: '',
     // 支払い方法
-    paymentMethod: 'bank_transfer', // 'bank_transfer' | 'card'
+    paymentMethod: 'card', // [2026-10 C3/C4] 'card' | 'store'（店頭受取のときだけ）。銀行振込は終了
     paymentScheduledDate: '',
     // 立札
     tatePattern: '',
@@ -210,7 +210,7 @@ export default function EstimateAcceptPage() {
         window.location.href = data.checkoutUrl;
         return;
       }
-      setDone(data);
+      setDone({ ...data, paymentMethod: orderForm.paymentMethod, phoneCheck: orderForm.paymentMethod === 'store' && (selectedPrice + Math.floor(selectedPrice * 0.1)) > 22000 });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -267,7 +267,9 @@ export default function EstimateAcceptPage() {
           <p className="text-[12px] text-[#555] leading-relaxed flex flex-col items-center gap-1">
             <span>お見積もりの内容で正式なご注文を承りました。</span>
             <span>ご注文番号: <span className="font-mono">{String(done.orderId || '').slice(0, 8)}</span></span>
-            <span className="flex items-center gap-1 mt-2"><Mail size={12}/> お振込先などのご案内は、ご登録のメールアドレスへ別途お送りします</span>
+            <span className="flex items-center gap-1 mt-2"><Mail size={12}/> ご注文内容の確認メールを、ご登録のメールアドレスへお送りします</span>
+            {done.paymentMethod === 'store' && <span className="mt-1">店頭でお受け取りの際にお支払いください。</span>}
+            {done.phoneCheck && <span className="mt-1 text-[#B45309]">ご注文金額が税込 22,000 円を超えるため、お店からお電話でご予約の確認をさせていただいたうえで確定いたします。</span>}
           </p>
           <Link href={`/order/${tenantId}/${shopId}`} className="inline-block px-6 h-12 leading-[48px] bg-[#2D4B3E] text-white rounded-xl text-[13px] font-bold">
             トップに戻る
@@ -614,18 +616,21 @@ export default function EstimateAcceptPage() {
             </p>
             <p className="text-[11px] text-red-900 leading-relaxed">
               <strong>お客様都合でのご入金後のキャンセル・返金は承っておりません。</strong><br/>
-              銀行振込・クレジットカード決済いずれもご返金できかねます。<br/>
+              クレジットカード決済・店頭でのお支払いいずれもご返金できかねます。<br/>
               日程やお届け先の変更はお電話にて承りますので、ご注文確定後にお問い合わせください。
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <button type="button"
-              onClick={() => setOrderForm({...orderForm, paymentMethod: 'bank_transfer'})}
-              className={`p-4 rounded-xl border-2 text-left transition-all ${orderForm.paymentMethod === 'bank_transfer' ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white shadow-md' : 'bg-white border-[#EAEAEA] text-[#555]'}`}>
-              <div className="flex items-center gap-2 mb-1"><Banknote size={18}/><span className="text-[13px] font-bold">銀行振込</span></div>
-              <p className={`text-[10px] ${orderForm.paymentMethod === 'bank_transfer' ? 'text-white/80' : 'text-[#999]'}`}>ご注文確定後、振込先をメールでお送りします。<strong>お支払い確認後から制作を開始</strong>いたします。</p>
-            </button>
+            {/* [2026-10 C4/C5] 店頭払いは店頭受取のときだけ（銀行振込は終了） */}
+            {rd.deliveryMethod === 'pickup' && (
+              <button type="button"
+                onClick={() => setOrderForm({...orderForm, paymentMethod: 'store'})}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${orderForm.paymentMethod === 'store' ? 'bg-[#2D4B3E] border-[#2D4B3E] text-white shadow-md' : 'bg-white border-[#EAEAEA] text-[#555]'}`}>
+                <div className="flex items-center gap-2 mb-1"><Banknote size={18}/><span className="text-[13px] font-bold">店頭でお支払い</span></div>
+                <p className={`text-[10px] ${orderForm.paymentMethod === 'store' ? 'text-white/80' : 'text-[#999]'}`}>お受け取りの際に店頭でお支払いください。</p>
+              </button>
+            )}
             <button type="button"
               onClick={() => stripeEnabled && setOrderForm({...orderForm, paymentMethod: 'card'})}
               disabled={!stripeEnabled}
@@ -674,6 +679,16 @@ export default function EstimateAcceptPage() {
             </div>
           )}
 
+          {orderForm.paymentMethod === 'store' && total > 22000 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-900 leading-relaxed">
+              ご注文金額が税込 22,000 円を超えるため、お店からお電話でご予約の確認をさせていただいたうえで確定いたします。お電話で確認ができない場合は、クレジットカードでのお支払いのご案内をメールでお送りします（期限までにお支払いがない場合はキャンセルとなります）。
+            </div>
+          )}
+          {!stripeEnabled && rd.deliveryMethod !== 'pickup' && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-900">
+              ただいまネットでのカード決済を準備中です。お手数ですが、お電話でご注文ください。
+            </div>
+          )}
           {orderForm.paymentMethod === 'card' && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-[11px] text-blue-900 flex items-start gap-1">
               <Lightbulb size={12} className="mt-0.5 shrink-0"/>

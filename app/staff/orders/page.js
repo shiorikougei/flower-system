@@ -493,6 +493,13 @@ export default function OrdersPage() {
                         </span>
                       )}
 
+                      {/* [2026-10 C5] 店頭払いで電話確認が必要な注文 */}
+                      {d.phoneConfirmation?.status === 'pending' && (
+                        <span className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 px-2 py-1 rounded flex items-center gap-1">電話確認待ち</span>
+                      )}
+                      {d.phoneConfirmation?.status === 'card_link_sent' && (
+                        <span className="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-1 rounded flex items-center gap-1">カード払いのご案内済み</span>
+                      )}
                       {/* [2026-10 C2] カード決済がまだ終わっていない注文 */}
                       {(isCardPaymentPending(order) || isAbandonedCardOrder(order)) && (
                         <span className="text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200 px-2 py-1 rounded flex items-center gap-1">

@@ -53,6 +53,33 @@ export async function GET(request) {
   };
 
   try {
+    // === [2026-10 C5] 電話確認ができずカード払いをご案内した注文: 期限を過ぎても支払いがなければキャンセル扱い（データは残す） ===
+    {
+      const { data: linkOrders } = await supabase
+        .from("orders")
+        .select("id, payment_status, order_data")
+        .eq("order_data->phoneConfirmation->>status", "card_link_sent");
+      for (const o of linkOrders || []) {
+        try {
+          const od = o.order_data || {};
+          const exp = od.phoneConfirmation?.cardLinkExpiresAt ? new Date(od.phoneConfirmation.cardLinkExpiresAt) : null;
+          if (!exp || exp > now || o.payment_status === "paid") continue;
+          const at = now.toISOString();
+          const next = {
+            ...od,
+            status: "キャンセル",
+            currentStatus: "キャンセル",
+            phoneConfirmation: { ...od.phoneConfirmation, status: "cancelled", cancelledAt: at },
+            statusHistory: [{ status: "キャンセル（カード払いの期限切れ）", staff: "自動", date: at }, ...(Array.isArray(od.statusHistory) ? od.statusHistory : [])],
+          };
+          await supabase.from("orders").update({ order_data: next }).eq("id", o.id);
+          results.cardLinkCancelled = (results.cardLinkCancelled || 0) + 1;
+        } catch (e) {
+          results.errors.push({ id: o.id, type: "card_link_cancel", message: e?.message });
+        }
+      }
+    }
+
     // === ③ 期限切れ自動マーク（先に処理） ===
     {
       const { data: expiredList } = await supabase

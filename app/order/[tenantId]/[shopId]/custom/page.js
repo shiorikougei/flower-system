@@ -168,6 +168,11 @@ function OrderFormContent() {
 
   // ★ 要件④: 決済方法選択
   const [paymentMethod, setPaymentMethod] = useState('');
+  // [2026-10 C4] 店頭払いは店頭受取のときだけ。受取方法を変えたら選び直してもらう
+  useEffect(() => {
+    if (paymentMethod === 'store' && receiveMethod !== 'pickup') setPaymentMethod('');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [receiveMethod]);
   // 店舗のStripe接続状態（カード決済が使えるかどうかの判定用）
   const [stripeEnabled, setStripeEnabled] = useState(false);
 
@@ -872,8 +877,8 @@ function OrderFormContent() {
         return;
       }
 
-      // 銀行振込・代引きの場合はサンクスページへ
-      router.push(`/order/${tenantId}/${shopId}/thanks?order_id=${data.orderId}`);
+      // 店頭払いの場合はサンクスページへ（[2026-10 C4/C5] 支払い方法と電話確認の有無を渡す）
+      router.push(`/order/${tenantId}/${shopId}/thanks?order_id=${data.orderId}&pay=${encodeURIComponent(paymentMethod)}${paymentMethod === 'store' && totalAmount > 22000 ? '&phone=1' : ''}`);
     } catch (error) {
       console.error('注文エラー:', error);
       alert('注文の送信に失敗しました。\n' + (error.message || ''));
@@ -1936,7 +1941,7 @@ function OrderFormContent() {
                   </p>
                   <p className="text-[11px] text-red-900 leading-relaxed">
                     <strong>お客様都合でのご入金後のキャンセル・返金は承っておりません。</strong><br/>
-                    銀行振込・クレジットカード決済いずれもご返金できかねます。<br/>
+                    クレジットカード決済・店頭でのお支払いいずれもご返金できかねます。<br/>
                     日程やお届け先の変更はお電話にて承りますので、ご注文確定後にお問い合わせください。
                   </p>
                 </div>
@@ -1960,22 +1965,35 @@ function OrderFormContent() {
                       </div>
                     </label>
                   )}
-                  <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'bank_transfer' ? 'border-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#EAEAEA] hover:border-[#2D4B3E]/50'}`}>
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="bank_transfer"
-                      checked={paymentMethod === 'bank_transfer'}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="mt-1 accent-[#2D4B3E]"
-                    />
-                    <div className="flex-1">
-                      <p className="text-[13px] font-bold text-[#111111]">銀行振込</p>
-                      <p className="text-[11px] text-[#555555] mt-1 leading-relaxed">
-                        ご注文確定後、振込先をメールでお送りします。<strong className="text-[#D97D54]">お支払い確認後から制作を開始</strong>いたします。
-                      </p>
-                    </div>
-                  </label>
+                  {/* [2026-10 C3] 銀行振込は終了 / [C4・C5] 店頭払いは店頭受取のときだけ */}
+                  {receiveMethod === 'pickup' && (
+                    <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'store' ? 'border-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#EAEAEA] hover:border-[#2D4B3E]/50'}`}>
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="store"
+                        checked={paymentMethod === 'store'}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        className="mt-1 accent-[#2D4B3E]"
+                      />
+                      <div className="flex-1">
+                        <p className="text-[13px] font-bold text-[#111111]">店頭でお支払い（お受け取りの際）</p>
+                        <p className="text-[11px] text-[#555555] mt-1 leading-relaxed">
+                          店頭でお受け取りの際にお支払いください。
+                          {totalAmount > 22000 && (
+                            <span className="block mt-1 text-[#B45309] font-bold">
+                              ご注文金額が税込 22,000 円を超えるため、お店からお電話でご予約の確認をさせていただいたうえで確定いたします。お電話で確認ができない場合は、クレジットカードでのお支払いのご案内をメールでお送りします（期限までにお支払いがない場合はキャンセルとなります）。
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </label>
+                  )}
+                  {!stripeEnabled && receiveMethod !== 'pickup' && (
+                    <p className="text-[12px] text-[#B45309] bg-amber-50 border border-amber-200 rounded-xl p-3">
+                      ただいまネットでのカード決済を準備中です。お手数ですが、お電話でご注文ください。
+                    </p>
+                  )}
                 </div>
 
                 {/* ★ 銀行振込選択時の納期注意＋入金予定日カレンダー */}

@@ -349,26 +349,11 @@ export default function CartPage() {
                   </div>
                 </label>
               )}
-              <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer ${paymentMethod === 'bank_transfer' ? 'border-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#EAEAEA]'}`}>
-                <input type="radio" name="pm" value="bank_transfer" checked={paymentMethod === 'bank_transfer'} onChange={(e) => setPaymentMethod(e.target.value)} className="mt-1 accent-[#2D4B3E]"/>
-                <div>
-                  <p className="text-[13px] font-bold text-[#111111]">銀行振込</p>
-                  <p className="text-[11px] text-[#555555] mt-1">注文後、振込先をメールでお送りします</p>
-                </div>
-              </label>
-
-              {paymentMethod === 'bank_transfer' && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-[11.5px] text-amber-900 leading-relaxed">
-                  <p className="font-bold mb-1.5 flex items-center gap-1.5">
-                    <AlertCircle size={14}/> 銀行振込についてご確認ください
-                  </p>
-                  <ul className="space-y-1 pl-1">
-                    <li>・<strong>ご入金確認後</strong>に商品のご準備を開始いたします</li>
-                    <li>・ご入金のタイミングによっては、ご希望の納品日にお届けできない場合がございます</li>
-                    <li>・入金確認が取れ次第、確定の納品日をメールにてご案内いたします</li>
-                    <li>・お振込手数料はお客様ご負担となります</li>
-                  </ul>
-                </div>
+              {/* [2026-10 C3] 銀行振込は終了。ネットショップはカード払いのみ */}
+              {!stripeEnabled && (
+                <p className="text-[12px] text-[#B45309] bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  ただいまネットでのカード決済を準備中です。お手数ですが、お電話でご注文ください。
+                </p>
               )}
             </div>
 
@@ -381,7 +366,7 @@ export default function CartPage() {
 
             <button
               onClick={handleCheckout}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !stripeEnabled}
               className="w-full h-14 bg-[#2D4B3E] text-white rounded-xl font-bold text-[14px] hover:bg-[#1f352b] disabled:opacity-50 transition-all"
             >
               {isSubmitting ? '送信中...' : `合計 ¥${totalAmount.toLocaleString()} を注文確定する`}
