@@ -15,6 +15,16 @@ export const SHOW_DAYS = 30;
 
 export const RELEASE_NOTES = [
   {
+    id: '2026-10-order-price-check',
+    date: '2026-10-14',
+    title: '注文金額の確認（記録のみ）',
+    items: [
+      'ネット注文・ネットショップの注文が届いたとき、送料や商品代をお店の設定でもう一度計算して確かめるようにしました。',
+      '差があったときは、注文詳細の「お支払い情報」に黄色で「金額の確認で差がありました」と出ます。注文はそのまま受け付けています。念のため金額を確認してください。',
+    ],
+    helpArticleId: 'order_price_check',
+  },
+  {
     id: '2026-10-estimate-card-convert',
     date: '2026-10-10',
     title: '見積からのカード払いは、決済が終わってから確定済みに',

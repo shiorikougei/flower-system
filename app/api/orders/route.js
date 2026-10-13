@@ -20,6 +20,7 @@ import { createMypageMagicUrl } from '@/utils/mypageLink';
 import { rateLimit, getClientIp } from '@/utils/rateLimit';
 import { validateOrderData } from '@/utils/orderValidator';
 import { loadVersions, amountsFromVersion, isValidCustomerToken, findPendingCardOrder } from '@/utils/estimateThread';
+import { computeCustomFees, isAllowedCustomItemPrice, computeEcShippingFee } from '@/utils/orderPricing';
 
 export async function POST(request) {
   try {
@@ -183,6 +184,7 @@ export async function POST(request) {
     const isEcOrder = orderData.orderType === 'ec' && Array.isArray(orderData.cartItems);
 
     let ecBoxFee = 0; // ★ EC専用 箱代
+    let ecMaxSize = null; // [2026-10] 金額の確認用（商品の表から求めた一番大きい箱のサイズ）
     if (isEcOrder) {
       // 商品IDをDBで再検索して、価格と在庫を検証する
       const ids = orderData.cartItems.map(c => c.productId).filter(Boolean);
@@ -258,6 +260,7 @@ export async function POST(request) {
         .from('app_settings').select('settings_data').eq('id', String(tenantId)).single();
       const ecBoxFees = settingsRow?.settings_data?.boxFeeConfig?.ecBoxFees || {};
       ecBoxFee = maxSize ? (Number(ecBoxFees[maxSize]) || 0) : 0;
+      ecMaxSize = maxSize;
       if (ecBoxFee > 0) {
         lineItemsForStripe.push({
           price_data: {
@@ -271,6 +274,71 @@ export async function POST(request) {
     } else {
       // 既存のカスタム注文（単一）
       item = Number(orderData.itemPrice) || 0;
+    }
+
+    // [2026-10] お客様の注文の金額: マイナスや数字でない値は受け付けない
+    if (!isStaffEntered) {
+      delete orderData.priceCheck;
+      for (const k of ['itemPrice', 'calculatedFee', 'pickupFee']) {
+        const v = orderData[k];
+        if (v === null || v === undefined || v === '') continue;
+        const n = Number(v);
+        if (!Number.isFinite(n) || n < 0) {
+          return NextResponse.json({ error: '金額が正しくありません。ページを再読み込みして、もう一度お試しください' }, { status: 400 });
+        }
+      }
+    }
+
+    // [2026-10] 金額の確認（見積以外のお客様の注文）
+    //   画面と同じ計算をサーバーでもう一度行い、送られた金額と比べる。
+    //   いまは「記録だけ」: 差があっても注文は受け付け、priceCheck に印を残す（utils/orderPricing.js）
+    if (!isStaffEntered && !orderData.fromEstimate) {
+      try {
+        const { data: pcSettingsRow } = await supabaseAdmin
+          .from('app_settings').select('settings_data').eq('id', String(tenantId)).maybeSingle();
+        const pcSettings = pcSettingsRow?.settings_data || {};
+        const sent = {
+          itemPrice: Number(orderData.itemPrice) || 0,
+          calculatedFee: Number(orderData.calculatedFee) || 0,
+          pickupFee: Number(orderData.pickupFee) || 0,
+        };
+        const diffs = [];
+        let expected = {};
+        if (isEcOrder) {
+          const addr = orderData.isRecipientDifferent ? orderData.recipientInfo?.address1 : orderData.customerInfo?.address1;
+          expected = { calculatedFee: computeEcShippingFee(pcSettings, { address1: addr, maxSize: ecMaxSize }), pickupFee: 0 };
+          if (sent.calculatedFee !== expected.calculatedFee) diffs.push('shipping');
+          if (sent.pickupFee !== 0) diffs.push('pickup');
+        } else {
+          const target = orderData.isRecipientDifferent ? (orderData.recipientInfo || {}) : (orderData.customerInfo || {});
+          const fees = computeCustomFees(pcSettings, {
+            receiveMethod: orderData.receiveMethod,
+            rawAddress: `${target.address1 || ''}${target.address2 || ''}`,
+            itemPrice: sent.itemPrice,
+            flowerType: orderData.flowerType,
+            selectedDate: orderData.selectedDate,
+          });
+          let gallery = [];
+          try {
+            const { data: g } = await supabaseAdmin.from('app_settings').select('settings_data').eq('id', `${tenantId}_gallery`).maybeSingle();
+            gallery = g?.settings_data?.images || [];
+          } catch { gallery = []; }
+          const itemOk = isAllowedCustomItemPrice(pcSettings, gallery, { flowerType: orderData.flowerType, receiveMethod: orderData.receiveMethod, itemPrice: sent.itemPrice });
+          expected = { calculatedFee: fees.calculatedFee, pickupFee: fees.pickupFee, itemPriceAllowed: itemOk, ...(fees.ok ? {} : { feeReason: fees.reason }) };
+          if (!itemOk) diffs.push('item');
+          if (!fees.ok) diffs.push('fee_' + fees.reason);
+          else {
+            if (sent.calculatedFee !== fees.calculatedFee) diffs.push('fee');
+            if (sent.pickupFee !== fees.pickupFee) diffs.push('pickup');
+          }
+        }
+        orderData.priceCheck = diffs.length === 0
+          ? { result: 'ok', mode: 'record_only', checkedAt: new Date().toISOString() }
+          : { result: 'mismatch', mode: 'record_only', diffs, sent, expected, checkedAt: new Date().toISOString() };
+        if (diffs.length > 0) console.warn('[/api/orders] 金額の確認で差がありました（記録のみ）:', tenantId, diffs.join(','));
+      } catch (e) {
+        console.warn('[/api/orders] 金額の確認に失敗（注文は続行）:', e?.message);
+      }
     }
 
     const fee = Number(orderData.calculatedFee) || 0;
