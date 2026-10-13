@@ -2286,6 +2286,18 @@ export default function OrderDetailModal({
                   カード決済の金額（¥{Number(modalData.paymentAmountMismatch.paid).toLocaleString()}）が、注文の合計（¥{Number(modalData.paymentAmountMismatch.expected).toLocaleString()}）と違います。制作の前に確認してください。
                 </div>
               )}
+              {/* [2026-10] 金額の確認（記録のみ）: お客様の画面の計算とサーバーの計算に差があったとき */}
+              {modalData.priceCheck?.result === 'mismatch' && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[12px] text-amber-900 leading-relaxed">
+                  <span className="font-bold">金額の確認で差がありました。</span>
+                  {(modalData.priceCheck.diffs || []).includes('item') && <span>（商品代が、選べる金額にありません）</span>}
+                  {(modalData.priceCheck.diffs || []).some(d => d.startsWith('fee_')) && <span>（送料などの計算: お届け先の地域を判定できませんでした）</span>}
+                  {(modalData.priceCheck.diffs || []).some(d => d === 'fee' || d === 'pickup' || d === 'shipping') && (
+                    <span>（送料などの計算: お店の設定では ¥{Number(modalData.priceCheck.expected?.calculatedFee || 0).toLocaleString()}{Number(modalData.priceCheck.expected?.pickupFee || 0) > 0 ? ` + 引き取り料 ¥${Number(modalData.priceCheck.expected.pickupFee).toLocaleString()}` : ''}）</span>
+                  )}
+                  <span> 念のため、お客様の金額を確認してください。</span>
+                </div>
+              )}
               <div className="space-y-3 text-[13px] md:text-[14px] font-medium text-[#555555]">
                 <div className="flex justify-between items-center"><span>商品代 (税抜):</span><span className="font-black text-[#111111] text-[16px]">¥{getTotals(modalData).item.toLocaleString()}</span></div>
                 {/* ★ 内訳: feeBreakdown があれば各内訳を別行で、なければ従来通り合算 */}
