@@ -8,7 +8,7 @@ import {
   Tag, MessageSquare, CreditCard, CheckCircle2, Upload, ImageIcon,
   Edit3, ArrowRight, TrendingUp, TrendingDown, FileText, Bell, BellOff,
   Wallet, RefreshCw, Mail, Camera, Plus, Clock, ShoppingBag, History,
-  Save, ArrowDown, Gift, Pen, Lightbulb
+  Save, ArrowDown, Gift, Pen, Lightbulb, ChevronDown
 } from 'lucide-react';
 import TatefudaPreview from '@/components/TatefudaPreview';
 import { ensureOperationAllowed, getCurrentRole, getCurrentStaff } from '@/utils/staffRole';
@@ -26,14 +26,27 @@ const normalizeHomepageUrl = (raw) => {
   } catch { return ''; }
 };
 
+// [2026-10 画面リニューアル] 社内メモ・お客様の備考の欄
+//   白い欄に、ふつうの太さの文字で表示する。見逃しがないよう、長い文章も省略せず全文を出す
+function NoteBlock({ label, tone, text }) {
+  const tag = tone === 'memo' ? 'bg-[#FFF3C4] text-[#6B4E00]' : 'bg-[#E6F0F4] text-[#1D5670]';
+  return (
+    <section className="bg-white rounded-[14px] border border-[#E6E2DA] p-5 md:p-6">
+      <h3 className="mb-2"><span className={`inline-flex items-center h-7 px-2.5 rounded-md text-[13px] font-bold ${tag}`}>{label}</span></h3>
+      <p className="text-[15px] text-[#1F2A24] whitespace-pre-wrap leading-[1.8]">{text}</p>
+    </section>
+  );
+}
+
 export default function OrderDetailModal({ 
   order, 
   appSettings, 
   onClose, 
   onUpdateStatus, 
   onUpdatePayment, 
-  onArchive, 
-  onDelete 
+  onArchive,
+  onDelete,
+  asPage = false,   // [2026-10] true のとき、ふつうのページとして表示（app/staff/orders/[orderId]/page.jsx）
 }) {
   const [updateForm, setUpdateForm] = useState({ 
     status: order?.order_data?.currentStatus || order?.order_data?.status || 'new', 
@@ -66,6 +79,8 @@ export default function OrderDetailModal({
 
   // ★ 新規追加：メールテンプレート選択メニューの表示状態
   const [showMailTemplates, setShowMailTemplates] = useState(false);
+  // [2026-10 画面リニューアル] 上の「その他」メニュー
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   // ★ 入金確認モーダル（銀行振込の手動入金確認 + 納品日変更 + 自動メール送信）
   const [showPaymentConfirmModal, setShowPaymentConfirmModal] = useState(false);
@@ -1585,106 +1600,72 @@ export default function OrderDetailModal({
 
   return (
     // ★ モーダルクリック時にドロップダウンを閉じる処理を追加
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#111111]/60 backdrop-blur-sm p-3 md:p-4 animate-in fade-in" onClick={onClose}>
-      <div 
-        className="bg-[#FBFAF9] rounded-[24px] md:rounded-[32px] w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative flex flex-col" 
-        onClick={(e) => { e.stopPropagation(); setShowMailTemplates(false); }}
+    <div className={asPage ? 'min-h-screen bg-[#F6F4EF]' : 'fixed inset-0 z-[110] flex items-center justify-center bg-[#1F2A24]/60 backdrop-blur-sm p-3 md:p-4 animate-in fade-in'} onClick={asPage ? undefined : onClose}>
+      <div
+        className={asPage ? 'w-full relative' : 'bg-[#FAFAF7] rounded-[24px] md:rounded-[32px] w-full max-w-4xl xl:max-w-[1360px] max-h-[92vh] overflow-hidden shadow-2xl relative flex flex-col'} 
+        onClick={(e) => { e.stopPropagation(); setShowMailTemplates(false); setShowMoreMenu(false); }}
       >
         
-        <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-[#EAEAEA] p-4 md:p-6 flex flex-wrap items-center justify-between gap-3 z-20 rounded-t-[24px] md:rounded-t-[32px]">
-          <div>
-            <div className="flex items-center gap-3">
-              <h2 className="text-[16px] md:text-[18px] font-black text-[#2D4B3E]">注文詳細</h2>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${modalData.status === 'completed' || modalData.status === '完了' ? 'bg-gray-100 text-gray-500' : 'bg-orange-50 text-orange-600 border border-orange-100'}`}>
-                {modalData.status === 'completed' || modalData.status === '完了' ? '完了' : '未完了'}
-              </span>
-              
-              {isUnpaid ? (
-                <span className="text-[10px] font-bold bg-[#D97D54]/10 text-[#D97D54] px-2 py-0.5 rounded border border-[#D97D54]/20 flex items-center gap-1">
-                  <AlertCircle size={12}/> {currentPaymentStatus}
+        <div className={asPage ? 'md:sticky md:top-0 bg-[#F6F4EF]/95 backdrop-blur border-b border-[#E0DCD3] px-4 md:px-8 pt-4 pb-3 z-20 space-y-3' : 'sticky top-0 bg-white/95 backdrop-blur-md border-b border-[#E6E2DA] px-4 md:px-6 pt-4 md:pt-5 pb-3 z-20 rounded-t-[24px] md:rounded-t-[32px] space-y-3'}>
+          {asPage && (
+            <button type="button" onClick={onClose} className="inline-flex items-center gap-1 min-h-[36px] text-[14px] font-bold text-[#2D4B3E] hover:underline">
+              <ChevronRight size={16} className="rotate-180" aria-hidden="true" /> 受注一覧に戻る
+            </button>
+          )}
+          {/* 1 段目: タイトル・状態・受付日時 / 閉じる */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className={asPage ? 'text-[24px] md:text-[28px] font-bold text-[#1F2A24]' : 'text-[20px] md:text-[22px] font-bold text-[#1F2A24]'}>注文詳細</h2>
+                <span className={`inline-flex items-center h-7 px-2.5 rounded-full text-[13px] font-bold ${(modalData.status === 'completed' || modalData.status === '完了') ? 'bg-[#F1EEE7] text-[#3B4640]' : 'bg-[#FBEBE3] text-[#A2471F]'}`}>
+                  {(modalData.status === 'completed' || modalData.status === '完了') ? '完了' : '未完了'}
                 </span>
-              ) : (
-                <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded border border-green-200 flex items-center gap-1">
-                  <CheckCircle2 size={12}/> {currentPaymentStatus}
-                </span>
-              )}
+                {isUnpaid ? (
+                  <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[13px] font-bold bg-[#FBEBE3] text-[#A2471F]">
+                    <AlertCircle size={13}/> {currentPaymentStatus}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[13px] font-bold bg-[#E4F1EA] text-[#1E6B47]">
+                    <CheckCircle2 size={13}/> {currentPaymentStatus}
+                  </span>
+                )}
+              </div>
+              <p className="text-[13px] text-[#5C6660] mt-1 flex items-center gap-x-3 gap-y-1 flex-wrap">
+                <span>受付: {safeFormatDate(order.created_at, true)}</span>
+                {modalData.managementNo && <span className="ui-num font-bold text-[#2D4B3E]">管理番号: {modalData.managementNo}</span>}
+                <span>ID: {order.id.slice(0, 8)}</span>
+              </p>
             </div>
-            <p className="text-[10px] md:text-[11px] text-[#999999] font-bold mt-1">
-              受付: {safeFormatDate(order.created_at, true)}
-              {modalData.managementNo && <span className="ml-2 px-2 py-0.5 bg-[#2D4B3E]/10 text-[#2D4B3E] rounded-full font-mono">管理番号: {modalData.managementNo}</span>}
-              <span className="ml-2 text-[#bbb]">ID: {order.id.slice(0, 8)}</span>
-            </p>
+            {!asPage && <button onClick={onClose} aria-label="閉じる" className="shrink-0 w-11 h-11 bg-white border border-[#D5D0C6] rounded-full flex items-center justify-center text-[#3B4640] hover:bg-[#F6F4EF] transition-colors">
+              <X size={20} />
+            </button>}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 ml-auto">
-            {modalData.customerInfo?.email && (
-              <a
-                href={`/staff/customers?email=${encodeURIComponent(modalData.customerInfo.email)}`}
-                className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all"
-                title="このお客様の顧客カルテを開く"
-              >
-                <User size={14} /> <span className="hidden sm:inline">顧客カルテ</span>
-              </a>
-            )}
-            <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all">
-              <Printer size={14} /> <span className="hidden sm:inline">印刷 / PDF出力</span>
+          {/* 2 段目: よく使うボタン + その他 */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => onArchive(order.id, modalData.status !== 'completed' && modalData.status !== '完了')} className={`inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-[14px] font-bold transition-all ${(modalData.status === 'completed' || modalData.status === '完了') ? 'bg-white border border-[#D5D0C6] text-[#1F2A24] hover:border-[#2D4B3E]' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b]'}`}>
+              {(modalData.status === 'completed' || modalData.status === '完了') ? <RotateCcw size={16}/> : <Archive size={16}/>}
+              {(modalData.status === 'completed' || modalData.status === '完了') ? '未完了に戻す' : '完了にする'}
             </button>
 
-            {/* [注文-4] 金額訂正ボタン（オーナーのみ） */}
-            {isOwner && (
-              <button
-                onClick={() => {
-                  setCorrectionItemPrice(String(modalData.itemPrice || ''));
-                  setCorrectionFee(String((Number(modalData.calculatedFee) || 0) + (Number(modalData.pickupFee) || 0)));
-                  setCorrectionReason('');
-                  setCorrectionNotifyMode('correction');
-                  setCorrectionNotifyStore(true);
-                  setCorrectionMarkAsPaid(false);
-                  setShowAmountCorrection(true);
-                }}
-                className="flex items-center gap-1.5 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[10px] md:text-[11px] font-bold text-[#555555] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all"
-                title="注文金額を訂正（オーナー権限）"
-              >
-                <Edit3 size={14}/> <span className="hidden sm:inline">金額訂正</span>
-              </button>
-            )}
+            {/* ★ 注文内容・日程の編集ボタン */}
+            <button onClick={openEditModal} className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-[14px] font-bold transition-all bg-white border border-[#D5D0C6] text-[#1F2A24] hover:border-[#2D4B3E] hover:text-[#2D4B3E]">
+              <Edit3 size={16}/> 内容を編集
+            </button>
 
-            {/* [業務-5] 完成写真メール 後から送信ボタン（既に写真がアップロード済みの注文のみ） */}
-            {(() => {
-              const hasImages = (Array.isArray(modalData.completionImages) && modalData.completionImages.length > 0) || !!modalData.completionImage;
-              const customerEmail = modalData.customerInfo?.email;
-              if (!hasImages || !customerEmail) return null;
-              const allImages = Array.isArray(modalData.completionImages) && modalData.completionImages.length > 0
-                ? modalData.completionImages
-                : [modalData.completionImage];
-              return (
-                <button
-                  onClick={() => {
-                    setCompletionDeliveryDate(modalData.selectedDate || '');
-                    setCompletionDeliveryTime(modalData.selectedTime || '');
-                    setCompletionMailPreview({ images: allImages, customerEmail });
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-[#FFF8E1] border border-[#F9C846] rounded-xl text-[10px] md:text-[11px] font-bold text-[#8B6F2C] hover:bg-[#FFEFC2] transition-all"
-                  title="完成写真メールを今から送信"
-                >
-                  <Send size={14} /> <span className="hidden sm:inline">完成写真メール送信</span>
-                </button>
-              );
-            })()}
-            
-            {/* ★ 新規追加：メール作成ボタン＆ドロップダウンメニュー */}
+            {/* ★ メール作成ボタン＆ドロップダウンメニュー */}
             {modalData.customerInfo?.email && (
               <div className="relative">
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setShowMailTemplates(!showMailTemplates); }} 
-                  className="flex items-center gap-1.5 px-3 py-2 bg-[#2D4B3E] text-white rounded-xl text-[10px] md:text-[11px] font-bold hover:bg-[#1f352b] transition-all shadow-sm"
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowMoreMenu(false); setShowMailTemplates(!showMailTemplates); }}
+                  aria-expanded={showMailTemplates}
+                  className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-[14px] font-bold transition-all bg-white border border-[#D5D0C6] text-[#1F2A24] hover:border-[#2D4B3E] hover:text-[#2D4B3E]"
                 >
-                  <Send size={14} /> <span className="hidden sm:inline">メール作成</span>
+                  <Send size={16} /> メール作成
                 </button>
-                
                 {showMailTemplates && (
-                  <div className="absolute top-full right-0 mt-2 w-56 md:w-72 bg-white border border-[#EAEAEA] rounded-xl shadow-xl z-50 overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                    <div className="bg-[#FBFAF9] px-4 py-2 border-b border-[#EAEAEA] text-[10px] font-bold text-[#999999]">
+                  <div className="absolute top-full right-0 mt-2 w-56 md:w-72 bg-white border border-[#E6E2DA] rounded-xl shadow-xl z-50 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-[#FAFAF7] px-4 py-2 border-b border-[#E6E2DA] text-[12px] font-bold text-[#5C6660]">
                       手動送信する案内文を選択
                     </div>
                     <div className="max-h-60 overflow-y-auto hide-scrollbar">
@@ -1695,7 +1676,7 @@ export default function OrderDetailModal({
                           manualTriggers.includes(t.trigger) && t.enabled !== false
                         );
                         if (manualTemplates.length === 0) {
-                          return <div className="px-4 py-3 text-[11px] text-[#999999]">設定画面で「手動送信」テンプレートを追加してください</div>;
+                          return <div className="px-4 py-3 text-[13px] text-[#5C6660]">設定画面で「手動送信」テンプレートを追加してください</div>;
                         }
                         const triggerLabel = {
                           restock_notification: '入荷のお知らせ',
@@ -1706,10 +1687,10 @@ export default function OrderDetailModal({
                           <button
                             key={t.id}
                             onClick={() => handleSendTemplateEmail(t)}
-                            className="w-full text-left px-4 py-3 hover:bg-[#FBFAF9] border-b border-[#EAEAEA] last:border-0 transition-colors"
+                            className="w-full text-left px-4 py-3 hover:bg-[#FAFAF7] border-b border-[#E6E2DA] last:border-0 transition-colors"
                           >
-                            <div className="text-[12px] font-bold text-[#2D4B3E] mb-1">{triggerLabel[t.trigger] || t.trigger}</div>
-                            <div className="text-[10px] text-[#555555] truncate">{t.subject}</div>
+                            <div className="text-[14px] font-bold text-[#2D4B3E] mb-1">{triggerLabel[t.trigger] || t.trigger}</div>
+                            <div className="text-[12px] text-[#3B4640] truncate">{t.subject}</div>
                           </button>
                         ));
                       })()}
@@ -1718,43 +1699,135 @@ export default function OrderDetailModal({
                 )}
               </div>
             )}
-            
-            <div className="w-[1px] h-6 bg-[#EAEAEA] mx-1"></div>
 
-            {/* ★ 注文内容・日程の編集ボタン */}
-            <button onClick={openEditModal} className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-[10px] md:text-[11px] font-bold text-amber-700 hover:bg-amber-100 transition-all shadow-sm">
-              <Edit3 size={14}/> <span className="hidden sm:inline">内容を編集</span>
+            <button onClick={handlePrint} className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-[14px] font-bold transition-all bg-white border border-[#D5D0C6] text-[#1F2A24] hover:border-[#2D4B3E] hover:text-[#2D4B3E]">
+              <Printer size={16} /> 印刷 / PDF出力
             </button>
 
-            <button onClick={() => onArchive(order.id, modalData.status !== 'completed' && modalData.status !== '完了')} className={`flex items-center gap-1.5 px-3 py-2 text-[10px] md:text-[11px] font-bold rounded-xl transition-all shadow-sm ${modalData.status === 'completed' || modalData.status === '完了' ? 'bg-white border border-[#EAEAEA] text-[#555555]' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b]'}`}>
-              {modalData.status === 'completed' || modalData.status === '完了' ? <RotateCcw size={14}/> : <Archive size={14}/>}
-              <span className="hidden sm:inline">{modalData.status === 'completed' || modalData.status === '完了' ? '未完了に戻す' : '完了にする'}</span>
-            </button>
+            {/* その他（顧客カルテ・金額訂正・完成写真メール送信・削除） */}
+            <div className="relative">
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowMailTemplates(false); setShowMoreMenu(v => !v); }}
+                aria-expanded={showMoreMenu}
+                className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-[14px] font-bold transition-all bg-white border border-[#D5D0C6] text-[#1F2A24] hover:border-[#2D4B3E] hover:text-[#2D4B3E]"
+              >
+                その他 <ChevronDown size={16} />
+              </button>
+              {showMoreMenu && (
+                <div className="absolute top-full left-0 mt-2 bg-white border border-[#E6E2DA] rounded-xl shadow-xl z-50 overflow-hidden py-1 whitespace-nowrap" style={{ minWidth: 240 }} onClick={(e) => e.stopPropagation()}>
+                  {modalData.customerInfo?.email && (
+                    <a
+                      href={`/staff/customers?email=${encodeURIComponent(modalData.customerInfo.email)}`}
+                      className="w-full text-left flex items-center gap-2 px-4 min-h-[44px] text-[14px] font-bold text-[#1F2A24] hover:bg-[#F6F4EF]"
+                    >
+                      <User size={16} /> 顧客カルテを開く
+                    </a>
+                  )}
 
-            <button onClick={() => onDelete(order.id)} className="flex items-center gap-1.5 px-3 py-2 bg-red-50 border border-red-100 rounded-xl text-[10px] md:text-[11px] font-bold text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm ml-1">
-              <Trash2 size={14} /> 削除
-            </button>
-            
-            <button onClick={onClose} className="w-8 h-8 md:w-10 md:h-10 bg-[#FBFAF9] border border-[#EAEAEA] rounded-full flex items-center justify-center text-[#555555] font-bold hover:bg-[#EAEAEA] transition-colors ml-1">
-              <X size={18} />
-            </button>
+                  {/* [注文-4] 金額訂正（オーナーのみ） */}
+                  {isOwner && (
+                    <button
+                      onClick={() => {
+                        setShowMoreMenu(false);
+                        setCorrectionItemPrice(String(modalData.itemPrice || ''));
+                        setCorrectionFee(String((Number(modalData.calculatedFee) || 0) + (Number(modalData.pickupFee) || 0)));
+                        setCorrectionReason('');
+                        setCorrectionNotifyMode('correction');
+                        setCorrectionNotifyStore(true);
+                        setCorrectionMarkAsPaid(false);
+                        setShowAmountCorrection(true);
+                      }}
+                      className="w-full text-left flex items-center gap-2 px-4 min-h-[44px] text-[14px] font-bold text-[#1F2A24] hover:bg-[#F6F4EF]"
+                    >
+                      <Edit3 size={16}/> 金額訂正（オーナー）
+                    </button>
+                  )}
+
+                  {/* [業務-5] 完成写真メール 後から送信（既に写真がアップロード済みの注文のみ） */}
+                  {(() => {
+                    const hasImages = (Array.isArray(modalData.completionImages) && modalData.completionImages.length > 0) || !!modalData.completionImage;
+                    const customerEmail = modalData.customerInfo?.email;
+                    if (!hasImages || !customerEmail) return null;
+                    const allImages = Array.isArray(modalData.completionImages) && modalData.completionImages.length > 0
+                      ? modalData.completionImages
+                      : [modalData.completionImage];
+                    return (
+                      <button
+                        onClick={() => {
+                          setShowMoreMenu(false);
+                          setCompletionDeliveryDate(modalData.selectedDate || '');
+                          setCompletionDeliveryTime(modalData.selectedTime || '');
+                          setCompletionMailPreview({ images: allImages, customerEmail });
+                        }}
+                        className="w-full text-left flex items-center gap-2 px-4 min-h-[44px] text-[14px] font-bold text-[#1F2A24] hover:bg-[#F6F4EF]"
+                      >
+                        <Send size={16} /> 完成写真メールを送る
+                      </button>
+                    );
+                  })()}
+
+                  <div className="my-1 border-t border-[#E6E2DA]"></div>
+                  <button onClick={() => { setShowMoreMenu(false); onDelete(order.id); }} className="w-full text-left flex items-center gap-2 px-4 min-h-[44px] text-[14px] font-bold text-[#B42318] hover:bg-[#FDECEA]">
+                    <Trash2 size={16} /> この注文を削除
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-        
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8 text-left overflow-x-hidden">
-          
-          <div className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className={`px-3 py-1.5 rounded-lg text-[11px] md:text-[12px] font-bold flex items-center gap-1 w-fit ${isPickup ? 'bg-orange-100 text-orange-700' : isDelivery ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+
+        {/* [2026-10 画面リニューアル] 上: 納品日・ステータス・入金の帯 / 下: 左の広い列（オーダー内容・カード・メモ・履歴）と右の列（お客様・お支払い） */}
+        <div className={asPage ? 'p-4 md:p-8 space-y-6' : 'flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 md:p-8 space-y-6 text-left overflow-x-hidden'}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 items-stretch">
+            <div className="min-w-0 [&>*]:h-full">
+          {isSagawa ? (
+            <div className="bg-green-50 border border-green-200 p-5 md:p-6 rounded-[14px] flex flex-col md:flex-row items-center gap-6 justify-center text-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-bl-[64px] -mr-4 -mt-4"></div>
+              
+              <div className="space-y-1 relative z-10">
+                <span className="text-[14px] font-bold text-green-700 tracking-widest bg-white/50 px-3 py-1 rounded-full">【箱詰め・集荷】発送予定日</span>
+                <p className="text-[28px] md:text-[36px] font-black text-green-900 flex items-center justify-center gap-2 pt-2">
+                  <Package size={24} className="text-green-600"/> 
+                  {modalData.shippingDate ? `${modalData.shippingDate.split('-')[1]}月${modalData.shippingDate.split('-')[2]}日` : '未設定'}
+                </p>
+              </div>
+              
+              <ChevronRight size={32} className="hidden md:block text-green-300 relative z-10"/>
+              
+              <div className="space-y-1 relative z-10">
+                <span className="text-[14px] font-bold text-green-700 tracking-widest">お客様 お届け日</span>
+                <p className="text-[18px] md:text-[20px] font-bold text-green-800 flex items-center justify-center gap-2 pt-2">
+                  <CalendarIcon size={18} className="text-green-600"/> 
+                  {modalData.selectedDate ? `${modalData.selectedDate.split('-')[1]}月${modalData.selectedDate.split('-')[2]}日` : '未指定'}
+                </p>
+                <p className="text-[14px] font-bold text-green-700">{modalData.selectedTime || '時間指定なし'}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white border border-[#E6E2DA] p-5 rounded-[14px] flex flex-col items-center justify-center text-center">
+               <span className="text-[14px] font-bold text-[#5C6660] tracking-widest mb-1">
+                 {isPickup ? 'ご来店予定日' : '配達予定日'}
+               </span>
+               <p className="text-[28px] font-black text-[#2D4B3E] flex items-center gap-2">
+                 <CalendarIcon size={24}/> {modalData.selectedDate ? `${modalData.selectedDate.split('-')[1]}月${modalData.selectedDate.split('-')[2]}日` : '未設定'}
+               </p>
+               <p className="text-[15px] font-bold text-[#D97C8F] mt-2">{modalData.selectedTime || '時間指定なし'}</p>
+            </div>
+          )}
+            </div>
+            <div className="min-w-0">
+          <div className="bg-white p-5 rounded-[14px] border border-[#E6E2DA] flex flex-col gap-4 h-full">
+            <div className={`px-3 py-1.5 rounded-lg text-[13px] md:text-[14px] font-bold flex items-center gap-1 w-fit ${isPickup ? 'bg-orange-100 text-orange-700' : isDelivery ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
               {isPickup ? <Store size={14}/> : isDelivery ? <Truck size={14}/> : <Package size={14}/>}
               {isPickup ? '店頭受取' : isDelivery ? '自社配達' : '業者配送'}
             </div>
             
-            <div className="flex flex-wrap items-center gap-2 bg-[#FBFAF9] p-2 rounded-2xl border border-[#EAEAEA]">
-              <span className="text-[11px] font-bold text-[#999999] px-2 flex items-center gap-1 hidden sm:flex"><ListChecks size={14}/> ステータス更新</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[13px] font-bold text-[#5C6660] px-2 flex items-center gap-1 hidden sm:flex"><ListChecks size={14}/> ステータス更新</span>
               <select
                 value={updateForm.status}
                 onChange={(e) => setUpdateForm({...updateForm, status: e.target.value})}
-                className="h-10 bg-white border border-[#EAEAEA] rounded-xl px-3 text-[12px] font-bold outline-none shadow-sm cursor-pointer"
+                className="h-10 bg-white border border-[#E6E2DA] rounded-xl px-3 text-[14px] font-bold outline-none shadow-sm cursor-pointer"
               >
                 <option value="new">未対応 (新規)</option>
                 {getStatusOptions().map(l => <option key={l} value={l}>{l}</option>)}
@@ -1871,17 +1944,18 @@ export default function OrderDetailModal({
                   setStatusSavedMsg(`「${updateForm.status === 'new' ? '未対応' : updateForm.status}」に更新しました${mailNote}`);
                   setTimeout(() => setStatusSavedMsg(''), 4000);
                 }
-              }} className="h-10 px-4 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-xl hover:bg-[#1f352b] transition-all shadow-sm">
+              }} className="h-10 px-4 bg-[#2D4B3E] text-white text-[14px] font-bold rounded-xl hover:bg-[#1f352b] transition-all shadow-sm">
                 更新
               </button>
               {statusSavedMsg && (
-                <span className="flex items-center gap-1 text-[13px] font-bold text-[#117768]" role="status">
+                <span className="flex items-center gap-1 text-[15px] font-bold text-[#117768]" role="status">
                   <CheckCircle2 size={16}/> {statusSavedMsg}
                 </span>
               )}
             </div>
           </div>
-
+            </div>
+            <div className="min-w-0 [&>*]:h-full">
           {/* ★ [業務-8] 入金ステータス独立プルダウン（ステータス更新の直下） */}
           {modalData.paymentMethod && (() => {
             const currentShop = appSettings?.shops?.find(s => String(s.id) === String(modalData.shopId));
@@ -1913,13 +1987,13 @@ export default function OrderDetailModal({
             const isPaidNow = /入金済|前払い済み/.test(currentPS);
 
             return (
-              <div className="bg-white p-5 rounded-[24px] border border-[#EAEAEA] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-2 bg-[#F7F7F7] px-3 py-1.5 rounded-lg w-fit">
-                  <span className="text-[10px] font-bold text-[#999999] tracking-widest">支払方法</span>
-                  <span className="text-[12px] font-bold text-[#2D4B3E]">{getPaymentLabel(modalData.paymentMethod)}</span>
+              <div className="bg-white p-5 rounded-[14px] border border-[#E6E2DA] flex flex-col gap-4">
+                <div className="flex items-center gap-2 bg-[#F6F4EF] px-3 py-1.5 rounded-lg w-fit whitespace-nowrap">
+                  <span className="text-[12px] font-bold text-[#5C6660] tracking-widest">支払方法</span>
+                  <span className="text-[14px] font-bold text-[#2D4B3E]">{getPaymentLabel(modalData.paymentMethod)}</span>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 bg-[#FBFAF9] p-2 rounded-2xl border border-[#EAEAEA]">
-                  <span className="text-[11px] font-bold text-[#999999] px-2 flex items-center gap-1 hidden sm:flex"><CreditCard size={14}/> 入金ステータス</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[13px] font-bold text-[#5C6660] px-2 flex items-center gap-1 hidden sm:flex"><CreditCard size={14}/> 入金ステータス</span>
                   <select
                     value={currentPS}
                     onChange={async (e) => {
@@ -1946,10 +2020,10 @@ export default function OrderDetailModal({
                         alert('入金ステータス更新失敗: ' + err.message);
                       }
                     }}
-                    className={`h-10 min-w-[220px] px-3 rounded-xl border-2 text-[12px] font-bold outline-none shadow-sm cursor-pointer ${
+                    className={`h-10 min-w-[220px] px-3 rounded-xl border-2 text-[14px] font-bold outline-none shadow-sm cursor-pointer ${
                       isPaidNow
                         ? 'border-green-500 bg-green-50 text-green-700 hover:border-green-600'
-                        : 'border-[#D97D54] bg-[#D97D54]/5 text-[#D97D54] hover:border-[#c26d48]'
+                        : 'border-[#B9562F] bg-[#B9562F]/5 text-[#B9562F] hover:border-[#A2471F]'
                     }`}
                   >
                     {!currentPS && <option value="">未設定</option>}
@@ -1960,7 +2034,7 @@ export default function OrderDetailModal({
                   {isUnpaid && modalData.paymentMethod === 'bank_transfer' && onUpdatePayment && (
                     <button
                       onClick={() => setShowPaymentConfirmModal(true)}
-                      className="h-10 px-3 bg-[#D97D54] text-white text-[11px] font-bold rounded-xl hover:bg-[#c26d48] transition-all shadow-sm flex items-center gap-1 active:scale-95 whitespace-nowrap"
+                      className="h-10 px-3 bg-[#B9562F] text-white text-[13px] font-bold rounded-xl hover:bg-[#A2471F] transition-all shadow-sm flex items-center gap-1 active:scale-95 whitespace-nowrap"
                       title="入金確認 → 納品日確認 → お客様へメール送信"
                     >
                       <CheckCircle2 size={14}/> 入金確認+メール
@@ -1970,84 +2044,15 @@ export default function OrderDetailModal({
               </div>
             );
           })()}
-
-          {isSagawa ? (
-            <div className="bg-green-50 border-2 border-green-200 p-6 md:p-8 rounded-[24px] flex flex-col md:flex-row items-center gap-6 justify-center text-center shadow-inner relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-bl-[64px] -mr-4 -mt-4"></div>
-              
-              <div className="space-y-1 relative z-10">
-                <span className="text-[12px] font-bold text-green-700 tracking-widest bg-white/50 px-3 py-1 rounded-full">【箱詰め・集荷】発送予定日</span>
-                <p className="text-[28px] md:text-[36px] font-black text-green-900 flex items-center justify-center gap-2 pt-2">
-                  <Package size={24} className="text-green-600"/> 
-                  {modalData.shippingDate ? `${modalData.shippingDate.split('-')[1]}月${modalData.shippingDate.split('-')[2]}日` : '未設定'}
-                </p>
-              </div>
-              
-              <ChevronRight size={32} className="hidden md:block text-green-300 relative z-10"/>
-              
-              <div className="space-y-1 relative z-10">
-                <span className="text-[12px] font-bold text-green-700 tracking-widest">お客様 お届け日</span>
-                <p className="text-[18px] md:text-[20px] font-bold text-green-800 flex items-center justify-center gap-2 pt-2">
-                  <CalendarIcon size={18} className="text-green-600"/> 
-                  {modalData.selectedDate ? `${modalData.selectedDate.split('-')[1]}月${modalData.selectedDate.split('-')[2]}日` : '未指定'}
-                </p>
-                <p className="text-[12px] font-bold text-green-700">{modalData.selectedTime || '時間指定なし'}</p>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-[#FBFAF9] border border-[#EAEAEA] p-6 rounded-[24px] flex flex-col items-center justify-center text-center shadow-inner">
-               <span className="text-[12px] font-bold text-[#999999] tracking-widest mb-1">
-                 {isPickup ? 'ご来店予定日' : '配達予定日'}
-               </span>
-               <p className="text-[28px] font-black text-[#2D4B3E] flex items-center gap-2">
-                 <CalendarIcon size={24}/> {modalData.selectedDate ? `${modalData.selectedDate.split('-')[1]}月${modalData.selectedDate.split('-')[2]}日` : '未設定'}
-               </p>
-               <p className="text-[14px] font-bold text-[#D97C8F] mt-2">{modalData.selectedTime || '時間指定なし'}</p>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
-              <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><User size={18}/> 注文者情報</h3>
-              <div className="space-y-4 text-[13px] bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA]">
-                <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">お名前</span><span className="font-black text-[16px]">{modalData.customerInfo?.name || '未設定'} 様</span></p>
-                <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">電話番号</span><span className="font-bold text-[14px]">{modalData.customerInfo?.phone || '未設定'}</span></p>
-                {modalData.customerInfo?.email && <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">メール</span><span className="font-bold text-[#4285F4]">{modalData.customerInfo?.email}</span></p>}
-                {!isPickup && <p className="pt-2 border-t border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">住所</span><span className="font-bold leading-relaxed">〒{modalData.customerInfo?.zip}<br/>{modalData.customerInfo?.address1} {modalData.customerInfo?.address2}</span></p>}
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
-              <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><MapPin size={18}/> お届け先情報</h3>
-              <div className="space-y-3 text-[13px]">
-                {isPickup ? (
-                  <div className="bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA]">
-                    <p><span className="text-[#999999] text-[10px] block mb-1 tracking-widest">受取店舗</span><span className="font-black text-[16px] text-[#2D4B3E]">{modalData.selectedShop || '未指定'}</span></p>
-                  </div>
-                ) : (
-                  <div className="bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA] space-y-3 relative overflow-hidden">
-                    {modalData.isRecipientDifferent && <div className="absolute top-0 right-0 bg-[#2D4B3E] text-white text-[9px] font-bold px-2 py-0.5 rounded-bl-lg">注文者と別住所</div>}
-                    <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">宛名</span><span className="font-black text-[16px]">{modalTargetInfo?.name || '未設定'} 様</span></p>
-                    <p><span className="text-[#999999] text-[10px] block mb-0.5 tracking-widest">お届け先住所</span><span className="font-bold text-[14px] block leading-relaxed">〒{modalTargetInfo?.zip}<br/>{modalTargetInfo?.address1} {modalTargetInfo?.address2}</span></p>
-                    
-                    <a 
-                      href={getGoogleMapsUrl(modalTargetInfo)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 mt-3 text-[12px] font-bold text-white bg-[#4285F4] px-4 py-2.5 rounded-xl hover:bg-[#3367D6] transition-all shadow-md active:scale-95 w-full justify-center"
-                    >
-                      <MapPin size={16} /> Googleマップで場所を確認
-                    </a>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
 
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] gap-6 items-start">
+            <div className="space-y-6 min-w-0">
           {/* 置き配ご案内セクションは廃止（持ち戻りのみ運用） */}
 
-          <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
-            <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><Tag size={18}/> オーダー内容</h3>
+          <div className="bg-white p-5 md:p-6 rounded-[14px] border border-[#E6E2DA] space-y-4">
+            <h3 className="text-[15px] font-bold text-[#2D4B3E] border-b border-[#FAFAF7] pb-2 flex items-center gap-2"><Tag size={18}/> オーダー内容</h3>
             <div className="flex flex-col sm:flex-row gap-6">
               
               <div className="flex flex-col gap-2 shrink-0">
@@ -2058,11 +2063,11 @@ export default function OrderDetailModal({
                   if (allImages.length > 0) {
                     return (
                       <div className="space-y-2">
-                        <span className="text-[10px] font-bold text-[#2D4B3E] bg-[#2D4B3E]/10 px-2 py-0.5 rounded inline-block">完成写真 ({allImages.length}枚)</span>
+                        <span className="text-[12px] font-bold text-[#2D4B3E] bg-[#2D4B3E]/10 px-2 py-0.5 rounded inline-block">完成写真 ({allImages.length}枚)</span>
                         <div className="grid grid-cols-2 gap-2 w-full sm:w-40">
                           {allImages.map((url, i) => (
                             <div key={i} className="relative group">
-                              <img src={url} alt={`完成写真${i+1}`} className="w-full aspect-square object-cover rounded-lg border border-[#EAEAEA] shadow-sm"/>
+                              <img src={url} alt={`完成写真${i+1}`} className="w-full aspect-square object-cover rounded-lg border border-[#E6E2DA] shadow-sm"/>
                               <button
                                 onClick={async () => {
                                   if (!confirm('この写真を削除しますか？')) return;
@@ -2074,7 +2079,7 @@ export default function OrderDetailModal({
                                   // 表示更新のためモーダル閉じて再オープン推奨
                                   window.location.reload();
                                 }}
-                                className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                                className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-[12px] opacity-0 group-hover:opacity-100 transition-opacity shadow"
                                 title="削除"
                               >×</button>
                             </div>
@@ -2086,13 +2091,13 @@ export default function OrderDetailModal({
                   if (modalData.referenceImage) {
                     return (
                       <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-[#999999] bg-[#F7F7F7] px-2 py-0.5 rounded inline-block">お客様からの参考画像</span>
-                        <img src={modalData.referenceImage} alt="参考画像" className="w-full sm:w-40 h-32 sm:h-40 object-cover rounded-2xl border border-[#EAEAEA] shadow-sm" />
+                        <span className="text-[12px] font-bold text-[#5C6660] bg-[#F6F4EF] px-2 py-0.5 rounded inline-block">お客様からの参考画像</span>
+                        <img src={modalData.referenceImage} alt="参考画像" className="w-full sm:w-40 h-32 sm:h-40 object-cover rounded-2xl border border-[#E6E2DA] shadow-sm" />
                       </div>
                     );
                   }
                   return (
-                    <div className="w-full sm:w-40 h-32 sm:h-40 bg-[#FBFAF9] border border-[#EAEAEA] rounded-2xl flex flex-col items-center justify-center text-[#999999] text-[11px] font-bold gap-2">
+                    <div className="w-full sm:w-40 h-32 sm:h-40 bg-[#FAFAF7] border border-[#E6E2DA] rounded-2xl flex flex-col items-center justify-center text-[#5C6660] text-[13px] font-bold gap-2">
                       <ImageIcon size={24}/> 画像なし
                     </div>
                   );
@@ -2101,11 +2106,11 @@ export default function OrderDetailModal({
                 {/* ★ 見積の参考写真（お客様が見積依頼時に添付。表示のみ） */}
                 {estimateImages.length > 0 && (
                   <div className="space-y-2 mt-2">
-                    <span className="text-[10px] font-bold text-[#117768] bg-[#117768]/10 px-2 py-0.5 rounded inline-block">見積の参考写真 ({estimateImages.length}枚)</span>
+                    <span className="text-[12px] font-bold text-[#117768] bg-[#117768]/10 px-2 py-0.5 rounded inline-block">見積の参考写真 ({estimateImages.length}枚)</span>
                     <div className="grid grid-cols-2 gap-2 w-full sm:w-40">
                       {estimateImages.map((url, i) => (
                         <a key={i} href={url} target="_blank" rel="noopener noreferrer" title="拡大して見る">
-                          <img src={url} alt={`見積の参考写真${i+1}`} className="w-full aspect-square object-cover rounded-lg border border-[#EAEAEA] shadow-sm hover:opacity-80 transition-opacity"/>
+                          <img src={url} alt={`見積の参考写真${i+1}`} className="w-full aspect-square object-cover rounded-lg border border-[#E6E2DA] shadow-sm hover:opacity-80 transition-opacity"/>
                         </a>
                       ))}
                     </div>
@@ -2121,20 +2126,20 @@ export default function OrderDetailModal({
                     disabled={isUploading}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                   />
-                  <div className={`flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl text-[11px] font-bold transition-all border ${isUploading ? 'bg-gray-100 text-gray-400 border-gray-200' : 'bg-white text-[#2D4B3E] border-[#2D4B3E]/30 hover:bg-[#2D4B3E]/5 shadow-sm'}`}>
+                  <div className={`flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl text-[13px] font-bold transition-all border ${isUploading ? 'bg-gray-100 text-gray-400 border-gray-200' : 'bg-white text-[#2D4B3E] border-[#2D4B3E]/30 hover:bg-[#2D4B3E]/5 shadow-sm'}`}>
                     <Upload size={14} />
                     {isUploading ? '送信中...' : '完成写真を登録'}
                   </div>
                 </div>
               </div>
 
-              <div className="flex-1 text-[13px]">
+              <div className="flex-1 text-[15px]">
                 {/* ★ EC注文の場合: 商品画像付きカート内訳を表示 */}
                 {modalData.orderType === 'ec' && Array.isArray(modalData.cartItems) && modalData.cartItems.length > 0 ? (
-                  <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA] space-y-3">
-                    <div className="flex items-center gap-2 pb-2 border-b border-[#EAEAEA]">
-                      <span className="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded inline-flex items-center gap-1"><ShoppingBag size={10}/> EC注文</span>
-                      <span className="text-[10px] text-[#999999]">{modalData.cartItems.length} 商品 / 合計 {modalData.cartItems.reduce((s, c) => s + (Number(c.qty) || 0), 0)} 点</span>
+                  <div className="py-1 border-b border-[#EFEBE3] space-y-3">
+                    <div className="flex items-center gap-2 pb-2 border-b border-[#E6E2DA]">
+                      <span className="text-[12px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded inline-flex items-center gap-1"><ShoppingBag size={10}/> EC注文</span>
+                      <span className="text-[12px] text-[#5C6660]">{modalData.cartItems.length} 商品 / 合計 {modalData.cartItems.reduce((s, c) => s + (Number(c.qty) || 0), 0)} 点</span>
                     </div>
                     <div className="space-y-3">
                       {modalData.cartItems.map((c, idx) => {
@@ -2142,21 +2147,21 @@ export default function OrderDetailModal({
                         const optTotal = Number(c.optionsTotal) || 0;
                         const lineTotal = (Number(c.price) + optTotal) * Number(c.qty);
                         return (
-                          <div key={idx} className="bg-white p-2 rounded-lg border border-[#EAEAEA] space-y-2">
+                          <div key={idx} className="bg-white p-2 rounded-lg border border-[#E6E2DA] space-y-2">
                             <div className="flex items-center gap-3">
                               {/* 商品画像 */}
-                              <div className="w-14 h-14 shrink-0 bg-[#FBFAF9] rounded-lg overflow-hidden">
+                              <div className="w-14 h-14 shrink-0 bg-[#FAFAF7] rounded-lg overflow-hidden">
                                 {c.imageUrl ? (
                                   <img src={c.imageUrl} alt={c.name} className="w-full h-full object-cover" />
                                 ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-[#CCC] text-[10px]">No Img</div>
+                                  <div className="w-full h-full flex items-center justify-center text-[#CCC] text-[12px]">No Img</div>
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-[12px] font-bold text-[#111111] truncate">{c.name}</p>
-                                <p className="text-[10px] text-[#999999] mt-0.5">¥{Number(c.price).toLocaleString()}{optTotal > 0 && <span className="text-pink-700"> + オプション¥{optTotal.toLocaleString()}</span>} × {c.qty}</p>
+                                <p className="text-[14px] font-bold text-[#1F2A24] truncate">{c.name}</p>
+                                <p className="text-[12px] text-[#5C6660] mt-0.5">¥{Number(c.price).toLocaleString()}{optTotal > 0 && <span className="text-pink-700"> + オプション¥{optTotal.toLocaleString()}</span>} × {c.qty}</p>
                               </div>
-                              <span className="text-[13px] text-[#2D4B3E] font-bold shrink-0">
+                              <span className="text-[15px] text-[#2D4B3E] font-bold shrink-0">
                                 ¥{lineTotal.toLocaleString()}
                               </span>
                             </div>
@@ -2164,18 +2169,18 @@ export default function OrderDetailModal({
                             {(opt.wrapping || opt.messageCard || opt.textInsertion) && (
                               <div className="ml-[68px] bg-pink-50 rounded-lg p-2 space-y-1 border border-pink-100">
                                 {opt.wrapping && (
-                                  <p className="text-[10px] text-pink-900 font-bold flex items-center gap-1"><Gift size={10}/> ラッピング (+¥{(Number(opt.wrapping.price)||0).toLocaleString()})</p>
+                                  <p className="text-[12px] text-pink-900 font-bold flex items-center gap-1"><Gift size={10}/> ラッピング (+¥{(Number(opt.wrapping.price)||0).toLocaleString()})</p>
                                 )}
                                 {opt.messageCard && (
-                                  <div className="text-[10px] text-pink-900">
+                                  <div className="text-[12px] text-pink-900">
                                     <p className="font-bold flex items-center gap-1"><Mail size={10}/> メッセージカード {Number(opt.messageCard.price) > 0 ? `(+¥${Number(opt.messageCard.price).toLocaleString()})` : '(無料)'}</p>
                                     {opt.messageCard.text && (
-                                      <p className="ml-3 text-[10px] text-[#555555] whitespace-pre-wrap mt-0.5">「{opt.messageCard.text}」</p>
+                                      <p className="ml-3 text-[12px] text-[#3B4640] whitespace-pre-wrap mt-0.5">「{opt.messageCard.text}」</p>
                                     )}
                                   </div>
                                 )}
                                 {opt.textInsertion && (
-                                  <p className="text-[10px] text-pink-900 font-bold flex items-center gap-1"><Pen size={10}/> 文字入れ「{opt.textInsertion.text}」({opt.textInsertion.position}) (+¥{(Number(opt.textInsertion.price)||0).toLocaleString()})</p>
+                                  <p className="text-[12px] text-pink-900 font-bold flex items-center gap-1"><Pen size={10}/> 文字入れ「{opt.textInsertion.text}」({opt.textInsertion.position}) (+¥{(Number(opt.textInsertion.price)||0).toLocaleString()})</p>
                                 )}
                               </div>
                             )}
@@ -2187,48 +2192,47 @@ export default function OrderDetailModal({
                 ) : (
                   /* カスタム注文の場合: 従来通り */
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block mb-1">お花の種類</span><span className="font-bold text-[#2D4B3E] text-[14px]">{modalData.flowerType || '未設定'}</span></div>
-                    <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block mb-1">用途</span><span className="font-bold">{modalData.flowerPurpose} {modalData.otherPurpose && `(${modalData.otherPurpose})`}</span></div>
-                    <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block mb-1">カラー</span><span className="font-bold">{modalData.flowerColor} {modalData.otherColor && `(${modalData.otherColor})`}</span></div>
-                    <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA]"><span className="text-[#999999] text-[10px] block mb-1">イメージ</span><span className="font-bold">{modalData.flowerVibe} {modalData.otherVibe && `(${modalData.otherVibe})`}</span></div>
+                    <div className="py-1 border-b border-[#EFEBE3]"><span className="text-[#5C6660] text-[12px] block mb-1">お花の種類</span><span className="font-bold text-[#2D4B3E] text-[15px]">{modalData.flowerType || '未設定'}</span></div>
+                    <div className="py-1 border-b border-[#EFEBE3]"><span className="text-[#5C6660] text-[12px] block mb-1">用途</span><span className="font-bold">{modalData.flowerPurpose} {modalData.otherPurpose && `(${modalData.otherPurpose})`}</span></div>
+                    <div className="py-1 border-b border-[#EFEBE3]"><span className="text-[#5C6660] text-[12px] block mb-1">カラー</span><span className="font-bold">{modalData.flowerColor} {modalData.otherColor && `(${modalData.otherColor})`}</span></div>
+                    <div className="py-1 border-b border-[#EFEBE3]"><span className="text-[#5C6660] text-[12px] block mb-1">イメージ</span><span className="font-bold">{modalData.flowerVibe} {modalData.otherVibe && `(${modalData.otherVibe})`}</span></div>
                   </div>
                 )}
               </div>
             </div>
-            {modalData.isBring === 'bring' && <div className="bg-orange-100 text-orange-700 px-3 py-2 rounded-xl text-[12px] font-bold mt-2 inline-block border border-orange-200">※お客様からのお花/器の持込あり</div>}
+            {modalData.isBring === 'bring' && <div className="bg-orange-100 text-orange-700 px-3 py-2 rounded-xl text-[14px] font-bold mt-2 inline-block border border-orange-200">※お客様からのお花/器の持込あり</div>}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-4">
             {modalData.cardType && modalData.cardType !== 'なし' && (
-              <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm space-y-4">
-                <h3 className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2"><MessageSquare size={18}/> 添付物: {modalData.cardType}</h3>
+              <div className="bg-white p-5 md:p-6 rounded-[14px] border border-[#E6E2DA] space-y-4">
+                <h3 className="text-[15px] font-bold text-[#2D4B3E] border-b border-[#FAFAF7] pb-2 flex items-center gap-2"><MessageSquare size={18}/> 添付物: {modalData.cardType}</h3>
                 
                 {modalData.cardType === 'メッセージカード' && (
-                  <div className="bg-[#FBFAF9] p-5 rounded-2xl text-[13px] font-bold whitespace-pre-wrap border border-[#EAEAEA] text-[#333333] leading-relaxed">
+                  <div className="text-[15px] font-bold whitespace-pre-wrap text-[#1F2A24] leading-relaxed">
                     {modalData.cardMessage}
                   </div>
                 )}
 
                 {/* [2026-10 B2] 自由入力の立札（会社名・送り主・ご要望） */}
                 {modalData.cardType === '立札' && isFreeTatefuda(modalData) && (
-                  <div className="space-y-1.5 text-[12px] bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA]">
+                  <div className="space-y-1.5 text-[14px]">
                     {tatefudaRows(modalData).map(([k, v]) => (
-                      <div key={k} className="flex border-b border-white pb-1 last:border-b-0"><span className="w-16 text-[#999999] font-bold shrink-0">{k}:</span><span className="font-black whitespace-pre-line">{v}</span></div>
+                      <div key={k} className="flex border-b border-white pb-1 last:border-b-0"><span className="w-16 text-[#5C6660] font-bold shrink-0">{k}:</span><span className="font-black whitespace-pre-line">{v}</span></div>
                     ))}
-                    <p className="text-[10px] text-[#999] pt-2">レイアウトと頭書き（御祝・御供など）はお店で決めます</p>
+                    <p className="text-[12px] text-[#5C6660] pt-2">レイアウトと頭書き（御祝・御供など）はお店で決めます</p>
                   </div>
                 )}
 
                 {modalData.cardType === '立札' && !isFreeTatefuda(modalData) && (
-                  <div className="space-y-1.5 text-[12px] bg-[#FBFAF9] p-5 rounded-2xl border border-[#EAEAEA]">
-                    <span className="inline-block bg-[#2D4B3E] text-white px-2 py-0.5 rounded text-[10px] font-bold mb-2">{modalData.tatePattern}</span>
-                    {modalData.tateInput1 && <div className="flex border-b border-white pb-1"><span className="w-16 text-[#999999] font-bold">内容:</span><span className="font-black">{modalData.tateInput1}</span></div>}
-                    {modalData.tateInput2 && <div className="flex border-b border-white pb-1"><span className="w-16 text-[#999999] font-bold">宛名:</span><span className="font-black">{modalData.tateInput2} 様</span></div>}
-                    {modalData.tateInput3 && <div className="flex border-b border-white pb-1"><span className="w-16 text-[#999999] font-bold shrink-0">贈り主:</span><span className="font-black whitespace-pre-line">{modalData.tateInput3}</span></div>}
-                    {modalData.tateInput3a && <div className="flex border-b border-white pb-1"><span className="w-16 text-[#999999] font-bold shrink-0">会社名:</span><span className="font-black whitespace-pre-line">{modalData.tateInput3a}</span></div>}
-                    {modalData.tateInput3b && <div className="flex"><span className="w-16 text-[#999999] font-bold shrink-0">役職・名:</span><span className="font-black whitespace-pre-line">{modalData.tateInput3b}</span></div>}
+                  <div className="space-y-1.5 text-[14px]">
+                    <span className="inline-block bg-[#2D4B3E] text-white px-2 py-0.5 rounded text-[12px] font-bold mb-2">{modalData.tatePattern}</span>
+                    {modalData.tateInput1 && <div className="flex border-b border-white pb-1"><span className="w-16 text-[#5C6660] font-bold">内容:</span><span className="font-black">{modalData.tateInput1}</span></div>}
+                    {modalData.tateInput2 && <div className="flex border-b border-white pb-1"><span className="w-16 text-[#5C6660] font-bold">宛名:</span><span className="font-black">{modalData.tateInput2} 様</span></div>}
+                    {modalData.tateInput3 && <div className="flex border-b border-white pb-1"><span className="w-16 text-[#5C6660] font-bold shrink-0">贈り主:</span><span className="font-black whitespace-pre-line">{modalData.tateInput3}</span></div>}
+                    {modalData.tateInput3a && <div className="flex border-b border-white pb-1"><span className="w-16 text-[#5C6660] font-bold shrink-0">会社名:</span><span className="font-black whitespace-pre-line">{modalData.tateInput3a}</span></div>}
+                    {modalData.tateInput3b && <div className="flex"><span className="w-16 text-[#5C6660] font-bold shrink-0">役職・名:</span><span className="font-black whitespace-pre-line">{modalData.tateInput3b}</span></div>}
                     
-                    <p className="text-[10px] font-bold text-[#999999] tracking-widest text-center pt-4 mb-2">仕上がりプレビュー</p>
+                    <p className="text-[12px] font-bold text-[#5C6660] tracking-widest text-center pt-4 mb-2">仕上がりプレビュー</p>
                     <TatefudaPreview 
                       tatePattern={modalData.tatePattern}
                       layout={selectedTateOpt?.layout}
@@ -2244,51 +2248,114 @@ export default function OrderDetailModal({
               </div>
             )}
 
-            <div className="bg-white p-6 md:p-8 rounded-[32px] border-2 border-[#2D4B3E]/20 shadow-md space-y-6">
-              <h3 className="text-[16px] font-black text-[#2D4B3E] border-b border-[#EAEAEA] pb-3 flex items-center gap-2"><CreditCard size={20}/> お支払い情報</h3>
+          {modalData.note && (
+            <NoteBlock label="社内メモ / お客様要望" tone="memo" text={modalData.note} />
+          )}
+
+          {/* ★ お客様が入力した補足・備考（purposeNote） */}
+          {modalData.purposeNote && (
+            <NoteBlock label="お客様からの補足・備考" tone="customer" text={modalData.purposeNote} />
+          )}
+
+          {modalData.statusHistory && modalData.statusHistory.length > 0 && (
+            <div className="bg-white p-5 md:p-6 rounded-[14px] border border-[#E6E2DA]">
+              <h3 className="text-[15px] font-bold text-[#2D4B3E] border-b border-[#FAFAF7] pb-2 flex items-center gap-2">
+                <ListChecks size={16}/> 対応履歴
+              </h3>
+              <div className="space-y-2 mt-4 text-[14px]">
+                {modalData.statusHistory.map((h, i) => (
+                  <div key={i} className="flex items-center justify-between border-b border-dashed border-[#E6E2DA] pb-2 last:border-0">
+                    <span className="text-[#5C6660] font-mono">{safeFormatDate(h.date, true)}</span>
+                    <span className="font-bold text-[#2D4B3E] px-3">{h.status}</span>
+                    <span className="bg-[#FAFAF7] border border-[#E6E2DA] px-2 py-1 rounded text-[#3B4640] font-bold">{h.staff}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+            </div>
+            <div className="space-y-6 min-w-0">
+            <div className="bg-white p-5 md:p-6 rounded-[14px] border border-[#E6E2DA] space-y-4">
+              <h3 className="text-[15px] font-bold text-[#2D4B3E] border-b border-[#FAFAF7] pb-2 flex items-center gap-2"><User size={18}/> 注文者情報</h3>
+              <div className="space-y-4 text-[15px]">
+                <p><span className="text-[#5C6660] text-[12px] block mb-0.5 tracking-widest">お名前</span><span className="font-black text-[16px]">{modalData.customerInfo?.name || '未設定'} 様</span></p>
+                <p><span className="text-[#5C6660] text-[12px] block mb-0.5 tracking-widest">電話番号</span><span className="font-bold text-[15px]">{modalData.customerInfo?.phone || '未設定'}</span></p>
+                {modalData.customerInfo?.email && <p><span className="text-[#5C6660] text-[12px] block mb-0.5 tracking-widest">メール</span><span className="font-bold text-[#4285F4]">{modalData.customerInfo?.email}</span></p>}
+                {!isPickup && <p className="pt-2 border-t border-[#E6E2DA]"><span className="text-[#5C6660] text-[12px] block mb-0.5 tracking-widest">住所</span><span className="font-bold leading-relaxed">〒{modalData.customerInfo?.zip}<br/>{modalData.customerInfo?.address1} {modalData.customerInfo?.address2}</span></p>}
+              </div>
+            </div>
+
+            <div className="bg-white p-5 md:p-6 rounded-[14px] border border-[#E6E2DA] space-y-4">
+              <h3 className="text-[15px] font-bold text-[#2D4B3E] border-b border-[#FAFAF7] pb-2 flex items-center gap-2"><MapPin size={18}/> お届け先情報</h3>
+              <div className="space-y-3 text-[15px]">
+                {isPickup ? (
+                  <div>
+                    <p><span className="text-[#5C6660] text-[12px] block mb-1 tracking-widest">受取店舗</span><span className="font-black text-[16px] text-[#2D4B3E]">{modalData.selectedShop || '未指定'}</span></p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 relative">
+                    {modalData.isRecipientDifferent && <div className="inline-block bg-[#2D4B3E] text-white text-[12px] font-bold px-2 py-0.5 rounded">注文者と別住所</div>}
+                    <p><span className="text-[#5C6660] text-[12px] block mb-0.5 tracking-widest">宛名</span><span className="font-black text-[16px]">{modalTargetInfo?.name || '未設定'} 様</span></p>
+                    <p><span className="text-[#5C6660] text-[12px] block mb-0.5 tracking-widest">お届け先住所</span><span className="font-bold text-[15px] block leading-relaxed">〒{modalTargetInfo?.zip}<br/>{modalTargetInfo?.address1} {modalTargetInfo?.address2}</span></p>
+                    
+                    <a 
+                      href={getGoogleMapsUrl(modalTargetInfo)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 mt-3 text-[14px] font-bold text-white bg-[#4285F4] px-4 py-2.5 rounded-xl hover:bg-[#3367D6] transition-all shadow-md active:scale-95 w-full justify-center"
+                    >
+                      <MapPin size={16} /> Googleマップで場所を確認
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white p-5 md:p-6 rounded-[14px] border border-[#E6E2DA] space-y-5">
+              <h3 className="text-[16px] font-black text-[#2D4B3E] border-b border-[#E6E2DA] pb-3 flex items-center gap-2"><CreditCard size={20}/> お支払い情報</h3>
               {/* [2026-10 C5] 店頭払い・税込 22,000 円超: 電話確認 */}
               {modalData.phoneConfirmation?.status === 'pending' && (
                 <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 space-y-3">
-                  <p className="text-[13px] font-bold text-amber-900">電話確認が必要なご注文です（店頭払い・税込 22,000 円超）</p>
-                  <p className="text-[12px] text-amber-900 leading-relaxed">お客様にお電話でご予約の確認をしてください。確認できなかった場合は、カード払いのご案内を送ります（期限までにお支払いがなければキャンセル扱い）。</p>
+                  <p className="text-[15px] font-bold text-amber-900">電話確認が必要なご注文です（店頭払い・税込 22,000 円超）</p>
+                  <p className="text-[14px] text-amber-900 leading-relaxed">お客様にお電話でご予約の確認をしてください。確認できなかった場合は、カード払いのご案内を送ります（期限までにお支払いがなければキャンセル扱い）。</p>
                   <div className="flex flex-wrap gap-2">
                     <button type="button" disabled={phoneCheckBusy} onClick={() => handlePhoneCheck('confirm')}
-                      className="h-10 px-4 rounded-lg bg-[#2D4B3E] text-white text-[12px] font-bold disabled:opacity-50">電話確認OK（注文を確定）</button>
+                      className="h-10 px-4 rounded-lg bg-[#2D4B3E] text-white text-[14px] font-bold disabled:opacity-50">電話確認OK（注文を確定）</button>
                     <button type="button" disabled={phoneCheckBusy} onClick={() => handlePhoneCheck('send_card_link')}
-                      className="h-10 px-4 rounded-lg bg-white border border-amber-400 text-amber-900 text-[12px] font-bold disabled:opacity-50">確認できない → カード払いのご案内を送る</button>
+                      className="h-10 px-4 rounded-lg bg-white border border-amber-400 text-amber-900 text-[14px] font-bold disabled:opacity-50">確認できない → カード払いのご案内を送る</button>
                   </div>
                 </div>
               )}
               {modalData.phoneConfirmation?.status === 'confirmed' && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-[12px] text-emerald-800 font-bold">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-[14px] text-emerald-800 font-bold">
                   電話確認済み（店頭でお支払い）{modalData.phoneConfirmation.confirmedAt ? `・${new Date(modalData.phoneConfirmation.confirmedAt).toLocaleString('ja-JP')}` : ''}
                 </div>
               )}
               {modalData.phoneConfirmation?.status === 'card_link_sent' && order?.payment_status !== 'paid' && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[12px] text-amber-900 font-bold">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[14px] text-amber-900 font-bold">
                   カード払いのご案内を送信済み。お支払いの期限: {modalData.phoneConfirmation.cardLinkExpiresAt ? new Date(modalData.phoneConfirmation.cardLinkExpiresAt).toLocaleString('ja-JP') : '-'}（過ぎるとキャンセル扱い）
                 </div>
               )}
               {modalData.phoneConfirmation?.status === 'cancelled' && (
-                <div className="bg-gray-100 border border-gray-300 rounded-xl p-3 text-[12px] text-gray-700 font-bold">
+                <div className="bg-gray-100 border border-gray-300 rounded-xl p-3 text-[14px] text-gray-700 font-bold">
                   カード払いの期限までにお支払いがなかったため、キャンセル扱いになりました。
                 </div>
               )}
               {/* [2026-10 A11] カード決済が失敗したとき（あとで払い直して入金済になった場合は出さない） */}
               {modalData.cardPaymentFailedAt && order?.payment_status !== 'paid' && (
-                <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 text-[12px] text-amber-900 font-bold">
+                <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 text-[14px] text-amber-900 font-bold">
                   カード決済が完了しませんでした（{new Date(modalData.cardPaymentFailedAt).toLocaleString('ja-JP')}）。お客様に確認してください。
                 </div>
               )}
               {/* [セキュリティ 2026-10] カード決済の金額が注文の合計と違ったとき */}
               {modalData.paymentAmountMismatch && (
-                <div className="bg-red-50 border border-red-300 rounded-xl p-3 text-[12px] text-red-800 font-bold">
+                <div className="bg-red-50 border border-red-300 rounded-xl p-3 text-[14px] text-red-800 font-bold">
                   カード決済の金額（¥{Number(modalData.paymentAmountMismatch.paid).toLocaleString()}）が、注文の合計（¥{Number(modalData.paymentAmountMismatch.expected).toLocaleString()}）と違います。制作の前に確認してください。
                 </div>
               )}
               {/* [2026-10] 金額の確認（記録のみ）: お客様の画面の計算とサーバーの計算に差があったとき */}
               {modalData.priceCheck?.result === 'mismatch' && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[12px] text-amber-900 leading-relaxed">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[14px] text-amber-900 leading-relaxed">
                   <span className="font-bold">金額の確認で差がありました。</span>
                   {(modalData.priceCheck.diffs || []).includes('item') && <span>（商品代が、選べる金額にありません）</span>}
                   {(modalData.priceCheck.diffs || []).some(d => d.startsWith('fee_')) && <span>（送料などの計算: お届け先の地域を判定できませんでした）</span>}
@@ -2298,8 +2365,8 @@ export default function OrderDetailModal({
                   <span> 念のため、お客様の金額を確認してください。</span>
                 </div>
               )}
-              <div className="space-y-3 text-[13px] md:text-[14px] font-medium text-[#555555]">
-                <div className="flex justify-between items-center"><span>商品代 (税抜):</span><span className="font-black text-[#111111] text-[16px]">¥{getTotals(modalData).item.toLocaleString()}</span></div>
+              <div className="space-y-3 text-[15px] md:text-[15px] font-medium text-[#3B4640]">
+                <div className="flex justify-between items-center"><span>商品代 (税抜):</span><span className="font-black text-[#1F2A24] text-[16px]">¥{getTotals(modalData).item.toLocaleString()}</span></div>
                 {/* ★ 内訳: feeBreakdown があれば各内訳を別行で、なければ従来通り合算 */}
                 {modalData.feeBreakdown ? (
                   <>
@@ -2330,10 +2397,10 @@ export default function OrderDetailModal({
                   </>
                 )}
                 {getTotals(modalData).pickup > 0 && <div className="flex justify-between items-center text-orange-600"><span>器回収・返却費:</span><span className="font-bold text-[16px]">¥{getTotals(modalData).pickup.toLocaleString()}</span></div>}
-                <div className="flex justify-between items-center border-t border-[#EAEAEA] pt-3 text-[#2D4B3E]"><span>消費税 (10%):</span><span className="font-bold text-[16px]">¥{getTotals(modalData).tax.toLocaleString()}</span></div>
+                <div className="flex justify-between items-center border-t border-[#E6E2DA] pt-3 text-[#2D4B3E]"><span>消費税 (10%):</span><span className="font-bold text-[16px]">¥{getTotals(modalData).tax.toLocaleString()}</span></div>
                 
                 <div className="flex justify-between border-t-2 border-[#2D4B3E]/20 pt-4 mt-2 items-end">
-                  <span className="text-[13px] font-bold text-[#2D4B3E] tracking-widest mb-1">合計 (税込)</span>
+                  <span className="text-[15px] font-bold text-[#2D4B3E] tracking-widest mb-1">合計 (税込)</span>
                   <span className="text-[32px] md:text-[36px] font-black text-[#2D4B3E] leading-none">¥{getTotals(modalData).total.toLocaleString()}</span>
                 </div>
               </div>
@@ -2343,12 +2410,12 @@ export default function OrderDetailModal({
                 const orderTotal = getTotals(modalData).total;
                 const hasCorrection = Array.isArray(modalData.amountCorrections) && modalData.amountCorrections.length > 0;
                 if (estimateCheck.state === 'loading') {
-                  return <p className="text-[12px] text-[#999]">見積の金額を確認しています...</p>;
+                  return <p className="text-[14px] text-[#5C6660]">見積の金額を確認しています...</p>;
                 }
                 if (estimateCheck.state === 'error' || estimateCheck.expectedTotal == null) {
                   return (
-                    <div className="flex items-start gap-2 bg-[#F7F7F7] border border-[#EAEAEA] rounded-xl px-4 py-3 text-[12px] text-[#555]">
-                      <AlertCircle size={16} className="shrink-0 mt-0.5 text-[#999]"/>
+                    <div className="flex items-start gap-2 text-[14px] text-[#3B4640]">
+                      <AlertCircle size={16} className="shrink-0 mt-0.5 text-[#5C6660]"/>
                       <span>見積の金額を確認できませんでした。見積一覧で金額をご確認ください。</span>
                     </div>
                   );
@@ -2357,12 +2424,12 @@ export default function OrderDetailModal({
                 const matched = expected === orderTotal;
                 const diff = orderTotal - expected;
                 return (
-                  <div className={`rounded-xl border-2 px-4 py-3 space-y-2 ${matched ? 'bg-[#EEF5F1] border-[#117768]/30' : 'bg-[#FDF1EB] border-[#D97D54]'}`}>
-                    <div className={`flex items-center gap-2 text-[14px] font-black ${matched ? 'text-[#117768]' : 'text-[#D97D54]'}`}>
+                  <div className={`rounded-xl border-2 px-4 py-3 space-y-2 ${matched ? 'bg-[#EEF5F1] border-[#117768]/30' : 'bg-[#FDF1EB] border-[#B9562F]'}`}>
+                    <div className={`flex items-center gap-2 text-[15px] font-black ${matched ? 'text-[#117768]' : 'text-[#B9562F]'}`}>
                       {matched ? <CheckCircle2 size={18}/> : <AlertCircle size={18}/>}
                       {matched ? '見積の金額と一致しています' : '見積の金額と違います'}
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-[13px] text-[#2D4B3E]">
+                    <div className="grid grid-cols-2 gap-2 text-[15px] text-[#2D4B3E]">
                       <span>見積でご案内した金額（税込）</span>
                       <span className="text-right font-bold">¥{expected.toLocaleString()}</span>
                       <span>この注文の金額（税込）</span>
@@ -2370,12 +2437,12 @@ export default function OrderDetailModal({
                       {!matched && (
                         <>
                           <span>差額</span>
-                          <span className="text-right font-bold text-[#D97D54]">{diff > 0 ? '+' : '-'}¥{Math.abs(diff).toLocaleString()}</span>
+                          <span className="text-right font-bold text-[#B9562F]">{diff > 0 ? '+' : '-'}¥{Math.abs(diff).toLocaleString()}</span>
                         </>
                       )}
                     </div>
                     {!matched && (
-                      <p className="text-[12px] text-[#555] leading-relaxed">
+                      <p className="text-[14px] text-[#3B4640] leading-relaxed">
                         {hasCorrection
                           ? 'この注文は金額訂正の記録があります。下の「訂正履歴」で内容をご確認ください。'
                           : '制作に入る前に、見積の内容とお支払い金額をご確認ください。'}
@@ -2386,55 +2453,24 @@ export default function OrderDetailModal({
               })()}
 
               {modalData.paymentMethod && (
-                <div className="pt-4 flex flex-col gap-3 border-t border-[#EAEAEA]">
-                  <div className="flex items-center gap-2 bg-[#F7F7F7] px-4 py-2.5 rounded-xl border border-[#EAEAEA] shadow-sm w-fit">
-                    <span className="text-[10px] font-bold text-[#999999] tracking-widest">支払方法</span>
-                    <span className="text-[13px] font-bold text-[#2D4B3E]">{getPaymentLabel(modalData.paymentMethod)}</span>
+                <div className="pt-4 flex flex-col gap-3 border-t border-[#E6E2DA]">
+                  <div className="flex items-center gap-2 w-fit">
+                    <span className="text-[12px] font-bold text-[#5C6660] tracking-widest">支払方法</span>
+                    <span className="text-[15px] font-bold text-[#2D4B3E]">{getPaymentLabel(modalData.paymentMethod)}</span>
                   </div>
-                  <p className="text-[10px] text-[#999]">※ 入金ステータスは上部のステータス更新の下から変更できます</p>
+                  <p className="text-[12px] text-[#5C6660]">※ 入金ステータスは上部のステータス更新の下から変更できます</p>
                 </div>
               )}
             </div>
+            </div>
           </div>
-
-          {modalData.statusHistory && modalData.statusHistory.length > 0 && (
-            <div className="bg-white p-6 rounded-[24px] border border-[#EAEAEA] shadow-sm mb-4">
-              <h3 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-2 flex items-center gap-2">
-                <ListChecks size={16}/> 対応履歴
-              </h3>
-              <div className="space-y-2 mt-4 text-[12px]">
-                {modalData.statusHistory.map((h, i) => (
-                  <div key={i} className="flex items-center justify-between border-b border-dashed border-[#EAEAEA] pb-2 last:border-0">
-                    <span className="text-[#999999] font-mono">{safeFormatDate(h.date, true)}</span>
-                    <span className="font-bold text-[#2D4B3E] px-3">{h.status}</span>
-                    <span className="bg-[#FBFAF9] border border-[#EAEAEA] px-2 py-1 rounded text-[#555] font-bold">{h.staff}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {modalData.note && (
-            <div className="bg-yellow-50 p-6 rounded-[24px] border border-yellow-200 shadow-sm mb-4">
-              <h3 className="text-[12px] font-bold text-yellow-800 mb-2 tracking-widest flex items-center gap-2">社内メモ / お客様要望</h3>
-              <p className="text-[14px] font-bold text-yellow-900 whitespace-pre-wrap leading-relaxed">{modalData.note}</p>
-            </div>
-          )}
-
-          {/* ★ お客様が入力した補足・備考（purposeNote） */}
-          {modalData.purposeNote && (
-            <div className="bg-blue-50 p-6 rounded-[24px] border border-blue-200 shadow-sm mb-4">
-              <h3 className="text-[12px] font-bold text-blue-800 mb-2 tracking-widest flex items-center gap-2">お客様からの補足・備考</h3>
-              <p className="text-[14px] font-bold text-blue-900 whitespace-pre-wrap leading-relaxed">{modalData.purposeNote}</p>
-            </div>
-          )}
         </div>
       </div>
 
       {/* ★ 銀行振込 入金確認モーダル */}
       {showPaymentConfirmModal && (
         <div
-          className="fixed inset-0 z-[120] flex items-center justify-center bg-[#111111]/70 backdrop-blur-sm p-4 animate-in fade-in"
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-[#1F2A24]/70 backdrop-blur-sm p-4 animate-in fade-in"
           onClick={(e) => { e.stopPropagation(); setShowPaymentConfirmModal(false); }}
         >
           <div
@@ -2446,40 +2482,40 @@ export default function OrderDetailModal({
                 <CheckCircle2 size={22} className="text-[#117768]" />
               </div>
               <div>
-                <h3 className="text-[16px] font-bold text-[#111111]">ご入金確認</h3>
-                <p className="text-[11px] text-[#999999] mt-0.5">納品予定日を確定してお客様へ通知します</p>
+                <h3 className="text-[16px] font-bold text-[#1F2A24]">ご入金確認</h3>
+                <p className="text-[13px] text-[#5C6660] mt-0.5">納品予定日を確定してお客様へ通知します</p>
               </div>
             </div>
 
-            <div className="bg-[#FBFAF9] rounded-xl p-4 mb-4 border border-[#EAEAEA] text-[12px] text-[#555] space-y-1">
-              <div><span className="text-[#999]">ご注文者:</span> <span className="font-bold text-[#111]">{modalData.customerInfo?.name || '-'}</span></div>
-              <div><span className="text-[#999]">合計金額:</span> <span className="font-bold text-[#2D4B3E]">¥{getTotals(modalData).total.toLocaleString()}</span></div>
-              <div><span className="text-[#999]">現在の納品予定日:</span> <span className="font-bold">{modalData.selectedDate || '未指定'} {modalData.selectedTime || ''}</span></div>
+            <div className="bg-[#FAFAF7] rounded-xl p-4 mb-4 border border-[#E6E2DA] text-[14px] text-[#3B4640] space-y-1">
+              <div><span className="text-[#5C6660]">ご注文者:</span> <span className="font-bold text-[#1F2A24]">{modalData.customerInfo?.name || '-'}</span></div>
+              <div><span className="text-[#5C6660]">合計金額:</span> <span className="font-bold text-[#2D4B3E]">¥{getTotals(modalData).total.toLocaleString()}</span></div>
+              <div><span className="text-[#5C6660]">現在の納品予定日:</span> <span className="font-bold">{modalData.selectedDate || '未指定'} {modalData.selectedTime || ''}</span></div>
             </div>
 
             <div className="space-y-3 mb-5">
               <div>
-                <label className="block text-[11px] font-bold text-[#555] mb-1.5 tracking-widest">新しい納品日</label>
+                <label className="block text-[13px] font-bold text-[#3B4640] mb-1.5 tracking-widest">新しい納品日</label>
                 <input
                   type="date"
                   value={confirmDeliveryDate}
                   onChange={(e) => setConfirmDeliveryDate(e.target.value)}
-                  className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"
+                  className="w-full h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] outline-none focus:border-[#2D4B3E]"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-bold text-[#555] mb-1.5 tracking-widest">時間（任意）</label>
+                <label className="block text-[13px] font-bold text-[#3B4640] mb-1.5 tracking-widest">時間（任意）</label>
                 <input
                   type="text"
                   value={confirmDeliveryTime}
                   onChange={(e) => setConfirmDeliveryTime(e.target.value)}
                   placeholder="例: 14:00〜16:00"
-                  className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"
+                  className="w-full h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] outline-none focus:border-[#2D4B3E]"
                 />
               </div>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-5 text-[11px] text-blue-900 leading-relaxed flex items-start gap-1.5">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-5 text-[13px] text-blue-900 leading-relaxed flex items-start gap-1.5">
               <Mail size={12} className="shrink-0 mt-0.5"/>
               <span>確定すると、お客様に「入金確認・納品日のお知らせ」メールが自動送信されます</span>
             </div>
@@ -2488,14 +2524,14 @@ export default function OrderDetailModal({
               <button
                 onClick={() => setShowPaymentConfirmModal(false)}
                 disabled={isProcessingPayment}
-                className="flex-1 h-11 bg-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-xl hover:bg-[#dcdcdc] disabled:opacity-50"
+                className="flex-1 h-11 bg-[#E6E2DA] text-[#3B4640] text-[14px] font-bold rounded-xl hover:bg-[#dcdcdc] disabled:opacity-50"
               >
                 キャンセル
               </button>
               <button
                 onClick={handleConfirmPayment}
                 disabled={isProcessingPayment}
-                className="flex-1 h-11 bg-[#117768] text-white text-[12px] font-bold rounded-xl hover:bg-[#0f6358] disabled:opacity-50 flex items-center justify-center gap-1.5"
+                className="flex-1 h-11 bg-[#117768] text-white text-[14px] font-bold rounded-xl hover:bg-[#0f6358] disabled:opacity-50 flex items-center justify-center gap-1.5"
               >
                 {isProcessingPayment ? '送信中...' : <><CheckCircle2 size={15}/>確定 + メール送信</>}
               </button>
@@ -2507,113 +2543,113 @@ export default function OrderDetailModal({
       {/* ★ 注文内容編集モーダル */}
       {showEditModal && editForm && (
         <div
-          className="fixed inset-0 z-[130] flex items-center justify-center bg-[#111]/70 backdrop-blur-sm p-3 md:p-4"
+          className="fixed inset-0 z-[130] flex items-center justify-center bg-[#1F2A24]/70 backdrop-blur-sm p-3 md:p-4"
           onClick={() => !isSavingEdit && setShowEditModal(false)}
         >
           <div
             className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 bg-white border-b border-[#EAEAEA] px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+            <div className="sticky top-0 bg-white border-b border-[#E6E2DA] px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
               <h3 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2"><Pen size={16}/> 注文内容の編集</h3>
-              <button onClick={() => !isSavingEdit && setShowEditModal(false)} className="text-[#999] hover:text-[#111] text-[20px] font-bold">✕</button>
+              <button onClick={() => !isSavingEdit && setShowEditModal(false)} className="text-[#5C6660] hover:text-[#1F2A24] text-[20px] font-bold">✕</button>
             </div>
 
             <div className="p-6 space-y-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[11px] text-blue-900 flex items-start gap-1.5">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[13px] text-blue-900 flex items-start gap-1.5">
                 <Lightbulb size={12} className="shrink-0 mt-0.5"/>
                 <span>日程変更・内容変更は電話受付前提。変更内容は対応履歴に記録されます。</span>
               </div>
 
               {/* 納品日・時間 */}
               <div className="space-y-3">
-                <h4 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2 flex items-center gap-1.5"><CalendarIcon size={14}/> 納品日・時間</h4>
+                <h4 className="text-[15px] font-bold text-[#2D4B3E] border-b border-[#E6E2DA] pb-2 flex items-center gap-1.5"><CalendarIcon size={14}/> 納品日・時間</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] font-bold text-[#555] block mb-1">納品日</label>
-                    <input type="date" value={editForm.selectedDate} onChange={(e) => setEditForm({...editForm, selectedDate: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                    <label className="text-[13px] font-bold text-[#3B4640] block mb-1">納品日</label>
+                    <input type="date" value={editForm.selectedDate} onChange={(e) => setEditForm({...editForm, selectedDate: e.target.value})} className="w-full h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"/>
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-[#555] block mb-1">時間（任意）</label>
-                    <input type="text" placeholder="例: 14:00〜16:00" value={editForm.selectedTime} onChange={(e) => setEditForm({...editForm, selectedTime: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                    <label className="text-[13px] font-bold text-[#3B4640] block mb-1">時間（任意）</label>
+                    <input type="text" placeholder="例: 14:00〜16:00" value={editForm.selectedTime} onChange={(e) => setEditForm({...editForm, selectedTime: e.target.value})} className="w-full h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"/>
                   </div>
                 </div>
               </div>
 
               {/* お花の種類・用途・色・イメージ */}
               <div className="space-y-3">
-                <h4 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2">お花の種類・用途・色・イメージ</h4>
+                <h4 className="text-[15px] font-bold text-[#2D4B3E] border-b border-[#E6E2DA] pb-2">お花の種類・用途・色・イメージ</h4>
                 <div>
-                  <label className="text-[11px] font-bold text-[#555] block mb-1">お花の種類</label>
-                  <input type="text" value={editForm.flowerType} onChange={(e) => setEditForm({...editForm, flowerType: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                  <label className="text-[13px] font-bold text-[#3B4640] block mb-1">お花の種類</label>
+                  <input type="text" value={editForm.flowerType} onChange={(e) => setEditForm({...editForm, flowerType: e.target.value})} className="w-full h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"/>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] font-bold text-[#555] block mb-1">用途</label>
-                    <input type="text" value={editForm.flowerPurpose} onChange={(e) => setEditForm({...editForm, flowerPurpose: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                    <label className="text-[13px] font-bold text-[#3B4640] block mb-1">用途</label>
+                    <input type="text" value={editForm.flowerPurpose} onChange={(e) => setEditForm({...editForm, flowerPurpose: e.target.value})} className="w-full h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"/>
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-[#555] block mb-1">用途（その他）</label>
-                    <input type="text" value={editForm.otherPurpose} onChange={(e) => setEditForm({...editForm, otherPurpose: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                    <label className="text-[13px] font-bold text-[#3B4640] block mb-1">用途（その他）</label>
+                    <input type="text" value={editForm.otherPurpose} onChange={(e) => setEditForm({...editForm, otherPurpose: e.target.value})} className="w-full h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"/>
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-[#555] block mb-1">メインカラー</label>
-                    <input type="text" value={editForm.flowerColor} onChange={(e) => setEditForm({...editForm, flowerColor: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                    <label className="text-[13px] font-bold text-[#3B4640] block mb-1">メインカラー</label>
+                    <input type="text" value={editForm.flowerColor} onChange={(e) => setEditForm({...editForm, flowerColor: e.target.value})} className="w-full h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"/>
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-[#555] block mb-1">イメージ</label>
-                    <input type="text" value={editForm.flowerVibe} onChange={(e) => setEditForm({...editForm, flowerVibe: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                    <label className="text-[13px] font-bold text-[#3B4640] block mb-1">イメージ</label>
+                    <input type="text" value={editForm.flowerVibe} onChange={(e) => setEditForm({...editForm, flowerVibe: e.target.value})} className="w-full h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"/>
                   </div>
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-[#555] block mb-1">イメージ（その他）</label>
-                  <input type="text" value={editForm.otherVibe} onChange={(e) => setEditForm({...editForm, otherVibe: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                  <label className="text-[13px] font-bold text-[#3B4640] block mb-1">イメージ（その他）</label>
+                  <input type="text" value={editForm.otherVibe} onChange={(e) => setEditForm({...editForm, otherVibe: e.target.value})} className="w-full h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"/>
                 </div>
               </div>
 
               {/* 立札・カード */}
               <div className="space-y-3">
-                <h4 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2">立札・カード</h4>
+                <h4 className="text-[15px] font-bold text-[#2D4B3E] border-b border-[#E6E2DA] pb-2">立札・カード</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] font-bold text-[#555] block mb-1">カードタイプ</label>
-                    <select value={editForm.cardType} onChange={(e) => setEditForm({...editForm, cardType: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]">
+                    <label className="text-[13px] font-bold text-[#3B4640] block mb-1">カードタイプ</label>
+                    <select value={editForm.cardType} onChange={(e) => setEditForm({...editForm, cardType: e.target.value})} className="w-full h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]">
                       <option value="">指定なし</option>
                       <option value="立札">立札</option>
                       <option value="メッセージカード">メッセージカード</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-[#555] block mb-1">立札パターン</label>
-                    <input type="text" placeholder="例: 御祝、御供" value={editForm.tatePattern} onChange={(e) => setEditForm({...editForm, tatePattern: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                    <label className="text-[13px] font-bold text-[#3B4640] block mb-1">立札パターン</label>
+                    <input type="text" placeholder="例: 御祝、御供" value={editForm.tatePattern} onChange={(e) => setEditForm({...editForm, tatePattern: e.target.value})} className="w-full h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"/>
                   </div>
                 </div>
                 {/* [2026-10 B2] 立札（自由入力） */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <input type="text" placeholder="立札 会社名・団体名" value={editForm.tateCompany} onChange={(e) => setEditForm({...editForm, tateCompany: e.target.value})} className="h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>
-                  <textarea placeholder="立札 送り主（連名は改行）" value={editForm.tateSender} onChange={(e) => setEditForm({...editForm, tateSender: e.target.value})} rows={2} className="px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E] resize-y"/>
-                  <textarea placeholder="立札 ご要望" value={editForm.tateRequest} onChange={(e) => setEditForm({...editForm, tateRequest: e.target.value})} rows={2} className="px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E] resize-y"/>
+                  <input type="text" placeholder="立札 会社名・団体名" value={editForm.tateCompany} onChange={(e) => setEditForm({...editForm, tateCompany: e.target.value})} className="h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[14px] outline-none focus:border-[#2D4B3E]"/>
+                  <textarea placeholder="立札 送り主（連名は改行）" value={editForm.tateSender} onChange={(e) => setEditForm({...editForm, tateSender: e.target.value})} rows={2} className="px-3 py-2 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[14px] outline-none focus:border-[#2D4B3E] resize-y"/>
+                  <textarea placeholder="立札 ご要望" value={editForm.tateRequest} onChange={(e) => setEditForm({...editForm, tateRequest: e.target.value})} rows={2} className="px-3 py-2 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[14px] outline-none focus:border-[#2D4B3E] resize-y"/>
                 </div>
                 {/* 古い形（パターン選択）の立札が入っている注文だけ、元の入力欄も出す */}
                 {(modalData.tateInput1 || modalData.tateInput2 || modalData.tateInput3) && (
                 <div className="grid grid-cols-3 gap-2">
-                  <input type="text" placeholder="立札 1行目" value={editForm.tateInput1} onChange={(e) => setEditForm({...editForm, tateInput1: e.target.value})} className="h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>
-                  <input type="text" placeholder="立札 2行目" value={editForm.tateInput2} onChange={(e) => setEditForm({...editForm, tateInput2: e.target.value})} className="h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E]"/>
-                  <textarea placeholder="立札 3行目（連名はEnter改行）" value={editForm.tateInput3} onChange={(e) => setEditForm({...editForm, tateInput3: e.target.value})} rows={2} className="px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#2D4B3E] resize-y"/>
+                  <input type="text" placeholder="立札 1行目" value={editForm.tateInput1} onChange={(e) => setEditForm({...editForm, tateInput1: e.target.value})} className="h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[14px] outline-none focus:border-[#2D4B3E]"/>
+                  <input type="text" placeholder="立札 2行目" value={editForm.tateInput2} onChange={(e) => setEditForm({...editForm, tateInput2: e.target.value})} className="h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[14px] outline-none focus:border-[#2D4B3E]"/>
+                  <textarea placeholder="立札 3行目（連名はEnter改行）" value={editForm.tateInput3} onChange={(e) => setEditForm({...editForm, tateInput3: e.target.value})} rows={2} className="px-3 py-2 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[14px] outline-none focus:border-[#2D4B3E] resize-y"/>
                 </div>
                 )}
                 <div>
-                  <label className="text-[11px] font-bold text-[#555] block mb-1">メッセージカード本文</label>
-                  <textarea value={editForm.cardMessage} onChange={(e) => setEditForm({...editForm, cardMessage: e.target.value})} rows={3} className="w-full px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                  <label className="text-[13px] font-bold text-[#3B4640] block mb-1">メッセージカード本文</label>
+                  <textarea value={editForm.cardMessage} onChange={(e) => setEditForm({...editForm, cardMessage: e.target.value})} rows={3} className="w-full px-3 py-2 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"/>
                 </div>
               </div>
 
               {/* 受取方法・配送先 */}
               <div className="space-y-3">
-                <h4 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2 flex items-center gap-1.5"><Package size={14}/> 受取方法・配送先</h4>
+                <h4 className="text-[15px] font-bold text-[#2D4B3E] border-b border-[#E6E2DA] pb-2 flex items-center gap-1.5"><Package size={14}/> 受取方法・配送先</h4>
                 <div>
-                  <label className="text-[11px] font-bold text-[#555] block mb-1">受取方法</label>
-                  <select value={editForm.receiveMethod} onChange={(e) => setEditForm({...editForm, receiveMethod: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]">
+                  <label className="text-[13px] font-bold text-[#3B4640] block mb-1">受取方法</label>
+                  <select value={editForm.receiveMethod} onChange={(e) => setEditForm({...editForm, receiveMethod: e.target.value})} className="w-full h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]">
                     <option value="">指定なし</option>
                     <option value="pickup">店頭受取</option>
                     <option value="delivery">自社配達</option>
@@ -2622,35 +2658,35 @@ export default function OrderDetailModal({
                 </div>
                 {editForm.receiveMethod === 'pickup' && (
                   <div>
-                    <label className="text-[11px] font-bold text-[#555] block mb-1">受取店舗</label>
-                    <input type="text" value={editForm.selectedShop} onChange={(e) => setEditForm({...editForm, selectedShop: e.target.value})} className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                    <label className="text-[13px] font-bold text-[#3B4640] block mb-1">受取店舗</label>
+                    <input type="text" value={editForm.selectedShop} onChange={(e) => setEditForm({...editForm, selectedShop: e.target.value})} className="w-full h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"/>
                   </div>
                 )}
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={editForm.isRecipientDifferent} onChange={(e) => setEditForm({...editForm, isRecipientDifferent: e.target.checked})} className="accent-[#2D4B3E]"/>
-                  <span className="text-[12px] font-bold text-[#555]">注文者と別住所に届ける</span>
+                  <span className="text-[14px] font-bold text-[#3B4640]">注文者と別住所に届ける</span>
                 </label>
                 {editForm.isRecipientDifferent && (
-                  <div className="space-y-2 bg-[#FBFAF9] p-3 rounded-lg border border-[#EAEAEA]">
-                    <input type="text" placeholder="お届け先 お名前" value={editForm.recipientInfo.name || ''} onChange={(e) => setEditForm({...editForm, recipientInfo: {...editForm.recipientInfo, name: e.target.value}})} className="w-full h-11 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
-                    <input type="text" placeholder="郵便番号" value={editForm.recipientInfo.zip || ''} onChange={(e) => setEditForm({...editForm, recipientInfo: {...editForm.recipientInfo, zip: e.target.value}})} className="w-full h-11 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
-                    <input type="text" placeholder="住所1（都道府県・市区町村）" value={editForm.recipientInfo.address1 || ''} onChange={(e) => setEditForm({...editForm, recipientInfo: {...editForm.recipientInfo, address1: e.target.value}})} className="w-full h-11 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
-                    <input type="text" placeholder="住所2（番地・建物）" value={editForm.recipientInfo.address2 || ''} onChange={(e) => setEditForm({...editForm, recipientInfo: {...editForm.recipientInfo, address2: e.target.value}})} className="w-full h-11 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
-                    <input type="text" placeholder="電話番号" value={editForm.recipientInfo.phone || ''} onChange={(e) => setEditForm({...editForm, recipientInfo: {...editForm.recipientInfo, phone: e.target.value}})} className="w-full h-11 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"/>
+                  <div className="space-y-2 bg-[#FAFAF7] p-3 rounded-lg border border-[#E6E2DA]">
+                    <input type="text" placeholder="お届け先 お名前" value={editForm.recipientInfo.name || ''} onChange={(e) => setEditForm({...editForm, recipientInfo: {...editForm.recipientInfo, name: e.target.value}})} className="w-full h-11 px-3 bg-white border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"/>
+                    <input type="text" placeholder="郵便番号" value={editForm.recipientInfo.zip || ''} onChange={(e) => setEditForm({...editForm, recipientInfo: {...editForm.recipientInfo, zip: e.target.value}})} className="w-full h-11 px-3 bg-white border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"/>
+                    <input type="text" placeholder="住所1（都道府県・市区町村）" value={editForm.recipientInfo.address1 || ''} onChange={(e) => setEditForm({...editForm, recipientInfo: {...editForm.recipientInfo, address1: e.target.value}})} className="w-full h-11 px-3 bg-white border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"/>
+                    <input type="text" placeholder="住所2（番地・建物）" value={editForm.recipientInfo.address2 || ''} onChange={(e) => setEditForm({...editForm, recipientInfo: {...editForm.recipientInfo, address2: e.target.value}})} className="w-full h-11 px-3 bg-white border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"/>
+                    <input type="text" placeholder="電話番号" value={editForm.recipientInfo.phone || ''} onChange={(e) => setEditForm({...editForm, recipientInfo: {...editForm.recipientInfo, phone: e.target.value}})} className="w-full h-11 px-3 bg-white border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"/>
                   </div>
                 )}
               </div>
 
               {/* 社内メモ */}
               <div className="space-y-2">
-                <h4 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2 flex items-center gap-1.5"><FileText size={14}/> 社内メモ</h4>
-                <textarea value={editForm.note} onChange={(e) => setEditForm({...editForm, note: e.target.value})} rows={3} placeholder="変更内容のメモ等" className="w-full px-3 py-2 bg-yellow-50 border border-yellow-300 rounded-lg text-[13px] outline-none focus:border-yellow-500"/>
+                <h4 className="text-[15px] font-bold text-[#2D4B3E] border-b border-[#E6E2DA] pb-2 flex items-center gap-1.5"><FileText size={14}/> 社内メモ</h4>
+                <textarea value={editForm.note} onChange={(e) => setEditForm({...editForm, note: e.target.value})} rows={3} placeholder="変更内容のメモ等" className="w-full px-3 py-2 bg-yellow-50 border border-yellow-300 rounded-lg text-[15px] outline-none focus:border-yellow-500"/>
               </div>
             </div>
 
-            <div className="sticky bottom-0 bg-white border-t border-[#EAEAEA] px-6 py-4 flex gap-2 rounded-b-2xl">
-              <button onClick={() => !isSavingEdit && setShowEditModal(false)} disabled={isSavingEdit} className="flex-1 h-12 bg-[#EAEAEA] text-[#555] text-[13px] font-bold rounded-xl hover:bg-[#dcdcdc] disabled:opacity-50">キャンセル</button>
-              <button onClick={handleSaveEdit} disabled={isSavingEdit} className="flex-1 h-12 bg-[#2D4B3E] text-white text-[13px] font-bold rounded-xl hover:bg-[#1f352b] disabled:opacity-50 flex items-center justify-center gap-1.5">
+            <div className="sticky bottom-0 bg-white border-t border-[#E6E2DA] px-6 py-4 flex gap-2 rounded-b-2xl">
+              <button onClick={() => !isSavingEdit && setShowEditModal(false)} disabled={isSavingEdit} className="flex-1 h-12 bg-[#E6E2DA] text-[#3B4640] text-[15px] font-bold rounded-xl hover:bg-[#dcdcdc] disabled:opacity-50">キャンセル</button>
+              <button onClick={handleSaveEdit} disabled={isSavingEdit} className="flex-1 h-12 bg-[#2D4B3E] text-white text-[15px] font-bold rounded-xl hover:bg-[#1f352b] disabled:opacity-50 flex items-center justify-center gap-1.5">
                 {isSavingEdit ? '保存中...' : <><CheckCircle2 size={15}/>変更を保存</>}
               </button>
             </div>
@@ -2727,7 +2763,7 @@ export default function OrderDetailModal({
             >
               <div className="sticky top-0 bg-[#FAF7F2] border-b border-[#E5DED2]/60 px-7 py-5 flex items-start justify-between rounded-t-[20px] z-10">
                 <div>
-                  <p className="text-[10px] tracking-[0.3em] font-medium text-[#7E9279] mb-1" style={{ fontFamily: "var(--font-outfit), system-ui" }}>
+                  <p className="text-[12px] tracking-[0.3em] font-medium text-[#7E9279] mb-1" style={{ fontFamily: "var(--font-outfit), system-ui" }}>
                     AMOUNT CORRECTION
                   </p>
                   <h3 className="text-[18px] text-[#2F2F2F]" style={{ fontFamily: "var(--font-shippori), 'Noto Serif JP', serif", fontWeight: 500 }}>
@@ -2737,7 +2773,7 @@ export default function OrderDetailModal({
                 <button
                   onClick={() => setShowAmountCorrection(false)}
                   disabled={isSavingCorrection}
-                  className="w-9 h-9 rounded-full bg-white border border-[#E5DED2] hover:border-[#C97D60] flex items-center justify-center text-[#999] hover:text-[#C97D60] disabled:opacity-50 transition"
+                  className="w-9 h-9 rounded-full bg-white border border-[#E5DED2] hover:border-[#C97D60] flex items-center justify-center text-[#5C6660] hover:text-[#C97D60] disabled:opacity-50 transition"
                 >
                   <X size={16}/>
                 </button>
@@ -2745,7 +2781,7 @@ export default function OrderDetailModal({
               <div className="bg-[#FAF7F2] p-7 space-y-6">
 
                 <div className="bg-white border border-[#E5DED2] px-5 py-4 rounded-2xl">
-                  <p className="text-[11.5px] text-[#5B5B5B] leading-[1.9]">
+                  <p className="text-[14px] text-[#5B5B5B] leading-[1.9]">
                     オーナー権限による金額訂正です。訂正履歴は監査ログとして残り、お客様への通知方法も選択できます。
                   </p>
                 </div>
@@ -2753,33 +2789,33 @@ export default function OrderDetailModal({
                 {/* 既存の訂正履歴 */}
                 {corrections.length > 0 && (
                   <details className="bg-white border border-[#E5DED2] rounded-2xl overflow-hidden">
-                    <summary className="cursor-pointer px-5 py-4 text-[11.5px] text-[#5B5B5B] flex items-center justify-between hover:bg-[#FAF7F2]/50 transition list-none">
+                    <summary className="cursor-pointer px-5 py-4 text-[14px] text-[#5B5B5B] flex items-center justify-between hover:bg-[#FAF7F2]/50 transition list-none">
                       <span className="flex items-center gap-2.5">
                         <span className="w-7 h-7 rounded-full bg-[#FBE8DF] flex items-center justify-center">
                           <History size={12} className="text-[#C97D60]"/>
                         </span>
                         <span className="font-medium text-[#2F2F2F]">訂正履歴</span>
-                        <span className="text-[10px] tracking-[0.15em] text-[#999]" style={{ fontFamily: "var(--font-outfit)" }}>
+                        <span className="text-[12px] tracking-[0.15em] text-[#5C6660]" style={{ fontFamily: "var(--font-outfit)" }}>
                           {corrections.length} ITEMS
                         </span>
                       </span>
-                      <ChevronRight size={14} className="text-[#999]"/>
+                      <ChevronRight size={14} className="text-[#5C6660]"/>
                     </summary>
                     <div className="px-5 pb-5 pt-1 space-y-3 border-t border-[#E5DED2]">
                       {corrections.slice().reverse().map((c, i) => (
                         <div key={i} className="py-3 border-b border-[#F0EAE0] last:border-0">
-                          <div className="flex items-center gap-2 text-[10px] text-[#7E9279] mb-1.5" style={{ fontFamily: "var(--font-outfit)" }}>
+                          <div className="flex items-center gap-2 text-[12px] text-[#7E9279] mb-1.5" style={{ fontFamily: "var(--font-outfit)" }}>
                             <Clock size={10}/>
                             <span>{new Date(c.at).toLocaleString('ja-JP')}</span>
                             <span className="text-[#CCC]">/</span>
                             <span className="font-medium text-[#5B5B5B]" style={{ fontFamily: "var(--font-zen-kaku)" }}>{c.operatorName}</span>
                           </div>
-                          <p className="text-[12px] font-mono text-[#5B5B5B] mb-1">
+                          <p className="text-[14px] font-mono text-[#5B5B5B] mb-1">
                             ¥{c.before?.totalAmount?.toLocaleString()}
                             <ArrowRight size={11} className="inline mx-1.5 text-[#C97D60]"/>
                             <span className="font-semibold text-[#2F2F2F]">¥{c.after?.totalAmount?.toLocaleString()}</span>
                           </p>
-                          <p className="text-[11px] text-[#777] leading-relaxed">{c.reason}</p>
+                          <p className="text-[13px] text-[#4A544E] leading-relaxed">{c.reason}</p>
                         </div>
                       ))}
                     </div>
@@ -2788,16 +2824,16 @@ export default function OrderDetailModal({
 
                 {/* 入力フォーム */}
                 <div className="bg-white border border-[#E5DED2] rounded-2xl p-5">
-                  <p className="text-[10px] tracking-[0.3em] font-medium text-[#7E9279] mb-4" style={{ fontFamily: "var(--font-outfit)" }}>
+                  <p className="text-[12px] tracking-[0.3em] font-medium text-[#7E9279] mb-4" style={{ fontFamily: "var(--font-outfit)" }}>
                     NEW AMOUNT
                   </p>
                   <div className="space-y-4">
                     <div>
-                      <label className="text-[11px] text-[#5B5B5B] block mb-2">
+                      <label className="text-[13px] text-[#5B5B5B] block mb-2">
                         商品代（税抜） <span className="text-[#C97D60]">*</span>
                       </label>
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[13px] text-[#999]">¥</span>
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[15px] text-[#5C6660]">¥</span>
                         <input
                           type="number"
                           value={correctionItemPrice}
@@ -2810,9 +2846,9 @@ export default function OrderDetailModal({
                     </div>
 
                     <div>
-                      <label className="text-[11px] text-[#5B5B5B] block mb-2">配送料・手数料（税抜）</label>
+                      <label className="text-[13px] text-[#5B5B5B] block mb-2">配送料・手数料（税抜）</label>
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[13px] text-[#999]">¥</span>
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[15px] text-[#5C6660]">¥</span>
                         <input
                           type="number"
                           value={correctionFee}
@@ -2832,20 +2868,20 @@ export default function OrderDetailModal({
                     <span className="w-7 h-7 rounded-full bg-[#FBE8DF] flex items-center justify-center">
                       <FileText size={12} className="text-[#C97D60]"/>
                     </span>
-                    <p className="text-[12px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>訂正内容</p>
+                    <p className="text-[14px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>訂正内容</p>
                   </div>
                   <div className="grid grid-cols-[1fr_auto_1fr] items-stretch">
                     {/* 訂正前 */}
                     <div className="p-5">
-                      <p className="text-[9px] tracking-[0.3em] text-[#999] mb-3" style={{ fontFamily: "var(--font-outfit)" }}>BEFORE</p>
-                      <div className="space-y-2 text-[11.5px]">
-                        <div className="flex justify-between text-[#777]"><span>商品代</span><span className="font-mono">¥{oldItem.toLocaleString()}</span></div>
-                        <div className="flex justify-between text-[#777]"><span>送料等</span><span className="font-mono">¥{oldFee.toLocaleString()}</span></div>
-                        <div className="flex justify-between text-[#777]"><span>消費税</span><span className="font-mono">¥{oldTax.toLocaleString()}</span></div>
+                      <p className="text-[12px] tracking-[0.3em] text-[#5C6660] mb-3" style={{ fontFamily: "var(--font-outfit)" }}>BEFORE</p>
+                      <div className="space-y-2 text-[14px]">
+                        <div className="flex justify-between text-[#4A544E]"><span>商品代</span><span className="font-mono">¥{oldItem.toLocaleString()}</span></div>
+                        <div className="flex justify-between text-[#4A544E]"><span>送料等</span><span className="font-mono">¥{oldFee.toLocaleString()}</span></div>
+                        <div className="flex justify-between text-[#4A544E]"><span>消費税</span><span className="font-mono">¥{oldTax.toLocaleString()}</span></div>
                       </div>
                       <div className="mt-3 pt-3 border-t border-[#F0EAE0]">
                         <div className="flex justify-between items-baseline">
-                          <span className="text-[10px] text-[#999] tracking-wider">TOTAL</span>
+                          <span className="text-[12px] text-[#5C6660] tracking-wider">TOTAL</span>
                           <span className="text-[17px] text-[#5B5B5B] font-mono" style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 500 }}>¥{oldTotal.toLocaleString()}</span>
                         </div>
                       </div>
@@ -2860,15 +2896,15 @@ export default function OrderDetailModal({
 
                     {/* 訂正後 */}
                     <div className="p-5 bg-[#FFFDF9]">
-                      <p className="text-[9px] tracking-[0.3em] text-[#C97D60] mb-3" style={{ fontFamily: "var(--font-outfit)" }}>AFTER</p>
-                      <div className="space-y-2 text-[11.5px]">
+                      <p className="text-[12px] tracking-[0.3em] text-[#C97D60] mb-3" style={{ fontFamily: "var(--font-outfit)" }}>AFTER</p>
+                      <div className="space-y-2 text-[14px]">
                         <div className="flex justify-between text-[#5B5B5B]"><span>商品代</span><span className="font-mono">¥{newItem.toLocaleString()}</span></div>
                         <div className="flex justify-between text-[#5B5B5B]"><span>送料等</span><span className="font-mono">¥{newFee.toLocaleString()}</span></div>
                         <div className="flex justify-between text-[#5B5B5B]"><span>消費税</span><span className="font-mono">¥{newTax.toLocaleString()}</span></div>
                       </div>
                       <div className="mt-3 pt-3 border-t border-[#F0EAE0]">
                         <div className="flex justify-between items-baseline">
-                          <span className="text-[10px] text-[#999] tracking-wider">TOTAL</span>
+                          <span className="text-[12px] text-[#5C6660] tracking-wider">TOTAL</span>
                           <span className="text-[19px] text-[#C97D60] font-mono" style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}>¥{newTotal.toLocaleString()}</span>
                         </div>
                       </div>
@@ -2877,7 +2913,7 @@ export default function OrderDetailModal({
 
                   {/* 差額 */}
                   {diff !== 0 && (
-                    <div className={`flex items-center justify-center gap-2 py-3 text-[11.5px] font-medium border-t ${diff > 0 ? 'border-[#EFCCC0] bg-[#FDF6F2] text-[#A85A3A]' : 'border-[#C5E0CD] bg-[#F1F9F3] text-[#2F6B43]'}`} style={{ fontFamily: "var(--font-zen-kaku)" }}>
+                    <div className={`flex items-center justify-center gap-2 py-3 text-[14px] font-medium border-t ${diff > 0 ? 'border-[#EFCCC0] bg-[#FDF6F2] text-[#A85A3A]' : 'border-[#C5E0CD] bg-[#F1F9F3] text-[#2F6B43]'}`} style={{ fontFamily: "var(--font-zen-kaku)" }}>
                       {diff > 0 ? <TrendingUp size={13}/> : <TrendingDown size={13}/>}
                       <span>{diff > 0 ? '増額' : '減額'}　{diff > 0 ? '+' : ''}¥{diff.toLocaleString()}</span>
                     </div>
@@ -2890,18 +2926,18 @@ export default function OrderDetailModal({
                     <span className="w-7 h-7 rounded-full bg-[#FBE8DF] flex items-center justify-center">
                       <Wallet size={12} className="text-[#C97D60]"/>
                     </span>
-                    <p className="text-[12px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>入金状況とお客様への対応</p>
+                    <p className="text-[14px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>入金状況とお客様への対応</p>
                   </div>
                   <div className="p-5 space-y-4">
                     {/* 現在の入金状況 */}
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-[9px] tracking-[0.3em] text-[#999] mb-1.5" style={{ fontFamily: "var(--font-outfit)" }}>CURRENT STATUS</p>
+                        <p className="text-[12px] tracking-[0.3em] text-[#5C6660] mb-1.5" style={{ fontFamily: "var(--font-outfit)" }}>CURRENT STATUS</p>
                         <p className={`text-[13.5px] font-medium ${sc.text}`} style={{ fontFamily: "var(--font-zen-kaku)" }}>{sc.statusLabel}</p>
                       </div>
                       {wasPaid && (
                         <div className="text-right">
-                          <p className="text-[9px] tracking-[0.3em] text-[#999] mb-1.5" style={{ fontFamily: "var(--font-outfit)" }}>PAID</p>
+                          <p className="text-[12px] tracking-[0.3em] text-[#5C6660] mb-1.5" style={{ fontFamily: "var(--font-outfit)" }}>PAID</p>
                           <p className="text-[16px] text-[#7E9279] font-mono" style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 500 }}>¥{paidAmount.toLocaleString()}</p>
                         </div>
                       )}
@@ -2909,24 +2945,24 @@ export default function OrderDetailModal({
 
                     {/* 訂正後のアクション */}
                     <div className={`border-l-[3px] ${sc.accent} px-4 py-3 rounded-r-lg`}>
-                      <p className={`text-[12.5px] font-medium ${sc.text} mb-1`} style={{ fontFamily: "var(--font-zen-kaku)" }}>{sc.actionTitle}</p>
-                      <p className="text-[11.5px] text-[#5B5B5B] leading-relaxed">{sc.actionDesc}</p>
+                      <p className={`text-[14px] font-medium ${sc.text} mb-1`} style={{ fontFamily: "var(--font-zen-kaku)" }}>{sc.actionTitle}</p>
+                      <p className="text-[14px] text-[#5B5B5B] leading-relaxed">{sc.actionDesc}</p>
                     </div>
 
                     {/* お支払い済み + 追加/返金の場合のみ差額詳細 */}
                     {wasPaid && balance !== 0 && (
                       <div className="bg-[#FAF7F2] border border-[#E5DED2] rounded-xl p-4">
-                        <div className="space-y-2 text-[11.5px]">
-                          <div className="flex justify-between text-[#777]">
+                        <div className="space-y-2 text-[14px]">
+                          <div className="flex justify-between text-[#4A544E]">
                             <span>お支払い済み</span>
                             <span className="font-mono">¥{paidAmount.toLocaleString()}</span>
                           </div>
-                          <div className="flex justify-between text-[#777]">
+                          <div className="flex justify-between text-[#4A544E]">
                             <span>訂正後の合計</span>
                             <span className="font-mono">¥{newTotal.toLocaleString()}</span>
                           </div>
                           <div className="flex justify-between items-baseline pt-2 border-t border-[#E5DED2]">
-                            <span className="text-[11px] font-medium text-[#2F2F2F]">{balance > 0 ? '追加お支払い額' : '返金額'}</span>
+                            <span className="text-[13px] font-medium text-[#2F2F2F]">{balance > 0 ? '追加お支払い額' : '返金額'}</span>
                             <span className={`text-[16px] font-mono ${balance > 0 ? 'text-[#A85A3A]' : 'text-[#3A6BA8]'}`} style={{ fontFamily: "var(--font-shippori), serif", fontWeight: 600 }}>
                               ¥{Math.abs(balance).toLocaleString()}
                             </span>
@@ -2939,7 +2975,7 @@ export default function OrderDetailModal({
 
                 {/* 訂正理由 */}
                 <div className="bg-white border border-[#E5DED2] rounded-2xl p-5">
-                  <p className="text-[10px] tracking-[0.3em] font-medium text-[#7E9279] mb-3" style={{ fontFamily: "var(--font-outfit)" }}>
+                  <p className="text-[12px] tracking-[0.3em] font-medium text-[#7E9279] mb-3" style={{ fontFamily: "var(--font-outfit)" }}>
                     REASON <span className="text-[#C97D60]">*</span>
                   </p>
                   <textarea
@@ -2947,10 +2983,10 @@ export default function OrderDetailModal({
                     onChange={(e) => setCorrectionReason(e.target.value)}
                     disabled={isSavingCorrection}
                     rows={3}
-                    className="w-full bg-[#FAF7F2] border border-[#E5DED2] rounded-xl px-4 py-3 text-[12.5px] text-[#2F2F2F] focus:border-[#C97D60] focus:bg-white outline-none resize-none leading-relaxed transition"
+                    className="w-full bg-[#FAF7F2] border border-[#E5DED2] rounded-xl px-4 py-3 text-[14px] text-[#2F2F2F] focus:border-[#C97D60] focus:bg-white outline-none resize-none leading-relaxed transition"
                     placeholder="例: 商品数量の追加にて金額調整、配達エリア変更による送料追加 など"
                   />
-                  <p className="text-[10.5px] text-[#999] mt-2 leading-relaxed">監査ログとお客様へのメール本文にこの理由が含まれます。</p>
+                  <p className="text-[13px] text-[#5C6660] mt-2 leading-relaxed">監査ログとお客様へのメール本文にこの理由が含まれます。</p>
                 </div>
 
                 {/* 通知モード 3択 */}
@@ -2959,7 +2995,7 @@ export default function OrderDetailModal({
                     <span className="w-7 h-7 rounded-full bg-[#FBE8DF] flex items-center justify-center">
                       <Bell size={12} className="text-[#C97D60]"/>
                     </span>
-                    <p className="text-[12px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>お客様への通知</p>
+                    <p className="text-[14px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>お客様への通知</p>
                   </div>
                   <div className="space-y-2">
                     {/* 訂正通知 */}
@@ -2973,9 +3009,9 @@ export default function OrderDetailModal({
                         className="mt-1 w-4 h-4 accent-[#C97D60]"
                       />
                       <div className="flex-1">
-                        <p className="text-[12.5px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>訂正のお知らせを送る</p>
-                        <p className="text-[11px] text-[#777] leading-relaxed mt-1">訂正前後の金額・理由・必要なアクションを詳細にメールで送信</p>
-                        {!modalData.customerInfo?.email && <p className="text-[10.5px] text-[#A85A3A] mt-1.5 flex items-center gap-1.5"><AlertCircle size={11}/> メールアドレス未登録のため選択不可</p>}
+                        <p className="text-[14px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>訂正のお知らせを送る</p>
+                        <p className="text-[13px] text-[#4A544E] leading-relaxed mt-1">訂正前後の金額・理由・必要なアクションを詳細にメールで送信</p>
+                        {!modalData.customerInfo?.email && <p className="text-[13px] text-[#A85A3A] mt-1.5 flex items-center gap-1.5"><AlertCircle size={11}/> メールアドレス未登録のため選択不可</p>}
                       </div>
                     </label>
 
@@ -2990,9 +3026,9 @@ export default function OrderDetailModal({
                         className="mt-1 w-4 h-4 accent-[#C97D60]"
                       />
                       <div className="flex-1">
-                        <p className="text-[12.5px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>お支払い完了通知のみ送る</p>
-                        <p className="text-[11px] text-[#777] leading-relaxed mt-1">電話・LINEで案内済みの場合に。訂正の話には触れず、入金確認の通知のみ</p>
-                        {!modalData.customerInfo?.email && <p className="text-[10.5px] text-[#A85A3A] mt-1.5 flex items-center gap-1.5"><AlertCircle size={11}/> メールアドレス未登録のため選択不可</p>}
+                        <p className="text-[14px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>お支払い完了通知のみ送る</p>
+                        <p className="text-[13px] text-[#4A544E] leading-relaxed mt-1">電話・LINEで案内済みの場合に。訂正の話には触れず、入金確認の通知のみ</p>
+                        {!modalData.customerInfo?.email && <p className="text-[13px] text-[#A85A3A] mt-1.5 flex items-center gap-1.5"><AlertCircle size={11}/> メールアドレス未登録のため選択不可</p>}
                       </div>
                     </label>
 
@@ -3007,8 +3043,8 @@ export default function OrderDetailModal({
                         className="mt-1 w-4 h-4 accent-[#C97D60]"
                       />
                       <div className="flex-1">
-                        <p className="text-[12.5px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>通知しない</p>
-                        <p className="text-[11px] text-[#777] leading-relaxed mt-1">他の手段（電話・LINE・対面など）で連絡済みの場合に。内部記録のみ</p>
+                        <p className="text-[14px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>通知しない</p>
+                        <p className="text-[13px] text-[#4A544E] leading-relaxed mt-1">他の手段（電話・LINE・対面など）で連絡済みの場合に。内部記録のみ</p>
                       </div>
                     </label>
                   </div>
@@ -3016,7 +3052,7 @@ export default function OrderDetailModal({
 
                 {/* オプション */}
                 <div className="bg-white border border-[#E5DED2] rounded-2xl p-5 space-y-3.5">
-                  <p className="text-[10px] tracking-[0.3em] font-medium text-[#7E9279] mb-1" style={{ fontFamily: "var(--font-outfit)" }}>OPTIONS</p>
+                  <p className="text-[12px] tracking-[0.3em] font-medium text-[#7E9279] mb-1" style={{ fontFamily: "var(--font-outfit)" }}>OPTIONS</p>
 
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
@@ -3027,8 +3063,8 @@ export default function OrderDetailModal({
                       className="mt-0.5 w-4 h-4 accent-[#C97D60]"
                     />
                     <div className="flex-1">
-                      <p className="text-[12.5px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>訂正と同時に「入金済み」へ更新する</p>
-                      <p className="text-[11px] text-[#777] leading-relaxed mt-0.5">既に入金確認できているお客様、振込確認後の処理に使用</p>
+                      <p className="text-[14px] font-medium text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>訂正と同時に「入金済み」へ更新する</p>
+                      <p className="text-[13px] text-[#4A544E] leading-relaxed mt-0.5">既に入金確認できているお客様、振込確認後の処理に使用</p>
                     </div>
                   </label>
 
@@ -3042,7 +3078,7 @@ export default function OrderDetailModal({
                       disabled={isSavingCorrection}
                       className="w-4 h-4 accent-[#C97D60]"
                     />
-                    <span className="text-[12.5px] text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>店舗の通知メールにも記録通知</span>
+                    <span className="text-[14px] text-[#2F2F2F]" style={{ fontFamily: "var(--font-zen-kaku)" }}>店舗の通知メールにも記録通知</span>
                   </label>
                 </div>
 
@@ -3050,7 +3086,7 @@ export default function OrderDetailModal({
                   <button
                     onClick={() => setShowAmountCorrection(false)}
                     disabled={isSavingCorrection}
-                    className="flex-1 h-12 bg-white border border-[#E5DED2] text-[#5B5B5B] text-[12.5px] font-medium rounded-full hover:border-[#C97D60] hover:text-[#C97D60] disabled:opacity-50 transition"
+                    className="flex-1 h-12 bg-white border border-[#E5DED2] text-[#5B5B5B] text-[14px] font-medium rounded-full hover:border-[#C97D60] hover:text-[#C97D60] disabled:opacity-50 transition"
                     style={{ fontFamily: "var(--font-zen-kaku)" }}
                   >
                     キャンセル
@@ -3104,7 +3140,7 @@ export default function OrderDetailModal({
                       }
                     }}
                     disabled={isSavingCorrection || !correctionReason}
-                    className="flex-1 h-12 bg-[#C97D60] hover:bg-[#B36B50] text-white text-[12.5px] font-medium rounded-full disabled:opacity-50 transition flex items-center justify-center gap-2 shadow-sm"
+                    className="flex-1 h-12 bg-[#C97D60] hover:bg-[#B36B50] text-white text-[14px] font-medium rounded-full disabled:opacity-50 transition flex items-center justify-center gap-2 shadow-sm"
                     style={{ fontFamily: "var(--font-zen-kaku)" }}
                   >
                     {isSavingCorrection ? (
@@ -3130,18 +3166,18 @@ export default function OrderDetailModal({
             className="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 bg-white border-b border-[#EAEAEA] px-6 py-4 flex items-center justify-between rounded-t-2xl">
+            <div className="sticky top-0 bg-white border-b border-[#E6E2DA] px-6 py-4 flex items-center justify-between rounded-t-2xl">
               <h3 className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-1.5"><Mail size={15}/> 完成写真メールの送信確認</h3>
               <button
                 onClick={() => setCompletionMailPreview(null)}
-                className="text-[#999] hover:text-[#111] text-[20px] font-bold"
+                className="text-[#5C6660] hover:text-[#1F2A24] text-[20px] font-bold"
               >
                 ✕
               </button>
             </div>
             <div className="p-6 space-y-4">
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <p className="text-[12px] text-amber-900 leading-relaxed flex items-start gap-1.5">
+                <p className="text-[14px] text-amber-900 leading-relaxed flex items-start gap-1.5">
                   <AlertCircle size={13} className="shrink-0 mt-0.5"/>
                   <span>下記の内容で <strong>{completionMailPreview.customerEmail}</strong> 宛にメールを送信します。<br/>
                   写真の内容に問題ないか、ご確認の上「送信する」を押してください。</span>
@@ -3151,9 +3187,9 @@ export default function OrderDetailModal({
               {/* 写真プレビュー（削除・差し替え・追加可能） */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[11px] font-bold text-[#999] flex items-center gap-1"><Camera size={11}/> 送信される完成写真 ({completionMailPreview.images.length}枚)</p>
+                  <p className="text-[13px] font-bold text-[#5C6660] flex items-center gap-1"><Camera size={11}/> 送信される完成写真 ({completionMailPreview.images.length}枚)</p>
                   {/* 追加ボタン */}
-                  <label className={`text-[10px] font-bold px-3 py-1.5 rounded-lg cursor-pointer transition ${isUploading ? 'bg-gray-100 text-gray-400' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b]'}`}>
+                  <label className={`text-[12px] font-bold px-3 py-1.5 rounded-lg cursor-pointer transition ${isUploading ? 'bg-gray-100 text-gray-400' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b]'}`}>
                     {isUploading ? 'アップロード中...' : '＋ 写真追加'}
                     <input
                       type="file"
@@ -3196,9 +3232,9 @@ export default function OrderDetailModal({
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {completionMailPreview.images.map((url, idx) => (
-                    <div key={idx} className="relative aspect-square bg-[#FBFAF9] rounded-lg overflow-hidden border border-[#EAEAEA] group">
+                    <div key={idx} className="relative aspect-square bg-[#FAFAF7] rounded-lg overflow-hidden border border-[#E6E2DA] group">
                       <img src={url} alt={`完成写真${idx+1}`} className="w-full h-full object-cover"/>
-                      <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] px-2 py-0.5 rounded-full">
+                      <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[12px] px-2 py-0.5 rounded-full">
                         {idx+1}枚目
                       </div>
                       {/* 操作ボタン群（右上） */}
@@ -3264,75 +3300,75 @@ export default function OrderDetailModal({
                           className="w-7 h-7 bg-red-600 hover:bg-red-500 text-white rounded-full shadow-md flex items-center justify-center transition"
                           title="この写真を削除"
                         >
-                          <span className="text-[12px] font-bold">×</span>
+                          <span className="text-[14px] font-bold">×</span>
                         </button>
                       </div>
                     </div>
                   ))}
                 </div>
-                <p className="text-[10px] text-[#999] mt-2 leading-relaxed flex items-start gap-1">
+                <p className="text-[12px] text-[#5C6660] mt-2 leading-relaxed flex items-start gap-1">
                   <Lightbulb size={11} className="shrink-0 mt-0.5"/>
                   <span>各写真の右上で <strong>差し替え</strong> / <strong>× 削除</strong> ができます。「＋ 写真追加」で複数枚一気に追加もOK。</span>
                 </p>
               </div>
 
               {/* ★ 納品日確認・編集（入金確認モーダルと同じスキーム） */}
-              <div className="bg-[#FBFAF9] rounded-xl p-4 border border-[#EAEAEA] space-y-3">
+              <div className="bg-[#FAFAF7] rounded-xl p-4 border border-[#E6E2DA] space-y-3">
                 <div className="flex items-center gap-2">
                   <CalendarIcon size={16} className="text-[#2D4B3E]"/>
-                  <p className="text-[12px] font-bold text-[#2D4B3E]">お届け予定日（メール本文に反映されます）</p>
+                  <p className="text-[14px] font-bold text-[#2D4B3E]">お届け予定日（メール本文に反映されます）</p>
                 </div>
-                <div className="text-[11px] text-[#777] bg-white p-2 rounded border border-[#EAEAEA]">
-                  現在の納品予定日: <span className="font-bold text-[#111]">{modalData.selectedDate || '未指定'} {modalData.selectedTime || ''}</span>
+                <div className="text-[13px] text-[#4A544E] bg-white p-2 rounded border border-[#E6E2DA]">
+                  現在の納品予定日: <span className="font-bold text-[#1F2A24]">{modalData.selectedDate || '未指定'} {modalData.selectedTime || ''}</span>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-[#555] mb-1.5 tracking-widest">新しい納品日 <span className="text-red-500">*</span></label>
+                  <label className="block text-[13px] font-bold text-[#3B4640] mb-1.5 tracking-widest">新しい納品日 <span className="text-red-500">*</span></label>
                   <input
                     type="date"
                     value={completionDeliveryDate}
                     onChange={(e) => setCompletionDeliveryDate(e.target.value)}
-                    className="w-full h-11 px-3 bg-white border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"
+                    className="w-full h-11 px-3 bg-white border border-[#E6E2DA] rounded-xl text-[15px] outline-none focus:border-[#2D4B3E]"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-[#555] mb-1.5 tracking-widest">時間（任意）</label>
+                  <label className="block text-[13px] font-bold text-[#3B4640] mb-1.5 tracking-widest">時間（任意）</label>
                   <input
                     type="text"
                     value={completionDeliveryTime}
                     onChange={(e) => setCompletionDeliveryTime(e.target.value)}
                     placeholder="例: 14:00〜16:00"
-                    className="w-full h-11 px-3 bg-white border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"
+                    className="w-full h-11 px-3 bg-white border border-[#E6E2DA] rounded-xl text-[15px] outline-none focus:border-[#2D4B3E]"
                   />
                 </div>
-                <p className="text-[10px] text-[#999]">※ 変更すると注文データの納品日も更新され、メール本文に反映されます。</p>
+                <p className="text-[12px] text-[#5C6660]">※ 変更すると注文データの納品日も更新され、メール本文に反映されます。</p>
               </div>
 
               {/* メール本文のサマリー */}
-              <div className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg p-3">
-                <p className="text-[10px] font-bold text-[#999] mb-1 flex items-center gap-1"><FileText size={10}/> メール本文の概要</p>
-                <p className="text-[12px] text-[#222] leading-relaxed">
+              <div className="bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg p-3">
+                <p className="text-[12px] font-bold text-[#5C6660] mb-1 flex items-center gap-1"><FileText size={10}/> メール本文の概要</p>
+                <p className="text-[14px] text-[#222] leading-relaxed">
                   完成のご案内 + 上の写真と注文情報を記載。<br/>
                   <strong className="text-[#2D4B3E]">お届け日程のご案内＋日程変更のご相談はお電話で</strong>もご案内します。<br/>
-                  <span className="text-[10px] text-[#999]">※本文の詳細はオーナーページ → 案内文管理 → 「完成写真のお知らせ」でカスタマイズできます</span>
+                  <span className="text-[12px] text-[#5C6660]">※本文の詳細はオーナーページ → 案内文管理 → 「完成写真のお知らせ」でカスタマイズできます</span>
                 </p>
               </div>
 
-              <div className="flex gap-2 pt-3 border-t border-[#EAEAEA]">
+              <div className="flex gap-2 pt-3 border-t border-[#E6E2DA]">
                 <button
                   onClick={() => setCompletionMailPreview(null)}
-                  className="flex-1 h-11 bg-white border border-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-xl hover:bg-[#FBFAF9] flex items-center justify-center gap-1.5"
+                  className="flex-1 h-11 bg-white border border-[#E6E2DA] text-[#3B4640] text-[14px] font-bold rounded-xl hover:bg-[#FAFAF7] flex items-center justify-center gap-1.5"
                 >
                   <Clock size={13}/> 後で送る
                 </button>
                 <button
                   onClick={sendCompletionPhotoMail}
                   disabled={isSendingMail}
-                  className="flex-1 h-11 bg-[#117768] text-white text-[12px] font-bold rounded-xl hover:bg-[#0f6358] disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  className="flex-1 h-11 bg-[#117768] text-white text-[14px] font-bold rounded-xl hover:bg-[#0f6358] disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   {isSendingMail ? '送信中...' : <><Mail size={13}/> 今すぐ送信</>}
                 </button>
               </div>
-              <p className="text-[10px] text-[#999] text-center -mt-1 flex items-start justify-center gap-1">
+              <p className="text-[12px] text-[#5C6660] text-center -mt-1 flex items-start justify-center gap-1">
                 <Lightbulb size={11} className="shrink-0 mt-0.5"/>
                 <span>「後で送る」を選んでも、注文詳細の <strong>「完成写真メール送信」ボタン</strong> から、いつでも再度送信できます</span>
               </p>

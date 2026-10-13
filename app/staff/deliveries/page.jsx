@@ -236,30 +236,30 @@ export default function DeliveriesPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-[#F5F6F7] font-sans overflow-hidden text-[#1f2937]">
-      <div className="bg-white border-b border-[#E5E7EB] shrink-0 px-4 md:px-6 py-4 z-10">
+    <div className="h-screen flex flex-col bg-[#F6F4EF] font-sans overflow-hidden text-[#1F2A24]">
+      <div className="bg-[#F6F4EF] border-b border-[#E0DCD3] shrink-0 px-4 md:px-10 pt-5 pb-4 z-10">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#1F4D3A] text-white flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-[#2D4B3E] text-white flex items-center justify-center">
                 <Truck size={20} />
               </div>
               <div>
-                <h1 className="text-[20px] font-bold text-[#1F4D3A] tracking-wide">配達管理</h1>
-                <p className="text-[12px] text-[#6B7280] font-medium">自社配達案件を日付ごとに確認</p>
+                <h1 className="text-[24px] md:text-[28px] font-bold tracking-[0.02em] text-[#1F2A24]">配達管理</h1>
+                <p className="text-[14px] text-[#5C6660] font-medium">自社配達案件を日付ごとに確認</p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <div className="flex gap-1 bg-[#F3F4F6] p-1 rounded-xl border border-[#E5E7EB]">
+              <div className="flex gap-1 bg-[#F1EEE7] p-1 rounded-xl border border-[#E6E2DA]">
                 {[{ val: 1, label: '1日' }, { val: 3, label: '3日間' }, { val: 7, label: '1週間' }].map(t => (
                   <button
                     key={t.val}
                     onClick={() => setViewRange(t.val)}
-                    className={`px-4 py-2 rounded-lg text-[12px] font-bold transition ${
+                    className={`px-4 py-2 rounded-lg text-[14px] font-bold transition ${
                       viewRange === t.val
-                        ? 'bg-white text-[#1F4D3A] border border-[#D1D5DB]'
-                        : 'text-[#6B7280] hover:text-[#374151]'
+                        ? 'bg-white text-[#2D4B3E] border border-[#D5D0C6]'
+                        : 'text-[#5C6660] hover:text-[#3B4640]'
                     }`}
                   >
                     {t.label}
@@ -267,27 +267,27 @@ export default function DeliveriesPage() {
                 ))}
               </div>
 
-              <div className="flex items-center bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl px-1">
+              <div className="flex items-center bg-white border border-[#D5D0C6] rounded-xl px-1">
                 <button
                   onClick={() => changeDate(-1)}
-                  className="p-2 text-[#6B7280] hover:text-[#1F4D3A] rounded-lg hover:bg-white"
+                  className="p-2 text-[#5C6660] hover:text-[#2D4B3E] rounded-lg hover:bg-white"
                 >
                   <ChevronLeft size={18} />
                 </button>
 
                 <div className="flex items-center gap-2 px-3">
-                  <Calendar size={15} className="text-[#1F4D3A]" />
+                  <Calendar size={15} className="text-[#2D4B3E]" />
                   <input
                     type="date"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="bg-transparent border-none outline-none text-[14px] font-bold text-[#1F4D3A]"
+                    className="bg-transparent border-none outline-none text-[15px] font-bold text-[#2D4B3E]"
                   />
                 </div>
 
                 <button
                   onClick={() => changeDate(1)}
-                  className="p-2 text-[#6B7280] hover:text-[#1F4D3A] rounded-lg hover:bg-white"
+                  className="p-2 text-[#5C6660] hover:text-[#2D4B3E] rounded-lg hover:bg-white"
                 >
                   <ChevronRight size={18} />
                 </button>
@@ -295,14 +295,14 @@ export default function DeliveriesPage() {
 
               <button
                 onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
-                className="h-10 px-4 rounded-xl border border-[#E5E7EB] bg-white text-[12px] font-bold text-[#374151] hover:border-[#1F4D3A]"
+                className="h-10 px-4 rounded-xl border border-[#E6E2DA] bg-white text-[14px] font-bold text-[#3B4640] hover:border-[#2D4B3E]"
               >
                 今日へ戻る
               </button>
 
               <button
                 onClick={fetchOrders}
-                className="h-10 px-4 rounded-xl bg-[#1F4D3A] text-white text-[12px] font-bold flex items-center gap-2 hover:bg-[#183C2D]"
+                className="h-10 px-4 rounded-xl bg-[#2D4B3E] text-white text-[14px] font-bold flex items-center gap-2 hover:bg-[#183C2D]"
               >
                 <RefreshCw size={14} />
                 更新
@@ -311,16 +311,16 @@ export default function DeliveriesPage() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="bg-white border border-[#E5E7EB] rounded-2xl px-4 py-3">
-              <div className="text-[11px] text-[#6B7280] font-bold">対象件数</div>
+            <div className="bg-white border border-[#E6E2DA] rounded-2xl px-4 py-3">
+              <div className="text-[13px] text-[#5C6660] font-bold">対象件数</div>
               <div className="text-[24px] font-bold text-[#111827]">{summary.total}</div>
             </div>
-            <div className="bg-white border border-[#E5E7EB] rounded-2xl px-4 py-3">
-              <div className="text-[11px] text-[#6B7280] font-bold">未対応</div>
+            <div className="bg-white border border-[#E6E2DA] rounded-2xl px-4 py-3">
+              <div className="text-[13px] text-[#5C6660] font-bold">未対応</div>
               <div className="text-[24px] font-bold text-[#B45309]">{summary.newCount}</div>
             </div>
-            <div className="bg-white border border-[#E5E7EB] rounded-2xl px-4 py-3">
-              <div className="text-[11px] text-[#6B7280] font-bold">器回収あり</div>
+            <div className="bg-white border border-[#E6E2DA] rounded-2xl px-4 py-3">
+              <div className="text-[13px] text-[#5C6660] font-bold">器回収あり</div>
               <div className="text-[24px] font-bold text-[#2563EB]">{summary.pickupNeedCount}</div>
             </div>
           </div>
@@ -329,25 +329,25 @@ export default function DeliveriesPage() {
 
       <main className="flex-1 overflow-x-auto overflow-y-hidden hide-scrollbar">
         {isLoading ? (
-          <div className="flex items-center justify-center h-full text-[#1F4D3A] font-bold animate-pulse">
+          <div className="flex items-center justify-center h-full text-[#2D4B3E] font-bold animate-pulse">
             読み込み中...
           </div>
         ) : (
-          <div className="flex gap-4 p-4 md:p-6 h-full items-start w-max">
+          <div className="flex gap-4 p-4 md:px-10 md:py-6 h-full items-start w-max min-w-full">
             {groupedOrders.map(group => (
               <div
                 key={group.date}
-                className="w-[88vw] sm:w-[400px] shrink-0 flex flex-col bg-white rounded-2xl border border-[#E5E7EB] max-h-full overflow-hidden"
+                className="w-[88vw] sm:w-[360px] lg:w-auto lg:flex-1 lg:min-w-[320px] shrink-0 flex flex-col bg-white rounded-2xl border border-[#E6E2DA] max-h-full overflow-hidden"
               >
-                <div className="px-5 py-4 border-b border-[#E5E7EB] bg-[#FAFAFA] shrink-0">
+                <div className="px-5 py-4 border-b border-[#E6E2DA] bg-[#FAFAFA] shrink-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className={`w-2.5 h-2.5 rounded-full ${isToday(group.date) ? 'bg-red-500' : 'bg-[#1F4D3A]'}`}></div>
-                      <h2 className="text-[16px] font-bold text-[#1F4D3A] tracking-wide">
+                      <div className={`w-2.5 h-2.5 rounded-full ${isToday(group.date) ? 'bg-red-500' : 'bg-[#2D4B3E]'}`}></div>
+                      <h2 className="text-[16px] font-bold text-[#2D4B3E] tracking-wide">
                         {formatDateWithDay(group.date)}
                       </h2>
                     </div>
-                    <span className="text-[12px] font-bold text-[#6B7280] bg-white border border-[#E5E7EB] px-3 py-1 rounded-lg">
+                    <span className="text-[14px] font-bold text-[#5C6660] bg-white border border-[#E6E2DA] px-3 py-1 rounded-lg">
                       {group.orders.length} 件
                     </span>
                   </div>
@@ -355,9 +355,9 @@ export default function DeliveriesPage() {
 
                 <div className="p-4 flex-1 overflow-y-auto space-y-4 hide-scrollbar bg-[#F8F9FA]">
                   {group.orders.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-[#9CA3AF] py-10">
+                    <div className="h-full flex flex-col items-center justify-center text-[#5C6660] py-10">
                       <Truck size={32} className="mb-2" />
-                      <p className="text-[12px] font-bold">配達予定はありません</p>
+                      <p className="text-[14px] font-bold">配達予定はありません</p>
                     </div>
                   ) : (
                     group.orders.map((order, index) => {
@@ -369,30 +369,30 @@ export default function DeliveriesPage() {
                         <div
                           key={order.id}
                           className={`bg-white rounded-2xl border shadow-sm overflow-hidden ${
-                            isDone ? 'border-[#D1D5DB] opacity-70' : 'border-[#E5E7EB]'
+                            isDone ? 'border-[#D5D0C6] opacity-70' : 'border-[#E6E2DA]'
                           }`}
                         >
                           <div className="px-4 py-3 border-b border-[#F1F5F9] bg-white">
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex items-start gap-3 min-w-0">
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[12px] font-bold ${
-                                  isDone ? 'bg-[#E5E7EB] text-[#6B7280]' : 'bg-[#1F4D3A] text-white'
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[14px] font-bold ${
+                                  isDone ? 'bg-[#E6E2DA] text-[#5C6660]' : 'bg-[#2D4B3E] text-white'
                                 }`}>
                                   {index + 1}
                                 </div>
 
                                 <div className="min-w-0">
                                   <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-100">
+                                    <span className="inline-flex items-center gap-1 text-[13px] font-bold px-2 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-100">
                                       <Truck size={12} />
                                       自社配達
                                     </span>
-                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-md bg-[#F3F4F6] text-[#374151] border border-[#E5E7EB]">
+                                    <span className="inline-flex items-center gap-1 text-[13px] font-bold px-2 py-1 rounded-md bg-[#F1EEE7] text-[#3B4640] border border-[#E6E2DA]">
                                       <Clock size={12} />
                                       {d.selectedTime || '指定なし'}
                                     </span>
                                     {isDone && (
-                                      <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-md bg-green-50 text-green-700 border border-green-100">
+                                      <span className="inline-flex items-center gap-1 text-[13px] font-bold px-2 py-1 rounded-md bg-green-50 text-green-700 border border-green-100">
                                         <CheckCircle2 size={12} />
                                         完了
                                       </span>
@@ -403,7 +403,7 @@ export default function DeliveriesPage() {
                                     {targetInfo?.name || '未設定'} 様
                                   </div>
 
-                                  <div className="text-[12px] text-[#6B7280] font-medium mt-1">
+                                  <div className="text-[14px] text-[#5C6660] font-medium mt-1">
                                     {d.flowerType || '商品未設定'}
                                     {d.flowerPurpose ? ` / ${d.flowerPurpose}` : ''}
                                   </div>
@@ -414,14 +414,14 @@ export default function DeliveriesPage() {
 
                           <div className="p-4 space-y-4">
                             <div className="space-y-2">
-                              <div className="flex items-center gap-2 text-[12px] font-bold text-[#374151]">
-                                <Phone size={14} className="text-[#6B7280]" />
+                              <div className="flex items-center gap-2 text-[14px] font-bold text-[#3B4640]">
+                                <Phone size={14} className="text-[#5C6660]" />
                                 {targetInfo?.phone || '未設定'}
                               </div>
 
-                              <div className="bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl p-3">
-                                <div className="text-[11px] font-bold text-[#6B7280] mb-1">お届け先</div>
-                                <p className="text-[13px] leading-relaxed font-semibold text-[#111827]">
+                              <div className="bg-[#F9FAFB] border border-[#E6E2DA] rounded-xl p-3">
+                                <div className="text-[13px] font-bold text-[#5C6660] mb-1">お届け先</div>
+                                <p className="text-[15px] leading-relaxed font-semibold text-[#111827]">
                                   〒{targetInfo?.zip || ''}
                                   <br />
                                   {targetInfo?.address1 || ''} {targetInfo?.address2 || ''}
@@ -435,8 +435,8 @@ export default function DeliveriesPage() {
                                   <div className="flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5">
                                     <RotateCcw size={15} className="text-blue-600 shrink-0 mt-0.5" />
                                     <div>
-                                      <div className="text-[11px] font-bold text-blue-800">器回収あり</div>
-                                      <div className="text-[12px] font-bold text-blue-900">
+                                      <div className="text-[13px] font-bold text-blue-800">器回収あり</div>
+                                      <div className="text-[14px] font-bold text-blue-900">
                                         後日、器の回収が必要です
                                       </div>
                                     </div>
@@ -447,8 +447,8 @@ export default function DeliveriesPage() {
                                   <div className="flex items-start gap-2 rounded-xl border border-yellow-200 bg-yellow-50 px-3 py-2.5">
                                     <MessageSquare size={15} className="text-yellow-700 shrink-0 mt-0.5" />
                                     <div>
-                                      <div className="text-[11px] font-bold text-yellow-800">メモ</div>
-                                      <div className="text-[12px] font-bold text-yellow-900 leading-relaxed whitespace-pre-wrap">
+                                      <div className="text-[13px] font-bold text-yellow-800">メモ</div>
+                                      <div className="text-[14px] font-bold text-yellow-900 leading-relaxed whitespace-pre-wrap">
                                         {d.note}
                                       </div>
                                     </div>
@@ -462,7 +462,7 @@ export default function DeliveriesPage() {
                                 href={getGoogleMapsUrl(targetInfo)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="h-11 rounded-xl border border-[#D1D5DB] bg-white flex items-center justify-center gap-2 text-[12px] font-bold text-[#1F4D3A] hover:bg-[#F9FAFB]"
+                                className="h-11 rounded-xl border border-[#D5D0C6] bg-white flex items-center justify-center gap-2 text-[14px] font-bold text-[#2D4B3E] hover:bg-[#F9FAFB]"
                               >
                                 <MapPin size={15} />
                                 地図
@@ -470,7 +470,7 @@ export default function DeliveriesPage() {
 
                               <a
                                 href={getPhoneHref(targetInfo?.phone)}
-                                className="h-11 rounded-xl border border-[#D1D5DB] bg-white flex items-center justify-center gap-2 text-[12px] font-bold text-[#374151] hover:bg-[#F9FAFB]"
+                                className="h-11 rounded-xl border border-[#D5D0C6] bg-white flex items-center justify-center gap-2 text-[14px] font-bold text-[#3B4640] hover:bg-[#F9FAFB]"
                               >
                                 <Phone size={15} />
                                 電話
@@ -478,7 +478,7 @@ export default function DeliveriesPage() {
 
                               <button
                                 onClick={() => handleCopyAddress(targetInfo)}
-                                className="h-11 rounded-xl border border-[#D1D5DB] bg-white flex items-center justify-center gap-2 text-[12px] font-bold text-[#374151] hover:bg-[#F9FAFB]"
+                                className="h-11 rounded-xl border border-[#D5D0C6] bg-white flex items-center justify-center gap-2 text-[14px] font-bold text-[#3B4640] hover:bg-[#F9FAFB]"
                               >
                                 <Copy size={15} />
                                 住所コピー
@@ -486,7 +486,7 @@ export default function DeliveriesPage() {
 
                               <button
                                 onClick={() => handleOutsource(order)}
-                                className="h-11 rounded-xl bg-[#111827] text-white flex items-center justify-center gap-2 text-[12px] font-bold hover:bg-[#0B1220]"
+                                className="h-11 rounded-xl bg-[#111827] text-white flex items-center justify-center gap-2 text-[14px] font-bold hover:bg-[#0B1220]"
                               >
                                 <Truck size={15} />
                                 業務委託に依頼
@@ -494,14 +494,14 @@ export default function DeliveriesPage() {
                             </div>
 
                             <div className="pt-1">
-                              <div className="flex items-center gap-2 mb-2 text-[11px] font-bold text-[#6B7280]">
+                              <div className="flex items-center gap-2 mb-2 text-[13px] font-bold text-[#5C6660]">
                                 <ListChecks size={14} />
                                 ステータス
                               </div>
                               <select
                                 value={d.status || 'new'}
                                 onChange={(e) => updateOrderStatus(order.id, e.target.value)}
-                                className="w-full h-11 bg-white border border-[#D1D5DB] rounded-xl px-3 text-[13px] font-bold text-[#1F4D3A] outline-none cursor-pointer focus:border-[#1F4D3A]"
+                                className="w-full h-11 bg-white border border-[#D5D0C6] rounded-xl px-3 text-[15px] font-bold text-[#2D4B3E] outline-none cursor-pointer focus:border-[#2D4B3E]"
                               >
                                 <option value="new">未対応 (新規)</option>
                                 {getCustomLabels().map(l => (

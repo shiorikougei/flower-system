@@ -410,15 +410,15 @@ export default function EstimatesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FBFAF9] pb-32">
-      <header className="bg-white border-b border-[#EAEAEA] sticky top-0 z-10">
-        <div className="max-w-[1000px] mx-auto px-6 h-16 flex items-center justify-between">
-          <h1 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2">お見積もり依頼管理</h1>
-          <button onClick={loadEstimates} className="p-2 hover:bg-[#FBFAF9] rounded-lg"><RefreshCw size={16} className={loading ? 'animate-spin' : ''}/></button>
+    <div className="min-h-screen bg-[#F6F4EF] pb-32">
+      <header className="bg-[#F6F4EF]/95 backdrop-blur border-b border-[#E0DCD3] sticky top-0 z-10">
+        <div className="w-full px-4 md:px-10 pt-5 pb-4 flex items-center justify-between">
+          <h1 className="text-[24px] md:text-[28px] font-bold tracking-[0.02em] text-[#1F2A24] flex items-center gap-2">お見積もり依頼管理</h1>
+          <button onClick={loadEstimates} aria-label="最新の情報に更新" className="w-11 h-11 flex items-center justify-center bg-white border border-[#D5D0C6] hover:border-[#2D4B3E] rounded-xl"><RefreshCw size={17} className={loading ? 'animate-spin' : ''}/></button>
         </div>
       </header>
 
-      <main className="max-w-[1000px] mx-auto px-6 py-8 space-y-6">
+      <main className="w-full px-4 md:px-10 py-6 space-y-6">
         {/* フィルター */}
         <div className="flex gap-2 flex-wrap">
           {[
@@ -431,42 +431,42 @@ export default function EstimatesPage() {
             { id: 'deleted', label: 'ゴミ箱' },
           ].map(f => (
             <button key={f.id} onClick={() => setFilter(f.id)}
-              className={`px-4 py-2 rounded-full text-[12px] font-bold ${filter === f.id ? 'bg-[#2D4B3E] text-white' : 'bg-white border border-[#EAEAEA] text-[#555]'}`}>
+              className={`px-4 py-2 rounded-full text-[14px] font-bold ${filter === f.id ? 'bg-[#2D4B3E] text-white' : 'bg-white border border-[#E6E2DA] text-[#3B4640]'}`}>
               {f.label}
               {f.id === 'revision_requested' && revisionCount > 0 && (
-                <span className="ml-1.5 inline-flex min-w-5 h-5 px-1.5 rounded-full bg-[#D97D54] text-white text-[11px] items-center justify-center">{revisionCount}</span>
+                <span className="ml-1.5 inline-flex min-w-5 h-5 px-1.5 rounded-full bg-[#B9562F] text-white text-[13px] items-center justify-center">{revisionCount}</span>
               )}
             </button>
           ))}
         </div>
 
         {loading ? (
-          <p className="text-center text-[#999] py-12 animate-pulse">読み込み中...</p>
+          <p className="text-center text-[#5C6660] py-12 animate-pulse">読み込み中...</p>
         ) : filtered.length === 0 ? (
-          <p className="text-center text-[#999] py-12">該当する見積依頼はありません</p>
+          <p className="text-center text-[#5C6660] py-12">該当する見積依頼はありません</p>
         ) : (
           <div className="space-y-4">
             {filtered.map(est => {
               const status = STATUS_LABELS[est.status] || STATUS_LABELS.pending;
               const isEditing = editingId === est.id;
               return (
-                <div key={est.id} className="bg-white p-6 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-3">
+                <div key={est.id} className="bg-white p-6 rounded-2xl border border-[#E6E2DA] shadow-sm space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold border ${status.color}`}>{status.label}</span>
-                        <span className="text-[10px] text-[#999] font-mono">{new Date(est.created_at).toLocaleString('ja-JP')}</span>
+                        <span className={`px-2 py-1 rounded-full text-[12px] font-bold border ${status.color}`}>{status.label}</span>
+                        <span className="text-[12px] text-[#5C6660] font-mono">{new Date(est.created_at).toLocaleString('ja-JP')}</span>
                       </div>
-                      <p className="text-[14px] font-bold text-[#111]">{est.customer_name} 様</p>
-                      <div className="flex gap-3 text-[11px] text-[#555] mt-1">
+                      <p className="text-[15px] font-bold text-[#1F2A24]">{est.customer_name} 様</p>
+                      <div className="flex gap-3 text-[13px] text-[#3B4640] mt-1">
                         <a href={`mailto:${est.customer_email}`} className="flex items-center gap-1 hover:text-[#2D4B3E]"><Mail size={11}/> {est.customer_email}</a>
                         {est.customer_phone && <a href={`tel:${est.customer_phone}`} className="flex items-center gap-1 hover:text-[#2D4B3E]"><Phone size={11}/> {est.customer_phone}</a>}
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-[#FBFAF9] p-3 rounded-lg">
-                    <p className="text-[10px] font-bold text-[#999] mb-2">ご依頼内容</p>
+                  <div className="bg-[#FAFAF7] p-3 rounded-lg">
+                    <p className="text-[12px] font-bold text-[#5C6660] mb-2">ご依頼内容</p>
                     {/* ★ 構造化データがあればテーブル表示、なければプレーンテキスト */}
                     {est.request_data && typeof est.request_data === 'object' ? (
                       <div className="space-y-1">
@@ -496,28 +496,28 @@ export default function EstimatesPage() {
                           if (rd.instagramUrls) fields.push(['Instagram URL', rd.instagramUrls]);
                           if (rd.otherNotes) fields.push(['その他', rd.otherNotes]);
                           return fields.map(([k, v], i) => (
-                            <div key={i} className="grid grid-cols-[110px_1fr] gap-2 text-[12px] py-1 border-b border-[#EAEAEA] last:border-b-0">
-                              <span className="font-bold text-[#117768] text-[11px]">{k}</span>
+                            <div key={i} className="grid grid-cols-[110px_1fr] gap-2 text-[14px] py-1 border-b border-[#E6E2DA] last:border-b-0">
+                              <span className="font-bold text-[#117768] text-[13px]">{k}</span>
                               <span className="text-[#222] whitespace-pre-wrap break-words">{v}</span>
                             </div>
                           ));
                         })()}
                       </div>
                     ) : (
-                      <pre className="text-[12px] text-[#222] whitespace-pre-wrap font-sans leading-relaxed [overflow-wrap:anywhere]">{est.request_content}</pre>
+                      <pre className="text-[14px] text-[#222] whitespace-pre-wrap font-sans leading-relaxed [overflow-wrap:anywhere]">{est.request_content}</pre>
                     )}
                   </div>
 
                   {/* ★ 参考画像のサムネイル表示 */}
                   {Array.isArray(est.reference_images) && est.reference_images.length > 0 && (
-                    <div className="bg-[#FBFAF9] p-3 rounded-lg">
-                      <p className="text-[10px] font-bold text-[#999] mb-2">参考画像 ({est.reference_images.length}枚)</p>
+                    <div className="bg-[#FAFAF7] p-3 rounded-lg">
+                      <p className="text-[12px] font-bold text-[#5C6660] mb-2">参考画像 ({est.reference_images.length}枚)</p>
                       <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
                         {est.reference_images.map((url, idx) => (
-                          <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="relative aspect-square bg-white rounded-lg overflow-hidden border border-[#EAEAEA] hover:shadow-md transition-all group">
+                          <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="relative aspect-square bg-white rounded-lg overflow-hidden border border-[#E6E2DA] hover:shadow-md transition-all group">
                             <img src={url} alt={`参考画像${idx + 1}`} className="w-full h-full object-cover"/>
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
-                              <span className="opacity-0 group-hover:opacity-100 text-white text-[10px] font-bold">拡大</span>
+                              <span className="opacity-0 group-hover:opacity-100 text-white text-[12px] font-bold">拡大</span>
                             </div>
                           </a>
                         ))}
@@ -541,17 +541,17 @@ export default function EstimatesPage() {
                     const canEditVersions = !['converted', 'deleted'].includes(est.status);
                     return (
                       <div className="space-y-2">
-                        <p className="text-[10px] font-bold text-[#999]">やり取り</p>
+                        <p className="text-[12px] font-bold text-[#5C6660]">やり取り</p>
                         {items.map(item => {
                           if (item.m) {
                             const isCustomer = item.m.sender === 'customer';
                             return (
                               <div key={item.key} className={`p-3 rounded-lg border ${isCustomer ? 'bg-orange-50 border-orange-200' : 'bg-emerald-50 border-emerald-200'}`}>
-                                <p className={`text-[10px] font-bold mb-1 ${isCustomer ? 'text-orange-800' : 'text-emerald-700'}`}>
+                                <p className={`text-[12px] font-bold mb-1 ${isCustomer ? 'text-orange-800' : 'text-emerald-700'}`}>
                                   {isCustomer ? 'お客様からの変更依頼' : 'お店からの返信'}
-                                  <span className="font-normal text-[#777] ml-2">{item.at ? new Date(item.at).toLocaleString('ja-JP') : ''}</span>
+                                  <span className="font-normal text-[#4A544E] ml-2">{item.at ? new Date(item.at).toLocaleString('ja-JP') : ''}</span>
                                 </p>
-                                <pre className="text-[12px] text-[#222] whitespace-pre-wrap font-sans leading-relaxed [overflow-wrap:anywhere]">{item.m.body}</pre>
+                                <pre className="text-[14px] text-[#222] whitespace-pre-wrap font-sans leading-relaxed [overflow-wrap:anywhere]">{item.m.body}</pre>
                               </div>
                             );
                           }
@@ -560,20 +560,20 @@ export default function EstimatesPage() {
                           return (
                             <div key={item.key} className={`p-3 rounded-lg border ${withdrawn ? 'bg-gray-50 border-gray-200 opacity-70' : 'bg-emerald-50 border-emerald-200'}`}>
                               <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-                                <p className="text-[10px] font-bold text-emerald-700">
+                                <p className="text-[12px] font-bold text-emerald-700">
                                   見積案 {v.version_no}（¥{Number(v.proposed_price).toLocaleString()} 税抜 / ¥{Math.floor(Number(v.proposed_price) * 1.1).toLocaleString()} 税込）
                                   {v.id === latestId && <span className="ml-2 px-1.5 py-0.5 rounded bg-emerald-600 text-white">最新</span>}
                                   {withdrawn && <span className="ml-2 px-1.5 py-0.5 rounded bg-gray-300 text-gray-700">取り下げ</span>}
-                                  <span className="font-normal text-[#777] ml-2">{item.at ? new Date(item.at).toLocaleString('ja-JP') : ''}</span>
+                                  <span className="font-normal text-[#4A544E] ml-2">{item.at ? new Date(item.at).toLocaleString('ja-JP') : ''}</span>
                                 </p>
                                 {canEditVersions && (
                                   <button type="button" onClick={() => handleVersionStatus(est.id, v.id, !withdrawn)}
-                                    className="text-[10px] font-bold px-2 py-1 rounded border border-[#EAEAEA] bg-white text-[#555] hover:border-[#2D4B3E]">
+                                    className="text-[12px] font-bold px-2 py-1 rounded border border-[#E6E2DA] bg-white text-[#3B4640] hover:border-[#2D4B3E]">
                                     {withdrawn ? '元に戻す' : 'この案を取り下げ'}
                                   </button>
                                 )}
                               </div>
-                              <pre className="text-[12px] text-[#222] whitespace-pre-wrap font-sans leading-relaxed [overflow-wrap:anywhere]">{v.message}</pre>
+                              <pre className="text-[14px] text-[#222] whitespace-pre-wrap font-sans leading-relaxed [overflow-wrap:anywhere]">{v.message}</pre>
                             </div>
                           );
                         })}
@@ -592,7 +592,7 @@ export default function EstimatesPage() {
                     if (isExpired) {
                       return (
                         <div className="bg-red-50 border border-red-200 p-3 rounded-lg flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-red-700">有効期限が切れました ({expiresAt.toLocaleDateString('ja-JP')})</span>
+                          <span className="text-[13px] font-bold text-red-700">有効期限が切れました ({expiresAt.toLocaleDateString('ja-JP')})</span>
                         </div>
                       );
                     }
@@ -600,11 +600,11 @@ export default function EstimatesPage() {
                       <div className={`${isNear ? 'bg-amber-50 border-amber-300' : 'bg-blue-50 border-blue-200'} border p-3 rounded-lg space-y-2`}>
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <div>
-                            <p className={`text-[11px] font-bold ${isNear ? 'text-amber-800' : 'text-blue-800'}`}>
+                            <p className={`text-[13px] font-bold ${isNear ? 'text-amber-800' : 'text-blue-800'}`}>
                               有効期限 {expiresAt.toLocaleDateString('ja-JP')}（あと {daysLeft}日）
                             </p>
                             {alreadySent && (
-                              <p className="text-[10px] text-[#666] mt-1">
+                              <p className="text-[12px] text-[#3B4640] mt-1">
                                 {new Date(est.expiry_warning_sent_at).toLocaleString('ja-JP')} に顧客リマインド送信済
                               </p>
                             )}
@@ -638,7 +638,7 @@ export default function EstimatesPage() {
                                 alert(`送信失敗: ${e.message}`);
                               }
                             }}
-                            className={`px-3 h-9 ${isNear ? 'bg-amber-600 hover:bg-amber-500' : 'bg-blue-600 hover:bg-blue-500'} text-white text-[11px] font-bold rounded-lg flex items-center gap-1`}
+                            className={`px-3 h-9 ${isNear ? 'bg-amber-600 hover:bg-amber-500' : 'bg-blue-600 hover:bg-blue-500'} text-white text-[13px] font-bold rounded-lg flex items-center gap-1`}
                           >
                             {alreadySent ? '再度' : ''}顧客にリマインド送信
                           </button>
@@ -650,11 +650,11 @@ export default function EstimatesPage() {
                   {est.status === 'pending' && !isEditing && (
                     <div className="flex gap-2 pt-2">
                       <button onClick={() => startEditing(est)}
-                        className="flex-1 h-10 bg-[#117768] text-white text-[12px] font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-[#0d5e54]">
+                        className="flex-1 h-10 bg-[#117768] text-white text-[14px] font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-[#0d5e54]">
                         <Send size={12}/> 回答する
                       </button>
                       <button onClick={() => handleReject(est.id)}
-                        className="h-10 px-4 bg-white border border-red-200 text-red-600 text-[12px] font-bold rounded-lg hover:bg-red-50 flex items-center gap-1">
+                        className="h-10 px-4 bg-white border border-red-200 text-red-600 text-[14px] font-bold rounded-lg hover:bg-red-50 flex items-center gap-1">
                         <XCircle size={12}/> 却下
                       </button>
                     </div>
@@ -663,7 +663,7 @@ export default function EstimatesPage() {
                   {['replied', 'revision_requested', 'expired'].includes(est.status) && !isEditing && messagingId !== est.id && (
                     <div className="flex gap-2 pt-2 flex-wrap">
                       <button onClick={() => { setMessagingId(est.id); setMessageText(''); setEditingId(null); }}
-                        className="flex-1 min-w-[140px] h-10 bg-white border border-[#117768] text-[#117768] text-[12px] font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-[#117768]/5">
+                        className="flex-1 min-w-[140px] h-10 bg-white border border-[#117768] text-[#117768] text-[14px] font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-[#117768]/5">
                         <Mail size={12}/> 返信する（文章のみ）
                       </button>
                       <button onClick={() => {
@@ -671,24 +671,24 @@ export default function EstimatesPage() {
                           const act = vs.filter(v => v.status === 'active');
                           startEditing(est, act[act.length - 1] || vs[vs.length - 1] || (est.proposed_data ? { proposed_data: est.proposed_data } : null));
                         }}
-                        className="flex-1 min-w-[140px] h-10 bg-[#117768] text-white text-[12px] font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-[#0d5e54]">
+                        className="flex-1 min-w-[140px] h-10 bg-[#117768] text-white text-[14px] font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-[#0d5e54]">
                         <Send size={12}/> 見積を出し直す
                       </button>
                     </div>
                   )}
 
                   {messagingId === est.id && (
-                    <div className="space-y-2 pt-3 border-t border-[#EAEAEA]">
+                    <div className="space-y-2 pt-3 border-t border-[#E6E2DA]">
                       <label className="block">
-                        <span className="text-[10px] font-bold text-[#555]">お客様への返信（金額は変わりません。メールでお送りします）</span>
+                        <span className="text-[12px] font-bold text-[#3B4640]">お客様への返信（金額は変わりません。メールでお送りします）</span>
                         <textarea value={messageText} onChange={e => setMessageText(e.target.value)} rows={5}
                           placeholder="例: ダリアでのお作りも可能です。ご予算はそのままで大丈夫です。"
-                          className="w-full mt-1 px-3 py-2 bg-white border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#117768] resize-y leading-relaxed"/>
+                          className="w-full mt-1 px-3 py-2 bg-white border border-[#E6E2DA] rounded-lg text-[14px] outline-none focus:border-[#117768] resize-y leading-relaxed"/>
                       </label>
                       <div className="flex gap-2">
-                        <button onClick={() => setMessagingId(null)} className="h-10 px-4 bg-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-lg">キャンセル</button>
+                        <button onClick={() => setMessagingId(null)} className="h-10 px-4 bg-[#E6E2DA] text-[#3B4640] text-[14px] font-bold rounded-lg">キャンセル</button>
                         <button onClick={() => handleSendMessage(est.id)} disabled={sendingMessage || !messageText.trim()}
-                          className="flex-1 h-10 bg-[#117768] text-white text-[12px] font-bold rounded-lg hover:bg-[#0d5e54] flex items-center justify-center gap-1 disabled:opacity-50">
+                          className="flex-1 h-10 bg-[#117768] text-white text-[14px] font-bold rounded-lg hover:bg-[#0d5e54] flex items-center justify-center gap-1 disabled:opacity-50">
                           <Send size={12}/> {sendingMessage ? '送信中...' : '返信を送る'}
                         </button>
                       </div>
@@ -702,9 +702,9 @@ export default function EstimatesPage() {
                     const wantsSelfDelivery = rd.deliveryMethod === 'delivery';
 
                     return (
-                    <div className="space-y-4 pt-3 border-t border-[#EAEAEA] bg-[#FBFAF9] -mx-6 px-6 py-4 rounded-b-2xl">
+                    <div className="space-y-4 pt-3 border-t border-[#E6E2DA] bg-[#FAFAF7] -mx-6 px-6 py-4 rounded-b-2xl">
                       <div className="flex items-center justify-between">
-                        <p className="text-[12px] font-bold text-[#117768]">お見積もり料金 内訳</p>
+                        <p className="text-[14px] font-bold text-[#117768]">お見積もり料金 内訳</p>
                         <button
                           type="button"
                           onClick={() => {
@@ -719,38 +719,38 @@ export default function EstimatesPage() {
                               coolFee: String(calcCoolFee(addr, rd.desiredDate, pp) || ''),
                             }));
                           }}
-                          className="text-[10px] bg-[#117768]/10 text-[#117768] px-3 py-1 rounded-full font-bold hover:bg-[#117768] hover:text-white"
+                          className="text-[12px] bg-[#117768]/10 text-[#117768] px-3 py-1 rounded-full font-bold hover:bg-[#117768] hover:text-white"
                         >
                           商品代から再計算
                         </button>
                       </div>
-                      <p className="text-[10px] text-[#999] -mt-2">※ 配送料・箱代・クール代は住所と希望日から自動算出済み。変更可能です。</p>
+                      <p className="text-[12px] text-[#5C6660] -mt-2">※ 配送料・箱代・クール代は住所と希望日から自動算出済み。変更可能です。</p>
 
                       {/* 商品代 */}
                       <div>
-                        <label className="text-[10px] font-bold text-[#555]">商品代 (税抜) *</label>
+                        <label className="text-[12px] font-bold text-[#3B4640]">商品代 (税抜) *</label>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="font-bold">¥</span>
                           <input type="number" value={replyForm.productPrice}
                             onChange={e => setReplyForm({...replyForm, productPrice: e.target.value})}
                             placeholder="例: 5000"
-                            className="flex-1 h-11 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[14px] font-bold outline-none focus:border-[#117768]"/>
+                            className="flex-1 h-11 px-3 bg-white border border-[#E6E2DA] rounded-lg text-[15px] font-bold outline-none focus:border-[#117768]"/>
                         </div>
                       </div>
 
                       {/* 自社配達対応可否 (お客様が delivery希望時のみ表示) */}
                       {wantsSelfDelivery && (
                         <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 space-y-2">
-                          <p className="text-[11px] font-bold text-emerald-900">自社配達のご希望あり - 対応可否を選択</p>
+                          <p className="text-[13px] font-bold text-emerald-900">自社配達のご希望あり - 対応可否を選択</p>
                           <div className="grid grid-cols-2 gap-2">
                             <button type="button"
                               onClick={() => setReplyForm({...replyForm, selfDeliveryAccepted: 'yes', sagawaFee: ''})}
-                              className={`p-2.5 rounded-lg border-2 text-[11px] font-bold ${replyForm.selfDeliveryAccepted === 'yes' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-emerald-200 text-emerald-700'}`}>
+                              className={`p-2.5 rounded-lg border-2 text-[13px] font-bold ${replyForm.selfDeliveryAccepted === 'yes' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-emerald-200 text-emerald-700'}`}>
                               対応可能
                             </button>
                             <button type="button"
                               onClick={() => setReplyForm({...replyForm, selfDeliveryAccepted: 'no', selfDeliveryFee: ''})}
-                              className={`p-2.5 rounded-lg border-2 text-[11px] font-bold ${replyForm.selfDeliveryAccepted === 'no' ? 'bg-amber-600 border-amber-600 text-white' : 'bg-white border-amber-200 text-amber-700'}`}>
+                              className={`p-2.5 rounded-lg border-2 text-[13px] font-bold ${replyForm.selfDeliveryAccepted === 'no' ? 'bg-amber-600 border-amber-600 text-white' : 'bg-white border-amber-200 text-amber-700'}`}>
                               対応不可 (業者配送に切替)
                             </button>
                           </div>
@@ -760,13 +760,13 @@ export default function EstimatesPage() {
                       {/* 自社配達料 */}
                       {(replyForm.selfDeliveryAccepted === 'yes' || (!wantsSelfDelivery && rd.deliveryMethod !== 'pickup')) && (
                         <div>
-                          <label className="text-[10px] font-bold text-[#555]">自社配達料 (税抜)</label>
+                          <label className="text-[12px] font-bold text-[#3B4640]">自社配達料 (税抜)</label>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="font-bold">¥</span>
                             <input type="number" value={replyForm.selfDeliveryFee}
                               onChange={e => setReplyForm({...replyForm, selfDeliveryFee: e.target.value})}
                               placeholder="例: 500"
-                              className="flex-1 h-11 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#117768]"/>
+                              className="flex-1 h-11 px-3 bg-white border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#117768]"/>
                           </div>
                         </div>
                       )}
@@ -774,13 +774,13 @@ export default function EstimatesPage() {
                       {/* 業者配送料 */}
                       {(replyForm.selfDeliveryAccepted === 'no' || rd.deliveryMethod === 'shipping' || (!wantsSelfDelivery && rd.deliveryMethod !== 'pickup')) && (
                         <div>
-                          <label className="text-[10px] font-bold text-[#555]">業者配送料 (税抜)</label>
+                          <label className="text-[12px] font-bold text-[#3B4640]">業者配送料 (税抜)</label>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="font-bold">¥</span>
                             <input type="number" value={replyForm.sagawaFee}
                               onChange={e => setReplyForm({...replyForm, sagawaFee: e.target.value})}
                               placeholder="例: 1450"
-                              className="flex-1 h-11 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#117768]"/>
+                              className="flex-1 h-11 px-3 bg-white border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#117768]"/>
                           </div>
                         </div>
                       )}
@@ -788,32 +788,32 @@ export default function EstimatesPage() {
                       {/* 箱代 */}
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="text-[10px] font-bold text-[#555]">箱代 (任意)</label>
+                          <label className="text-[12px] font-bold text-[#3B4640]">箱代 (任意)</label>
                           <input type="number" value={replyForm.boxFee}
                             onChange={e => setReplyForm({...replyForm, boxFee: e.target.value})}
                             placeholder="例: 300"
-                            className="w-full h-11 px-3 mt-1 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#117768]"/>
+                            className="w-full h-11 px-3 mt-1 bg-white border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#117768]"/>
                         </div>
                         <div>
-                          <label className="text-[10px] font-bold text-[#555]">クール便代 (任意)</label>
+                          <label className="text-[12px] font-bold text-[#3B4640]">クール便代 (任意)</label>
                           <input type="number" value={replyForm.coolFee}
                             onChange={e => setReplyForm({...replyForm, coolFee: e.target.value})}
                             placeholder="例: 220"
-                            className="w-full h-11 px-3 mt-1 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#117768]"/>
+                            className="w-full h-11 px-3 mt-1 bg-white border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#117768]"/>
                         </div>
                       </div>
 
                       {/* ★ その他料金 (複数追加可能) */}
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <label className="text-[10px] font-bold text-[#555]">その他料金 (任意・複数追加可)</label>
+                          <label className="text-[12px] font-bold text-[#3B4640]">その他料金 (任意・複数追加可)</label>
                           <button
                             type="button"
                             onClick={() => setReplyForm({
                               ...replyForm,
                               otherFees: [...(replyForm.otherFees||[]), { name: '', amount: '' }],
                             })}
-                            className="text-[10px] bg-[#117768]/10 text-[#117768] px-3 py-1 rounded-full font-bold hover:bg-[#117768] hover:text-white"
+                            className="text-[12px] bg-[#117768]/10 text-[#117768] px-3 py-1 rounded-full font-bold hover:bg-[#117768] hover:text-white"
                           >
                             + 項目を追加
                           </button>
@@ -827,7 +827,7 @@ export default function EstimatesPage() {
                                 setReplyForm({...replyForm, otherFees: arr});
                               }}
                               placeholder="例: スタンド料"
-                              className="h-10 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#117768]"/>
+                              className="h-10 px-3 bg-white border border-[#E6E2DA] rounded-lg text-[14px] outline-none focus:border-[#117768]"/>
                             <input type="number" value={o.amount}
                               onChange={e => {
                                 const arr = [...replyForm.otherFees];
@@ -835,7 +835,7 @@ export default function EstimatesPage() {
                                 setReplyForm({...replyForm, otherFees: arr});
                               }}
                               placeholder="¥金額"
-                              className="h-10 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#117768]"/>
+                              className="h-10 px-3 bg-white border border-[#E6E2DA] rounded-lg text-[14px] outline-none focus:border-[#117768]"/>
                             <button type="button"
                               onClick={() => setReplyForm({...replyForm, otherFees: replyForm.otherFees.filter((_, i) => i !== idx)})}
                               className="h-10 text-red-500 hover:bg-red-50 rounded-lg"
@@ -845,23 +845,23 @@ export default function EstimatesPage() {
                           </div>
                         ))}
                         {(!replyForm.otherFees || replyForm.otherFees.length === 0) && (
-                          <p className="text-[10px] text-[#999]">「+ 項目を追加」でスタンド料・特別装飾代などを追加</p>
+                          <p className="text-[12px] text-[#5C6660]">「+ 項目を追加」でスタンド料・特別装飾代などを追加</p>
                         )}
                       </div>
 
                       {/* 合計表示 */}
                       <div className="bg-white border-2 border-[#117768] rounded-xl p-4 text-center space-y-1">
-                        <p className="text-[10px] text-[#999]">合計</p>
+                        <p className="text-[12px] text-[#5C6660]">合計</p>
                         <p className="text-[20px] font-bold text-[#117768]">
-                          ¥{totalTax.toLocaleString()} <span className="text-[11px] text-[#999]">(税込)</span>
+                          ¥{totalTax.toLocaleString()} <span className="text-[13px] text-[#5C6660]">(税込)</span>
                         </p>
-                        <p className="text-[10px] text-[#555]">税抜: ¥{total.toLocaleString()} + 消費税 ¥{Math.floor(total * 0.1).toLocaleString()}</p>
+                        <p className="text-[12px] text-[#3B4640]">税抜: ¥{total.toLocaleString()} + 消費税 ¥{Math.floor(total * 0.1).toLocaleString()}</p>
                       </div>
 
                       {/* ★ 店舗からの追加コメント (自動生成と合体) */}
                       <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
-                        <label className="text-[11px] font-bold text-amber-900">店舗からの追加コメント (任意)</label>
-                        <p className="text-[10px] text-amber-700">
+                        <label className="text-[13px] font-bold text-amber-900">店舗からの追加コメント (任意)</label>
+                        <p className="text-[12px] text-amber-700">
                           お客様への質問・補足説明があればこちらに記入してください。<br/>
                           下の「自動生成」ボタンを押すと、料金内訳と合わせてメッセージに反映されます。
                         </p>
@@ -869,17 +869,17 @@ export default function EstimatesPage() {
                           onChange={e => setReplyForm({...replyForm, staffComment: e.target.value})}
                           rows={3}
                           placeholder="例: バラの代わりにダリアで仕上げる予定ですがよろしいでしょうか？／お届け先のご都合を再度ご確認ください 等"
-                          className="w-full px-3 py-2 bg-white border border-amber-200 rounded-lg text-[12px] outline-none focus:border-amber-500 resize-none leading-relaxed"/>
+                          className="w-full px-3 py-2 bg-white border border-amber-200 rounded-lg text-[14px] outline-none focus:border-amber-500 resize-none leading-relaxed"/>
                       </div>
 
                       {/* 自動生成ボタン + メッセージ */}
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <label className="text-[10px] font-bold text-[#555]">回答メッセージ (お客様に送信される内容)</label>
+                          <label className="text-[12px] font-bold text-[#3B4640]">回答メッセージ (お客様に送信される内容)</label>
                           <button type="button"
                             onClick={() => setReplyForm({...replyForm, message: generateMessage(est)})}
                             disabled={total <= 0}
-                            className="text-[10px] bg-[#117768]/10 text-[#117768] px-3 py-1 rounded-full font-bold hover:bg-[#117768] hover:text-white disabled:opacity-50">
+                            className="text-[12px] bg-[#117768]/10 text-[#117768] px-3 py-1 rounded-full font-bold hover:bg-[#117768] hover:text-white disabled:opacity-50">
                             内容＋追加コメントから自動生成
                           </button>
                         </div>
@@ -887,14 +887,14 @@ export default function EstimatesPage() {
                           onChange={e => setReplyForm({...replyForm, message: e.target.value})}
                           rows={10}
                           placeholder="先に料金と追加コメントを入力して「自動生成」を押してください。"
-                          className="w-full px-3 py-2 bg-white border border-[#EAEAEA] rounded-lg text-[12px] outline-none focus:border-[#117768] resize-none leading-relaxed"/>
+                          className="w-full px-3 py-2 bg-white border border-[#E6E2DA] rounded-lg text-[14px] outline-none focus:border-[#117768] resize-none leading-relaxed"/>
                       </div>
 
                       <div className="flex gap-2">
-                        <button onClick={() => setEditingId(null)} className="h-10 px-4 bg-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-lg">キャンセル</button>
+                        <button onClick={() => setEditingId(null)} className="h-10 px-4 bg-[#E6E2DA] text-[#3B4640] text-[14px] font-bold rounded-lg">キャンセル</button>
                         <button onClick={() => handleReply(est.id)}
                           disabled={total <= 0 || !replyForm.message}
-                          className="flex-1 h-10 bg-[#117768] text-white text-[12px] font-bold rounded-lg hover:bg-[#0d5e54] flex items-center justify-center gap-1 disabled:opacity-50">
+                          className="flex-1 h-10 bg-[#117768] text-white text-[14px] font-bold rounded-lg hover:bg-[#0d5e54] flex items-center justify-center gap-1 disabled:opacity-50">
                           <Send size={12}/> 回答メールを送信
                         </button>
                       </div>
@@ -903,17 +903,17 @@ export default function EstimatesPage() {
                   })()}
 
                   {est.status === 'converted' && est.order_id && (
-                    <div className="bg-emerald-50 p-3 rounded-lg text-[11px] text-emerald-700">
+                    <div className="bg-emerald-50 p-3 rounded-lg text-[13px] text-emerald-700">
                       <strong>正式注文に確定済み</strong> (注文ID: {String(est.order_id).slice(0, 8)})
                     </div>
                   )}
 
                   {/* ★ [2026-10] 却下・ゴミ箱は「元に戻す」、それ以外は「ゴミ箱へ移動」（データは消さない） */}
-                  <div className="flex justify-end gap-2 pt-2 border-t border-[#EAEAEA]">
+                  <div className="flex justify-end gap-2 pt-2 border-t border-[#E6E2DA]">
                     {(est.status === 'rejected' || est.status === 'deleted') && (
                       <button
                         onClick={() => handleRestore(est.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#2D4B3E]/40 text-[#2D4B3E] text-[11px] font-bold rounded-lg hover:bg-[#2D4B3E] hover:text-white transition-all"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#2D4B3E]/40 text-[#2D4B3E] text-[13px] font-bold rounded-lg hover:bg-[#2D4B3E] hover:text-white transition-all"
                       >
                         <RotateCcw size={12}/> 元に戻す
                       </button>
@@ -921,7 +921,7 @@ export default function EstimatesPage() {
                     {est.status !== 'deleted' && (
                       <button
                         onClick={() => handleDelete(est.id, est)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 text-[11px] font-bold rounded-lg hover:bg-red-500 hover:text-white transition-all"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 text-[13px] font-bold rounded-lg hover:bg-red-500 hover:text-white transition-all"
                       >
                         <Trash2 size={12}/> ゴミ箱へ移動
                       </button>

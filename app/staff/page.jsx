@@ -494,7 +494,7 @@ export default function DashboardPage() {
                   const d = order.order_data || {};
                   const parts = (d.selectedDate || '').split('-');
                   return (
-                    <Link key={order.id} href="/staff/orders" className="px-5 py-3.5 flex items-center gap-4 hover:bg-[#FAFAF7] group">
+                    <Link key={order.id} href={`/staff/orders/${order.id}`} className="px-5 py-3.5 flex items-center gap-4 hover:bg-[#FAFAF7] group">
                       <div className="w-14 shrink-0 text-center">
                         <span className="block text-[12px] text-[#5C6660]">{parts[1] ? `${Number(parts[1])}月` : '--月'}</span>
                         <span className="ui-num block text-[22px] font-bold leading-tight text-[#1F2A24]">{parts[2] ? Number(parts[2]) : '--'}</span>

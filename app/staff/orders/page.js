@@ -1,4 +1,5 @@
 'use client';
+import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 import {
@@ -26,6 +27,8 @@ export default function OrdersPage() {
   const [currentTenantId, setCurrentTenantId] = useState(null);
   // [2026-10 C2] 「決済が完了していない注文」を見ているとき true
   const [showAbandoned, setShowAbandoned] = useState(false);
+  // [2026-10] 注文を開くと注文詳細のページへ
+  const router = useRouter();
   // [2026-10] アーカイブは新しい順に 10 件ずつ出す（「もっと見る」で増やす）
   const ARCHIVE_PAGE = 10;
   const [archiveLimit, setArchiveLimit] = useState(ARCHIVE_PAGE);
@@ -508,7 +511,7 @@ export default function OrdersPage() {
               return (
                 <div
                   key={order.id}
-                  onClick={() => setSelectedOrder(order)}
+                  onClick={() => router.push(`/staff/orders/${order.id}`)}
                   className="bg-white rounded-[14px] border border-[#E6E2DA] hover:border-[#2D4B3E]/50 hover:shadow-sm cursor-pointer transition-all group grid grid-cols-[72px_minmax(0,1fr)] md:grid-cols-[96px_minmax(0,1fr)_auto] gap-x-4 md:gap-x-6 gap-y-3 p-4 md:p-5"
                 >
                   {/* 納品日 */}

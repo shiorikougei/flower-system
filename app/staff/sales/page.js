@@ -1,4 +1,5 @@
 'use client';
+import { useRouter } from 'next/navigation';
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/utils/supabase';
 import {
@@ -34,6 +35,8 @@ function SalesPageInner() {
   const [paymentModalOrder, setPaymentModalOrder] = useState(null); // { id, order_data }
   // ★ ④ 受注詳細モーダル
   const [detailOrder, setDetailOrder] = useState(null);
+  // [2026-10] 注文を開くと注文詳細のページへ
+  const router = useRouter();
   const [appSettings, setAppSettings] = useState(null);
   const [confirmDeliveryDate, setConfirmDeliveryDate] = useState('');
   const [confirmDeliveryTime, setConfirmDeliveryTime] = useState('');
@@ -598,7 +601,7 @@ function SalesPageInner() {
                       {/* ★ ④ クリックで詳細モーダルを開く（左2/3エリア） */}
                       <button
                         type="button"
-                        onClick={() => setDetailOrder(order)}
+                        onClick={() => router.push(`/staff/orders/${order.id}`)}
                         className="p-6 md:w-1/3 flex flex-col justify-center w-full border-b md:border-b-0 md:border-r border-[#EAEAEA] text-left hover:bg-[#FBFAF9] transition-colors"
                       >
                         <div className="flex items-center gap-2 mb-2">
@@ -611,7 +614,7 @@ function SalesPageInner() {
 
                       <button
                         type="button"
-                        onClick={() => setDetailOrder(order)}
+                        onClick={() => router.push(`/staff/orders/${order.id}`)}
                         className="p-6 md:w-1/3 flex flex-col justify-center w-full space-y-2 border-b md:border-b-0 md:border-r border-[#EAEAEA] text-left hover:bg-[#FBFAF9] transition-colors"
                       >
                         <p className="text-[14px] font-bold text-[#333] flex items-center gap-2"><User size={14} className="text-[#999]"/> {c.name || '名称未設定'} 様</p>
