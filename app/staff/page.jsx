@@ -252,7 +252,7 @@ export default function DashboardPage() {
         <h1 className="text-[26px] md:text-[30px] font-bold tracking-[0.02em] text-[#1F2A24]">ダッシュボード</h1>
       </header>
 
-      <div className="max-w-[1200px] mx-auto w-full p-4 md:p-8 space-y-10">
+      <div className="w-full p-4 md:px-10 md:py-8 space-y-10">
         
         <div className="flex flex-col gap-2">
           <p className="text-[15px] text-[#3B4640]">本日の業務状況と最新の注文状況を確認しましょう。</p>

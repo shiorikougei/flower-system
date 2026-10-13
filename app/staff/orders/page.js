@@ -366,76 +366,84 @@ export default function OrdersPage() {
 
   return (
     <div className="min-h-screen bg-[#F6F4EF] pb-32">
-      <div className="bg-[#F6F4EF]/95 backdrop-blur border-b border-[#E0DCD3] sticky top-0 z-30 px-4 md:px-10 pt-6 pb-4">
-        <div className="max-w-[1100px] mx-auto flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <h1 className="text-[26px] md:text-[30px] font-bold tracking-[0.02em] text-[#1F2A24] flex items-center gap-2">受注一覧 <HelpTooltip articleId="order_status"/> <HelpTooltip articleId="order_payment" size={14}/></h1>
-          
-          <div role="tablist" className="flex gap-1 w-fit">
+      <div className="bg-[#F6F4EF]/95 backdrop-blur border-b border-[#E0DCD3] sticky top-0 z-30 px-4 md:px-10 pt-5">
+        <h1 className="text-[24px] md:text-[28px] font-bold tracking-[0.02em] text-[#1F2A24] flex items-center gap-2">受注一覧 <HelpTooltip articleId="order_status"/> <HelpTooltip articleId="order_payment" size={14}/></h1>
+
+        {/* 表示の切り替え（タイトルのすぐ下に左寄せ） */}
+        <div role="tablist" className="mt-2 flex gap-1 border-b border-[#E0DCD3]">
             <button
               role="tab" aria-selected={filterMode === '未完了'}
               onClick={() => setFilterMode('未完了')}
-              className={`h-12 px-4 md:px-5 border-b-[3px] text-[16px] transition-all ${filterMode === '未完了' ? 'border-[#2D4B3E] text-[#2D4B3E] font-bold' : 'border-transparent text-[#5C6660] font-medium hover:text-[#1F2A24]'}`}
+              className={`h-11 px-4 -mb-px border-b-[3px] text-[15px] transition-all ${filterMode === '未完了' ? 'border-[#2D4B3E] text-[#2D4B3E] font-bold' : 'border-transparent text-[#5C6660] hover:text-[#1F2A24]'}`}
             >
               未完了
             </button>
             <button
               role="tab" aria-selected={filterMode === '未入金'}
               onClick={() => setFilterMode('未入金')}
-              className={`h-12 px-4 md:px-5 border-b-[3px] text-[16px] transition-all ${filterMode === '未入金' ? 'border-[#A2471F] text-[#A2471F] font-bold' : 'border-transparent text-[#5C6660] font-medium hover:text-[#1F2A24]'}`}
+              className={`h-11 px-4 -mb-px border-b-[3px] text-[15px] transition-all ${filterMode === '未入金' ? 'border-[#A2471F] text-[#A2471F] font-bold' : 'border-transparent text-[#5C6660] hover:text-[#1F2A24]'}`}
             >
               未入金
             </button>
             <button
               role="tab" aria-selected={filterMode === 'アーカイブ'}
               onClick={() => setFilterMode('アーカイブ')}
-              className={`h-12 px-4 md:px-5 border-b-[3px] text-[16px] transition-all ${filterMode === 'アーカイブ' ? 'border-[#2D4B3E] text-[#2D4B3E] font-bold' : 'border-transparent text-[#5C6660] font-medium hover:text-[#1F2A24]'}`}
+              className={`h-11 px-4 -mb-px border-b-[3px] text-[15px] transition-all ${filterMode === 'アーカイブ' ? 'border-[#2D4B3E] text-[#2D4B3E] font-bold' : 'border-transparent text-[#5C6660] hover:text-[#1F2A24]'}`}
             >
               アーカイブ
             </button>
-          </div>
         </div>
 
-        {/* ★ ソート切替（納期順 / 登録順） */}
-        <div className="max-w-[1100px] mx-auto mt-4 flex items-center gap-2 flex-wrap">
-          <span className="text-[14px] font-bold text-[#5C6660]">並び順:</span>
-          <button
-            onClick={() => setSortMode('納期順')}
-            className={`h-9 px-4 rounded-full text-[14px] border transition-all ${sortMode === '納期順' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] font-bold' : 'bg-white text-[#3B4640] border-[#D5D0C6] hover:border-[#2D4B3E]'}`}
-          >
-            納期順（近い順）
-          </button>
-          <button
-            onClick={() => setSortMode('登録順')}
-            className={`h-9 px-4 rounded-full text-[14px] border transition-all ${sortMode === '登録順' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] font-bold' : 'bg-white text-[#3B4640] border-[#D5D0C6] hover:border-[#2D4B3E]'}`}
-          >
-            登録順（新しい順）
-          </button>
-        </div>
-
-        {/* ★ 商品(お花の種類)別フィルタ */}
-        {productOptions.length > 0 && (
-          <div className="max-w-[1100px] mx-auto mt-3 flex items-center gap-2 flex-wrap">
-            <span className="text-[14px] font-bold text-[#5C6660]">商品で絞り込み:</span>
+        {/* 並び順と商品の絞り込みを 1 行に */}
+        <div className="py-3 flex items-center gap-x-5 gap-y-2 flex-wrap">
+          {/* ★ ソート切替（納期順 / 登録順） */}
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] font-bold text-[#5C6660]">並び順</span>
+            <div className="flex p-0.5 rounded-lg bg-[#E9E5DC]">
             <button
-              onClick={() => setProductFilter('all')}
-              className={`h-9 px-4 rounded-full text-[14px] border transition-all ${productFilter === 'all' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] font-bold' : 'bg-white text-[#3B4640] border-[#D5D0C6] hover:border-[#2D4B3E]'}`}
+              onClick={() => setSortMode('納期順')}
+              aria-pressed={sortMode === '納期順'}
+              className={`h-8 px-3 rounded-md text-[13px] transition-all ${sortMode === '納期順' ? 'bg-white text-[#1F2A24] font-bold shadow-sm' : 'text-[#5C6660] hover:text-[#1F2A24]'}`}
             >
-              すべて <span className="ui-num ml-1 opacity-80">({baseFilteredOrders.length})</span>
+              納期順（近い順）
             </button>
-            {productOptions.map(([name, count]) => (
-              <button
-                key={name}
-                onClick={() => setProductFilter(name)}
-                className={`h-9 px-4 rounded-full text-[14px] border transition-all ${productFilter === name ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] font-bold' : 'bg-white text-[#3B4640] border-[#D5D0C6] hover:border-[#2D4B3E]'}`}
-              >
-                {name} <span className="ui-num ml-1 opacity-80">({count})</span>
-              </button>
-            ))}
+            <button
+              onClick={() => setSortMode('登録順')}
+              aria-pressed={sortMode === '登録順'}
+              className={`h-8 px-3 rounded-md text-[13px] transition-all ${sortMode === '登録順' ? 'bg-white text-[#1F2A24] font-bold shadow-sm' : 'text-[#5C6660] hover:text-[#1F2A24]'}`}
+            >
+              登録順（新しい順）
+            </button>
+            </div>
           </div>
-        )}
+
+          {/* ★ 商品(お花の種類)別フィルタ */}
+          {productOptions.length > 0 && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[13px] font-bold text-[#5C6660] mr-0.5">商品</span>
+              <button
+                onClick={() => setProductFilter('all')}
+                aria-pressed={productFilter === 'all'}
+                className={`h-8 px-3 rounded-full text-[13px] border transition-all ${productFilter === 'all' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] font-bold' : 'bg-white text-[#3B4640] border-[#D5D0C6] hover:border-[#2D4B3E]'}`}
+              >
+                すべて <span className="ui-num ml-0.5 opacity-80">{baseFilteredOrders.length}</span>
+              </button>
+              {productOptions.map(([name, count]) => (
+                <button
+                  key={name}
+                  onClick={() => setProductFilter(name)}
+                  aria-pressed={productFilter === name}
+                  className={`h-8 px-3 rounded-full text-[13px] border transition-all ${productFilter === name ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] font-bold' : 'bg-white text-[#3B4640] border-[#D5D0C6] hover:border-[#2D4B3E]'}`}
+                >
+                  {name} <span className="ui-num ml-0.5 opacity-80">{count}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      <main className="max-w-[1100px] mx-auto px-4 md:px-10 py-6 space-y-4">
+      <main className="w-full px-4 md:px-10 py-6 space-y-4">
         {/* [2026-10 C2] 決済が完了していない注文を見ているときの説明 */}
         {showAbandoned && (
           <div className="bg-sky-50 border border-sky-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
