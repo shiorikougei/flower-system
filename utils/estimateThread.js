@@ -31,6 +31,31 @@ export function isValidCustomerToken(est, token) {
   return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(est.access_token));
 }
 
+// [2026-10 C6] 見積からのカード決済の手続き中（決済画面の有効時間 31 分）の注文
+//   - カード払いの注文は、決済が終わるまで見積を「確定済み」にしない
+//   - その間に同じ見積からもう一度注文されないよう、手続き中の注文を探す
+//   - 決済画面で「戻る」を押した注文（checkoutCancelledAt あり）は手続き中にしない
+export const CARD_CHECKOUT_MINUTES = 31;
+export async function findPendingCardOrder(supabase, est) {
+  if (!est?.id) return null;
+  const since = new Date(Date.now() - CARD_CHECKOUT_MINUTES * 60 * 1000).toISOString();
+  const { data } = await supabase
+    .from('orders')
+    .select('id, created_at, order_data')
+    .eq('tenant_id', String(est.tenant_id))
+    .eq('payment_status', 'processing')
+    .gte('created_at', since)
+    .filter('order_data->>estimateId', 'eq', String(est.id))
+    .order('created_at', { ascending: false })
+    .limit(5);
+  const row = (data || []).find(o => o.order_data?.paymentMethod === 'card' && !o.order_data?.checkoutCancelledAt);
+  if (!row) return null;
+  return {
+    orderId: row.id,
+    until: new Date(new Date(row.created_at).getTime() + CARD_CHECKOUT_MINUTES * 60 * 1000).toISOString(),
+  };
+}
+
 // お客様に返してよい項目だけにする（鍵は返さない）
 export function publicEstimate(est) {
   if (!est) return est;

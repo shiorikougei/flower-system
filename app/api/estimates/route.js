@@ -8,12 +8,13 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { stripe } from '@/utils/stripe';
 import { sendEmail, noReplyFooter, shopContactEmail } from '@/utils/email';
 import { rateLimit, getClientIp } from '@/utils/rateLimit';
 import { requireTenantStaff } from '@/utils/adminAuth';
 import {
   newExpiresAt, newAccessToken, customerEstimateUrl, isValidCustomerToken, publicEstimate,
-  loadVersions, loadMessages, loadThreadsFor, materializeLegacyVersion,
+  loadVersions, loadMessages, loadThreadsFor, materializeLegacyVersion, findPendingCardOrder,
 } from '@/utils/estimateThread';
 
 export const runtime = 'nodejs';
@@ -346,7 +347,17 @@ export async function GET(request) {
         // 表がまだ無いときの「見積案1」
         versions = [{ id: 'legacy', version_no: 1, proposed_price: Number(data.proposed_price) || 0, proposed_data: data.proposed_data, message: data.reply_message || '', status: 'active', created_at: data.replied_at, legacy: true }];
       }
-      return NextResponse.json({ estimates: [{ ...publicEstimate(data), versions, messages }] });
+      // [2026-10 C6] カードのお支払い手続き中なら、その終わりの時刻を返す（見積ページで案内を出す）
+      let pendingCardPayment = null;
+      if (data.status !== 'converted') {
+        try {
+          const p = await findPendingCardOrder(supabase, data);
+          if (p) pendingCardPayment = { until: p.until };
+        } catch (e) {
+          console.warn('[estimates GET] pending card check', e?.message);
+        }
+      }
+      return NextResponse.json({ estimates: [{ ...publicEstimate(data), versions, messages, pendingCardPayment }] });
     }
 
     // 一覧取得: 認証必須
@@ -415,7 +426,7 @@ export async function DELETE(request) {
 // PATCH: 店舗回答 or お客様承諾
 export async function PATCH(request) {
   try {
-    const { id, action, replyMessage, proposedPrice, proposedData, customerToken, customerExtraData, body: messageBody, versionId } = await request.json();
+    const { id, action, replyMessage, proposedPrice, proposedData, customerToken, customerExtraData, body: messageBody, versionId, orderId } = await request.json();
     if (!id || !action) return NextResponse.json({ error: 'id/action必要' }, { status: 400 });
 
     const supabase = admin();
@@ -429,6 +440,43 @@ export async function PATCH(request) {
       const authR = await requireTenantStaff(request, cur.tenant_id);
       if (!authR.ok) return authR.response;
       staffUserId = authR.user?.id || null;
+    }
+
+    // [2026-10 C6] 決済画面で「戻る」を押して見積ページに戻ったとき
+    //   その決済画面を Stripe で無効にしてから、注文に「戻った」印を付ける（すぐに選び直せるようにする）
+    //   決済がもう終わっている・無効にできないときは何もしない
+    if (action === 'cancel_card_checkout') {
+      if (!isValidCustomerToken(cur, customerToken)) {
+        return NextResponse.json({ error: 'お見積もりが見つかりません' }, { status: 404 });
+      }
+      if (!orderId) return NextResponse.json({ ok: false });
+      const { data: ord } = await supabase.from('orders')
+        .select('id, tenant_id, payment_status, stripe_checkout_session_id, order_data')
+        .eq('id', String(orderId)).maybeSingle();
+      const od = ord?.order_data || {};
+      if (!ord || String(ord.tenant_id) !== String(cur.tenant_id) || String(od.estimateId) !== String(cur.id)
+        || od.paymentMethod !== 'card' || ord.payment_status !== 'processing' || !ord.stripe_checkout_session_id || od.checkoutCancelledAt) {
+        return NextResponse.json({ ok: false });
+      }
+      const { data: settingsRow } = await supabase.from('app_settings').select('settings_data').eq('id', cur.tenant_id).maybeSingle();
+      const stripeAccount = settingsRow?.settings_data?.stripe?.accountId;
+      if (!stripeAccount) return NextResponse.json({ ok: false });
+      try {
+        const sess = await stripe.checkout.sessions.retrieve(ord.stripe_checkout_session_id, {}, { stripeAccount });
+        if (sess.status === 'open') {
+          await stripe.checkout.sessions.expire(ord.stripe_checkout_session_id, {}, { stripeAccount });
+        } else if (sess.status !== 'expired') {
+          return NextResponse.json({ ok: false });
+        }
+      } catch (e) {
+        console.warn('[estimates cancel_card_checkout]', e?.message);
+        return NextResponse.json({ ok: false });
+      }
+      await supabase.from('orders')
+        .update({ order_data: { ...od, checkoutCancelledAt: new Date().toISOString() } })
+        .eq('id', ord.id)
+        .eq('payment_status', 'processing');
+      return NextResponse.json({ ok: true });
     }
 
     // [2026-10] お客様からの変更依頼（ログイン不要。お客様用の鍵で確認）
