@@ -26,6 +26,26 @@ const normalizeHomepageUrl = (raw) => {
   } catch { return ''; }
 };
 
+// [2026-10 画面リニューアル] 社内メモ・お客様の備考の欄
+//   白い欄に、ふつうの太さの文字で表示する。長い文章は最初の数行だけ出し、「全文を表示」で開く（内容はそのまま）
+function NoteBlock({ label, tone, text }) {
+  const [open, setOpen] = useState(false);
+  const lines = String(text || '').split('\n').length;
+  const isLong = lines > 6 || String(text || '').length > 240;
+  const tag = tone === 'memo' ? 'bg-[#FFF3C4] text-[#6B4E00]' : 'bg-[#E6F0F4] text-[#1D5670]';
+  return (
+    <section className="bg-white rounded-2xl border border-[#E6E2DA] p-5 mb-4">
+      <h3 className="mb-2"><span className={`inline-flex items-center h-7 px-2.5 rounded-md text-[13px] font-bold ${tag}`}>{label}</span></h3>
+      <p className="text-[15px] text-[#1F2A24] whitespace-pre-wrap leading-[1.8]" style={isLong && !open ? { maxHeight: '10.8em', overflow: 'hidden' } : undefined}>{text}</p>
+      {isLong && (
+        <button type="button" onClick={() => setOpen(v => !v)} className="mt-2 min-h-[36px] text-[14px] font-bold text-[#2D4B3E] underline">
+          {open ? '閉じる' : '全文を表示'}
+        </button>
+      )}
+    </section>
+  );
+}
+
 export default function OrderDetailModal({ 
   order, 
   appSettings, 
@@ -2415,18 +2435,12 @@ export default function OrderDetailModal({
           )}
 
           {modalData.note && (
-            <div className="bg-yellow-50 p-6 rounded-[24px] border border-yellow-200 shadow-sm mb-4">
-              <h3 className="text-[14px] font-bold text-yellow-800 mb-2 tracking-widest flex items-center gap-2">社内メモ / お客様要望</h3>
-              <p className="text-[15px] font-bold text-yellow-900 whitespace-pre-wrap leading-relaxed">{modalData.note}</p>
-            </div>
+            <NoteBlock label="社内メモ / お客様要望" tone="memo" text={modalData.note} />
           )}
 
           {/* ★ お客様が入力した補足・備考（purposeNote） */}
           {modalData.purposeNote && (
-            <div className="bg-blue-50 p-6 rounded-[24px] border border-blue-200 shadow-sm mb-4">
-              <h3 className="text-[14px] font-bold text-blue-800 mb-2 tracking-widest flex items-center gap-2">お客様からの補足・備考</h3>
-              <p className="text-[15px] font-bold text-blue-900 whitespace-pre-wrap leading-relaxed">{modalData.purposeNote}</p>
-            </div>
+            <NoteBlock label="お客様からの補足・備考" tone="customer" text={modalData.purposeNote} />
           )}
         </div>
       </div>
