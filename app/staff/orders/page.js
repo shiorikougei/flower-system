@@ -372,26 +372,39 @@ export default function OrdersPage() {
         {/* 表示の切り替え（タイトルのすぐ下に左寄せ） */}
         <div role="tablist" className="mt-2 flex gap-1 border-b border-[#E0DCD3]">
             <button
-              role="tab" aria-selected={filterMode === '未完了'}
-              onClick={() => setFilterMode('未完了')}
-              className={`h-11 px-4 -mb-px border-b-[3px] text-[15px] transition-all ${filterMode === '未完了' ? 'border-[#2D4B3E] text-[#2D4B3E] font-bold' : 'border-transparent text-[#5C6660] hover:text-[#1F2A24]'}`}
+              role="tab" aria-selected={filterMode === '未完了' && !showAbandoned}
+              onClick={() => { setFilterMode('未完了'); setShowAbandoned(false); }}
+              className={`h-11 px-4 -mb-px border-b-[3px] text-[15px] transition-all ${filterMode === '未完了' && !showAbandoned ? 'border-[#2D4B3E] text-[#2D4B3E] font-bold' : 'border-transparent text-[#5C6660] hover:text-[#1F2A24]'}`}
             >
               未完了
             </button>
             <button
-              role="tab" aria-selected={filterMode === '未入金'}
-              onClick={() => setFilterMode('未入金')}
-              className={`h-11 px-4 -mb-px border-b-[3px] text-[15px] transition-all ${filterMode === '未入金' ? 'border-[#A2471F] text-[#A2471F] font-bold' : 'border-transparent text-[#5C6660] hover:text-[#1F2A24]'}`}
+              role="tab" aria-selected={filterMode === '未入金' && !showAbandoned}
+              onClick={() => { setFilterMode('未入金'); setShowAbandoned(false); }}
+              className={`h-11 px-4 -mb-px border-b-[3px] text-[15px] transition-all ${filterMode === '未入金' && !showAbandoned ? 'border-[#A2471F] text-[#A2471F] font-bold' : 'border-transparent text-[#5C6660] hover:text-[#1F2A24]'}`}
             >
               未入金
             </button>
             <button
-              role="tab" aria-selected={filterMode === 'アーカイブ'}
-              onClick={() => setFilterMode('アーカイブ')}
-              className={`h-11 px-4 -mb-px border-b-[3px] text-[15px] transition-all ${filterMode === 'アーカイブ' ? 'border-[#2D4B3E] text-[#2D4B3E] font-bold' : 'border-transparent text-[#5C6660] hover:text-[#1F2A24]'}`}
+              role="tab" aria-selected={filterMode === 'アーカイブ' && !showAbandoned}
+              onClick={() => { setFilterMode('アーカイブ'); setShowAbandoned(false); }}
+              className={`h-11 px-4 -mb-px border-b-[3px] text-[15px] transition-all ${filterMode === 'アーカイブ' && !showAbandoned ? 'border-[#2D4B3E] text-[#2D4B3E] font-bold' : 'border-transparent text-[#5C6660] hover:text-[#1F2A24]'}`}
             >
               アーカイブ
             </button>
+            {/* [2026-10 C2] 決済が完了していない注文（ふだんの一覧から外したもの）。あるときだけ件数付きで出す */}
+            {(abandonedOrders.length > 0 || showAbandoned) && (
+              <button
+                role="tab" aria-selected={showAbandoned}
+                onClick={() => { setShowAbandoned(true); setProductFilter('all'); }}
+                className={`h-11 px-4 -mb-px border-b-[3px] text-[15px] transition-all inline-flex items-center gap-1.5 ${showAbandoned ? 'border-[#A2471F] text-[#A2471F] font-bold' : 'border-transparent text-[#5C6660] hover:text-[#1F2A24]'}`}
+              >
+                決済未完了
+                {abandonedOrders.length > 0 && (
+                  <span className="ui-num min-w-[22px] h-[22px] px-1.5 rounded-full bg-[#B9562F] text-white text-[12px] font-bold inline-flex items-center justify-center">{abandonedOrders.length}</span>
+                )}
+              </button>
+            )}
         </div>
 
         {/* 並び順と商品の絞り込みを 1 行に */}
@@ -448,7 +461,8 @@ export default function OrdersPage() {
         {showAbandoned && (
           <div className="bg-sky-50 border border-sky-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
             <p className="text-[14px] text-sky-900 leading-relaxed min-w-0 flex-1">
-              <strong>決済が完了していない注文</strong>（カード払いを選んでから{UNPAID_CARD_HIDE_MINUTES}分たっても決済が終わっていないもの）を表示しています。ふだんの受注一覧・カレンダー・印刷には出ません。
+              <strong>決済が完了していない注文</strong>（カード払いを選んでから{UNPAID_CARD_HIDE_MINUTES}分たっても決済が終わっていないもの）を表示しています。ふだんの受注一覧・カレンダー・印刷には出ません（データは残っています）。<br/>
+              あとから決済が完了すると、自動で「入金済」になって一覧に戻ります。
             </p>
             <button type="button" onClick={() => setShowAbandoned(false)} className="h-11 px-4 rounded-xl bg-white border border-sky-300 text-sky-900 text-[14px] font-bold">受注一覧に戻る</button>
           </div>
@@ -586,21 +600,6 @@ export default function OrdersPage() {
                 </div>
               );
             })}
-          </div>
-        )}
-        {/* [2026-10 C2] 決済が完了していない注文（一覧から外したもの）を確認するリンク */}
-        {!isLoading && (abandonedOrders.length > 0 || showAbandoned) && (
-          <div className="pt-6 text-center space-y-2">
-            {showAbandoned && (
-              <p className="text-[14px] text-[#3B4640] leading-relaxed">
-                カード払いを選んだあと、{UNPAID_CARD_HIDE_MINUTES}分たっても決済が完了していない注文です。受注一覧・カレンダー・印刷には出ていません（データは残っています）。<br/>
-                あとから決済が完了すると、自動で「入金済」になって一覧に戻ります。
-              </p>
-            )}
-            <button type="button" onClick={() => { setShowAbandoned(v => !v); setProductFilter('all'); }}
-              className="min-h-[44px] text-[14px] font-bold text-[#3B4640] underline hover:text-[#2D4B3E]">
-              {showAbandoned ? '受注一覧に戻る' : `決済が完了していない注文（${abandonedOrders.length}件）`}
-            </button>
           </div>
         )}
       </main>
