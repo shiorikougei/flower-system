@@ -71,3 +71,25 @@ input::placeholder, textarea::placeholder {
     box-shadow: none !important;
   }
 }
+
+/* ============================================ */
+/* [2026-10 画面リニューアル] スタッフ画面の土台
+   - 書体: BIZ UDPゴシック（数字も同じ書体。app/layout.tsx で読み込み済み）
+   - 色: 背景 #F6F4EF / 文字 #1F2A24 / 補足 #5C6660 / 線 #E6E2DA / 主色 #2D4B3E / 差し色 #117768 / 注意 #B9562F
+   情報やボタンは変えず、見た目だけを変える */
+/* ============================================ */
+.ui-renewal {
+  font-family: var(--font-biz-ud), 'BIZ UDPGothic', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+  color: #1F2A24;
+  -webkit-font-smoothing: antialiased;
+}
+.ui-renewal .ui-num,
+.ui-num {
+  font-family: var(--font-biz-ud), 'BIZ UDPGothic', sans-serif;
+  font-feature-settings: "tnum";
+}
+/* スタッフ画面の中で個別に「font-sans」が付いている所も、同じ書体にそろえる */
+.ui-renewal .font-sans,
+.ui-renewal h1, .ui-renewal h2, .ui-renewal h3, .ui-renewal h4 {
+  font-family: inherit;
+}

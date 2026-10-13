@@ -345,15 +345,15 @@ export default function StaffLayout({ children }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#FBFAF9] flex flex-col md:flex-row font-sans text-[#111111]">
-      <aside className="w-full md:w-64 bg-white border-r border-[#EAEAEA] md:fixed h-full z-40 flex flex-col print:hidden">
-        <div className="p-6 flex flex-col gap-1 border-b border-[#EAEAEA] shrink-0">
+    <div className="ui-renewal min-h-screen bg-[#F6F4EF] flex flex-col md:flex-row text-[#1F2A24]">
+      <aside className="w-full md:w-64 bg-white border-r border-[#E6E2DA] md:fixed h-full z-40 flex flex-col print:hidden">
+        <div className="px-5 pt-7 pb-5 flex flex-col gap-1 border-b border-[#E6E2DA] shrink-0">
           {logoUrl ? (
             <img src={logoUrl} alt={appName} className="h-8 object-contain object-left mb-1" />
           ) : (
-            <span className="font-serif italic text-[24px] font-bold tracking-tight text-[#2D4B3E]">{appName}</span>
+            <span className="ui-num text-[24px] font-bold tracking-[0.04em] text-[#2D4B3E]">{appName}</span>
           )}
-          <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#999999] pt-1 flex items-center gap-1">
+          <span className="text-[12px] text-[#5C6660] pt-0.5 flex items-center gap-1">
             管理ワークスペース
             {isPremiumPlan && <Sparkles size={10} className="text-yellow-500" />}
           </span>
@@ -362,10 +362,10 @@ export default function StaffLayout({ children }) {
           <div className="mt-3 relative">
             <button
               onClick={() => setShowStaffPicker(s => !s)}
-              className="w-full flex items-center justify-between gap-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-3 py-2 hover:border-[#2D4B3E] transition-all"
+              className="w-full min-h-[52px] flex items-center justify-between gap-2 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl px-3 py-2 hover:border-[#2D4B3E] transition-all"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0 ${
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0 ${
                   currentStaff?.role === 'owner' ? 'bg-[#2D4B3E]' :
                   currentStaff?.role === 'staff' ? 'bg-[#117768]' :
                   currentStaff?.role === 'parttime' ? 'bg-[#D97D54]' : 'bg-[#999]'
@@ -373,29 +373,29 @@ export default function StaffLayout({ children }) {
                   <UserCheck size={13}/>
                 </div>
                 <div className="text-left min-w-0">
-                  <p className={`text-[11px] font-bold truncate ${currentStaff ? 'text-[#111]' : 'text-red-600'}`}>
+                  <p className={`text-[14px] font-bold truncate ${currentStaff ? 'text-[#1F2A24]' : 'text-red-600'}`}>
                     {currentStaff?.name || (staffAuthConfig.requirePin ? '未選択（操作不可）' : '未選択')}
                   </p>
-                  <p className={`text-[9px] truncate ${currentStaff ? 'text-[#999]' : (staffAuthConfig.requirePin ? 'text-red-500 font-bold' : 'text-[#999]')}`}>
+                  <p className={`text-[12px] truncate ${currentStaff ? 'text-[#5C6660]' : (staffAuthConfig.requirePin ? 'text-red-600 font-bold' : 'text-[#5C6660]')}`}>
                     {currentStaff?.role
                       ? ROLE_LABELS[currentStaff.role]
                       : (staffAuthConfig.requirePin ? '※スタッフを選んでください' : '※全機能アクセス')}
                   </p>
                 </div>
               </div>
-              <ChevronDown size={14} className="text-[#999] shrink-0"/>
+              <ChevronDown size={16} className="text-[#5C6660] shrink-0"/>
             </button>
 
             {showStaffPicker && (
-              <div className="absolute top-full mt-2 left-0 right-0 bg-white border border-[#EAEAEA] rounded-xl shadow-lg z-50 overflow-hidden">
+              <div className="absolute top-full mt-2 left-0 right-0 bg-white border border-[#E6E2DA] rounded-xl shadow-lg z-50 overflow-hidden">
                 <div className="p-2 max-h-80 overflow-y-auto">
                   {staffList.length === 0 ? (
-                    <p className="text-[11px] text-[#999] p-3 text-center">スタッフ未登録<br/>設定→スタッフから追加してください</p>
+                    <p className="text-[13px] text-[#5C6660] p-3 text-center">スタッフ未登録<br/>設定→スタッフから追加してください</p>
                   ) : staffList.map((s, i) => (
                     <button
                       key={i}
                       onClick={() => switchStaff(s)}
-                      className={`w-full flex items-center gap-2 p-2.5 rounded-lg hover:bg-[#FBFAF9] transition-all text-left ${currentStaff?.name === s.name ? 'bg-[#2D4B3E]/5' : ''}`}
+                      className={`w-full min-h-[44px] flex items-center gap-2 p-2.5 rounded-lg hover:bg-[#F6F4EF] transition-all text-left ${currentStaff?.name === s.name ? 'bg-[#2D4B3E]/5' : ''}`}
                     >
                       <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0 ${
                         s.role === 'owner' ? 'bg-[#2D4B3E]' :
@@ -405,8 +405,8 @@ export default function StaffLayout({ children }) {
                         <UserCheck size={13}/>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[12px] font-bold text-[#111] truncate">{s.name}</p>
-                        <p className="text-[9px] text-[#999] truncate">{ROLE_LABELS[s.role || 'staff']}</p>
+                        <p className="text-[14px] font-bold text-[#1F2A24] truncate">{s.name}</p>
+                        <p className="text-[12px] text-[#5C6660] truncate">{ROLE_LABELS[s.role || 'staff']}</p>
                       </div>
                     </button>
                   ))}
@@ -414,7 +414,7 @@ export default function StaffLayout({ children }) {
                 {currentStaff && (
                   <button
                     onClick={clearStaff}
-                    className="w-full p-2.5 text-[11px] font-bold text-[#999] hover:bg-[#FBFAF9] border-t border-[#EAEAEA]"
+                    className="w-full min-h-[44px] p-2.5 text-[13px] font-bold text-[#5C6660] hover:bg-[#F6F4EF] border-t border-[#E6E2DA]"
                   >
                     選択を解除
                   </button>
@@ -424,10 +424,10 @@ export default function StaffLayout({ children }) {
           </div>
         </div>
         
-        <nav className="p-4 space-y-4 flex-1 overflow-y-auto hide-scrollbar">
+        <nav className="px-3 py-5 space-y-5 flex-1 overflow-y-auto hide-scrollbar">
           {filteredCategories.map(cat => (
             <div key={cat.name} className="space-y-1">
-              <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-1.5 px-2 text-[#999999]">
+              <p className="text-[12px] font-bold tracking-[0.08em] mb-1 px-3 text-[#5C6660]">
                 {cat.name}
               </p>
               {cat.items.map(item => {
@@ -438,17 +438,18 @@ export default function StaffLayout({ children }) {
                 return (
                   <Link
                     key={item.path} href={item.path}
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold text-[12.5px] tracking-wider transition-all ${
-                      isActive ? 'bg-[#2D4B3E]/5 text-[#2D4B3E] border border-[#2D4B3E]/10 shadow-sm' : 'text-[#555555] hover:bg-[#F7F7F7] border border-transparent'
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`flex items-center gap-3 min-h-[44px] px-3 rounded-[10px] text-[15px] transition-all ${
+                      isActive ? 'bg-[#2D4B3E] text-white font-bold' : 'text-[#3B4640] font-medium hover:bg-[#F6F4EF]'
                     }`}
                   >
-                    <Icon size={16} className={isActive ? 'text-[#2D4B3E]' : 'text-[#999999]'} />
+                    <Icon size={18} className={isActive ? 'text-white' : 'text-[#5C6660]'} />
                     {item.name}
                     {item.path === '/staff/estimates' && estimateRevisionCount > 0 && (
-                      <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-[#D97D54] text-white text-[11px] font-bold flex items-center justify-center" title="お客様から変更依頼が来ている見積">{estimateRevisionCount}</span>
+                      <span className="ui-num ml-auto min-w-[22px] h-[22px] px-1.5 rounded-full bg-[#B9562F] text-white text-[12px] font-bold flex items-center justify-center" title="お客様から変更依頼が来ている見積">{estimateRevisionCount}</span>
                     )}
                     {item.path === '/staff' && unseenNotes.length > 0 && (
-                      <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-[#D97D54] text-white text-[11px] font-bold flex items-center justify-center" title="未確認のお知らせ">{unseenNotes.length}</span>
+                      <span className="ui-num ml-auto min-w-[22px] h-[22px] px-1.5 rounded-full bg-[#B9562F] text-white text-[12px] font-bold flex items-center justify-center" title="未確認のお知らせ">{unseenNotes.length}</span>
                     )}
                   </Link>
                 );
@@ -457,30 +458,30 @@ export default function StaffLayout({ children }) {
           ))}
         </nav>
 
-        <div className="p-5 bg-[#F7F7F7] border-t border-[#EAEAEA] shrink-0 space-y-3">
+        <div className="p-4 bg-[#FAFAF7] border-t border-[#E6E2DA] shrink-0 space-y-3">
           <button 
             onClick={() => setShowFeedback(true)}
-            className="w-full bg-white border border-[#EAEAEA] text-[#555555] text-[11px] font-bold py-2.5 rounded-xl shadow-sm hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all flex items-center justify-center gap-2"
+            className="w-full min-h-[44px] bg-white border border-[#E6E2DA] text-[#3B4640] text-[13px] font-bold rounded-xl hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all flex items-center justify-center gap-2"
           >
             <MessageSquare size={14} /> アプリの要望・バグ報告
           </button>
 
           {/* オプション機能のアップグレード案内 */}
-          <div className="pt-2 border-t border-[#EAEAEA] space-y-2">
+          <div className="pt-3 border-t border-[#E6E2DA] space-y-2">
             <button
               onClick={() => setShowUpgradeModal(true)}
-              className="w-full bg-[#2D4B3E] text-white text-[11px] font-bold py-3 rounded-xl shadow-md hover:bg-[#1f352b] transition-all flex items-center justify-center gap-2"
+              className="w-full min-h-[44px] bg-[#2D4B3E] text-white text-[13px] font-bold rounded-xl hover:bg-[#1f352b] transition-all flex items-center justify-center gap-2"
             >
               <Sparkles size={14} /> 機能アップグレード
             </button>
             <div className="flex flex-col gap-1">
-              <Link href="/terms" target="_blank" className="block text-center text-[10px] text-[#999] hover:text-[#2D4B3E] underline">
+              <Link href="/terms" target="_blank" className="block text-center text-[12px] text-[#5C6660] hover:text-[#2D4B3E] underline py-0.5">
                 利用規約・解約申請
               </Link>
-              <Link href="/privacy-policy" target="_blank" className="block text-center text-[10px] text-[#999] hover:text-[#2D4B3E] underline">
+              <Link href="/privacy-policy" target="_blank" className="block text-center text-[12px] text-[#5C6660] hover:text-[#2D4B3E] underline py-0.5">
                 プライバシーポリシー
               </Link>
-              <Link href="/legal" target="_blank" className="block text-center text-[10px] text-[#999] hover:text-[#2D4B3E] underline">
+              <Link href="/legal" target="_blank" className="block text-center text-[12px] text-[#5C6660] hover:text-[#2D4B3E] underline py-0.5">
                 特定商取引法に基づく表記
               </Link>
             </div>

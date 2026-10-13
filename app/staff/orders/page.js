@@ -345,10 +345,10 @@ export default function OrdersPage() {
 
   const getReceiveMethodBadge = (method) => {
     switch (method) {
-      case 'pickup': return <span className="flex items-center gap-1 bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm border border-orange-200"><Store size={14}/> 店頭受取</span>;
-      case 'delivery': return <span className="flex items-center gap-1 bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm border border-blue-200"><Truck size={14}/> 自社配達</span>;
-      case 'sagawa': return <span className="flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm border border-green-200"><Package size={14}/> 業者配送</span>;
-      default: return <span className="flex items-center gap-1 bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg text-[11px] font-bold shadow-sm border border-gray-200">未定</span>;
+      case 'pickup': return <span className="inline-flex items-center gap-1.5 h-8 bg-[#EEF2EF] text-[#2D4B3E] px-3 rounded-lg text-[13px] font-bold"><Store size={15}/> 店頭受取</span>;
+      case 'delivery': return <span className="inline-flex items-center gap-1.5 h-8 bg-[#E6F0F4] text-[#1D5670] px-3 rounded-lg text-[13px] font-bold"><Truck size={15}/> 自社配達</span>;
+      case 'sagawa': return <span className="inline-flex items-center gap-1.5 h-8 bg-[#F1EEE7] text-[#5A4A2E] px-3 rounded-lg text-[13px] font-bold"><Package size={15}/> 業者配送</span>;
+      default: return <span className="inline-flex items-center gap-1.5 h-8 bg-[#F1EEE7] text-[#3B4640] px-3 rounded-lg text-[13px] font-bold">未定</span>;
     }
   };
 
@@ -365,27 +365,30 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FBFAF9] font-sans pb-32">
-      <div className="bg-white border-b border-[#EAEAEA] sticky top-0 z-30 px-6 py-4 shadow-sm">
-        <div className="max-w-[1000px] mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h1 className="text-[20px] font-bold text-[#2D4B3E] flex items-center gap-2">受注一覧 <HelpTooltip articleId="order_status"/> <HelpTooltip articleId="order_payment" size={14}/></h1>
+    <div className="min-h-screen bg-[#F6F4EF] pb-32">
+      <div className="bg-[#F6F4EF]/95 backdrop-blur border-b border-[#E0DCD3] sticky top-0 z-30 px-4 md:px-10 pt-6 pb-4">
+        <div className="max-w-[1100px] mx-auto flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <h1 className="text-[26px] md:text-[30px] font-bold tracking-[0.02em] text-[#1F2A24] flex items-center gap-2">受注一覧 <HelpTooltip articleId="order_status"/> <HelpTooltip articleId="order_payment" size={14}/></h1>
           
-          <div className="flex bg-[#F7F7F7] p-1 rounded-xl border border-[#EAEAEA] w-fit">
+          <div role="tablist" className="flex gap-1 w-fit">
             <button
+              role="tab" aria-selected={filterMode === '未完了'}
               onClick={() => setFilterMode('未完了')}
-              className={`px-5 py-2 rounded-lg text-[12px] font-bold transition-all ${filterMode === '未完了' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}
+              className={`h-12 px-4 md:px-5 border-b-[3px] text-[16px] transition-all ${filterMode === '未完了' ? 'border-[#2D4B3E] text-[#2D4B3E] font-bold' : 'border-transparent text-[#5C6660] font-medium hover:text-[#1F2A24]'}`}
             >
               未完了
             </button>
             <button
+              role="tab" aria-selected={filterMode === '未入金'}
               onClick={() => setFilterMode('未入金')}
-              className={`px-5 py-2 rounded-lg text-[12px] font-bold transition-all ${filterMode === '未入金' ? 'bg-white shadow-sm text-[#D97D54]' : 'text-[#999999] hover:text-[#555555]'}`}
+              className={`h-12 px-4 md:px-5 border-b-[3px] text-[16px] transition-all ${filterMode === '未入金' ? 'border-[#A2471F] text-[#A2471F] font-bold' : 'border-transparent text-[#5C6660] font-medium hover:text-[#1F2A24]'}`}
             >
               未入金
             </button>
             <button
+              role="tab" aria-selected={filterMode === 'アーカイブ'}
               onClick={() => setFilterMode('アーカイブ')}
-              className={`px-5 py-2 rounded-lg text-[12px] font-bold transition-all ${filterMode === 'アーカイブ' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}
+              className={`h-12 px-4 md:px-5 border-b-[3px] text-[16px] transition-all ${filterMode === 'アーカイブ' ? 'border-[#2D4B3E] text-[#2D4B3E] font-bold' : 'border-transparent text-[#5C6660] font-medium hover:text-[#1F2A24]'}`}
             >
               アーカイブ
             </button>
@@ -393,17 +396,17 @@ export default function OrdersPage() {
         </div>
 
         {/* ★ ソート切替（納期順 / 登録順） */}
-        <div className="max-w-[1000px] mx-auto mt-3 flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] font-bold text-[#999] tracking-widest">並び順:</span>
+        <div className="max-w-[1100px] mx-auto mt-4 flex items-center gap-2 flex-wrap">
+          <span className="text-[14px] font-bold text-[#5C6660]">並び順:</span>
           <button
             onClick={() => setSortMode('納期順')}
-            className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all ${sortMode === '納期順' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-white text-[#555] border-[#EAEAEA] hover:border-[#2D4B3E]'}`}
+            className={`h-9 px-4 rounded-full text-[14px] border transition-all ${sortMode === '納期順' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] font-bold' : 'bg-white text-[#3B4640] border-[#D5D0C6] hover:border-[#2D4B3E]'}`}
           >
             納期順（近い順）
           </button>
           <button
             onClick={() => setSortMode('登録順')}
-            className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all ${sortMode === '登録順' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-white text-[#555] border-[#EAEAEA] hover:border-[#2D4B3E]'}`}
+            className={`h-9 px-4 rounded-full text-[14px] border transition-all ${sortMode === '登録順' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] font-bold' : 'bg-white text-[#3B4640] border-[#D5D0C6] hover:border-[#2D4B3E]'}`}
           >
             登録順（新しい順）
           </button>
@@ -411,45 +414,45 @@ export default function OrdersPage() {
 
         {/* ★ 商品(お花の種類)別フィルタ */}
         {productOptions.length > 0 && (
-          <div className="max-w-[1000px] mx-auto mt-3 flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] font-bold text-[#999] tracking-widest">商品で絞り込み:</span>
+          <div className="max-w-[1100px] mx-auto mt-3 flex items-center gap-2 flex-wrap">
+            <span className="text-[14px] font-bold text-[#5C6660]">商品で絞り込み:</span>
             <button
               onClick={() => setProductFilter('all')}
-              className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all ${productFilter === 'all' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-white text-[#555] border-[#EAEAEA] hover:border-[#2D4B3E]'}`}
+              className={`h-9 px-4 rounded-full text-[14px] border transition-all ${productFilter === 'all' ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] font-bold' : 'bg-white text-[#3B4640] border-[#D5D0C6] hover:border-[#2D4B3E]'}`}
             >
-              すべて <span className="ml-1 opacity-70">({baseFilteredOrders.length})</span>
+              すべて <span className="ui-num ml-1 opacity-80">({baseFilteredOrders.length})</span>
             </button>
             {productOptions.map(([name, count]) => (
               <button
                 key={name}
                 onClick={() => setProductFilter(name)}
-                className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all ${productFilter === name ? 'bg-[#2D4B3E] text-white border-[#2D4B3E]' : 'bg-white text-[#555] border-[#EAEAEA] hover:border-[#2D4B3E]'}`}
+                className={`h-9 px-4 rounded-full text-[14px] border transition-all ${productFilter === name ? 'bg-[#2D4B3E] text-white border-[#2D4B3E] font-bold' : 'bg-white text-[#3B4640] border-[#D5D0C6] hover:border-[#2D4B3E]'}`}
               >
-                {name} <span className="ml-1 opacity-70">({count})</span>
+                {name} <span className="ui-num ml-1 opacity-80">({count})</span>
               </button>
             ))}
           </div>
         )}
       </div>
 
-      <main className="max-w-[1000px] mx-auto p-6 space-y-4 pt-8">
+      <main className="max-w-[1100px] mx-auto px-4 md:px-10 py-6 space-y-4">
         {/* [2026-10 C2] 決済が完了していない注文を見ているときの説明 */}
         {showAbandoned && (
           <div className="bg-sky-50 border border-sky-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-[12px] text-sky-900 leading-relaxed min-w-0 flex-1">
+            <p className="text-[14px] text-sky-900 leading-relaxed min-w-0 flex-1">
               <strong>決済が完了していない注文</strong>（カード払いを選んでから{UNPAID_CARD_HIDE_MINUTES}分たっても決済が終わっていないもの）を表示しています。ふだんの受注一覧・カレンダー・印刷には出ません。
             </p>
-            <button type="button" onClick={() => setShowAbandoned(false)} className="h-9 px-4 rounded-lg bg-white border border-sky-300 text-sky-900 text-[12px] font-bold">受注一覧に戻る</button>
+            <button type="button" onClick={() => setShowAbandoned(false)} className="h-11 px-4 rounded-xl bg-white border border-sky-300 text-sky-900 text-[14px] font-bold">受注一覧に戻る</button>
           </div>
         )}
         {isLoading ? (
-          <div className="text-center py-20 text-[#2D4B3E] font-bold animate-pulse">読み込み中...</div>
+          <div className="text-center py-20 text-[16px] text-[#2D4B3E] font-bold animate-pulse">読み込み中...</div>
         ) : filteredOrders.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-[#EAEAEA] text-[#999999] font-bold">
+          <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-[#D5D0C6] text-[16px] text-[#5C6660] font-bold">
             表示する注文データがありません。
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-2.5">
             {filteredOrders.map(order => {
               const d = order?.order_data || {};
               // ★ Stripe決済反映: DB の payment_status='paid' (Webhookで自動更新) を優先
@@ -459,160 +462,117 @@ export default function OrdersPage() {
                 ? '入金済（クレジットカード）'
                 : (d.paymentStatus || '未設定');
 
+              // [2026-10 画面リニューアル] 並べ方と色だけを整理（出している情報は前と同じ）
+              const methodLabel = { pickup: '店頭受取', delivery: '自社配達', sagawa: '業者配送' }[d.receiveMethod] || '未定';
+              const MethodIcon = { pickup: Store, delivery: Truck, sagawa: Package }[d.receiveMethod] || null;
+              const dateParts = (d.selectedDate || '').split('-');
+              const hasDate = dateParts.length === 3;
+              const productText = d.orderType === 'ec' && Array.isArray(d.cartItems) && d.cartItems.length > 0
+                ? `${d.cartItems[0].name}${d.cartItems.length > 1 ? ` ほか${d.cartItems.length - 1}点` : ''}`
+                : (d.flowerType || '商品未設定');
+              const orderTypeText = d.orderType === 'ec' ? 'EC注文'
+                : d.fromEstimate ? '見積から'
+                : d.isStaffEntered ? `代理入力${d.staffName ? `（${d.staffName}）` : ''}`
+                : 'カスタム';
+              // ご注文の内容（用途・カラー・イメージ・立札/カード・お届け先）は、色札ではなく 1 行の文字で
+              const details = [];
+              const purpose = d.flowerPurpose || d.otherPurpose;
+              const vibe = d.flowerVibe || d.otherVibe;
+              if (purpose) details.push(['用途', purpose]);
+              if (d.flowerColor) details.push(['カラー', d.flowerColor]);
+              if (vibe) details.push(['イメージ', vibe]);
+              // [2026-10 B2] 自由入力（会社名・送り主・ご要望）と古い形の両方に対応
+              const tateText = tatefudaText(d);
+              if (d.cardType === '立札' && tateText) details.push(['立札', tateText]);
+              else if (d.cardType === 'メッセージカード' && d.cardMessage) details.push(['カード', d.cardMessage.slice(0, 30) + (d.cardMessage.length > 30 ? '…' : '')]);
+              if (d.isRecipientDifferent && d.recipientInfo?.name) details.push(['お届け先', `${d.recipientInfo.name} 様`]);
+              // [2026-10 B6] 見積の参考写真（小さく 1 枚。複数あるときは枚数）
+              const refImgs = d.fromEstimate
+                ? ((Array.isArray(d.referenceImages) && d.referenceImages.length > 0) ? d.referenceImages : (estimateImages[String(d.estimateId)] || []))
+                : [];
+              const statusText = d.status === 'new' ? '未対応' : (d.status || '未対応');
+              const pill = 'inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[13px] font-bold whitespace-nowrap';
+
               return (
-                <div 
-                  key={order.id} 
+                <div
+                  key={order.id}
                   onClick={() => setSelectedOrder(order)}
-                  className="bg-white p-5 md:p-6 rounded-2xl border border-[#EAEAEA] shadow-sm hover:shadow-md hover:border-[#2D4B3E]/30 cursor-pointer transition-all flex flex-col md:flex-row md:items-center gap-4 group"
+                  className="bg-white rounded-[14px] border border-[#E6E2DA] hover:border-[#2D4B3E]/50 hover:shadow-sm cursor-pointer transition-all group grid grid-cols-[72px_minmax(0,1fr)] md:grid-cols-[96px_minmax(0,1fr)_auto] gap-x-4 md:gap-x-6 gap-y-3 p-4 md:p-5"
                 >
-                  <div className="flex-1 space-y-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[11px] font-bold text-white bg-[#2D4B3E] px-3 py-1.5 rounded-lg tracking-wider shadow-sm">
-                        {safeFormatDate(order.created_at)} 受付
-                      </span>
-                      {getReceiveMethodBadge(d.receiveMethod)}
+                  {/* 納品日 */}
+                  <div className="row-span-2 md:row-span-1 flex flex-col items-center justify-center rounded-xl bg-[#F6F4EF] py-2 text-center self-start">
+                    <span className="text-[12px] font-bold text-[#5C6660]">納品日</span>
+                    {hasDate ? (
+                      <>
+                        <span className="ui-num text-[24px] md:text-[28px] font-bold leading-tight text-[#1F2A24]">{Number(dateParts[1])}/{Number(dateParts[2])}</span>
+                        <span className="ui-num text-[12px] text-[#5C6660]">{dateParts[0]}</span>
+                      </>
+                    ) : (
+                      <span className="text-[14px] font-bold text-[#A2471F] py-1">未指定</span>
+                    )}
+                  </div>
 
+                  {/* お名前・商品・受取方法・内容 */}
+                  <div className="min-w-0 space-y-1.5">
+                    <div className="flex items-baseline flex-wrap gap-x-2">
+                      <span className="text-[18px] md:text-[19px] font-bold text-[#1F2A24] group-hover:text-[#2D4B3E]">{d.customerInfo?.name || 'お名前未設定'} 様</span>
+                      <span className="text-[15px] text-[#3B4640]">{productText}</span>
+                    </div>
+                    <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-[14px] text-[#3B4640]">
+                      <span className="inline-flex items-center gap-1 font-bold text-[#2D4B3E]">
+                        {MethodIcon && <MethodIcon size={15} aria-hidden="true" />}{methodLabel}
+                      </span>
+                      {d.selectedTime && <span className="inline-flex items-center gap-1"><Calendar size={14} aria-hidden="true" />{d.selectedTime}</span>}
                       {d.receiveMethod === 'sagawa' && d.shippingDate && (
-                        <span className="flex items-center gap-1 bg-green-50 text-green-700 px-3 py-1.5 rounded-lg text-[11px] font-bold border border-green-200 shadow-sm">
-                          <Package size={12}/> 発送日: {d.shippingDate.split('-')[1]}/{d.shippingDate.split('-')[2]}
-                        </span>
+                        <span>発送日: {d.shippingDate.split('-')[1]}/{d.shippingDate.split('-')[2]}</span>
                       )}
-
-                      <span className="text-[11px] font-bold text-[#555555] border border-[#EAEAEA] px-3 py-1.5 rounded-lg bg-[#FBFAF9] shadow-sm">
-                        {d.status === 'new' ? '未対応' : (d.status || '未対応')}
-                      </span>
-                      
-                      {/* ★ 入金ステータスバッジ（クレカ決済はDBカラムを優先） */}
-                      {isUnpaid ? (
-                        <span className="text-[10px] font-bold bg-[#D97D54]/10 text-[#D97D54] px-2 py-1 rounded border border-[#D97D54]/20 flex items-center gap-1">
-                          <AlertCircle size={12}/> {displayStatus}
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded border border-green-200 flex items-center gap-1">
-                          <CheckCircle2 size={12}/> {displayStatus}
-                        </span>
-                      )}
-
-                      {/* [2026-10 C5] 店頭払いで電話確認が必要な注文 */}
-                      {d.phoneConfirmation?.status === 'pending' && (
-                        <span className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 px-2 py-1 rounded flex items-center gap-1">電話確認待ち</span>
-                      )}
-                      {d.phoneConfirmation?.status === 'card_link_sent' && (
-                        <span className="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-1 rounded flex items-center gap-1">カード払いのご案内済み</span>
-                      )}
-                      {/* [2026-10 C2] カード決済がまだ終わっていない注文 */}
-                      {(isCardPaymentPending(order) || isAbandonedCardOrder(order)) && (
-                        <span className="text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200 px-2 py-1 rounded flex items-center gap-1">
-                          {isAbandonedCardOrder(order) ? '決済未完了' : 'カード決済待ち'}
-                        </span>
-                      )}
-
-                      {/* [注文-1] 注文種別バッジ（EC / 代理入力 / 見積から / カスタム） */}
-                      {d.orderType === 'ec' ? (
-                        <span className="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded flex items-center gap-1">
-                          EC注文
-                        </span>
-                      ) : d.fromEstimate ? (
-                        <span className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-1 rounded flex items-center gap-1">
-                          見積から
-                        </span>
-                      ) : d.isStaffEntered ? (
-                        <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1 rounded flex items-center gap-1">
-                          代理入力
-                          {d.staffName && <span className="font-normal opacity-80">({d.staffName})</span>}
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 px-2 py-1 rounded flex items-center gap-1">
-                          カスタム
-                        </span>
-                      )}
+                      <span className="text-[#5C6660]">{orderTypeText}</span>
+                      <span className="text-[#5C6660]">{safeFormatDate(order.created_at)} 受付</span>
                     </div>
-                    <div className="text-[16px] md:text-[18px] font-bold text-[#111111] group-hover:text-[#2D4B3E] transition-colors">
-                      {d.customerInfo?.name || 'お名前未設定'} 様
-                      <span className="text-[12px] text-[#999999] font-medium ml-2">
-                        ({d.orderType === 'ec' && Array.isArray(d.cartItems) && d.cartItems.length > 0
-                          ? `${d.cartItems[0].name}${d.cartItems.length > 1 ? ` ほか${d.cartItems.length - 1}点` : ''}`
-                          : (d.flowerType || '商品未設定')})
-                      </span>
-                    </div>
-                    <div className="text-[13px] font-bold text-[#D97D54] flex items-center gap-1.5">
-                      <Calendar size={16} /> 納品日: {d.selectedDate || '未指定'} {d.selectedTime && `(${d.selectedTime})`}
-                    </div>
-
-                    {/* [2026-10 B6] 見積の参考写真（小さく 1 枚。複数あるときは枚数） */}
-                    {(() => {
-                      if (!d.fromEstimate) return null;
-                      const refImgs = (Array.isArray(d.referenceImages) && d.referenceImages.length > 0)
-                        ? d.referenceImages
-                        : (estimateImages[String(d.estimateId)] || []);
-                      if (refImgs.length === 0) return null;
-                      return (
-                        <div className="mt-2 flex items-center gap-2">
-                          <img src={refImgs[0]} alt="見積の参考写真" loading="lazy" className="w-14 h-14 rounded-lg object-cover border border-[#EAEAEA] bg-[#FBFAF9]"/>
-                          <span className="text-[11px] font-bold text-[#555]">見積の参考写真{refImgs.length > 1 ? `（ほか${refImgs.length - 1}枚）` : ''}</span>
-                        </div>
-                      );
-                    })()}
-
-                    {/* ★ オーダー内容サマリー（用途・カラー・イメージ・立札・カード・お届け先） */}
-                    {(() => {
-                      const chips = [];
-                      const purpose = d.flowerPurpose || d.otherPurpose;
-                      const color = d.flowerColor;
-                      const vibe = d.flowerVibe || d.otherVibe;
-                      if (purpose) chips.push({ icon: '', label: '用途', value: purpose, bg: 'bg-pink-50', border: 'border-pink-200', text: 'text-pink-900' });
-                      if (color) chips.push({ icon: '', label: 'カラー', value: color, bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-900' });
-                      if (vibe) chips.push({ icon: '', label: 'イメージ', value: vibe, bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-900' });
-
-                      // 立札・カード
-                      // [2026-10 B2] 自由入力（会社名・送り主・ご要望）と古い形の両方に対応
-                      const tateText = tatefudaText(d);
-                      if (d.cardType === '立札' && tateText) {
-                        chips.push({ icon: '', label: '立札', value: tateText, bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-900' });
-                      } else if (d.cardType === 'メッセージカード' && d.cardMessage) {
-                        chips.push({ icon: '', label: 'カード', value: d.cardMessage.slice(0, 30) + (d.cardMessage.length > 30 ? '…' : ''), bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-900' });
-                      }
-
-                      // お届け先（別住所のときだけ）
-                      if (d.isRecipientDifferent && d.recipientInfo?.name) {
-                        chips.push({ icon: '', label: 'お届け先', value: `${d.recipientInfo.name} 様`, bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-900' });
-                      }
-
-                      if (chips.length === 0) return null;
-                      return (
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {chips.map((c, i) => (
-                            <span key={i} className={`inline-flex items-center gap-1 ${c.bg} ${c.border} border ${c.text} text-[10px] font-bold px-2 py-1 rounded-md max-w-full`}>
-                              <span>{c.icon}</span>
-                              <span className="text-[9px] opacity-70">{c.label}:</span>
-                              <span className="truncate">{c.value}</span>
-                            </span>
-                          ))}
-                        </div>
-                      );
-                    })()}
-
-                    {/* ★ 社内メモを黄色の付箋風で表示（メモがあるときだけ） */}
+                    {details.length > 0 && (
+                      <p className="text-[14px] text-[#3B4640] leading-relaxed line-clamp-2">
+                        {details.map(([label, value], i) => (
+                          <span key={i}>{i > 0 && <span className="text-[#C9C3B8] mx-1.5" aria-hidden="true">|</span>}<span className="text-[#5C6660]">{label}:</span> {value}</span>
+                        ))}
+                      </p>
+                    )}
+                    {refImgs.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <img src={refImgs[0]} alt="見積の参考写真" loading="lazy" className="w-12 h-12 rounded-lg object-cover border border-[#E6E2DA] bg-[#F6F4EF]"/>
+                        <span className="text-[13px] text-[#3B4640]">見積の参考写真{refImgs.length > 1 ? `（ほか${refImgs.length - 1}枚）` : ''}</span>
+                      </div>
+                    )}
+                    {/* 社内メモ（メモがあるときだけ） */}
                     {d.note && (
-                      <div className="mt-2 bg-yellow-50 border border-yellow-300 border-l-4 border-l-yellow-500 rounded-md px-3 py-2 shadow-sm">
-                        <div className="flex items-start gap-1.5">
-                          <span className="text-[14px] leading-none mt-0.5"></span>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[10px] font-bold text-yellow-700 mb-0.5">社内メモ</div>
-                            <p className="text-[12px] font-bold text-yellow-900 whitespace-pre-wrap leading-snug line-clamp-3">
-                              {d.note}
-                            </p>
-                          </div>
-                        </div>
+                      <div className="flex gap-2 bg-[#FFF8DC] rounded-lg px-3 py-1.5">
+                        <span className="text-[13px] font-bold text-[#7A5A00] shrink-0">社内メモ</span>
+                        <p className="text-[13px] text-[#4A3B00] whitespace-pre-wrap leading-snug line-clamp-2 min-w-0">{d.note}</p>
                       </div>
                     )}
                   </div>
 
-                  <div className="flex flex-col md:items-end justify-between border-t md:border-t-0 md:border-l border-[#EAEAEA] pt-4 md:pt-0 md:pl-6">
-                    <p className="text-[11px] text-[#999999] font-bold mb-1">合計金額(税込)</p>
-                    <p className="text-[24px] font-bold text-[#2D4B3E]">¥{getTotals(d).total.toLocaleString()}</p>
-                    <div className="flex items-center gap-1 text-[11px] font-bold text-blue-600 mt-2 bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 group-hover:bg-blue-500 group-hover:text-white transition-all">
-                      詳細を見る <ChevronRight size={14}/>
+                  {/* 金額と状態 */}
+                  <div className="col-start-2 md:col-start-3 flex md:flex-col items-center md:items-end justify-between gap-2 md:gap-1.5 md:min-w-[150px] md:border-l md:border-[#E6E2DA] md:pl-5 pt-2 md:pt-0 border-t md:border-t-0 border-[#E6E2DA]">
+                    <div className="md:text-right">
+                      <p className="text-[12px] text-[#5C6660]">合計金額(税込)</p>
+                      <p className="ui-num text-[22px] md:text-[24px] font-bold text-[#1F2A24] leading-tight">¥{getTotals(d).total.toLocaleString()}</p>
+                    </div>
+                    <div className="flex flex-wrap md:flex-col items-end gap-1.5">
+                      <span className={`${pill} bg-[#F1EEE7] text-[#3B4640]`}>{statusText}</span>
+                      {/* ★ 入金ステータス（クレカ決済はDBカラムを優先） */}
+                      {isUnpaid ? (
+                        <span className={`${pill} bg-[#FBEBE3] text-[#A2471F]`}><AlertCircle size={13} aria-hidden="true"/>{displayStatus}</span>
+                      ) : (
+                        <span className={`${pill} bg-[#E4F1EA] text-[#1E6B47]`}><CheckCircle2 size={13} aria-hidden="true"/>{displayStatus}</span>
+                      )}
+                      {/* [2026-10 C5] 店頭払いで電話確認が必要な注文 */}
+                      {d.phoneConfirmation?.status === 'pending' && <span className={`${pill} bg-[#FBEBE3] text-[#A2471F]`}>電話確認待ち</span>}
+                      {d.phoneConfirmation?.status === 'card_link_sent' && <span className={`${pill} bg-[#F1EEE7] text-[#3B4640]`}>カード払いのご案内済み</span>}
+                      {/* [2026-10 C2] カード決済がまだ終わっていない注文 */}
+                      {(isCardPaymentPending(order) || isAbandonedCardOrder(order)) && (
+                        <span className={`${pill} bg-[#F1EEE7] text-[#3B4640]`}>{isAbandonedCardOrder(order) ? '決済未完了' : 'カード決済待ち'}</span>
+                      )}
+                      <span className="hidden md:inline-flex items-center gap-0.5 text-[13px] font-bold text-[#2D4B3E] mt-1 group-hover:underline">詳細を見る <ChevronRight size={14} aria-hidden="true"/></span>
                     </div>
                   </div>
                 </div>
@@ -624,13 +584,13 @@ export default function OrdersPage() {
         {!isLoading && (abandonedOrders.length > 0 || showAbandoned) && (
           <div className="pt-6 text-center space-y-2">
             {showAbandoned && (
-              <p className="text-[12px] text-[#555] leading-relaxed">
+              <p className="text-[14px] text-[#3B4640] leading-relaxed">
                 カード払いを選んだあと、{UNPAID_CARD_HIDE_MINUTES}分たっても決済が完了していない注文です。受注一覧・カレンダー・印刷には出ていません（データは残っています）。<br/>
                 あとから決済が完了すると、自動で「入金済」になって一覧に戻ります。
               </p>
             )}
             <button type="button" onClick={() => { setShowAbandoned(v => !v); setProductFilter('all'); }}
-              className="text-[12px] font-bold text-[#555] underline hover:text-[#2D4B3E]">
+              className="min-h-[44px] text-[14px] font-bold text-[#3B4640] underline hover:text-[#2D4B3E]">
               {showAbandoned ? '受注一覧に戻る' : `決済が完了していない注文（${abandonedOrders.length}件）`}
             </button>
           </div>
