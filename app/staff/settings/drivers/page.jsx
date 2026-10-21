@@ -160,47 +160,47 @@ export default function DriversPage() {
   // 表示のフィルタリング
   const filteredDrivers = drivers.filter(d => filter === 'all' || d.status === filter);
 
-  if (isLoading) return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-bold text-[#2D4B3E] animate-pulse">読み込み中...</div>;
+  if (isLoading) return <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center font-bold text-[#2D4B3E] animate-pulse">読み込み中...</div>;
 
   return (
-    <div className="min-h-screen bg-[#FBFAF9] flex flex-col md:flex-row text-[#111111] font-sans">
+    <div className="min-h-screen bg-[#FAFAF7] flex flex-col md:flex-row text-[#1F2A24] font-sans">
       
       {/* サイドバー */}
-      <aside className="w-full md:w-64 bg-white border-r border-[#EAEAEA] md:fixed h-full z-20 overflow-y-auto pb-10 hidden md:block">
-        <div className="p-8 flex flex-col gap-1 border-b border-[#EAEAEA]">
+      <aside className="w-full md:w-64 bg-white border-r border-[#E6E2DA] md:fixed h-full z-20 overflow-y-auto pb-10 hidden md:block">
+        <div className="p-8 flex flex-col gap-1 border-b border-[#E6E2DA]">
           {logoUrl ? <img src={logoUrl} alt={appName} className="h-8 object-contain object-left mb-1" /> : <span className="font-serif italic text-[24px] tracking-tight text-[#2D4B3E]">{appName}</span>}
-          <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#999999] pt-1">管理ワークスペース</span>
+          <span className="text-[12px] font-bold tracking-[0.2em] uppercase text-[#5C6660] pt-1">管理ワークスペース</span>
         </div>
         <nav className="p-4 space-y-1">
-          <Link href="/staff/orders" className="block px-6 py-4 rounded-xl text-[#555555] hover:bg-[#F7F7F7] text-[13px] font-bold tracking-wider transition-all">受注一覧</Link>
-          <Link href="/staff/deliveries" className="block px-6 py-4 rounded-xl text-[#555555] hover:bg-[#F7F7F7] text-[13px] font-bold tracking-wider transition-all">配達・ルート管理</Link>
-          <Link href="/staff/settings" className="block px-6 py-4 rounded-xl bg-[#2D4B3E]/5 text-[#2D4B3E] shadow-sm border border-[#2D4B3E]/10 text-[13px] font-bold tracking-wider transition-all mt-4 border-t border-[#EAEAEA] pt-4">各種設定</Link>
-          <Link href="/staff/settings/drivers" className="block px-6 py-4 rounded-xl text-[#555555] hover:bg-[#F7F7F7] text-[12px] font-bold tracking-wider ml-4 border-l-2 border-[#EAEAEA]">↳ ドライバー管理</Link>
+          <Link href="/staff/orders" className="block px-6 py-4 rounded-xl text-[#3B4640] hover:bg-[#F6F4EF] text-[15px] font-bold tracking-wider transition-all">受注一覧</Link>
+          <Link href="/staff/deliveries" className="block px-6 py-4 rounded-xl text-[#3B4640] hover:bg-[#F6F4EF] text-[15px] font-bold tracking-wider transition-all">配達・ルート管理</Link>
+          <Link href="/staff/settings" className="block px-6 py-4 rounded-xl bg-[#2D4B3E]/5 text-[#2D4B3E] shadow-sm border border-[#2D4B3E]/10 text-[15px] font-bold tracking-wider transition-all mt-4 border-t border-[#E6E2DA] pt-4">各種設定</Link>
+          <Link href="/staff/settings/drivers" className="block px-6 py-4 rounded-xl text-[#3B4640] hover:bg-[#F6F4EF] text-[14px] font-bold tracking-wider ml-4 border-l-2 border-[#E6E2DA]">↳ ドライバー管理</Link>
         </nav>
       </aside>
 
       <main className="flex-1 md:ml-64 flex flex-col min-w-0 pb-32">
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-[#EAEAEA] flex items-center justify-between px-6 md:px-8 sticky top-0 z-10">
-          <h1 className="text-[18px] font-bold tracking-tight text-[#2D4B3E] flex items-center gap-2">
+        <header className="h-20 bg-[#F6F4EF]/95 backdrop-blur border-b border-[#E6E2DA] flex items-center justify-between px-6 md:px-8 sticky top-0 z-10">
+          <h1 className="text-[24px] md:text-[28px] font-bold tracking-[0.02em] text-[#1F2A24] flex items-center gap-2">
             <UserCheck size={20} /> ドライバー ＆ 配送リソース管理
           </h1>
-          <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-1 bg-[#2D4B3E] text-white px-4 py-2 rounded-lg text-[12px] font-bold shadow-sm hover:bg-[#1f352b] transition-all">
+          <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-1 bg-[#2D4B3E] text-white px-4 py-2 rounded-lg text-[14px] font-bold shadow-sm hover:bg-[#1f352b] transition-all">
             <Plus size={16} /> 新規登録
           </button>
         </header>
 
-        <div className="max-w-[1000px] mx-auto w-full p-4 md:p-8 space-y-6">
+        <div className="w-full w-full p-4 md:p-8 space-y-6">
           
           <div className="flex flex-wrap gap-2 mb-6">
             {[{ id: 'all', label: 'すべて' }, { id: 'pending', label: '審査・承認待ち' }, { id: 'active', label: '稼働中' }, { id: 'blocked', label: 'ブロック (NG)' }].map(tab => (
               <button 
                 key={tab.id} 
                 onClick={() => setFilter(tab.id)}
-                className={`px-5 py-2.5 rounded-full text-[12px] font-bold transition-all ${filter === tab.id ? 'bg-[#2D4B3E] text-white shadow-md' : 'bg-white text-[#555555] border border-[#EAEAEA] hover:bg-gray-50'}`}
+                className={`px-5 py-2.5 rounded-full text-[14px] font-bold transition-all ${filter === tab.id ? 'bg-[#2D4B3E] text-white shadow-md' : 'bg-white text-[#3B4640] border border-[#E6E2DA] hover:bg-gray-50'}`}
               >
                 {tab.label} 
                 {tab.id === 'pending' && drivers.filter(d => d.status === 'pending').length > 0 && (
-                  <span className="ml-2 bg-orange-500 text-white px-1.5 py-0.5 rounded-full text-[10px]">{drivers.filter(d => d.status === 'pending').length}</span>
+                  <span className="ml-2 bg-orange-500 text-white px-1.5 py-0.5 rounded-full text-[12px]">{drivers.filter(d => d.status === 'pending').length}</span>
                 )}
               </button>
             ))}
@@ -208,7 +208,7 @@ export default function DriversPage() {
 
           <div className="space-y-6">
             {filteredDrivers.length === 0 ? (
-              <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-[#EAEAEA] text-[#999999] font-bold">
+              <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-[#E6E2DA] text-[#5C6660] font-bold">
                 該当するドライバーはいません。
               </div>
             ) : (
@@ -218,38 +218,38 @@ export default function DriversPage() {
                 const isExpired = docs.insuranceExpiry && docs.insuranceExpiry < today;
                 
                 return (
-                  <div key={driver.id} className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all ${driver.status === 'blocked' ? 'border-red-200 opacity-60' : 'border-[#EAEAEA]'}`}>
+                  <div key={driver.id} className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all ${driver.status === 'blocked' ? 'border-red-200 opacity-60' : 'border-[#E6E2DA]'}`}>
                     
                     {/* カードヘッダー */}
-                    <div className="flex flex-wrap justify-between items-center bg-[#FBFAF9] px-6 py-4 border-b border-[#EAEAEA]">
+                    <div className="flex flex-wrap justify-between items-center bg-[#FAFAF7] px-6 py-4 border-b border-[#E6E2DA]">
                       <div className="flex items-center gap-4">
-                        <span className="text-[18px] font-bold text-[#111111]">{driver.name}</span>
-                        <span className="text-[12px] text-[#555555] flex items-center gap-1"><Phone size={14}/> {driver.phone || '未設定'}</span>
+                        <span className="text-[18px] font-bold text-[#1F2A24]">{driver.name}</span>
+                        <span className="text-[14px] text-[#3B4640] flex items-center gap-1"><Phone size={14}/> {driver.phone || '未設定'}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        {driver.status === 'pending' && <span className="flex items-center gap-1 bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-[11px] font-bold"><Clock size={12}/> 承認待ち</span>}
-                        {driver.status === 'active' && <span className="flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full text-[11px] font-bold"><CheckCircle size={12}/> 稼働中</span>}
-                        {driver.status === 'blocked' && <span className="flex items-center gap-1 bg-red-100 text-red-700 px-3 py-1 rounded-full text-[11px] font-bold"><Ban size={12}/> ブロック</span>}
+                        {driver.status === 'pending' && <span className="flex items-center gap-1 bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-[13px] font-bold"><Clock size={12}/> 承認待ち</span>}
+                        {driver.status === 'active' && <span className="flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full text-[13px] font-bold"><CheckCircle size={12}/> 稼働中</span>}
+                        {driver.status === 'blocked' && <span className="flex items-center gap-1 bg-red-100 text-red-700 px-3 py-1 rounded-full text-[13px] font-bold"><Ban size={12}/> ブロック</span>}
                       </div>
                     </div>
 
                     <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
                       {/* 左側：法的チェック・書類 */}
                       <div className="space-y-5">
-                        <p className="text-[12px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2 flex items-center gap-1">
+                        <p className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#E6E2DA] pb-2 flex items-center gap-1">
                           <ShieldCheck size={16} /> 法的チェック・書類提出
                         </p>
                         
                         {/* 黒ナンバー */}
                         <div className="flex items-center justify-between">
-                          <span className="text-[12px] font-bold text-[#555555]">事業用ナンバー(黒ナンバー)</span>
+                          <span className="text-[14px] font-bold text-[#3B4640]">事業用ナンバー(黒ナンバー)</span>
                           {docs.blackNumber ? (
                             <div className="flex gap-2 items-center">
-                              <button onClick={() => setPreviewImage(docs.blackNumber)} className="text-[11px] bg-[#2D4B3E]/10 text-[#2D4B3E] px-3 py-1 rounded font-bold hover:bg-[#2D4B3E] hover:text-white transition-all">確認</button>
-                              <label className="text-[10px] text-[#999999] underline cursor-pointer hover:text-[#2D4B3E]">再UP<input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadDoc(driver.id, 'blackNumber', e)}/></label>
+                              <button onClick={() => setPreviewImage(docs.blackNumber)} className="text-[13px] bg-[#2D4B3E]/10 text-[#2D4B3E] px-3 py-1 rounded font-bold hover:bg-[#2D4B3E] hover:text-white transition-all">確認</button>
+                              <label className="text-[12px] text-[#5C6660] underline cursor-pointer hover:text-[#2D4B3E]">再UP<input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadDoc(driver.id, 'blackNumber', e)}/></label>
                             </div>
                           ) : (
-                            <label className="cursor-pointer flex items-center gap-1 bg-gray-100 text-gray-500 px-3 py-1.5 rounded text-[11px] font-bold hover:bg-gray-200 transition-all">
+                            <label className="cursor-pointer flex items-center gap-1 bg-gray-100 text-gray-500 px-3 py-1.5 rounded text-[13px] font-bold hover:bg-gray-200 transition-all">
                               {uploadingId === `${driver.id}-blackNumber` ? '送信中...' : <><Upload size={14}/> 画像を提出</>}
                               <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadDoc(driver.id, 'blackNumber', e)}/>
                             </label>
@@ -257,30 +257,30 @@ export default function DriversPage() {
                         </div>
 
                         {/* 保険証券 */}
-                        <div className="space-y-2 pt-3 border-t border-dashed border-[#EAEAEA]">
+                        <div className="space-y-2 pt-3 border-t border-dashed border-[#E6E2DA]">
                           <div className="flex items-center justify-between">
-                            <span className="text-[12px] font-bold text-[#555555]">任意保険証券 (事業用)</span>
+                            <span className="text-[14px] font-bold text-[#3B4640]">任意保険証券 (事業用)</span>
                             {docs.insurance ? (
                               <div className="flex gap-2 items-center">
-                                <button onClick={() => setPreviewImage(docs.insurance)} className="text-[11px] bg-[#2D4B3E]/10 text-[#2D4B3E] px-3 py-1 rounded font-bold hover:bg-[#2D4B3E] hover:text-white transition-all">確認</button>
-                                <label className="text-[10px] text-[#999999] underline cursor-pointer hover:text-[#2D4B3E]">再UP<input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadDoc(driver.id, 'insurance', e)}/></label>
+                                <button onClick={() => setPreviewImage(docs.insurance)} className="text-[13px] bg-[#2D4B3E]/10 text-[#2D4B3E] px-3 py-1 rounded font-bold hover:bg-[#2D4B3E] hover:text-white transition-all">確認</button>
+                                <label className="text-[12px] text-[#5C6660] underline cursor-pointer hover:text-[#2D4B3E]">再UP<input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadDoc(driver.id, 'insurance', e)}/></label>
                               </div>
                             ) : (
-                              <label className="cursor-pointer flex items-center gap-1 bg-gray-100 text-gray-500 px-3 py-1.5 rounded text-[11px] font-bold hover:bg-gray-200 transition-all">
+                              <label className="cursor-pointer flex items-center gap-1 bg-gray-100 text-gray-500 px-3 py-1.5 rounded text-[13px] font-bold hover:bg-gray-200 transition-all">
                                 {uploadingId === `${driver.id}-insurance` ? '送信中...' : <><Upload size={14}/> 画像を提出</>}
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadDoc(driver.id, 'insurance', e)}/>
                               </label>
                             )}
                           </div>
-                          <div className="flex items-center justify-between bg-[#FBFAF9] p-2 rounded-lg border border-[#EAEAEA]">
-                            <span className="text-[11px] text-[#555555]">有効期限:</span>
+                          <div className="flex items-center justify-between bg-[#FAFAF7] p-2 rounded-lg border border-[#E6E2DA]">
+                            <span className="text-[13px] text-[#3B4640]">有効期限:</span>
                             <div className="flex items-center gap-2">
                               {isExpired && <ShieldAlert size={14} className="text-red-500" />}
                               <input 
                                 type="date" 
                                 value={docs.insuranceExpiry || ''} 
                                 onChange={(e) => updateDocumentField(driver.id, 'insuranceExpiry', e.target.value)}
-                                className={`text-[12px] font-bold font-mono outline-none bg-transparent ${isExpired ? 'text-red-500' : 'text-[#2D4B3E]'}`} 
+                                className={`text-[14px] font-bold font-mono outline-none bg-transparent ${isExpired ? 'text-red-500' : 'text-[#2D4B3E]'}`} 
                               />
                             </div>
                           </div>
@@ -290,40 +290,40 @@ export default function DriversPage() {
                       {/* 右側：リソース制限 ＆ 操作 */}
                       <div className="space-y-6">
                         <div className="space-y-3">
-                          <p className="text-[12px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2">リソース（件数）制限</p>
+                          <p className="text-[14px] font-bold text-[#2D4B3E] border-b border-[#E6E2DA] pb-2">リソース（件数）制限</p>
                           <div className="flex items-center justify-between">
-                            <span className="text-[12px] text-[#555555]">1日の最大配達枠</span>
+                            <span className="text-[14px] text-[#3B4640]">1日の最大配達枠</span>
                             <div className="flex items-center gap-1">
                               <input 
                                 type="number" 
                                 value={driver.maxDeliveries} 
                                 onChange={(e) => updateMaxDeliveries(driver.id, e.target.value)} 
-                                className="w-16 h-8 text-center border border-[#EAEAEA] rounded font-bold text-[13px] outline-none focus:border-[#2D4B3E]"
+                                className="w-16 h-8 text-center border border-[#E6E2DA] rounded font-bold text-[15px] outline-none focus:border-[#2D4B3E]"
                               />
-                              <span className="text-[11px] text-[#999999]">件まで</span>
+                              <span className="text-[13px] text-[#5C6660]">件まで</span>
                             </div>
                           </div>
                         </div>
 
                         {/* アクションボタン */}
-                        <div className="pt-4 border-t border-[#EAEAEA] flex gap-2 justify-end">
+                        <div className="pt-4 border-t border-[#E6E2DA] flex gap-2 justify-end">
                           {driver.status !== 'blocked' && (
-                            <button onClick={() => changeStatus(driver.id, 'blocked')} className="px-4 py-2 border border-red-200 text-red-500 font-bold text-[11px] rounded-lg hover:bg-red-50 transition-all flex items-center gap-1">
+                            <button onClick={() => changeStatus(driver.id, 'blocked')} className="px-4 py-2 border border-red-200 text-red-500 font-bold text-[13px] rounded-lg hover:bg-red-50 transition-all flex items-center gap-1">
                               <Ban size={14} /> ブロックする
                             </button>
                           )}
                           {driver.status === 'blocked' && (
-                            <button onClick={() => changeStatus(driver.id, 'pending')} className="px-4 py-2 border border-gray-300 text-gray-600 font-bold text-[11px] rounded-lg hover:bg-gray-100 transition-all">
+                            <button onClick={() => changeStatus(driver.id, 'pending')} className="px-4 py-2 border border-gray-300 text-gray-600 font-bold text-[13px] rounded-lg hover:bg-gray-100 transition-all">
                               ブロック解除
                             </button>
                           )}
                           {driver.status !== 'active' && driver.status !== 'blocked' && (
-                            <button onClick={() => changeStatus(driver.id, 'active')} className="px-6 py-2 bg-[#2D4B3E] text-white font-bold text-[12px] rounded-lg shadow-sm hover:bg-[#1f352b] transition-all">
+                            <button onClick={() => changeStatus(driver.id, 'active')} className="px-6 py-2 bg-[#2D4B3E] text-white font-bold text-[14px] rounded-lg shadow-sm hover:bg-[#1f352b] transition-all">
                               本登録として承認
                             </button>
                           )}
                           {driver.status === 'active' && (
-                            <button onClick={() => changeStatus(driver.id, 'pending')} className="px-4 py-2 bg-orange-50 text-orange-600 font-bold text-[11px] rounded-lg border border-orange-200 hover:bg-orange-100 transition-all">
+                            <button onClick={() => changeStatus(driver.id, 'pending')} className="px-4 py-2 bg-orange-50 text-orange-600 font-bold text-[13px] rounded-lg border border-orange-200 hover:bg-orange-100 transition-all">
                               稼働を一時停止
                             </button>
                           )}
@@ -345,13 +345,13 @@ export default function DriversPage() {
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full space-y-6" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-[18px] font-bold text-[#2D4B3E]">新規ドライバー追加</h2>
             <div className="space-y-4">
-              <div className="space-y-1"><label className="text-[11px] font-bold text-[#999999]">氏名</label><input type="text" value={newDriver.name} onChange={(e)=>setNewDriver({...newDriver, name: e.target.value})} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl outline-none focus:border-[#2D4B3E] text-[14px]" placeholder="例：鈴木 太郎" /></div>
-              <div className="space-y-1"><label className="text-[11px] font-bold text-[#999999]">電話番号</label><input type="tel" value={newDriver.phone} onChange={(e)=>setNewDriver({...newDriver, phone: e.target.value})} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl outline-none focus:border-[#2D4B3E] text-[14px]" placeholder="例：090-0000-0000" /></div>
-              <div className="space-y-1"><label className="text-[11px] font-bold text-[#999999]">1日の件数上限 (初期値)</label><input type="number" value={newDriver.maxDeliveries} onChange={(e)=>setNewDriver({...newDriver, maxDeliveries: Number(e.target.value)})} className="w-full h-12 px-4 border border-[#EAEAEA] rounded-xl outline-none focus:border-[#2D4B3E] text-[14px]" /></div>
+              <div className="space-y-1"><label className="text-[13px] font-bold text-[#5C6660]">氏名</label><input type="text" value={newDriver.name} onChange={(e)=>setNewDriver({...newDriver, name: e.target.value})} className="w-full h-12 px-4 border border-[#E6E2DA] rounded-xl outline-none focus:border-[#2D4B3E] text-[15px]" placeholder="例：鈴木 太郎" /></div>
+              <div className="space-y-1"><label className="text-[13px] font-bold text-[#5C6660]">電話番号</label><input type="tel" value={newDriver.phone} onChange={(e)=>setNewDriver({...newDriver, phone: e.target.value})} className="w-full h-12 px-4 border border-[#E6E2DA] rounded-xl outline-none focus:border-[#2D4B3E] text-[15px]" placeholder="例：090-0000-0000" /></div>
+              <div className="space-y-1"><label className="text-[13px] font-bold text-[#5C6660]">1日の件数上限 (初期値)</label><input type="number" value={newDriver.maxDeliveries} onChange={(e)=>setNewDriver({...newDriver, maxDeliveries: Number(e.target.value)})} className="w-full h-12 px-4 border border-[#E6E2DA] rounded-xl outline-none focus:border-[#2D4B3E] text-[15px]" /></div>
             </div>
             <div className="flex gap-3 pt-4">
-              <button onClick={() => setIsModalOpen(false)} className="flex-1 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl font-bold text-[#555555] text-[13px] hover:bg-gray-100">キャンセル</button>
-              <button onClick={handleAddDriver} className="flex-1 py-3 bg-[#2D4B3E] text-white rounded-xl font-bold text-[13px] shadow-md hover:bg-[#1f352b]">登録する</button>
+              <button onClick={() => setIsModalOpen(false)} className="flex-1 py-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl font-bold text-[#3B4640] text-[15px] hover:bg-gray-100">キャンセル</button>
+              <button onClick={handleAddDriver} className="flex-1 py-3 bg-[#2D4B3E] text-white rounded-xl font-bold text-[15px] shadow-md hover:bg-[#1f352b]">登録する</button>
             </div>
           </div>
         </div>
@@ -361,7 +361,7 @@ export default function DriversPage() {
       {previewImage && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6" onClick={() => setPreviewImage(null)}>
           <div className="relative max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setPreviewImage(null)} className="absolute -top-10 right-0 text-white font-bold text-[14px] bg-black/50 px-4 py-2 rounded-full hover:bg-black transition-all">✕ 閉じる</button>
+            <button onClick={() => setPreviewImage(null)} className="absolute -top-10 right-0 text-white font-bold text-[15px] bg-black/50 px-4 py-2 rounded-full hover:bg-black transition-all">✕ 閉じる</button>
             <img src={previewImage} alt="Document" className="w-full h-auto max-h-[80vh] object-contain rounded-xl shadow-2xl bg-white" />
           </div>
         </div>

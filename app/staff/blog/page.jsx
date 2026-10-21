@@ -111,30 +111,30 @@ export default function StaffBlogPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center">
-        <p className="text-[#999] text-[13px]">読み込み中...</p>
+      <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center">
+        <p className="text-[#5C6660] text-[15px]">読み込み中...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#FBFAF9] p-6 md:p-10">
-      <div className="max-w-[1000px] mx-auto">
+    <div className="min-h-screen bg-[#FAFAF7] p-6 md:p-10">
+      <div className="w-full">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-[24px] font-bold text-[#2D4B3E]">ブログ管理</h1>
-            <p className="text-[12px] text-[#666] mt-1">SEO対策の月1運用。記事を書くだけでGoogle検索流入が増えます。</p>
+            <h1 className="text-[24px] md:text-[28px] font-bold tracking-[0.02em] text-[#1F2A24]">ブログ管理</h1>
+            <p className="text-[14px] text-[#3B4640] mt-1">SEO対策の月1運用。記事を書くだけでGoogle検索流入が増えます。</p>
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => setShowHelp(true)}
-              className="px-4 h-10 bg-white border border-[#EAEAEA] text-[#666] rounded-xl text-[12px] font-bold hover:bg-[#FBFAF9]"
+              className="px-4 h-10 bg-white border border-[#E6E2DA] text-[#3B4640] rounded-xl text-[14px] font-bold hover:bg-[#FAFAF7]"
             >
               書き方ガイド
             </button>
             <button
               onClick={() => setEditing({ new: true, tags: [], is_published: false })}
-              className="px-4 h-10 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold flex items-center gap-1"
+              className="px-4 h-10 bg-[#2D4B3E] text-white rounded-xl text-[14px] font-bold flex items-center gap-1"
             >
               <Plus size={14} /> 新規記事
             </button>
@@ -142,35 +142,35 @@ export default function StaffBlogPage() {
         </div>
 
         {posts.length === 0 ? (
-          <div className="bg-white border border-dashed border-[#EAEAEA] rounded-2xl p-12 text-center">
-            <p className="text-[14px] font-bold text-[#999]">まだ記事がありません</p>
-            <p className="text-[11px] text-[#CCC] mt-2">「新規記事」から最初の記事を書いてみましょう</p>
+          <div className="bg-white border border-dashed border-[#E6E2DA] rounded-2xl p-12 text-center">
+            <p className="text-[15px] font-bold text-[#5C6660]">まだ記事がありません</p>
+            <p className="text-[13px] text-[#CCC] mt-2">「新規記事」から最初の記事を書いてみましょう</p>
           </div>
         ) : (
           <div className="space-y-3">
             {posts.map(p => (
-              <div key={p.id} className="bg-white rounded-2xl p-5 border border-[#EAEAEA] flex items-center gap-4">
+              <div key={p.id} className="bg-white rounded-2xl p-5 border border-[#E6E2DA] flex items-center gap-4">
                 {p.cover_image_url && (
                   <img src={p.cover_image_url} alt="" className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.is_published ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                    <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full ${p.is_published ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                       {p.is_published ? '公開中' : '下書き'}
                     </span>
                     {p.tags && p.tags.slice(0, 3).map(t => (
-                      <span key={t} className="text-[10px] text-[#666]">#{t}</span>
+                      <span key={t} className="text-[12px] text-[#3B4640]">#{t}</span>
                     ))}
                   </div>
-                  <p className="text-[14px] font-bold text-[#111] mt-1 truncate">{p.title}</p>
-                  <p className="text-[10px] text-[#999] mt-1">/{p.slug} {p.published_at && `· ${new Date(p.published_at).toLocaleDateString('ja-JP')}`}</p>
+                  <p className="text-[15px] font-bold text-[#1F2A24] mt-1 truncate">{p.title}</p>
+                  <p className="text-[12px] text-[#5C6660] mt-1">/{p.slug} {p.published_at && `· ${new Date(p.published_at).toLocaleDateString('ja-JP')}`}</p>
                 </div>
                 <div className="flex gap-1">
                   {p.is_published && tenantId && (
                     <Link
                       href={`/blog/${tenantId}/${p.slug}`}
                       target="_blank"
-                      className="w-9 h-9 bg-[#FBFAF9] rounded-lg flex items-center justify-center hover:bg-[#EAEAEA]"
+                      className="w-9 h-9 bg-[#FAFAF7] rounded-lg flex items-center justify-center hover:bg-[#E6E2DA]"
                       title="公開ページを開く"
                     >
                       <ExternalLink size={14} />
@@ -178,7 +178,7 @@ export default function StaffBlogPage() {
                   )}
                   <button
                     onClick={() => setEditing(p)}
-                    className="w-9 h-9 bg-[#FBFAF9] rounded-lg flex items-center justify-center hover:bg-[#EAEAEA]"
+                    className="w-9 h-9 bg-[#FAFAF7] rounded-lg flex items-center justify-center hover:bg-[#E6E2DA]"
                     title="編集"
                   >
                     <Edit2 size={14} />
@@ -215,7 +215,7 @@ export default function StaffBlogPage() {
                 <h2 className="text-[18px] font-bold text-[#2D4B3E]">ブログ記事の書き方ガイド</h2>
                 <button onClick={() => setShowHelp(false)}><X size={18} /></button>
               </div>
-              <div className="space-y-4 text-[13px] leading-relaxed text-[#444]">
+              <div className="space-y-4 text-[15px] leading-relaxed text-[#444]">
                 <div>
                   <p className="font-bold text-[#2D4B3E]">SEOで効く書き方</p>
                   <ul className="ml-5 list-disc space-y-1 mt-1">
@@ -227,7 +227,7 @@ export default function StaffBlogPage() {
                 </div>
                 <div>
                   <p className="font-bold text-[#2D4B3E]">Markdown記法</p>
-                  <pre className="bg-[#F5F2EE] p-3 rounded-lg text-[11px] mt-1 whitespace-pre-wrap">{`## 見出し2
+                  <pre className="bg-[#F5F2EE] p-3 rounded-lg text-[13px] mt-1 whitespace-pre-wrap">{`## 見出し2
 ### 見出し3
 **太字** *斜体*
 - 箇条書き
@@ -302,32 +302,32 @@ function EditModal({ post, onClose, onSave }) {
 
           <div className="space-y-3">
             <div>
-              <label className="text-[11px] font-bold text-[#666]">タイトル *（32文字以内推奨）</label>
+              <label className="text-[13px] font-bold text-[#3B4640]">タイトル *（32文字以内推奨）</label>
               <input
                 type="text"
                 value={form.title}
                 onChange={e => setForm({ ...form, title: e.target.value })}
                 onBlur={() => !form.slug && autoSlug()}
-                className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold"
+                className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] font-bold"
                 placeholder="札幌で人気の母の日ブーケ5選"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#666]">URL（半角英数字・記号は - のみ）</label>
+              <label className="text-[13px] font-bold text-[#3B4640]">URL（半角英数字・記号は - のみ）</label>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-[#999]">/blog/.../</span>
+                <span className="text-[13px] text-[#5C6660]">/blog/.../</span>
                 <input
                   type="text"
                   value={form.slug}
                   onChange={e => setForm({ ...form, slug: e.target.value })}
-                  className="flex-1 h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px]"
+                  className="flex-1 h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px]"
                   placeholder="mothers-day-bouquet-2026"
                 />
                 <button
                   type="button"
                   onClick={autoSlug}
-                  className="h-11 px-3 bg-[#F5F2EE] rounded-xl text-[11px] font-bold"
+                  className="h-11 px-3 bg-[#F5F2EE] rounded-xl text-[13px] font-bold"
                 >
                   自動生成
                 </button>
@@ -335,44 +335,44 @@ function EditModal({ post, onClose, onSave }) {
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#666]">要約（160文字以内・検索結果に表示される）</label>
+              <label className="text-[13px] font-bold text-[#3B4640]">要約（160文字以内・検索結果に表示される）</label>
               <textarea
                 value={form.excerpt}
                 onChange={e => setForm({ ...form, excerpt: e.target.value.slice(0, 200) })}
                 rows={2}
-                className="w-full bg-[#FBFAF9] border rounded-xl px-4 py-3 text-[12px]"
+                className="w-full bg-[#FAFAF7] border rounded-xl px-4 py-3 text-[14px]"
                 placeholder="今年の母の日にぴったりのブーケを5つ厳選しました。札幌からの即日配達も承ります。"
               />
-              <p className="text-[10px] text-[#999] text-right">{form.excerpt.length}/160</p>
+              <p className="text-[12px] text-[#5C6660] text-right">{form.excerpt.length}/160</p>
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#666]">カバー画像URL（OG画像にも使用）</label>
+              <label className="text-[13px] font-bold text-[#3B4640]">カバー画像URL（OG画像にも使用）</label>
               <input
                 type="url"
                 value={form.cover_image_url}
                 onChange={e => setForm({ ...form, cover_image_url: e.target.value })}
-                className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px]"
+                className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px]"
                 placeholder="https://..."
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#666]">著者名（信頼性向上）</label>
+              <label className="text-[13px] font-bold text-[#3B4640]">著者名（信頼性向上）</label>
               <input
                 type="text"
                 value={form.author_name}
                 onChange={e => setForm({ ...form, author_name: e.target.value })}
-                className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px]"
+                className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px]"
                 placeholder="店主 田中"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#666]">タグ</label>
+              <label className="text-[13px] font-bold text-[#3B4640]">タグ</label>
               <div className="flex gap-2 flex-wrap mb-2">
                 {form.tags.map(t => (
-                  <span key={t} className="text-[10px] bg-[#F5F2EE] px-2 py-1 rounded-full flex items-center gap-1">
+                  <span key={t} className="text-[12px] bg-[#F5F2EE] px-2 py-1 rounded-full flex items-center gap-1">
                     #{t}
                     <button onClick={() => setForm({ ...form, tags: form.tags.filter(x => x !== t) })}>
                       <X size={10} />
@@ -392,25 +392,25 @@ function EditModal({ post, onClose, onSave }) {
                       setTagInput("");
                     }
                   }}
-                  className="flex-1 h-9 bg-[#FBFAF9] border rounded-lg px-3 text-[12px]"
+                  className="flex-1 h-9 bg-[#FAFAF7] border rounded-lg px-3 text-[14px]"
                   placeholder="母の日, ブーケ など Enterで追加"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#666]">本文（Markdown形式）*</label>
+              <label className="text-[13px] font-bold text-[#3B4640]">本文（Markdown形式）*</label>
               <textarea
                 value={form.content_md}
                 onChange={e => setForm({ ...form, content_md: e.target.value })}
                 rows={18}
-                className="w-full bg-[#FBFAF9] border rounded-xl px-4 py-3 text-[12px] font-mono"
+                className="w-full bg-[#FAFAF7] border rounded-xl px-4 py-3 text-[14px] font-mono"
                 placeholder={`## はじめに\n\n母の日に贈るお花のおすすめをご紹介します。\n\n## 1位：ピンクのバラブーケ\n\n華やかさNo.1のバラのブーケ...`}
               />
-              <p className="text-[10px] text-[#999] mt-1">{form.content_md.length} 文字（1500文字以上推奨）</p>
+              <p className="text-[12px] text-[#5C6660] mt-1">{form.content_md.length} 文字（1500文字以上推奨）</p>
             </div>
 
-            <div className="flex items-center gap-3 bg-[#FBFAF9] rounded-xl p-4">
+            <div className="flex items-center gap-3 bg-[#FAFAF7] rounded-xl p-4">
               <input
                 type="checkbox"
                 id="is_published"
@@ -418,7 +418,7 @@ function EditModal({ post, onClose, onSave }) {
                 onChange={e => setForm({ ...form, is_published: e.target.checked })}
                 className="w-4 h-4"
               />
-              <label htmlFor="is_published" className="text-[13px] font-bold cursor-pointer">
+              <label htmlFor="is_published" className="text-[15px] font-bold cursor-pointer">
                 公開する（チェックを外すと下書き）
               </label>
             </div>
@@ -427,13 +427,13 @@ function EditModal({ post, onClose, onSave }) {
           <div className="flex gap-2 mt-6">
             <button
               onClick={onClose}
-              className="flex-1 h-11 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] font-bold"
+              className="flex-1 h-11 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[14px] font-bold"
             >
               キャンセル
             </button>
             <button
               onClick={handleSubmit}
-              className="flex-1 h-11 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold flex items-center justify-center gap-1"
+              className="flex-1 h-11 bg-[#2D4B3E] text-white rounded-xl text-[14px] font-bold flex items-center justify-center gap-1"
             >
               <Save size={14} /> 保存
             </button>
