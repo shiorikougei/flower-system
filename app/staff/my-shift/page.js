@@ -174,7 +174,7 @@ function MyShiftPageInner() {
         </div>
       </header>
 
-      <div className="max-w-[800px] mx-auto p-6 space-y-6">
+      <div className="w-full p-4 md:px-10 md:py-8 space-y-6">
         {/* 案内 */}
         <div className={`p-4 rounded-2xl border ${deadlinePassed ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'} text-[14px] leading-relaxed`}>
           <p className="font-bold mb-1">

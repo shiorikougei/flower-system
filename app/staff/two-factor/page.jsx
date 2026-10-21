@@ -98,7 +98,7 @@ export default function TwoFactorPage() {
         </div>
       </header>
 
-      <div className="max-w-3xl mx-auto p-4 md:p-8 space-y-6">
+      <div className="w-full p-4 md:px-10 md:py-8 space-y-6">
         {message && (
           <div className={`flex items-start gap-2 p-4 rounded-xl border ${
             message.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'

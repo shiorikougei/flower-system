@@ -670,7 +670,7 @@ export default function StaffNewOrderPage() {
           </h1>
         </header>
 
-        <div className="max-w-[700px] mx-auto w-full p-8 space-y-8">
+        <div className="w-full p-4 md:px-10 md:py-8 space-y-8">
           
           <div className="bg-white p-8 rounded-2xl border border-[#E6E2DA] shadow-sm space-y-6">
             <h2 className="text-[15px] font-bold text-[#2D4B3E] border-b border-[#FAFAF7] pb-3">1. 受付情報と商品</h2>

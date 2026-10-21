@@ -352,7 +352,7 @@ function StaffProductsPageInner() {
             <p className="text-[13px] text-[#CCC] mt-1">「新規商品」ボタンから追加してください</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-5">
             {products.map(p => (
               <div key={p.id} className={`bg-white rounded-2xl border overflow-hidden flex flex-col group transition-all hover:shadow-md ${p.is_active ? 'border-[#E6E2DA]' : 'border-[#E6E2DA] opacity-60'}`}>
                 <div className="relative aspect-square bg-[#FAFAF7]">

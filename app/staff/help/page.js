@@ -45,7 +45,7 @@ export default function HelpCenterPage() {
 
   return (
     <main className="pb-32 font-sans text-left">
-      <header className="bg-[#F6F4EF]/95 backdrop-blur border-b border-[#EAEAEA] px-6 md:px-8 py-4 sticky top-0 z-10 print:hidden">
+      <header className="bg-[#F6F4EF]/95 backdrop-blur border-b border-[#E0DCD3] px-4 md:px-10 pt-5 pb-4 sticky top-0 z-10 print:hidden">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-[24px] md:text-[28px] font-bold tracking-[0.02em] text-[#1F2A24] flex items-center gap-2">
@@ -71,7 +71,7 @@ export default function HelpCenterPage() {
         </div>
       </header>
 
-      <div className="max-w-[900px] mx-auto p-6 md:p-8 space-y-8">
+      <div className="w-full p-4 md:px-10 md:py-8 space-y-8">
         {/* 検索結果モード */}
         {filteredArticles ? (
           <div>
@@ -90,7 +90,7 @@ export default function HelpCenterPage() {
           // カテゴリ別表示モード
           <>
             {/* カテゴリ目次 */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 print:hidden">
+            <div className="grid grid-cols-2 md:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2 print:hidden">
               {HELP_CATEGORIES.map(c => (
                 <a key={c.id} href={`#cat-${c.id}`} className="bg-white border border-[#E6E2DA] rounded-xl p-3 hover:border-[#2D4B3E] hover:shadow-md transition-all">
                   <div><CategoryIcon name={c.icon} size={20} /></div>

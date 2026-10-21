@@ -487,7 +487,7 @@ function PortfolioPageInner() {
                   {q ? `「${searchQuery}」に一致する作品がありません` : '作品が登録されていません。タブから新規追加してください。'}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-6">
                   {filtered.map(img => (
                   <div key={img.id} className="bg-white rounded-2xl border border-[#E6E2DA] overflow-hidden shadow-sm hover:shadow-md transition-all group flex flex-col">
                     <div className="relative aspect-square bg-[#FAFAF7] cursor-pointer" onClick={() => setDetailImage(img)}>
@@ -558,7 +558,7 @@ function PortfolioPageInner() {
                 <span className="text-[13px] font-normal block mt-2">注文詳細画面から完成写真をアップロードすると、ここに自動的に表示されます。<br/>登録済みの作品は「登録済み一覧」タブから確認できます。</span>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-6">
                 {pendingCompletedOrders.map(order => {
                   const d = order.order_data;
                   return (

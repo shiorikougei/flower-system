@@ -61,7 +61,7 @@ export default function CorporatePortalPage() {
         </div>
       </header>
 
-      <div className="max-w-[1000px] mx-auto w-full p-4 md:p-8 space-y-6">
+      <div className="w-full p-4 md:px-10 md:py-8 space-y-6">
         
         <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-2xl flex items-start gap-4 shadow-sm">
           <div className="bg-emerald-100 p-3 rounded-full text-emerald-600 mt-1"><Bell size={24} /></div>
