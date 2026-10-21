@@ -335,14 +335,14 @@ export default function EstimatePage() {
 
   if (done) {
     return (
-      <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center p-6">
-        <div className="max-w-lg w-full bg-white p-8 rounded-3xl border border-[#EAEAEA] space-y-5 shadow-xl">
+      <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center p-6">
+        <div className="max-w-lg w-full bg-white p-8 rounded-3xl border border-[#E6E2DA] space-y-5 shadow-xl">
           <div className="text-center space-y-3">
             <div className="w-16 h-16 mx-auto bg-emerald-50 rounded-full flex items-center justify-center">
               <CheckCircle2 size={32} className="text-emerald-600"/>
             </div>
             <h1 className="text-[18px] font-bold text-[#2D4B3E]">お見積もりのご依頼を受け付けました</h1>
-            <p className="text-[12px] text-[#555] leading-relaxed">
+            <p className="text-[14px] text-[#3B4640] leading-relaxed">
               内容を確認の上、お見積もり結果をご登録のメールアドレス宛にお送りいたします。<br/>
               通常 1〜2営業日以内にご連絡いたします。
             </p>
@@ -351,17 +351,17 @@ export default function EstimatePage() {
           {/* ★ 送信後のLINE案内 (離脱率にならないようここに表示) */}
           {appSettings?.lineConfig?.enabled && appSettings?.lineConfig?.addFriendUrl && (
             <div className="bg-[#06C755]/5 border-2 border-[#06C755]/30 rounded-2xl p-5 space-y-3 mt-4">
-              <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2">
+              <p className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2">
                 <MessageCircle size={14}/> LINEでも受け取り可能です
               </p>
-              <p className="text-[11px] text-[#555] leading-relaxed">
+              <p className="text-[13px] text-[#3B4640] leading-relaxed">
                 公式LINEを友達追加していただくと、お見積もり結果や注文後の進捗・完成写真を
                 <strong className="text-[#06C755]">LINEのトーク</strong>でもお届けできます。<br/>
                 メール受信より気付きやすいのでおすすめです！
               </p>
               <div className="bg-white rounded-lg p-3 space-y-2">
-                <p className="text-[11px] font-bold text-[#2D4B3E] flex items-center gap-1"><Smartphone size={12}/> 登録手順</p>
-                <ol className="text-[11px] text-[#555] leading-relaxed pl-4 list-decimal space-y-1">
+                <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-1"><Smartphone size={12}/> 登録手順</p>
+                <ol className="text-[13px] text-[#3B4640] leading-relaxed pl-4 list-decimal space-y-1">
                   <li>下のボタンから公式LINEを友達追加</li>
                   <li>リッチメニュー「LINE連携する」をタップ</li>
                   <li>ご入力のメアド <strong>{form.customerEmail}</strong> を送信</li>
@@ -369,13 +369,13 @@ export default function EstimatePage() {
                 </ol>
               </div>
               <a href={appSettings.lineConfig.addFriendUrl} target="_blank" rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full h-12 text-center bg-[#06C755] hover:bg-[#05a548] text-white rounded-xl font-bold text-[13px]">
+                className="flex items-center justify-center gap-2 w-full h-12 text-center bg-[#06C755] hover:bg-[#05a548] text-white rounded-xl font-bold text-[15px]">
                 <MessageCircle size={14}/> 当店公式LINEを友達追加する
               </a>
             </div>
           )}
 
-          <Link href={`/order/${tenantId}/${shopId}`} className="block text-center px-6 h-12 leading-[48px] bg-[#2D4B3E] text-white rounded-xl text-[13px] font-bold">
+          <Link href={`/order/${tenantId}/${shopId}`} className="block text-center px-6 h-12 leading-[48px] bg-[#2D4B3E] text-white rounded-xl text-[15px] font-bold">
             トップに戻る
           </Link>
         </div>
@@ -384,15 +384,15 @@ export default function EstimatePage() {
   }
 
   // ★ 共通スタイル
-  const inputCls = "w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] text-[#111] outline-none focus:border-[#117768]";
-  const labelCls = "text-[11px] font-bold text-[#555]";
-  const sectionCls = "bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-4 text-[#111]";
+  const inputCls = "w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] text-[#1F2A24] outline-none focus:border-[#117768]";
+  const labelCls = "text-[13px] font-bold text-[#3B4640]";
+  const sectionCls = "bg-white p-6 rounded-2xl border border-[#E6E2DA] space-y-4 text-[#1F2A24]";
 
   return (
-    <div className="min-h-screen bg-[#FBFAF9] font-sans pb-20">
-      <header className="bg-white border-b border-[#EAEAEA] sticky top-0 z-10">
+    <div className="min-h-screen bg-[#FAFAF7] font-sans pb-20">
+      <header className="bg-white border-b border-[#E6E2DA] sticky top-0 z-10">
         <div className="max-w-[700px] mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href={`/order/${tenantId}/${shopId}`} className="flex items-center gap-1 text-[12px] font-bold text-[#555] hover:text-[#2D4B3E]">
+          <Link href={`/order/${tenantId}/${shopId}`} className="flex items-center gap-1 text-[14px] font-bold text-[#3B4640] hover:text-[#2D4B3E]">
             <ChevronLeft size={16}/> 戻る
           </Link>
           <span className="font-serif font-bold text-[16px] text-[#2D4B3E]">{appName}</span>
@@ -402,9 +402,9 @@ export default function EstimatePage() {
 
       <main className="max-w-[700px] mx-auto px-6 py-10 space-y-5">
         <div>
-          <p className="text-[11px] text-[#117768] font-bold tracking-widest">ESTIMATE</p>
+          <p className="text-[13px] text-[#117768] font-bold tracking-widest">ESTIMATE</p>
           <h1 className="text-[24px] font-bold text-[#2D4B3E] mt-1">お見積もり依頼フォーム</h1>
-          <p className="text-[12px] text-[#555] mt-2 leading-relaxed">
+          <p className="text-[14px] text-[#3B4640] mt-2 leading-relaxed">
             以下のようなご依頼におすすめです：<br/>
             ・バラ12本／99本など本数指定<br/>
             ・複数の花束・アレンジを同時にご注文<br/>
@@ -415,7 +415,7 @@ export default function EstimatePage() {
 
         {/* ① お客様情報 */}
         <div className={sectionCls}>
-          <p className="text-[12px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">① お客様情報</p>
+          <p className="text-[14px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">① お客様情報</p>
           <div className="space-y-2">
             <label className={labelCls}>お名前 <span className="text-red-500">*</span></label>
             <input type="text" value={form.customerName} onChange={e => setForm({...form, customerName: e.target.value})} className={inputCls}/>
@@ -425,21 +425,21 @@ export default function EstimatePage() {
             <input type="email" value={form.customerEmail} onChange={e => setForm({...form, customerEmail: e.target.value})} className={inputCls}/>
           </div>
           <div className="space-y-2">
-            <label className={labelCls}>お電話番号 <span className="text-red-500">*</span> <span className="text-[10px] text-[#999]">（緊急連絡用）</span></label>
+            <label className={labelCls}>お電話番号 <span className="text-red-500">*</span> <span className="text-[12px] text-[#5C6660]">（緊急連絡用）</span></label>
             <input type="tel" value={form.customerPhone} onChange={e => setForm({...form, customerPhone: e.target.value})} className={inputCls}/>
           </div>
         </div>
 
         {/* ② 用途・受取 */}
         <div className={sectionCls}>
-          <p className="text-[12px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">② ご用途・お受け取り</p>
+          <p className="text-[14px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">② ご用途・お受け取り</p>
           <div className="space-y-2">
             <label className={labelCls}>ご用途 <span className="text-red-500">*</span></label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {PURPOSE_OPTIONS.map(p => (
                 <button key={p} type="button"
                   onClick={() => setForm({...form, purpose: p})}
-                  className={`p-2.5 rounded-lg text-[11px] font-bold border-2 transition-all ${form.purpose === p ? 'bg-[#117768] border-[#117768] text-white' : 'bg-white border-[#EAEAEA] text-[#555] hover:border-[#117768]'}`}>
+                  className={`p-2.5 rounded-lg text-[13px] font-bold border-2 transition-all ${form.purpose === p ? 'bg-[#117768] border-[#117768] text-white' : 'bg-white border-[#E6E2DA] text-[#3B4640] hover:border-[#117768]'}`}>
                   {p}
                 </button>
               ))}
@@ -457,7 +457,7 @@ export default function EstimatePage() {
               {DELIVERY_OPTIONS.map(d => (
                 <button key={d.value} type="button"
                   onClick={() => setForm({...form, deliveryMethod: d.value})}
-                  className={`p-3 rounded-lg text-[12px] font-bold border-2 transition-all text-left ${form.deliveryMethod === d.value ? 'bg-[#117768] border-[#117768] text-white' : 'bg-white border-[#EAEAEA] text-[#555] hover:border-[#117768]'}`}>
+                  className={`p-3 rounded-lg text-[14px] font-bold border-2 transition-all text-left ${form.deliveryMethod === d.value ? 'bg-[#117768] border-[#117768] text-white' : 'bg-white border-[#E6E2DA] text-[#3B4640] hover:border-[#117768]'}`}>
                   {d.label}
                 </button>
               ))}
@@ -466,11 +466,11 @@ export default function EstimatePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-2">
-              <label className={labelCls}>ご希望日 <span className="text-[10px] text-[#999]">（任意）</span></label>
+              <label className={labelCls}>ご希望日 <span className="text-[12px] text-[#5C6660]">（任意）</span></label>
               <input type="date" value={form.desiredDate} onChange={e => setForm({...form, desiredDate: e.target.value})} className={inputCls}/>
             </div>
             <div className="space-y-2">
-              <label className={labelCls}>ご希望時刻 <span className="text-[10px] text-[#999]">（任意）</span></label>
+              <label className={labelCls}>ご希望時刻 <span className="text-[12px] text-[#5C6660]">（任意）</span></label>
               <input type="text" placeholder="例: 17時頃 / 午前中"
                 value={form.desiredTime} onChange={e => setForm({...form, desiredTime: e.target.value})} className={inputCls}/>
             </div>
@@ -478,10 +478,10 @@ export default function EstimatePage() {
 
           {isDelivery && (
             <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 space-y-3">
-              <p className="text-[11px] font-bold text-blue-900 flex items-center gap-1"><MapPin size={12}/> お届け先情報</p>
+              <p className="text-[13px] font-bold text-blue-900 flex items-center gap-1"><MapPin size={12}/> お届け先情報</p>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-blue-900">郵便番号 (7桁・ハイフンなし)</label>
+                <label className="text-[12px] font-bold text-blue-900">郵便番号 (7桁・ハイフンなし)</label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -498,27 +498,27 @@ export default function EstimatePage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-blue-900">都道府県・市区町村 (自動入力)</label>
+                <label className="text-[12px] font-bold text-blue-900">都道府県・市区町村 (自動入力)</label>
                 <input type="text" placeholder="郵便番号入力で自動表示" readOnly
                   value={form.deliveryAddress1}
-                  className={inputCls.replace('bg-[#FBFAF9]', 'bg-[#EAEAEA]/30')}/>
+                  className={inputCls.replace('bg-[#FAFAF7]', 'bg-[#E6E2DA]/30')}/>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-blue-900">番地・建物名</label>
+                <label className="text-[12px] font-bold text-blue-900">番地・建物名</label>
                 <input type="text" placeholder="例: 北二十五条西4-1-1 〇〇マンション101"
                   value={form.deliveryAddress2} onChange={e => setForm({...form, deliveryAddress2: e.target.value})} className={inputCls}/>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-blue-900">お届け先お名前</label>
+                <label className="text-[12px] font-bold text-blue-900">お届け先お名前</label>
                 <input type="text" placeholder="〇〇 〇〇"
                   value={form.recipientName} onChange={e => setForm({...form, recipientName: e.target.value})} className={inputCls}/>
               </div>
 
               {/* ★ 自社配達選択時のエリア判定メッセージ */}
               {form.deliveryMethod === 'delivery' && areaJudgement && (
-                <div className={`p-3 rounded-lg text-[11px] leading-relaxed ${
+                <div className={`p-3 rounded-lg text-[13px] leading-relaxed ${
                   areaJudgement.area === 'out'
                     ? 'bg-amber-50 border border-amber-300 text-amber-900'
                     : 'bg-emerald-50 border border-emerald-300 text-emerald-900'
@@ -541,15 +541,15 @@ export default function EstimatePage() {
 
         {/* ③ デザイン */}
         <div className={sectionCls}>
-          <p className="text-[12px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">③ お花のイメージ</p>
+          <p className="text-[14px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">③ お花のイメージ</p>
 
           <div className="space-y-2">
-            <label className={labelCls}>花の種類 <span className="text-[10px] text-[#999]">（任意）</span></label>
+            <label className={labelCls}>花の種類 <span className="text-[12px] text-[#5C6660]">（任意）</span></label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {FLOWER_TYPE_OPTIONS.map(f => (
                 <button key={f} type="button"
                   onClick={() => setForm({...form, flowerType: f})}
-                  className={`p-2.5 rounded-lg text-[11px] font-bold border-2 transition-all ${form.flowerType === f ? 'bg-[#117768] border-[#117768] text-white' : 'bg-white border-[#EAEAEA] text-[#555] hover:border-[#117768]'}`}>
+                  className={`p-2.5 rounded-lg text-[13px] font-bold border-2 transition-all ${form.flowerType === f ? 'bg-[#117768] border-[#117768] text-white' : 'bg-white border-[#E6E2DA] text-[#3B4640] hover:border-[#117768]'}`}>
                   {f}
                 </button>
               ))}
@@ -557,12 +557,12 @@ export default function EstimatePage() {
           </div>
 
           <div className="space-y-2">
-            <label className={labelCls}>色・イメージ <span className="text-[10px] text-[#999]">（任意）</span></label>
+            <label className={labelCls}>色・イメージ <span className="text-[12px] text-[#5C6660]">（任意）</span></label>
             <div className="grid grid-cols-3 gap-2">
               {COLOR_OPTIONS.map(c => (
                 <button key={c} type="button"
                   onClick={() => setForm({...form, colorPreference: c})}
-                  className={`p-2.5 rounded-lg text-[11px] font-bold border-2 transition-all ${form.colorPreference === c ? 'bg-[#117768] border-[#117768] text-white' : 'bg-white border-[#EAEAEA] text-[#555] hover:border-[#117768]'}`}>
+                  className={`p-2.5 rounded-lg text-[13px] font-bold border-2 transition-all ${form.colorPreference === c ? 'bg-[#117768] border-[#117768] text-white' : 'bg-white border-[#E6E2DA] text-[#3B4640] hover:border-[#117768]'}`}>
                   {c}
                 </button>
               ))}
@@ -570,7 +570,7 @@ export default function EstimatePage() {
           </div>
 
           <div className="space-y-2">
-            <label className={labelCls}>本数・サイズ指定 <span className="text-[10px] text-[#999]">（任意）</span></label>
+            <label className={labelCls}>本数・サイズ指定 <span className="text-[12px] text-[#5C6660]">（任意）</span></label>
             <input type="text" placeholder="例: バラ21本、Mサイズ、高さ60cm程度"
               value={form.countSpec} onChange={e => setForm({...form, countSpec: e.target.value})} className={inputCls}/>
           </div>
@@ -578,12 +578,12 @@ export default function EstimatePage() {
 
         {/* ④ ご予算 */}
         <div className={sectionCls}>
-          <p className="text-[12px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">④ ご予算 <span className="text-red-500">*</span></p>
+          <p className="text-[14px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">④ ご予算 <span className="text-red-500">*</span></p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {BUDGET_OPTIONS.map(b => (
               <button key={b} type="button"
                 onClick={() => setForm({...form, budget: b})}
-                className={`p-3 rounded-lg text-[12px] font-bold border-2 transition-all ${form.budget === b ? 'bg-[#117768] border-[#117768] text-white' : 'bg-white border-[#EAEAEA] text-[#555] hover:border-[#117768]'}`}>
+                className={`p-3 rounded-lg text-[14px] font-bold border-2 transition-all ${form.budget === b ? 'bg-[#117768] border-[#117768] text-white' : 'bg-white border-[#E6E2DA] text-[#3B4640] hover:border-[#117768]'}`}>
                 {b}
               </button>
             ))}
@@ -592,12 +592,12 @@ export default function EstimatePage() {
 
         {/* ⑤ メッセージカード / 立札 */}
         <div className={sectionCls}>
-          <p className="text-[12px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">⑤ メッセージカード・立札</p>
+          <p className="text-[14px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">⑤ メッセージカード・立札</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {CARD_OPTIONS.map(c => (
               <button key={c.value} type="button"
                 onClick={() => setForm({...form, cardType: c.value})}
-                className={`p-3 rounded-lg text-[12px] font-bold border-2 transition-all ${form.cardType === c.value ? 'bg-[#117768] border-[#117768] text-white' : 'bg-white border-[#EAEAEA] text-[#555] hover:border-[#117768]'}`}>
+                className={`p-3 rounded-lg text-[14px] font-bold border-2 transition-all ${form.cardType === c.value ? 'bg-[#117768] border-[#117768] text-white' : 'bg-white border-[#E6E2DA] text-[#3B4640] hover:border-[#117768]'}`}>
                 {c.label}
               </button>
             ))}
@@ -606,33 +606,33 @@ export default function EstimatePage() {
             <textarea rows={3}
               placeholder={form.cardType === 'tatefuda' ? '例: 御祝 / 〇〇店御開店御祝 / 株式会社〇〇 代表 〇〇' : '例: お誕生日おめでとう！いつもありがとう。'}
               value={form.cardContent} onChange={e => setForm({...form, cardContent: e.target.value})}
-              className="w-full px-4 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] text-[#111] outline-none focus:border-[#117768] resize-none leading-relaxed"/>
+              className="w-full px-4 py-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] text-[#1F2A24] outline-none focus:border-[#117768] resize-none leading-relaxed"/>
           )}
         </div>
 
         {/* ⑥ 参考画像アップロード */}
         <div className={sectionCls}>
-          <p className="text-[12px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">⑥ 参考画像 <span className="text-[10px] text-[#999]">（任意・最大10枚）</span></p>
-          <p className="text-[11px] text-[#555] leading-relaxed">
+          <p className="text-[14px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">⑥ 参考画像 <span className="text-[12px] text-[#5C6660]">（任意・最大10枚）</span></p>
+          <p className="text-[13px] text-[#3B4640] leading-relaxed">
             イメージに近いお写真があれば、お手元のスマホ画像・スクショをアップロードしてください。<br/>
-            <span className="text-[10px] text-[#999]">※ JPG・PNG・HEIC等 / iPhone等の大きい写真も自動で圧縮されます</span>
+            <span className="text-[12px] text-[#5C6660]">※ JPG・PNG・HEIC等 / iPhone等の大きい写真も自動で圧縮されます</span>
           </p>
 
           {/* アップロード済みプレビュー */}
           {form.referenceImages.length > 0 && (
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {form.referenceImages.map((url, idx) => (
-                <div key={idx} className="relative aspect-square bg-[#FBFAF9] rounded-lg overflow-hidden border border-[#EAEAEA] group">
+                <div key={idx} className="relative aspect-square bg-[#FAFAF7] rounded-lg overflow-hidden border border-[#E6E2DA] group">
                   <img src={url} alt={`参考画像${idx + 1}`} className="w-full h-full object-cover"/>
                   <button
                     type="button"
                     onClick={() => removeReferenceImage(idx)}
-                    className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] shadow-md hover:bg-red-600 transition-all"
+                    className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-[12px] shadow-md hover:bg-red-600 transition-all"
                     aria-label="削除"
                   >
                     <X size={14}/>
                   </button>
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] text-center py-0.5">
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[12px] text-center py-0.5">
                     {idx + 1}枚目
                   </div>
                 </div>
@@ -642,21 +642,21 @@ export default function EstimatePage() {
 
           {/* アップロードボタン (10枚未満時のみ) */}
           {form.referenceImages.length < 10 && (
-            <label className={`flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed rounded-xl cursor-pointer transition-all ${uploadingImages ? 'border-[#117768] bg-[#117768]/5' : 'border-[#EAEAEA] hover:border-[#117768] hover:bg-[#FBFAF9]'}`}>
+            <label className={`flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed rounded-xl cursor-pointer transition-all ${uploadingImages ? 'border-[#117768] bg-[#117768]/5' : 'border-[#E6E2DA] hover:border-[#117768] hover:bg-[#FAFAF7]'}`}>
               {uploadingImages ? (
                 <>
                   <Loader2 className="animate-spin text-[#117768]" size={32}/>
-                  <span className="text-[12px] font-bold text-[#117768]">
+                  <span className="text-[14px] font-bold text-[#117768]">
                     圧縮＆アップロード中... ({uploadProgress.done}/{uploadProgress.total})
                   </span>
                 </>
               ) : (
                 <>
                   <ImagePlus size={32} className="text-[#117768]"/>
-                  <span className="text-[12px] font-bold text-[#117768]">
+                  <span className="text-[14px] font-bold text-[#117768]">
                     タップして画像を選択
                   </span>
-                  <span className="text-[10px] text-[#999]">
+                  <span className="text-[12px] text-[#5C6660]">
                     残り {10 - form.referenceImages.length} 枚まで追加可能
                   </span>
                 </>
@@ -673,7 +673,7 @@ export default function EstimatePage() {
           )}
 
           {form.referenceImages.length === 10 && (
-            <p className="text-[10px] text-amber-700 bg-amber-50 px-3 py-2 rounded-lg flex items-center gap-1">
+            <p className="text-[12px] text-amber-700 bg-amber-50 px-3 py-2 rounded-lg flex items-center gap-1">
               <AlertCircle size={11}/> 最大枚数 (10枚) に達しました。追加するには既存画像を削除してください。
             </p>
           )}
@@ -681,46 +681,46 @@ export default function EstimatePage() {
 
         {/* ⑦ Instagram投稿を参考にする */}
         <div className={sectionCls}>
-          <p className="text-[12px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">⑦ 当店Instagramの投稿を参考にする <span className="text-[10px] text-[#999]">（任意）</span></p>
-          <p className="text-[11px] text-[#555] leading-relaxed">
+          <p className="text-[14px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">⑦ 当店Instagramの投稿を参考にする <span className="text-[12px] text-[#5C6660]">（任意）</span></p>
+          <p className="text-[13px] text-[#3B4640] leading-relaxed">
             当店のInstagram投稿でイメージに近いものがあれば、<strong>管理番号</strong>または<strong>投稿URL</strong>をお知らせください。
           </p>
 
           {/* 管理番号 */}
           <div className="space-y-2">
-            <label className={labelCls + " flex items-center gap-1"}><ClipboardList size={11}/> 管理番号 <span className="text-[10px] text-[#999]">（複数の場合は改行で区切り）</span></label>
+            <label className={labelCls + " flex items-center gap-1"}><ClipboardList size={11}/> 管理番号 <span className="text-[12px] text-[#5C6660]">（複数の場合は改行で区切り）</span></label>
             <textarea
               rows={2}
               placeholder={'例:\n20260514-001\n20260520-003'}
               value={form.instagramManagementNos}
               onChange={e => setForm({...form, instagramManagementNos: e.target.value})}
-              className="w-full px-4 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] text-[#111] font-mono outline-none focus:border-[#117768] resize-none leading-relaxed"
+              className="w-full px-4 py-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[14px] text-[#1F2A24] font-mono outline-none focus:border-[#117768] resize-none leading-relaxed"
             />
-            <p className="text-[10px] text-[#999] flex items-start gap-1">
+            <p className="text-[12px] text-[#5C6660] flex items-start gap-1">
               <Lightbulb size={11} className="mt-0.5 shrink-0"/>
-              <span>管理番号は当店のInstagram投稿のキャプション冒頭に <code className="bg-[#FBFAF9] px-1 rounded">◯◯◯◯◯◯◯◯-◯◯◯</code> の形式で記載されています</span>
+              <span>管理番号は当店のInstagram投稿のキャプション冒頭に <code className="bg-[#FAFAF7] px-1 rounded">◯◯◯◯◯◯◯◯-◯◯◯</code> の形式で記載されています</span>
             </p>
           </div>
 
           {/* URL */}
           <div className="space-y-2">
-            <label className={labelCls + " flex items-center gap-1"}><LinkIcon size={11}/> 投稿URL <span className="text-[10px] text-[#999]">（管理番号がない場合・複数の場合は改行で区切り）</span></label>
+            <label className={labelCls + " flex items-center gap-1"}><LinkIcon size={11}/> 投稿URL <span className="text-[12px] text-[#5C6660]">（管理番号がない場合・複数の場合は改行で区切り）</span></label>
             <textarea
               rows={2}
               placeholder={'例:\nhttps://www.instagram.com/p/XXXXXXX/'}
               value={form.instagramUrls}
               onChange={e => setForm({...form, instagramUrls: e.target.value})}
-              className="w-full px-4 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] text-[#111] font-mono outline-none focus:border-[#117768] resize-none leading-relaxed"
+              className="w-full px-4 py-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[14px] text-[#1F2A24] font-mono outline-none focus:border-[#117768] resize-none leading-relaxed"
             />
           </div>
 
           {/* URL 取得方法のヒント */}
           <details className="bg-blue-50 border border-blue-200 rounded-xl p-3 group">
-            <summary className="cursor-pointer text-[11px] font-bold text-blue-900 list-none flex items-center justify-between">
+            <summary className="cursor-pointer text-[13px] font-bold text-blue-900 list-none flex items-center justify-between">
               <span className="flex items-center gap-1"><Smartphone size={12}/> Instagram投稿URLの取得方法</span>
-              <span className="text-[10px] text-blue-600 group-open:rotate-180 transition-transform">▼</span>
+              <span className="text-[12px] text-blue-600 group-open:rotate-180 transition-transform">▼</span>
             </summary>
-            <div className="mt-3 space-y-2 text-[11px] text-blue-900 leading-relaxed">
+            <div className="mt-3 space-y-2 text-[13px] text-blue-900 leading-relaxed">
               <p><strong>【スマホ・タブレット（Instagramアプリ）】</strong></p>
               <ol className="list-decimal pl-5 space-y-1">
                 <li>Instagramアプリで参考にしたい投稿を開く</li>
@@ -734,7 +734,7 @@ export default function EstimatePage() {
                 <li>ブラウザ上部のアドレスバーのURLをコピー</li>
                 <li>↑の入力欄に貼り付け</li>
               </ol>
-              <p className="text-[10px] text-blue-700 bg-blue-100 rounded px-2 py-1.5 mt-2 flex items-start gap-1">
+              <p className="text-[12px] text-blue-700 bg-blue-100 rounded px-2 py-1.5 mt-2 flex items-start gap-1">
                 <Lightbulb size={11} className="mt-0.5 shrink-0"/>
                 <span>URL例: <code className="bg-white px-1 rounded">https://www.instagram.com/p/XXXXXXX/</code> の形式（公開投稿のみ）</span>
               </p>
@@ -744,23 +744,23 @@ export default function EstimatePage() {
 
         {/* ⑧ その他特記事項 */}
         <div className={sectionCls}>
-          <p className="text-[12px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">⑧ その他特記事項 <span className="text-[10px] text-[#999]">（任意）</span></p>
+          <p className="text-[14px] font-bold text-[#117768] border-l-4 border-[#117768] pl-3">⑧ その他特記事項 <span className="text-[12px] text-[#5C6660]">（任意）</span></p>
           <textarea rows={4}
             placeholder="例: アレルギーで百合は避けてほしい / 母が喜ぶ色合いで / サプライズなので連絡不要 など"
             value={form.otherNotes} onChange={e => setForm({...form, otherNotes: e.target.value})}
-            className="w-full px-4 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] text-[#111] outline-none focus:border-[#117768] resize-none leading-relaxed"/>
+            className="w-full px-4 py-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] text-[#1F2A24] outline-none focus:border-[#117768] resize-none leading-relaxed"/>
         </div>
 
         {/* 送信 */}
         <div className={sectionCls}>
-          {error && <p className="text-[12px] text-red-600 font-bold">{error}</p>}
+          {error && <p className="text-[14px] text-red-600 font-bold">{error}</p>}
           <button onClick={handleSubmit} disabled={submitting}
-            className="w-full h-14 bg-[#117768] hover:bg-[#0d5e54] text-white rounded-xl font-bold text-[14px] flex items-center justify-center gap-2 disabled:opacity-50">
+            className="w-full h-14 bg-[#117768] hover:bg-[#0d5e54] text-white rounded-xl font-bold text-[15px] flex items-center justify-center gap-2 disabled:opacity-50">
             <Send size={16}/> {submitting ? '送信中...' : 'お見積もりを依頼する'}
           </button>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-[11px] text-blue-900 leading-relaxed flex items-start gap-1.5">
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-[13px] text-blue-900 leading-relaxed flex items-start gap-1.5">
           <Lightbulb size={13} className="mt-0.5 shrink-0"/>
           <span>通常 1〜2 営業日以内にメールでお見積もり結果をご連絡いたします。<br/>
           内容にご納得いただいてから正式注文への変換が可能です。</span>
@@ -771,7 +771,7 @@ export default function EstimatePage() {
           <div className="bg-[#06C755]/5 border-2 border-[#06C755]/30 rounded-2xl p-5 space-y-3">
             <a href={appSettings?.lineConfig?.addFriendUrl}
               target="_blank" rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full h-12 text-center bg-[#06C755] hover:bg-[#05a548] text-white rounded-xl font-bold text-[13px]"
+              className="flex items-center justify-center gap-2 w-full h-12 text-center bg-[#06C755] hover:bg-[#05a548] text-white rounded-xl font-bold text-[15px]"
             >
               <MessageCircle size={14}/> 当店公式LINEを友達追加する
             </a>

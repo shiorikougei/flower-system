@@ -93,3 +93,12 @@ input::placeholder, textarea::placeholder {
 .ui-renewal h1, .ui-renewal h2, .ui-renewal h3, .ui-renewal h4 {
   font-family: inherit;
 }
+
+/* [2026-10 画面リニューアル] お客様側の画面: 本文は .ui-renewal と同じ BIZ UDPゴシック、見出しは明朝 */
+.ui-renewal.ui-customer h1,
+.ui-renewal.ui-customer h2,
+.ui-renewal.ui-customer .font-serif {
+  font-family: var(--font-shippori), 'Shippori Mincho', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+  font-style: normal;
+  letter-spacing: 0.04em;
+}

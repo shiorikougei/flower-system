@@ -45,17 +45,17 @@ export default function FaqClient({ grouped, shop, tenantId, shopId }) {
   }
 
   return (
-    <main className="min-h-screen bg-[#FBFAF9] font-sans text-[#111111] pb-32">
+    <main className="min-h-screen bg-[#FAFAF7] font-sans text-[#1F2A24] pb-32">
       {/* ヘッダー */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-[#EAEAEA]">
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-[#E6E2DA]">
         <div className="max-w-[900px] mx-auto h-16 px-6 flex items-center justify-between">
           <Link
             href={`/order/${tenantId}/${shopId}`}
-            className="flex items-center gap-1 text-[12px] font-bold text-[#555555] hover:text-[#2D4B3E]"
+            className="flex items-center gap-1 text-[14px] font-bold text-[#3B4640] hover:text-[#2D4B3E]"
           >
             <ChevronLeft size={16} /> 店舗トップに戻る
           </Link>
-          <span className="font-serif font-bold text-[14px] text-[#2D4B3E] truncate">
+          <span className="font-serif font-bold text-[15px] text-[#2D4B3E] truncate">
             {shopName}
           </span>
         </div>
@@ -68,34 +68,34 @@ export default function FaqClient({ grouped, shop, tenantId, shopId }) {
           <h1 className="text-[24px] md:text-[32px] font-bold text-[#2D4B3E] mb-2">
             よくあるご質問
           </h1>
-          <p className="text-[12px] md:text-[13px] text-[#555] leading-relaxed">
+          <p className="text-[14px] md:text-[15px] text-[#3B4640] leading-relaxed">
             ご注文・配送・お花のお手入れ・お支払いまで、ご質問の多い内容をまとめました
           </p>
         </div>
 
         {/* 検索 */}
-        <div className="bg-white border border-[#EAEAEA] rounded-2xl p-4 mb-6">
+        <div className="bg-white border border-[#E6E2DA] rounded-2xl p-4 mb-6">
           <div className="relative">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#999]" />
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#5C6660]" />
             <input
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="質問・答えのキーワードで検索..."
-              className="w-full h-11 pl-10 pr-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"
+              className="w-full h-11 pl-10 pr-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] outline-none focus:border-[#2D4B3E]"
             />
           </div>
           <div className="flex gap-2 mt-3">
             <button
               onClick={openAll}
-              className="text-[11px] font-bold text-[#2D4B3E] hover:underline"
+              className="text-[13px] font-bold text-[#2D4B3E] hover:underline"
             >
               すべて開く
             </button>
             <span className="text-[#CCC]">/</span>
             <button
               onClick={closeAll}
-              className="text-[11px] font-bold text-[#999] hover:underline"
+              className="text-[13px] font-bold text-[#5C6660] hover:underline"
             >
               すべて閉じる
             </button>
@@ -104,9 +104,9 @@ export default function FaqClient({ grouped, shop, tenantId, shopId }) {
 
         {/* 該当なし */}
         {filtered.length === 0 && (
-          <div className="bg-white border border-dashed border-[#EAEAEA] rounded-2xl p-12 text-center">
-            <p className="text-[14px] font-bold text-[#999]">該当する質問が見つかりません</p>
-            <p className="text-[11px] text-[#CCC] mt-2">別のキーワードでお試しください</p>
+          <div className="bg-white border border-dashed border-[#E6E2DA] rounded-2xl p-12 text-center">
+            <p className="text-[15px] font-bold text-[#5C6660]">該当する質問が見つかりません</p>
+            <p className="text-[13px] text-[#CCC] mt-2">別のキーワードでお試しください</p>
           </div>
         )}
 
@@ -125,16 +125,16 @@ export default function FaqClient({ grouped, shop, tenantId, shopId }) {
                     key={id}
                     itemScope
                     itemType="https://schema.org/Question"
-                    className="bg-white border border-[#EAEAEA] rounded-xl overflow-hidden hover:border-[#2D4B3E]/30 transition-all"
+                    className="bg-white border border-[#E6E2DA] rounded-xl overflow-hidden hover:border-[#2D4B3E]/30 transition-all"
                   >
                     <button
                       onClick={() => toggleOpen(id)}
-                      className="w-full p-4 flex items-start justify-between gap-3 text-left hover:bg-[#FBFAF9]"
+                      className="w-full p-4 flex items-start justify-between gap-3 text-left hover:bg-[#FAFAF7]"
                       aria-expanded={isOpen}
                     >
                       <span
                         itemProp="name"
-                        className="text-[13px] md:text-[14px] font-bold text-[#111] leading-relaxed flex-1"
+                        className="text-[15px] md:text-[15px] font-bold text-[#1F2A24] leading-relaxed flex-1"
                       >
                         Q. {item.question}
                       </span>
@@ -152,7 +152,7 @@ export default function FaqClient({ grouped, shop, tenantId, shopId }) {
                       >
                         <p
                           itemProp="text"
-                          className="text-[12px] md:text-[13px] text-[#555] leading-relaxed whitespace-pre-wrap"
+                          className="text-[14px] md:text-[15px] text-[#3B4640] leading-relaxed whitespace-pre-wrap"
                         >
                           <span className="text-[#2D4B3E] font-bold">A. </span>
                           {item.answer}
@@ -171,7 +171,7 @@ export default function FaqClient({ grouped, shop, tenantId, shopId }) {
           <h3 className="text-[16px] md:text-[18px] font-bold mb-2">
             解決しないご質問は
           </h3>
-          <p className="text-[12px] md:text-[13px] opacity-90 mb-5 leading-relaxed">
+          <p className="text-[14px] md:text-[15px] opacity-90 mb-5 leading-relaxed">
             上記で解決しない場合は、お気軽にお問い合わせください。<br />
             スタッフが直接ご対応いたします。
           </p>
@@ -179,14 +179,14 @@ export default function FaqClient({ grouped, shop, tenantId, shopId }) {
             {shop.phone && (
               <a
                 href={`tel:${shop.phone}`}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-[#2D4B3E] rounded-xl text-[13px] font-bold hover:bg-[#FBFAF9]"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-[#2D4B3E] rounded-xl text-[15px] font-bold hover:bg-[#FAFAF7]"
               >
                 <Phone size={14}/> {shop.phone}
               </a>
             )}
             <Link
               href={`/order/${tenantId}/${shopId}/estimate`}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-xl text-[13px] font-bold hover:bg-amber-700"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-xl text-[15px] font-bold hover:bg-amber-700"
             >
               <MessageCircle size={14}/> お見積もり相談
             </Link>
@@ -197,21 +197,21 @@ export default function FaqClient({ grouped, shop, tenantId, shopId }) {
         <nav className="mt-8 grid grid-cols-2 md:grid-cols-3 gap-3" aria-label="店舗ページ">
           <Link
             href={`/order/${tenantId}/${shopId}/shop`}
-            className="block p-4 bg-white border border-[#EAEAEA] rounded-xl hover:border-[#2D4B3E] text-center"
+            className="block p-4 bg-white border border-[#E6E2DA] rounded-xl hover:border-[#2D4B3E] text-center"
           >
-            <p className="text-[12px] font-bold text-[#2D4B3E] flex items-center justify-center gap-1"><ShoppingBag size={13}/> 商品一覧</p>
+            <p className="text-[14px] font-bold text-[#2D4B3E] flex items-center justify-center gap-1"><ShoppingBag size={13}/> 商品一覧</p>
           </Link>
           <Link
             href={`/order/${tenantId}/${shopId}/custom`}
-            className="block p-4 bg-white border border-[#EAEAEA] rounded-xl hover:border-[#2D4B3E] text-center"
+            className="block p-4 bg-white border border-[#E6E2DA] rounded-xl hover:border-[#2D4B3E] text-center"
           >
-            <p className="text-[12px] font-bold text-[#2D4B3E] flex items-center justify-center gap-1"><Sparkles size={13}/> カスタム注文</p>
+            <p className="text-[14px] font-bold text-[#2D4B3E] flex items-center justify-center gap-1"><Sparkles size={13}/> カスタム注文</p>
           </Link>
           <Link
             href={`/order/${tenantId}/${shopId}`}
-            className="block p-4 bg-white border border-[#EAEAEA] rounded-xl hover:border-[#2D4B3E] text-center"
+            className="block p-4 bg-white border border-[#E6E2DA] rounded-xl hover:border-[#2D4B3E] text-center"
           >
-            <p className="text-[12px] font-bold text-[#2D4B3E] flex items-center justify-center gap-1"><Home size={13}/> 店舗トップ</p>
+            <p className="text-[14px] font-bold text-[#2D4B3E] flex items-center justify-center gap-1"><Home size={13}/> 店舗トップ</p>
           </Link>
         </nav>
       </div>

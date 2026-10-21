@@ -7,10 +7,10 @@ export default function PrivacyPolicyContent({ shop = null }) {
   const email = shop?.contactEmail || '';
   const phone = shop?.phone || '';
   return (
-    <main className="min-h-screen bg-[#FBFAF9] py-12 px-6">
-      <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-[#EAEAEA] p-8 md:p-12 shadow-sm">
+    <main className="min-h-screen bg-[#FAFAF7] py-12 px-6">
+      <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-[#E6E2DA] p-8 md:p-12 shadow-sm">
         <h1 className="text-[24px] md:text-[28px] font-bold text-[#2D4B3E] mb-2">プライバシーポリシー</h1>
-        <p className="text-[11px] text-[#999] mb-8">最終改訂日: 2026年10月5日</p>
+        <p className="text-[13px] text-[#5C6660] mb-8">最終改訂日: 2026年10月5日</p>
 
         <Section title="1. 個人情報の取得">
           <p>本サービス（以下「当サービス」）では、お客様が花の注文・お見積もり依頼・お問い合わせをご利用いただく際に、以下の個人情報を取得します。</p>
@@ -85,7 +85,7 @@ export default function PrivacyPolicyContent({ shop = null }) {
           {shopName || email || phone ? (
             <>
               <p>本プライバシーポリシーに関するお問い合わせ、個人情報の取り扱いに関するご質問は、下記のお花屋さんまでご連絡ください。</p>
-              <div className="bg-[#FBFAF9] rounded-xl p-4 mt-3 border border-[#EAEAEA]">
+              <div className="bg-[#FAFAF7] rounded-xl p-4 mt-3 border border-[#E6E2DA]">
                 {shopName && <p className="font-bold">{shopName}</p>}
                 {email && <p>メール: <a href={`mailto:${email}`} className="underline">{email}</a></p>}
                 {phone && <p>お電話: <a href={`tel:${phone}`} className="underline">{phone}</a></p>}
@@ -103,10 +103,10 @@ export default function PrivacyPolicyContent({ shop = null }) {
 function Section({ title, children }) {
   return (
     <section className="mb-8">
-      <h2 className="text-[16px] md:text-[18px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2 mb-3">
+      <h2 className="text-[16px] md:text-[18px] font-bold text-[#2D4B3E] border-b border-[#E6E2DA] pb-2 mb-3">
         {title}
       </h2>
-      <div className="text-[13px] text-[#333] leading-relaxed space-y-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-1 [&_ul]:my-2">
+      <div className="text-[15px] text-[#1F2A24] leading-relaxed space-y-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-1 [&_ul]:my-2">
         {children}
       </div>
     </section>

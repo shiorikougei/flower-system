@@ -34,8 +34,8 @@ export default function OrderEntryPage() {
   const shopName = shop.name || appName;
 
   return (
-    <div className="min-h-screen bg-[#FBFAF9] font-sans text-[#111111] pb-16">
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-[#EAEAEA]">
+    <div className="min-h-screen bg-[#FAFAF7] font-sans text-[#1F2A24] pb-16">
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-[#E6E2DA]">
         <div className="max-w-[800px] mx-auto h-16 px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {logoUrl
@@ -44,7 +44,7 @@ export default function OrderEntryPage() {
           </div>
           <Link
             href={`/order/${tenantId}/${shopId}/history`}
-            className="flex items-center gap-1 text-[11px] font-bold text-[#555555] hover:text-[#2D4B3E] px-2 py-1"
+            className="flex items-center gap-1 text-[13px] font-bold text-[#3B4640] hover:text-[#2D4B3E] px-2 py-1"
           >
             <User size={12}/> マイページ
           </Link>
@@ -53,9 +53,9 @@ export default function OrderEntryPage() {
 
       <main className="max-w-[640px] mx-auto px-6 pt-12 md:pt-16">
         <div className="text-center mb-10">
-          <p className="text-[11px] font-bold text-[#117768] tracking-[0.3em] mb-2">ORDER</p>
+          <p className="text-[13px] font-bold text-[#117768] tracking-[0.3em] mb-2">ORDER</p>
           <h1 className="text-[22px] md:text-[26px] font-bold text-[#2D4B3E] mb-3">ご注文方法をお選びください</h1>
-          <p className="text-[13px] text-[#555555] leading-relaxed">
+          <p className="text-[15px] text-[#3B4640] leading-relaxed">
             ご希望に合わせてお選びいただけます
           </p>
         </div>
@@ -64,84 +64,84 @@ export default function OrderEntryPage() {
           {/* オーダーメイド注文 */}
           <Link
             href={`/order/${tenantId}/${shopId}/custom`}
-            className="block p-6 md:p-7 bg-white border border-[#EAEAEA] rounded-3xl shadow-sm hover:border-[#2D4B3E] hover:shadow-md transition-all group"
+            className="block p-6 md:p-7 bg-white border border-[#E6E2DA] rounded-3xl shadow-sm hover:border-[#2D4B3E] hover:shadow-md transition-all group"
           >
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-[#2D4B3E]/10 text-[#2D4B3E] flex items-center justify-center shrink-0 group-hover:bg-[#2D4B3E] group-hover:text-white transition-all">
                 <Sparkles size={22}/>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-bold text-[#117768] tracking-widest mb-1">CUSTOM ORDER</p>
-                <h2 className="text-[16px] md:text-[17px] font-bold text-[#111111] mb-1.5">オーダーメイドで注文する</h2>
-                <p className="text-[11.5px] text-[#555555] leading-relaxed">
+                <p className="text-[12px] font-bold text-[#117768] tracking-widest mb-1">CUSTOM ORDER</p>
+                <h2 className="text-[16px] md:text-[17px] font-bold text-[#1F2A24] mb-1.5">オーダーメイドで注文する</h2>
+                <p className="text-[14px] text-[#3B4640] leading-relaxed">
                   用途・カラー・ご予算からお任せでお作りします。<br className="hidden sm:inline"/>
                   花束・アレンジ・スタンド花など対応します。
                 </p>
               </div>
-              <ChevronRight size={20} className="text-[#999999] group-hover:text-[#2D4B3E] transition-colors shrink-0"/>
+              <ChevronRight size={20} className="text-[#5C6660] group-hover:text-[#2D4B3E] transition-colors shrink-0"/>
             </div>
           </Link>
 
           {/* 完成品（EC） */}
           <Link
             href={`/order/${tenantId}/${shopId}/shop`}
-            className="block p-6 md:p-7 bg-white border border-[#EAEAEA] rounded-3xl shadow-sm hover:border-[#2D4B3E] hover:shadow-md transition-all group"
+            className="block p-6 md:p-7 bg-white border border-[#E6E2DA] rounded-3xl shadow-sm hover:border-[#2D4B3E] hover:shadow-md transition-all group"
           >
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-[#D97D54]/10 text-[#D97D54] flex items-center justify-center shrink-0 group-hover:bg-[#D97D54] group-hover:text-white transition-all">
+              <div className="w-14 h-14 rounded-2xl bg-[#B9562F]/10 text-[#B9562F] flex items-center justify-center shrink-0 group-hover:bg-[#B9562F] group-hover:text-white transition-all">
                 <ShoppingBag size={22}/>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-bold text-[#D97D54] tracking-widest mb-1">READY-MADE</p>
-                <h2 className="text-[16px] md:text-[17px] font-bold text-[#111111] mb-1.5">完成品をすぐに購入する</h2>
-                <p className="text-[11.5px] text-[#555555] leading-relaxed">
+                <p className="text-[12px] font-bold text-[#B9562F] tracking-widest mb-1">READY-MADE</p>
+                <h2 className="text-[16px] md:text-[17px] font-bold text-[#1F2A24] mb-1.5">完成品をすぐに購入する</h2>
+                <p className="text-[14px] text-[#3B4640] leading-relaxed">
                   ドライフラワーアレンジなど、店頭の完成品から<br className="hidden sm:inline"/>
                   そのままご購入いただけます。
                 </p>
               </div>
-              <ChevronRight size={20} className="text-[#999999] group-hover:text-[#2D4B3E] transition-colors shrink-0"/>
+              <ChevronRight size={20} className="text-[#5C6660] group-hover:text-[#2D4B3E] transition-colors shrink-0"/>
             </div>
           </Link>
 
           {/* 見積もり依頼 */}
           <Link
             href={`/order/${tenantId}/${shopId}/estimate`}
-            className="block p-6 md:p-7 bg-white border border-[#EAEAEA] rounded-3xl shadow-sm hover:border-[#117768] hover:shadow-md transition-all group"
+            className="block p-6 md:p-7 bg-white border border-[#E6E2DA] rounded-3xl shadow-sm hover:border-[#117768] hover:shadow-md transition-all group"
           >
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-[#117768]/10 text-[#117768] flex items-center justify-center shrink-0 group-hover:bg-[#117768] group-hover:text-white transition-all">
                 <ShoppingBag size={22}/>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-bold text-[#117768] tracking-widest mb-1">ESTIMATE</p>
-                <h2 className="text-[16px] md:text-[17px] font-bold text-[#111111] mb-1.5">お見積もり依頼</h2>
-                <p className="text-[11.5px] text-[#555555] leading-relaxed">
+                <p className="text-[12px] font-bold text-[#117768] tracking-widest mb-1">ESTIMATE</p>
+                <h2 className="text-[16px] md:text-[17px] font-bold text-[#1F2A24] mb-1.5">お見積もり依頼</h2>
+                <p className="text-[14px] text-[#3B4640] leading-relaxed">
                   バラの本数指定や複数同時のご注文など、<br className="hidden sm:inline"/>
                   金額がわかりにくい場合はこちらから
                 </p>
               </div>
-              <ChevronRight size={20} className="text-[#999999] group-hover:text-[#117768] transition-colors shrink-0"/>
+              <ChevronRight size={20} className="text-[#5C6660] group-hover:text-[#117768] transition-colors shrink-0"/>
             </div>
           </Link>
         </div>
 
         {/* マイページ導線 */}
-        <div className="mt-8 pt-8 border-t border-[#EAEAEA]">
+        <div className="mt-8 pt-8 border-t border-[#E6E2DA]">
           <Link
             href={`/order/${tenantId}/${shopId}/history`}
-            className="block p-5 bg-white border border-[#EAEAEA] rounded-2xl hover:border-[#2D4B3E] transition-all group"
+            className="block p-5 bg-white border border-[#E6E2DA] rounded-2xl hover:border-[#2D4B3E] transition-all group"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-[#FBFAF9] text-[#2D4B3E] flex items-center justify-center shrink-0 group-hover:bg-[#2D4B3E] group-hover:text-white transition-all">
+              <div className="w-12 h-12 rounded-xl bg-[#FAFAF7] text-[#2D4B3E] flex items-center justify-center shrink-0 group-hover:bg-[#2D4B3E] group-hover:text-white transition-all">
                 <User size={20}/>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-bold text-[#111111] mb-0.5">マイページ</p>
-                <p className="text-[11px] text-[#555555] leading-relaxed">
+                <p className="text-[15px] font-bold text-[#1F2A24] mb-0.5">マイページ</p>
+                <p className="text-[13px] text-[#3B4640] leading-relaxed">
                   ご注文履歴 ・ 記念日リマインダー ・ 領収書発行 ・ 再注文
                 </p>
               </div>
-              <ChevronRight size={18} className="text-[#999999] group-hover:text-[#2D4B3E] transition-colors shrink-0"/>
+              <ChevronRight size={18} className="text-[#5C6660] group-hover:text-[#2D4B3E] transition-colors shrink-0"/>
             </div>
           </Link>
         </div>
@@ -150,42 +150,42 @@ export default function OrderEntryPage() {
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
           <Link
             href={`/order/${tenantId}/${shopId}/faq`}
-            className="block p-4 bg-white border border-[#EAEAEA] rounded-2xl hover:border-[#2D4B3E] transition-all group"
+            className="block p-4 bg-white border border-[#E6E2DA] rounded-2xl hover:border-[#2D4B3E] transition-all group"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#FBFAF9] flex items-center justify-center shrink-0 text-[#2D4B3E]">
+              <div className="w-10 h-10 rounded-xl bg-[#FAFAF7] flex items-center justify-center shrink-0 text-[#2D4B3E]">
                 <HelpCircle size={18}/>
               </div>
               <div className="flex-1">
-                <p className="text-[13px] font-bold text-[#111]">よくあるご質問</p>
-                <p className="text-[10px] text-[#555]">配達・支払い・キャンセル等のご案内</p>
+                <p className="text-[15px] font-bold text-[#1F2A24]">よくあるご質問</p>
+                <p className="text-[12px] text-[#3B4640]">配達・支払い・キャンセル等のご案内</p>
               </div>
-              <ChevronRight size={16} className="text-[#999] group-hover:text-[#2D4B3E]"/>
+              <ChevronRight size={16} className="text-[#5C6660] group-hover:text-[#2D4B3E]"/>
             </div>
           </Link>
           <Link
             href={`/blog/${tenantId}`}
-            className="block p-4 bg-white border border-[#EAEAEA] rounded-2xl hover:border-[#2D4B3E] transition-all group"
+            className="block p-4 bg-white border border-[#E6E2DA] rounded-2xl hover:border-[#2D4B3E] transition-all group"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#FBFAF9] flex items-center justify-center shrink-0 text-[#2D4B3E]">
+              <div className="w-10 h-10 rounded-xl bg-[#FAFAF7] flex items-center justify-center shrink-0 text-[#2D4B3E]">
                 <BookOpen size={18}/>
               </div>
               <div className="flex-1">
-                <p className="text-[13px] font-bold text-[#111]">お花のブログ</p>
-                <p className="text-[10px] text-[#555]">季節のお花・贈り物のヒント・お役立ち情報</p>
+                <p className="text-[15px] font-bold text-[#1F2A24]">お花のブログ</p>
+                <p className="text-[12px] text-[#3B4640]">季節のお花・贈り物のヒント・お役立ち情報</p>
               </div>
-              <ChevronRight size={16} className="text-[#999] group-hover:text-[#2D4B3E]"/>
+              <ChevronRight size={16} className="text-[#5C6660] group-hover:text-[#2D4B3E]"/>
             </div>
           </Link>
         </div>
 
         <div className="text-center mt-10">
-          <p className="text-[11px] text-[#999999] leading-relaxed">
+          <p className="text-[13px] text-[#5C6660] leading-relaxed">
             お電話でのご注文も承っております{shop.phone ? <><br/>TEL: <a href={`tel:${String(shop.phone).replace(/[^\d+]/g, '')}`} className="text-[#2D4B3E] font-bold">{shop.phone}</a></> : ''}
           </p>
           {/* [2026-10 B3] お店ごとのプライバシーポリシー */}
-          <Link href={`/order/${tenantId}/${shopId}/privacy`} className="inline-block mt-3 text-[11px] text-[#777] underline hover:text-[#2D4B3E]">プライバシーポリシー</Link>
+          <Link href={`/order/${tenantId}/${shopId}/privacy`} className="inline-block mt-3 text-[13px] text-[#4A544E] underline hover:text-[#2D4B3E]">プライバシーポリシー</Link>
         </div>
       </main>
 

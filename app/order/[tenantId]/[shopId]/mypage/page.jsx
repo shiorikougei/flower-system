@@ -231,10 +231,10 @@ function MyPageContent() {
     if (o.payment_status === 'paid') return { label: '入金済', cls: 'bg-green-50 text-green-700 border-green-200' };
     if (o.payment_status === 'failed') return { label: '決済失敗', cls: 'bg-red-50 text-red-700 border-red-200' };
     if (o.payment_status === 'processing') return { label: '決済処理中', cls: 'bg-blue-50 text-blue-700 border-blue-200' };
-    if (o.payment_status === 'refunded') return { label: '返金済', cls: 'bg-[#FBFAF9] text-[#999999] border-[#EAEAEA]' };
+    if (o.payment_status === 'refunded') return { label: '返金済', cls: 'bg-[#FAFAF7] text-[#5C6660] border-[#E6E2DA]' };
     const ps = o.order_data?.paymentStatus || '未入金';
     const isPaid = ps && !ps.includes('未');
-    return { label: ps, cls: isPaid ? 'bg-green-50 text-green-700 border-green-200' : 'bg-[#D97D54]/10 text-[#D97D54] border-[#D97D54]/20' };
+    return { label: ps, cls: isPaid ? 'bg-green-50 text-green-700 border-green-200' : 'bg-[#B9562F]/10 text-[#B9562F] border-[#B9562F]/20' };
   }
 
   // 記念日 追加
@@ -485,10 +485,10 @@ function MyPageContent() {
   const customerNameDefault = data?.orders?.[0]?.order_data?.customerInfo?.name || '';
 
   return (
-    <div className="min-h-screen bg-[#FBFAF9] font-sans text-[#111111] pb-32">
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-[#EAEAEA]">
+    <div className="min-h-screen bg-[#FAFAF7] font-sans text-[#1F2A24] pb-32">
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-[#E6E2DA]">
         <div className="max-w-[800px] mx-auto h-16 px-6 flex items-center justify-between">
-          <Link href={`/order/${tenantId}/${shopId}`} className="flex items-center gap-1 text-[12px] font-bold text-[#555555] hover:text-[#2D4B3E]">
+          <Link href={`/order/${tenantId}/${shopId}`} className="flex items-center gap-1 text-[14px] font-bold text-[#3B4640] hover:text-[#2D4B3E]">
             <ChevronLeft size={16}/> ホームへ
           </Link>
           <h1 className="text-[16px] font-bold text-[#2D4B3E]">マイページ</h1>
@@ -498,12 +498,12 @@ function MyPageContent() {
 
       <main className="max-w-[800px] mx-auto px-6 pt-10 space-y-8">
         {isLoading ? (
-          <div className="py-20 text-center text-[#999999] font-bold animate-pulse">読み込み中...</div>
+          <div className="py-20 text-center text-[#5C6660] font-bold animate-pulse">読み込み中...</div>
         ) : error ? (
-          <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#EAEAEA] space-y-3">
-            <AlertCircle size={32} className="mx-auto text-[#D97D54]"/>
-            <p className="text-[13px] font-bold text-[#999999]">{error}</p>
-            <Link href={`/order/${tenantId}/${shopId}/history`} className="inline-block px-5 h-11 leading-[44px] bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold mt-2">
+          <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#E6E2DA] space-y-3">
+            <AlertCircle size={32} className="mx-auto text-[#B9562F]"/>
+            <p className="text-[15px] font-bold text-[#5C6660]">{error}</p>
+            <Link href={`/order/${tenantId}/${shopId}/history`} className="inline-block px-5 h-11 leading-[44px] bg-[#2D4B3E] text-white rounded-xl text-[14px] font-bold mt-2">
               再度送信する
             </Link>
           </div>
@@ -514,7 +514,7 @@ function MyPageContent() {
               <h2 className="text-[18px] font-bold text-[#2D4B3E] mb-4">ご注文履歴 ({data.orders.length}件)</h2>
               {/* LINEブラウザでの領収書表示問題のヒント */}
               {data.orders.some(o => paymentBadge(o).text === '入金済') && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 text-[11px] text-blue-900 leading-relaxed flex items-start gap-1.5">
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 text-[13px] text-blue-900 leading-relaxed flex items-start gap-1.5">
                   <Lightbulb size={13} className="mt-0.5 shrink-0"/>
                   <span><strong>領収書がうまく開かない場合</strong><br/>
                   LINE内ブラウザでは PDF表示できないことがあります。<br/>
@@ -522,9 +522,9 @@ function MyPageContent() {
                 </div>
               )}
               {data.orders.length === 0 ? (
-                <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#EAEAEA]">
+                <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#E6E2DA]">
                   <Package size={32} className="mx-auto text-[#CCC] mb-3"/>
-                  <p className="text-[13px] font-bold text-[#999999]">ご注文がまだありません</p>
+                  <p className="text-[15px] font-bold text-[#5C6660]">ご注文がまだありません</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -533,45 +533,45 @@ function MyPageContent() {
                     const badge = paymentBadge(o);
                     const isPaid = o.payment_status === 'paid' || (d.paymentStatus && !d.paymentStatus.includes('未'));
                     return (
-                      <div key={o.id} className="bg-white p-5 rounded-2xl border border-[#EAEAEA] space-y-3">
+                      <div key={o.id} className="bg-white p-5 rounded-2xl border border-[#E6E2DA] space-y-3">
                         <div className="flex items-center justify-between flex-wrap gap-2">
-                          <p className="text-[11px] text-[#999999]">注文番号: <code className="bg-[#FBFAF9] px-2 py-0.5 rounded">{String(o.id).slice(0, 8)}</code></p>
-                          <p className="text-[11px] text-[#999999]">{formatDate(o.created_at)}</p>
+                          <p className="text-[13px] text-[#5C6660]">注文番号: <code className="bg-[#FAFAF7] px-2 py-0.5 rounded">{String(o.id).slice(0, 8)}</code></p>
+                          <p className="text-[13px] text-[#5C6660]">{formatDate(o.created_at)}</p>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${badge.cls}`}>{badge.label}</span>
-                          {d.orderType === 'ec' && <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1"><ShoppingCart size={10}/> EC注文</span>}
-                          {d.status === 'completed' && <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-[#FBFAF9] text-[#555555] border border-[#EAEAEA]">手配完了</span>}
+                          <span className={`text-[12px] font-bold px-3 py-1 rounded-full border ${badge.cls}`}>{badge.label}</span>
+                          {d.orderType === 'ec' && <span className="text-[12px] font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1"><ShoppingCart size={10}/> EC注文</span>}
+                          {d.status === 'completed' && <span className="text-[12px] font-bold px-3 py-1 rounded-full bg-[#FAFAF7] text-[#3B4640] border border-[#E6E2DA]">手配完了</span>}
                         </div>
-                        <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA] space-y-1 text-[12px]">
+                        <div className="bg-[#FAFAF7] p-4 rounded-xl border border-[#E6E2DA] space-y-1 text-[14px]">
                           {Array.isArray(d.cartItems) && d.cartItems.length > 0 ? (
                             d.cartItems.map((c, i) => (
-                              <p key={i} className="text-[#555555]">• {c.name} × {c.qty}</p>
+                              <p key={i} className="text-[#3B4640]">• {c.name} × {c.qty}</p>
                             ))
                           ) : (
                             <>
-                              {d.flowerType && <p className="text-[#555555]"><strong>{d.flowerType}</strong></p>}
-                              {d.flowerPurpose && <p className="text-[#999999] text-[11px]">用途: {d.flowerPurpose}</p>}
+                              {d.flowerType && <p className="text-[#3B4640]"><strong>{d.flowerType}</strong></p>}
+                              {d.flowerPurpose && <p className="text-[#5C6660] text-[13px]">用途: {d.flowerPurpose}</p>}
                             </>
                           )}
-                          {d.selectedDate && <p className="text-[#999999] text-[11px] pt-1 border-t border-[#F0F0F0] mt-2">納品希望日: {d.selectedDate}</p>}
+                          {d.selectedDate && <p className="text-[#5C6660] text-[13px] pt-1 border-t border-[#F0F0F0] mt-2">納品希望日: {d.selectedDate}</p>}
                         </div>
                         <div className="flex justify-between items-baseline pt-2 border-t border-[#F0F0F0]">
-                          <span className="text-[12px] font-bold text-[#555555]">合計（税込）</span>
+                          <span className="text-[14px] font-bold text-[#3B4640]">合計（税込）</span>
                           <span className="text-[18px] font-bold text-[#2D4B3E]">¥{totalOf(o).toLocaleString()}</span>
                         </div>
                         <div className="flex gap-2 pt-2 border-t border-[#F0F0F0]">
                           {isPaid && (
                             <button
                               onClick={() => printReceipt(o)}
-                              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold bg-[#FBFAF9] text-[#555] border border-[#EAEAEA] hover:bg-[#2D4B3E] hover:text-white hover:border-[#2D4B3E] transition-all"
+                              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[13px] font-bold bg-[#FAFAF7] text-[#3B4640] border border-[#E6E2DA] hover:bg-[#2D4B3E] hover:text-white hover:border-[#2D4B3E] transition-all"
                             >
                               <FileText size={12}/> 領収書を発行
                             </button>
                           )}
                           <button
                             onClick={() => reorder(o)}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold bg-[#D97D54]/10 text-[#D97D54] border border-[#D97D54]/30 hover:bg-[#D97D54] hover:text-white transition-all"
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[13px] font-bold bg-[#B9562F]/10 text-[#B9562F] border border-[#B9562F]/30 hover:bg-[#B9562F] hover:text-white transition-all"
                           >
                             <RotateCcw size={12}/> 同じ内容で再注文
                           </button>
@@ -584,17 +584,17 @@ function MyPageContent() {
             </div>
 
             {/* お客様情報 */}
-            <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA]">
+            <div className="bg-white p-6 rounded-2xl border border-[#E6E2DA]">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] text-[#999999] flex items-center gap-1.5"><Mail size={12}/> ご注文時のメールアドレス</p>
-                  <p className="text-[14px] font-bold text-[#111111] mt-1 break-all">{data.email}</p>
-                  {customerNameDefault && <p className="text-[12px] text-[#555] mt-2">{customerNameDefault} 様</p>}
+                  <p className="text-[13px] text-[#5C6660] flex items-center gap-1.5"><Mail size={12}/> ご注文時のメールアドレス</p>
+                  <p className="text-[15px] font-bold text-[#1F2A24] mt-1 break-all">{data.email}</p>
+                  {customerNameDefault && <p className="text-[14px] text-[#3B4640] mt-2">{customerNameDefault} 様</p>}
                 </div>
                 {!showEmailChangeForm && !emailChangeSent && (
                   <button
                     onClick={() => setShowEmailChangeForm(true)}
-                    className="shrink-0 flex items-center gap-1 bg-[#FBFAF9] border border-[#EAEAEA] text-[#555] text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-[#EAEAEA]"
+                    className="shrink-0 flex items-center gap-1 bg-[#FAFAF7] border border-[#E6E2DA] text-[#3B4640] text-[12px] font-bold px-3 py-1.5 rounded-lg hover:bg-[#E6E2DA]"
                   >
                     <AtSign size={11}/> 変更
                   </button>
@@ -603,8 +603,8 @@ function MyPageContent() {
 
               {/* メアド変更フォーム */}
               {showEmailChangeForm && !emailChangeSent && (
-                <div className="mt-4 pt-4 border-t border-[#EAEAEA] space-y-3">
-                  <p className="text-[11px] text-[#555] leading-relaxed">
+                <div className="mt-4 pt-4 border-t border-[#E6E2DA] space-y-3">
+                  <p className="text-[13px] text-[#3B4640] leading-relaxed">
                     新しいメールアドレスを入力してください。確認メールが新メアド宛に送信されます。
                   </p>
                   <input
@@ -612,9 +612,9 @@ function MyPageContent() {
                     value={newEmailInput}
                     onChange={(e) => setNewEmailInput(e.target.value)}
                     placeholder="new-email@example.com"
-                    className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"
+                    className="w-full h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"
                   />
-                  <div className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 leading-relaxed flex items-start gap-1">
+                  <div className="text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 leading-relaxed flex items-start gap-1">
                     <AlertCircle size={11} className="mt-0.5 shrink-0"/>
                     <span>確認リンクをクリックして変更完了するまで、現在のメールアドレスは有効です。<br/>
                     旧メールアドレス宛にも変更通知メールが送信されます。</span>
@@ -623,14 +623,14 @@ function MyPageContent() {
                     <button
                       onClick={() => { setShowEmailChangeForm(false); setNewEmailInput(''); }}
                       disabled={isSendingEmailChange}
-                      className="flex-1 h-10 bg-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-lg disabled:opacity-50"
+                      className="flex-1 h-10 bg-[#E6E2DA] text-[#3B4640] text-[14px] font-bold rounded-lg disabled:opacity-50"
                     >
                       キャンセル
                     </button>
                     <button
                       onClick={sendEmailChangeRequest}
                       disabled={isSendingEmailChange}
-                      className="flex-1 h-10 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-lg hover:bg-[#1f352b] disabled:opacity-50"
+                      className="flex-1 h-10 bg-[#2D4B3E] text-white text-[14px] font-bold rounded-lg hover:bg-[#1f352b] disabled:opacity-50"
                     >
                       {isSendingEmailChange ? '送信中...' : '確認メールを送信'}
                     </button>
@@ -640,12 +640,12 @@ function MyPageContent() {
 
               {/* 送信完了 */}
               {emailChangeSent && (
-                <div className="mt-4 pt-4 border-t border-[#EAEAEA]">
+                <div className="mt-4 pt-4 border-t border-[#E6E2DA]">
                   <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-2">
                     <CheckCircle2 size={16} className="text-green-600 mt-0.5 shrink-0"/>
                     <div>
-                      <p className="text-[12px] font-bold text-green-800">確認メールを送信しました</p>
-                      <p className="text-[11px] text-green-700 mt-1 leading-relaxed">新しいメールアドレス（{newEmailInput}）の受信箱をご確認ください。リンクをクリックすると変更が完了します。</p>
+                      <p className="text-[14px] font-bold text-green-800">確認メールを送信しました</p>
+                      <p className="text-[13px] text-green-700 mt-1 leading-relaxed">新しいメールアドレス（{newEmailInput}）の受信箱をご確認ください。リンクをクリックすると変更が完了します。</p>
                     </div>
                   </div>
                 </div>
@@ -653,19 +653,19 @@ function MyPageContent() {
             </div>
 
             {/* ★ パスワード設定（任意） */}
-            <section className="bg-white rounded-2xl border border-[#EAEAEA] overflow-hidden">
-              <div className="p-5 border-b border-[#EAEAEA] flex items-center justify-between flex-wrap gap-2">
+            <section className="bg-white rounded-2xl border border-[#E6E2DA] overflow-hidden">
+              <div className="p-5 border-b border-[#E6E2DA] flex items-center justify-between flex-wrap gap-2">
                 <h2 className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2">
                   <Lock size={16}/> ログインパスワード（任意）
                 </h2>
                 <div className="flex items-center gap-2">
                   {hasPassword && (
-                    <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">設定済み</span>
+                    <span className="text-[12px] font-bold px-3 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">設定済み</span>
                   )}
                   {!showPasswordForm && (
                     <button
                       onClick={() => setShowPasswordForm(true)}
-                      className="flex items-center gap-1 bg-[#2D4B3E] text-white text-[11px] font-bold px-3 py-1.5 rounded-lg hover:bg-[#1f352b]"
+                      className="flex items-center gap-1 bg-[#2D4B3E] text-white text-[13px] font-bold px-3 py-1.5 rounded-lg hover:bg-[#1f352b]"
                     >
                       <KeyRound size={12}/> {hasPassword ? '変更' : '設定'}
                     </button>
@@ -674,26 +674,26 @@ function MyPageContent() {
               </div>
               <div className="p-5">
                 {!showPasswordForm ? (
-                  <p className="text-[11px] text-[#999] leading-relaxed">
+                  <p className="text-[13px] text-[#5C6660] leading-relaxed">
                     {hasPassword
                       ? 'メールアドレス + パスワードでログインできます。万一忘れた場合はMagic Linkで再設定可能です。'
                       : '未設定の場合は毎回「メールで届くリンク」でログインしていただきます。パスワードを設定すると、メールを開かずにマイページへ素早くアクセスできます。'}
                   </p>
                 ) : (
                   <div className="space-y-3">
-                    <p className="text-[11px] text-[#555] leading-relaxed">8文字以上のパスワードを入力してください</p>
+                    <p className="text-[13px] text-[#3B4640] leading-relaxed">8文字以上のパスワードを入力してください</p>
                     <div className="relative">
                       <input
                         type={showPasswordChars ? 'text' : 'password'}
                         placeholder="新しいパスワード"
                         value={pwForm.password}
                         onChange={(e) => setPwForm({ ...pwForm, password: e.target.value })}
-                        className="w-full h-11 px-3 pr-10 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"
+                        className="w-full h-11 px-3 pr-10 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPasswordChars(s => !s)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#999] hover:text-[#555]"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5C6660] hover:text-[#3B4640]"
                       >
                         {showPasswordChars ? <EyeOff size={14}/> : <Eye size={14}/>}
                       </button>
@@ -703,20 +703,20 @@ function MyPageContent() {
                       placeholder="確認のためもう一度"
                       value={pwForm.confirm}
                       onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
-                      className="w-full h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"
+                      className="w-full h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"
                     />
                     <div className="flex gap-2 pt-1">
                       <button
                         onClick={() => { setShowPasswordForm(false); setPwForm({ password: '', confirm: '' }); }}
                         disabled={isSavingPw}
-                        className="flex-1 h-10 bg-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-lg disabled:opacity-50"
+                        className="flex-1 h-10 bg-[#E6E2DA] text-[#3B4640] text-[14px] font-bold rounded-lg disabled:opacity-50"
                       >
                         キャンセル
                       </button>
                       <button
                         onClick={savePassword}
                         disabled={isSavingPw}
-                        className="flex-1 h-10 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-lg hover:bg-[#1f352b] disabled:opacity-50"
+                        className="flex-1 h-10 bg-[#2D4B3E] text-white text-[14px] font-bold rounded-lg hover:bg-[#1f352b] disabled:opacity-50"
                       >
                         {isSavingPw ? '保存中...' : (hasPassword ? '変更する' : '設定する')}
                       </button>
@@ -724,7 +724,7 @@ function MyPageContent() {
                     {hasPassword && (
                       <button
                         onClick={removePassword}
-                        className="w-full text-[11px] text-red-500 hover:text-red-700 underline pt-2"
+                        className="w-full text-[13px] text-red-500 hover:text-red-700 underline pt-2"
                       >
                         パスワードログインを解除する
                       </button>
@@ -735,8 +735,8 @@ function MyPageContent() {
             </section>
 
             {/* ★ LINE連携状況 */}
-            <section className="bg-white rounded-2xl border border-[#EAEAEA] overflow-hidden">
-              <div className="p-5 border-b border-[#EAEAEA]">
+            <section className="bg-white rounded-2xl border border-[#E6E2DA] overflow-hidden">
+              <div className="p-5 border-b border-[#E6E2DA]">
                 <h2 className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2">
                   <MessageCircle size={16} className="text-[#06C755]"/> LINE連携
                 </h2>
@@ -745,8 +745,8 @@ function MyPageContent() {
                 {lineLinks.filter(l => l.is_active).length === 0 ? (
                   <>
                     <div className="bg-[#06C755]/5 border border-[#06C755]/30 rounded-xl p-3 space-y-2">
-                      <p className="text-[12px] font-bold text-[#2D4B3E] flex items-center gap-1"><Smartphone size={12}/> LINE通知の登録手順</p>
-                      <ol className="text-[11px] text-[#555] leading-relaxed space-y-1.5 list-decimal pl-4">
+                      <p className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-1"><Smartphone size={12}/> LINE通知の登録手順</p>
+                      <ol className="text-[13px] text-[#3B4640] leading-relaxed space-y-1.5 list-decimal pl-4">
                         <li>下のボタンから当店公式LINEを友達追加</li>
                         <li>LINEのリッチメニューの <strong>「LINE連携」</strong> ボタンをタップ</li>
                         <li>FLORIXからメールアドレス送信のご案内が届きます</li>
@@ -759,17 +759,17 @@ function MyPageContent() {
                         href={lineAddFriendUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 w-full h-12 text-center bg-[#06C755] text-white rounded-xl font-bold text-[13px] hover:bg-[#05a548] transition-all"
+                        className="flex items-center justify-center gap-2 w-full h-12 text-center bg-[#06C755] text-white rounded-xl font-bold text-[15px] hover:bg-[#05a548] transition-all"
                       >
                         <MessageCircle size={14}/> LINEで通知を受け取る（友達追加）
                       </a>
                     ) : (
-                      <p className="text-[11px] text-[#999] italic">※この店舗はまだLINE通知に対応していません</p>
+                      <p className="text-[13px] text-[#5C6660] italic">※この店舗はまだLINE通知に対応していません</p>
                     )}
                   </>
                 ) : (
                   <>
-                    <p className="text-[11px] text-[#999] leading-relaxed mb-2">
+                    <p className="text-[13px] text-[#5C6660] leading-relaxed mb-2">
                       以下のLINEアカウントに通知が届きます。複数連携も可能です。
                     </p>
                     {lineLinks.filter(l => l.is_active).map(link => (
@@ -779,13 +779,13 @@ function MyPageContent() {
                             <MessageCircle size={16}/>
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-[13px] font-bold text-[#111] truncate">{link.display_name || 'LINEユーザー'}</p>
-                            <p className="text-[10px] text-[#999] truncate">連携日: {new Date(link.linked_at).toLocaleDateString('ja-JP')}</p>
+                            <p className="text-[15px] font-bold text-[#1F2A24] truncate">{link.display_name || 'LINEユーザー'}</p>
+                            <p className="text-[12px] text-[#5C6660] truncate">連携日: {new Date(link.linked_at).toLocaleDateString('ja-JP')}</p>
                           </div>
                         </div>
                         <button
                           onClick={() => unlinkLine(link.id)}
-                          className="shrink-0 flex items-center gap-1 text-red-500 hover:text-red-700 text-[11px] font-bold px-2 py-1"
+                          className="shrink-0 flex items-center gap-1 text-red-500 hover:text-red-700 text-[13px] font-bold px-2 py-1"
                         >
                           <Unlink size={12}/> 解除
                         </button>
@@ -796,23 +796,23 @@ function MyPageContent() {
                         href={lineAddFriendUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block text-center text-[11px] text-[#06C755] hover:text-[#05a548] underline pt-2"
+                        className="block text-center text-[13px] text-[#06C755] hover:text-[#05a548] underline pt-2"
                       >
                         別のLINEアカウントを追加で連携する
                       </a>
                     )}
                   </>
                 )}
-                <div className="text-[10px] text-[#999] leading-relaxed bg-[#FBFAF9] p-2.5 rounded-lg mt-2 flex items-start gap-1">
+                <div className="text-[12px] text-[#5C6660] leading-relaxed bg-[#FAFAF7] p-2.5 rounded-lg mt-2 flex items-start gap-1">
                   <Lightbulb size={11} className="mt-0.5 shrink-0"/>
                   <span>LINEを機種変更した場合は、新しいLINEで友達追加 → メールアドレス送信で、自動的に新アカウントに切り替わります。</span>
                 </div>
 
                 {/* ★ 通知方法の選択 (LINE連携あり時のみ表示) */}
                 {lineLinks.filter(l => l.is_active).length > 0 && (
-                  <div className="border-t border-[#EAEAEA] pt-4 mt-2 space-y-2">
-                    <p className="text-[12px] font-bold text-[#2D4B3E] flex items-center gap-1"><Inbox size={12}/> 通知の受け取り方法</p>
-                    <p className="text-[10px] text-[#999]">ご注文進捗・完成写真などをどちらで受け取るかを選べます。</p>
+                  <div className="border-t border-[#E6E2DA] pt-4 mt-2 space-y-2">
+                    <p className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-1"><Inbox size={12}/> 通知の受け取り方法</p>
+                    <p className="text-[12px] text-[#5C6660]">ご注文進捗・完成写真などをどちらで受け取るかを選べます。</p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       {[
                         { value: 'both', Icon: Mail, Icon2: MessageCircle, label: 'メール + LINE', desc: 'どちらにも届く' },
@@ -826,49 +826,49 @@ function MyPageContent() {
                           className={`p-3 rounded-xl border-2 text-left transition-all ${
                             notificationPref === opt.value
                               ? 'bg-[#06C755] border-[#06C755] text-white shadow-sm'
-                              : 'bg-white border-[#EAEAEA] text-[#555] hover:border-[#06C755]'
+                              : 'bg-white border-[#E6E2DA] text-[#3B4640] hover:border-[#06C755]'
                           } disabled:opacity-50`}
                         >
                           <div className="flex items-center gap-1 mb-0.5">
                             <opt.Icon size={14}/>
                             {opt.Icon2 && <opt.Icon2 size={14}/>}
                           </div>
-                          <div className="text-[12px] font-bold">{opt.label}</div>
-                          <div className={`text-[10px] mt-0.5 ${notificationPref === opt.value ? 'text-white/80' : 'text-[#999]'}`}>
+                          <div className="text-[14px] font-bold">{opt.label}</div>
+                          <div className={`text-[12px] mt-0.5 ${notificationPref === opt.value ? 'text-white/80' : 'text-[#5C6660]'}`}>
                             {opt.desc}
                           </div>
                         </button>
                       ))}
                     </div>
-                    {isSavingPref && <p className="text-[10px] text-[#999] animate-pulse">保存中...</p>}
+                    {isSavingPref && <p className="text-[12px] text-[#5C6660] animate-pulse">保存中...</p>}
                   </div>
                 )}
               </div>
             </section>
 
             {/* 記念日リマインダー */}
-            <section className="bg-white rounded-2xl border border-[#EAEAEA] overflow-hidden">
-              <div className="p-5 border-b border-[#EAEAEA] flex items-center justify-between flex-wrap gap-2">
-                <h2 className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2"><Heart size={16} className="text-[#D97D54]"/> 記念日リマインダー</h2>
+            <section className="bg-white rounded-2xl border border-[#E6E2DA] overflow-hidden">
+              <div className="p-5 border-b border-[#E6E2DA] flex items-center justify-between flex-wrap gap-2">
+                <h2 className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2"><Heart size={16} className="text-[#B9562F]"/> 記念日リマインダー</h2>
                 <button
                   onClick={() => setShowAnnivForm(true)}
-                  className="flex items-center gap-1 bg-[#2D4B3E] text-white text-[11px] font-bold px-3 py-1.5 rounded-lg hover:bg-[#1f352b]"
+                  className="flex items-center gap-1 bg-[#2D4B3E] text-white text-[13px] font-bold px-3 py-1.5 rounded-lg hover:bg-[#1f352b]"
                 >
                   <Plus size={12}/> 追加
                 </button>
               </div>
               <div className="p-5 space-y-2">
-                <p className="text-[11px] text-[#999] leading-relaxed mb-3">
+                <p className="text-[13px] text-[#5C6660] leading-relaxed mb-3">
                   記念日（誕生日・結婚記念日・月命日など）を登録すると、1週間前にメールでお知らせいたします。
                 </p>
                 {anniversaries.length === 0 && !showAnnivForm ? (
-                  <p className="text-[12px] text-[#999] py-4 text-center">まだ登録された記念日はありません</p>
+                  <p className="text-[14px] text-[#5C6660] py-4 text-center">まだ登録された記念日はありません</p>
                 ) : (
                   anniversaries.map(a => (
-                    <div key={a.id} className="flex items-center justify-between p-3 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA]">
+                    <div key={a.id} className="flex items-center justify-between p-3 bg-[#FAFAF7] rounded-xl border border-[#E6E2DA]">
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-bold text-[#111]">{a.title}</p>
-                        <p className="text-[11px] text-[#555] mt-0.5">毎年 {a.month}/{a.day}{a.notes ? ` ・ ${a.notes}` : ''}</p>
+                        <p className="text-[15px] font-bold text-[#1F2A24]">{a.title}</p>
+                        <p className="text-[13px] text-[#3B4640] mt-0.5">毎年 {a.month}/{a.day}{a.notes ? ` ・ ${a.notes}` : ''}</p>
                       </div>
                       <button
                         onClick={() => deleteAnniversary(a.id)}
@@ -885,16 +885,16 @@ function MyPageContent() {
                     <input
                       type="text" placeholder="記念日タイトル（例: 母の誕生日）" value={annivForm.title}
                       onChange={(e) => setAnnivForm({ ...annivForm, title: e.target.value })}
-                      className="w-full h-11 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"
+                      className="w-full h-11 px-3 bg-white border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"
                     />
                     <div className="flex gap-2">
                       <select value={annivForm.month} onChange={(e) => setAnnivForm({ ...annivForm, month: e.target.value })}
-                        className="flex-1 h-11 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]">
+                        className="flex-1 h-11 px-3 bg-white border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]">
                         <option value="">月</option>
                         {Array.from({length: 12}, (_, i) => i+1).map(m => <option key={m} value={m}>{m}月</option>)}
                       </select>
                       <select value={annivForm.day} onChange={(e) => setAnnivForm({ ...annivForm, day: e.target.value })}
-                        className="flex-1 h-11 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]">
+                        className="flex-1 h-11 px-3 bg-white border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]">
                         <option value="">日</option>
                         {Array.from({length: 31}, (_, i) => i+1).map(d => <option key={d} value={d}>{d}日</option>)}
                       </select>
@@ -902,11 +902,11 @@ function MyPageContent() {
                     <input
                       type="text" placeholder="メモ（例: 毎年ピンク系、予算1万円） 任意" value={annivForm.notes}
                       onChange={(e) => setAnnivForm({ ...annivForm, notes: e.target.value })}
-                      className="w-full h-11 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[13px] outline-none focus:border-[#2D4B3E]"
+                      className="w-full h-11 px-3 bg-white border border-[#E6E2DA] rounded-lg text-[15px] outline-none focus:border-[#2D4B3E]"
                     />
                     <div className="flex gap-2 pt-1">
-                      <button onClick={() => setShowAnnivForm(false)} className="flex-1 h-10 bg-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-lg">キャンセル</button>
-                      <button onClick={addAnniversary} className="flex-1 h-10 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-lg hover:bg-[#1f352b]">登録する</button>
+                      <button onClick={() => setShowAnnivForm(false)} className="flex-1 h-10 bg-[#E6E2DA] text-[#3B4640] text-[14px] font-bold rounded-lg">キャンセル</button>
+                      <button onClick={addAnniversary} className="flex-1 h-10 bg-[#2D4B3E] text-white text-[14px] font-bold rounded-lg hover:bg-[#1f352b]">登録する</button>
                     </div>
                   </div>
                 )}

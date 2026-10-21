@@ -55,7 +55,7 @@ function ThanksContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-sans">
+      <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center font-sans">
         <div className="text-[#2D4B3E] font-bold animate-pulse">読み込み中...</div>
       </div>
     );
@@ -80,10 +80,10 @@ function ThanksContent() {
   const needsPhoneCheck = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('phone') === '1';
 
   return (
-    <div className="min-h-screen bg-[#FBFAF9] flex flex-col font-sans text-[#111111]">
+    <div className="min-h-screen bg-[#FAFAF7] flex flex-col font-sans text-[#1F2A24]">
 
       {/* ヘッダー */}
-      <header className="h-16 bg-white/80 backdrop-blur-md border-b border-[#EAEAEA] flex items-center justify-center px-6 sticky top-0 z-50">
+      <header className="h-16 bg-white/80 backdrop-blur-md border-b border-[#E6E2DA] flex items-center justify-center px-6 sticky top-0 z-50">
         <div className="flex items-center gap-3 h-full">
           {logoUrl ? (
             <img
@@ -103,7 +103,7 @@ function ThanksContent() {
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center p-6 text-center pb-20">
-        <div className="bg-white p-8 md:p-14 rounded-2xl shadow-sm border border-[#EAEAEA] max-w-lg w-full animate-in fade-in duration-300">
+        <div className="bg-white p-8 md:p-14 rounded-2xl shadow-sm border border-[#E6E2DA] max-w-lg w-full animate-in fade-in duration-300">
 
           {/* チェックマーク */}
           <div className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center bg-[#2D4B3E]/10 text-[#2D4B3E]">
@@ -111,18 +111,18 @@ function ThanksContent() {
           </div>
 
           <h1 className="text-[24px] md:text-[28px] font-serif italic text-[#2D4B3E] mb-4">Thank you!</h1>
-          <p className="text-[16px] font-bold text-[#111111] mb-6">
+          <p className="text-[16px] font-bold text-[#1F2A24] mb-6">
             {isCardPaid ? 'ご注文・お支払いが完了しました。' : 'ご注文が完了しました。'}
           </p>
 
-          <div className="text-[13px] text-[#555555] space-y-3 leading-relaxed">
+          <div className="text-[15px] text-[#3B4640] space-y-3 leading-relaxed">
             <p>
               この度は <strong>{targetShop.name}</strong> をご利用いただき、誠にありがとうございます。
             </p>
             <p>ご入力いただいた内容を確認の上、スタッフより手配を進めさせていただきます。</p>
             {orderId && (
-              <p className="text-[11px] text-[#999999] mt-2">
-                ご注文番号: <code className="bg-[#FBFAF9] px-2 py-0.5 rounded text-[#555555]">{orderId.slice(0, 8)}</code>
+              <p className="text-[13px] text-[#5C6660] mt-2">
+                ご注文番号: <code className="bg-[#FAFAF7] px-2 py-0.5 rounded text-[#3B4640]">{orderId.slice(0, 8)}</code>
               </p>
             )}
           </div>
@@ -130,11 +130,11 @@ function ThanksContent() {
           {/* ★ カード決済済みの場合のみ「決済完了」セクションを表示 */}
           {isCardPaid && (
             <div className="mt-10 mb-2 w-full bg-[#2D4B3E]/5 border border-[#2D4B3E]/20 rounded-2xl p-6 text-left">
-              <p className="text-[13px] font-bold text-[#2D4B3E] mb-2 flex items-center gap-2">
+              <p className="text-[15px] font-bold text-[#2D4B3E] mb-2 flex items-center gap-2">
                 <CheckCircle2 size={16} />
                 クレジットカードでのお支払いが完了しました
               </p>
-              <p className="text-[11px] text-[#555555] leading-relaxed">
+              <p className="text-[13px] text-[#3B4640] leading-relaxed">
                 お支払い金額および詳細は、Stripeより自動送信されるレシートメールをご確認ください。
               </p>
             </div>
@@ -143,49 +143,49 @@ function ThanksContent() {
           {/* ★ カード決済「以外」かつ 銀行振込情報がある場合のみ表示 */}
           {/* [2026-10 C4/C5] 店頭でお支払い */}
           {!isCardPaid && payKind === 'store' && (
-            <div className="mt-10 mb-8 w-full text-left bg-[#FBFAF9] p-6 md:p-8 rounded-2xl border border-[#EAEAEA] space-y-3">
-              <h2 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2 text-center">お支払いについて</h2>
-              <p className="text-[13px] text-[#333] text-center">店頭でお受け取りの際にお支払いください。</p>
+            <div className="mt-10 mb-8 w-full text-left bg-[#FAFAF7] p-6 md:p-8 rounded-2xl border border-[#E6E2DA] space-y-3">
+              <h2 className="text-[15px] font-bold text-[#2D4B3E] border-b border-[#E6E2DA] pb-2 text-center">お支払いについて</h2>
+              <p className="text-[15px] text-[#1F2A24] text-center">店頭でお受け取りの際にお支払いください。</p>
               {needsPhoneCheck && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                  <p className="text-[12px] text-amber-900 leading-relaxed">
+                  <p className="text-[14px] text-amber-900 leading-relaxed">
                     ご注文金額が税込 22,000 円を超えるため、<strong>お店からお電話でご予約の確認</strong>をさせていただいたうえで確定いたします。<br/>
                     お電話で確認ができない場合は、クレジットカードでのお支払いのご案内をメールでお送りします。期限までにお支払いがない場合は、キャンセルとなります。
                   </p>
                 </div>
               )}
-              {shopPhone && <p className="text-[12px] text-[#555] text-center">お店の電話番号: <strong>{shopPhone}</strong></p>}
+              {shopPhone && <p className="text-[14px] text-[#3B4640] text-center">お店の電話番号: <strong>{shopPhone}</strong></p>}
             </div>
           )}
 
           {/* ★ 振込先は、銀行振込の注文のときだけ（[2026-10 C3] 新しい注文では銀行振込は選べない） */}
           {!isCardPaid && payKind === 'bank_transfer' && bankInfo && (
-            <div className="mt-10 mb-8 w-full text-left bg-[#FBFAF9] p-6 md:p-8 rounded-2xl border border-[#EAEAEA] space-y-4">
-              <h2 className="text-[13px] font-bold text-[#2D4B3E] border-b border-[#EAEAEA] pb-2 text-center">お支払いについて</h2>
+            <div className="mt-10 mb-8 w-full text-left bg-[#FAFAF7] p-6 md:p-8 rounded-2xl border border-[#E6E2DA] space-y-4">
+              <h2 className="text-[15px] font-bold text-[#2D4B3E] border-b border-[#E6E2DA] pb-2 text-center">お支払いについて</h2>
               <div className="space-y-3">
-                <p className="text-[11px] text-[#555555] font-bold text-center">銀行振込をご希望の方</p>
-                <div className="bg-white p-4 rounded-xl border border-[#EAEAEA]">
-                  <pre className="text-[12px] font-bold text-[#555555] font-sans whitespace-pre-wrap leading-relaxed">{bankInfo}</pre>
+                <p className="text-[13px] text-[#3B4640] font-bold text-center">銀行振込をご希望の方</p>
+                <div className="bg-white p-4 rounded-xl border border-[#E6E2DA]">
+                  <pre className="text-[14px] font-bold text-[#3B4640] font-sans whitespace-pre-wrap leading-relaxed">{bankInfo}</pre>
                 </div>
-                <p className="text-[10px] text-[#999999] text-center">※お振込手数料はお客様負担となります。</p>
+                <p className="text-[12px] text-[#5C6660] text-center">※お振込手数料はお客様負担となります。</p>
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-3">
-                  <p className="text-[11px] text-amber-900 font-bold mb-1 flex items-center gap-1"><AlertCircle size={12}/> ご注意</p>
-                  <p className="text-[11px] text-amber-900 leading-relaxed">
+                  <p className="text-[13px] text-amber-900 font-bold mb-1 flex items-center gap-1"><AlertCircle size={12}/> ご注意</p>
+                  <p className="text-[13px] text-amber-900 leading-relaxed">
                     お振込みのご確認が取れ次第、<strong>制作・発送</strong>させていただきます。
                   </p>
                 </div>
                 {/* ★ 入金タイミング相談用の電話番号案内 */}
                 {shopPhone && (
                   <div className="bg-[#2D4B3E]/5 border-2 border-[#2D4B3E]/20 rounded-xl p-4 mt-3 text-center space-y-2">
-                    <p className="text-[12px] font-bold text-[#2D4B3E] flex items-center justify-center gap-1"><Phone size={13}/> ご入金に関するご相談</p>
-                    <p className="text-[11px] text-[#555] leading-relaxed">
+                    <p className="text-[14px] font-bold text-[#2D4B3E] flex items-center justify-center gap-1"><Phone size={13}/> ご入金に関するご相談</p>
+                    <p className="text-[13px] text-[#3B4640] leading-relaxed">
                       ご入金のタイミングに関するご相談・ご質問は<br/>下記までお電話ください
                     </p>
                     <a href={`tel:${shopPhone}`}
-                      className="block bg-white px-4 py-3 rounded-xl border border-[#2D4B3E]/30 hover:bg-[#FBFAF9]">
+                      className="block bg-white px-4 py-3 rounded-xl border border-[#2D4B3E]/30 hover:bg-[#FAFAF7]">
                       <span className="text-[18px] font-bold text-[#2D4B3E] underline">{shopPhone}</span>
                     </a>
-                    <p className="text-[10px] text-[#999]">営業時間内のみ対応</p>
+                    <p className="text-[12px] text-[#5C6660]">営業時間内のみ対応</p>
                   </div>
                 )}
               </div>
@@ -202,7 +202,7 @@ function ThanksContent() {
                   router.push(`/order/${tenantId}/${shopId}`);
                 }
               }}
-              className="w-full py-4 rounded-xl bg-white border border-[#EAEAEA] text-[#555555] font-bold text-[13px] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all"
+              className="w-full py-4 rounded-xl bg-white border border-[#E6E2DA] text-[#3B4640] font-bold text-[15px] hover:border-[#2D4B3E] hover:text-[#2D4B3E] transition-all"
             >
               {from === 'ec' ? '商品一覧に戻る' : '最初の画面に戻る'}
             </button>
@@ -221,7 +221,7 @@ function ThanksContent() {
 
 export default function ThanksPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-sans text-[#2D4B3E] font-bold">読み込み中...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center font-sans text-[#2D4B3E] font-bold">読み込み中...</div>}>
       <ThanksContent />
     </Suspense>
   );

@@ -11,32 +11,32 @@
 export default function TatefudaFreeInput({ company, sender, request, onChange, compact = false }) {
   const box = compact
     ? 'space-y-3'
-    : 'space-y-4 bg-white p-6 rounded-2xl border border-[#EAEAEA] shadow-sm';
-  const input = 'w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]';
+    : 'space-y-4 bg-white p-6 rounded-2xl border border-[#E6E2DA] shadow-sm';
+  const input = 'w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] outline-none focus:border-[#2D4B3E]';
   return (
     <div className={box}>
       <label className="block space-y-1">
-        <span className="text-[11px] font-bold text-[#555]">会社名・団体名 <span className="font-normal text-[#999]">（任意）</span></span>
+        <span className="text-[13px] font-bold text-[#3B4640]">会社名・団体名 <span className="font-normal text-[#5C6660]">（任意）</span></span>
         <input type="text" value={company} maxLength={100}
           onChange={(e) => onChange('tateCompany', e.target.value)}
           placeholder="例: 株式会社〇〇"
           className={input}/>
       </label>
       <label className="block space-y-1">
-        <span className="text-[11px] font-bold text-[#555]">送り主のお名前 <span className="text-red-500">*</span></span>
+        <span className="text-[13px] font-bold text-[#3B4640]">送り主のお名前 <span className="text-red-500">*</span></span>
         <textarea value={sender} rows={2} maxLength={300}
           onChange={(e) => onChange('tateSender', e.target.value)}
           placeholder={'例: 代表取締役 山田太郎\n（連名の場合は改行して続けてご入力ください）'}
-          className="w-full px-4 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E] resize-y leading-relaxed"/>
+          className="w-full px-4 py-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] outline-none focus:border-[#2D4B3E] resize-y leading-relaxed"/>
       </label>
       <label className="block space-y-1">
-        <span className="text-[11px] font-bold text-[#555]">ご要望 <span className="font-normal text-[#999]">（任意）</span></span>
+        <span className="text-[13px] font-bold text-[#3B4640]">ご要望 <span className="font-normal text-[#5C6660]">（任意）</span></span>
         <textarea value={request} rows={2} maxLength={500}
           onChange={(e) => onChange('tateRequest', e.target.value)}
           placeholder="例: 宛名「〇〇様」も入れてほしい"
-          className="w-full px-4 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E] resize-y leading-relaxed"/>
+          className="w-full px-4 py-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] outline-none focus:border-[#2D4B3E] resize-y leading-relaxed"/>
       </label>
-      <p className="text-[11px] text-[#555] leading-relaxed bg-[#FBFAF9] rounded-xl p-3 border border-[#EAEAEA]">
+      <p className="text-[13px] text-[#3B4640] leading-relaxed bg-[#FAFAF7] rounded-xl p-3 border border-[#E6E2DA]">
         ※ 基本は送り主様の情報だけでお作りできます。「御祝」「御供」などの頭書きは、ご用途に合わせてお店でお入れします。
       </p>
     </div>

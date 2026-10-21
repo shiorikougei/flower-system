@@ -143,7 +143,8 @@ export default async function ShopLayout({ children, params }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(businessJsonLd) }}
       />
-      {children}
+      {/* [2026-10 画面リニューアル] お客様側の書体（本文 BIZ UDPゴシック・見出しは明朝）。app/globals.css の .ui-customer */}
+      <div className="ui-renewal ui-customer">{children}</div>
     </>
   );
 }
