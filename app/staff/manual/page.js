@@ -41,11 +41,11 @@ export default function ManualPage() {
           <div className="flex items-center gap-2">
             <BookOpen size={20} className="text-[#2D4B3E]"/>
             <h1 className="text-[16px] font-bold text-[#2D4B3E]">印刷用マニュアル</h1>
-            <span className="text-[11px] text-[#999]">Ctrl+P (Cmd+P) で印刷ダイアログを開きます</span>
+            <span className="text-[13px] text-[#5C6660]">Ctrl+P (Cmd+P) で印刷ダイアログを開きます</span>
           </div>
           <button
             onClick={() => window.print()}
-            className="h-11 px-6 bg-[#2D4B3E] hover:bg-[#1f352b] text-white text-[12px] font-bold rounded-xl flex items-center gap-2"
+            className="h-11 px-6 bg-[#2D4B3E] hover:bg-[#1f352b] text-white text-[14px] font-bold rounded-xl flex items-center gap-2"
           >
             <Printer size={14}/> 印刷する
           </button>
@@ -53,22 +53,22 @@ export default function ManualPage() {
 
         {/* 表紙 */}
         <section className="manual-cover text-center py-16 border-2 border-[#2D4B3E] rounded-2xl mb-10">
-          <p className="text-[11pt] tracking-widest text-[#999] mb-2">USER MANUAL</p>
+          <p className="text-[11pt] tracking-widest text-[#5C6660] mb-2">USER MANUAL</p>
           <h1 className="font-serif italic font-bold text-[#2D4B3E] mb-4" style={{ fontSize: '36pt' }}>FLORIX</h1>
           <p className="text-[14pt] font-bold text-[#2D4B3E] mb-1">操作マニュアル</p>
-          <p className="text-[11pt] text-[#555] mb-12">お花屋さん向けクラウド業務システム</p>
+          <p className="text-[11pt] text-[#3B4640] mb-12">お花屋さん向けクラウド業務システム</p>
 
-          <div className="max-w-md mx-auto mt-12 space-y-2 text-left bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-6 text-[10pt]">
+          <div className="max-w-md mx-auto mt-12 space-y-2 text-left bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl p-6 text-[10pt]">
             <p className="font-bold text-[#2D4B3E] mb-2">目次</p>
             {HELP_CATEGORIES.map((cat, i) => (
-              <div key={cat.id} className="flex items-center justify-between text-[#555]">
+              <div key={cat.id} className="flex items-center justify-between text-[#3B4640]">
                 <span>{cat.icon} {i + 1}. {cat.name}</span>
-                <span className="text-[#999]">{cat.articles.length}記事</span>
+                <span className="text-[#5C6660]">{cat.articles.length}記事</span>
               </div>
             ))}
           </div>
 
-          <p className="text-[9pt] text-[#999] mt-12">
+          <p className="text-[9pt] text-[#5C6660] mt-12">
             提供: NocoLde<br/>
             お問い合わせ: marusyou.reishin@gmail.com
           </p>
@@ -78,7 +78,7 @@ export default function ManualPage() {
         {HELP_CATEGORIES.map((cat, ci) => (
           <section key={cat.id} className="manual-category mb-12">
             <div className="border-b-4 border-[#2D4B3E] pb-3 mb-6">
-              <p className="text-[10pt] tracking-widest text-[#999]">CHAPTER {ci + 1}</p>
+              <p className="text-[10pt] tracking-widest text-[#5C6660]">CHAPTER {ci + 1}</p>
               <h1 className="text-[24pt] font-bold text-[#2D4B3E]">{cat.icon} {cat.name}</h1>
             </div>
 
@@ -88,13 +88,13 @@ export default function ManualPage() {
                   {ci + 1}.{ai + 1} {article.title}
                 </h2>
                 {article.summary && (
-                  <p className="text-[10pt] text-[#666] italic mb-3 pl-3">{article.summary}</p>
+                  <p className="text-[10pt] text-[#3B4640] italic mb-3 pl-3">{article.summary}</p>
                 )}
 
                 {article.steps && article.steps.length > 0 && (
                   <ol className="space-y-2 mt-3">
                     {article.steps.map((s, si) => (
-                      <li key={si} className="border border-[#EAEAEA] rounded-lg p-3 bg-[#FBFAF9]">
+                      <li key={si} className="border border-[#E6E2DA] rounded-lg p-3 bg-[#FAFAF7]">
                         <p className="text-[10pt] font-bold text-[#2D4B3E]">{s.title}</p>
                         {s.body && <p className="text-[10pt] text-[#444] mt-1 leading-relaxed">{s.body}</p>}
                       </li>
@@ -113,10 +113,10 @@ export default function ManualPage() {
         ))}
 
         {/* 巻末 */}
-        <section className="border-t-2 border-[#EAEAEA] pt-6 mt-12 text-center text-[10pt] text-[#666]">
+        <section className="border-t-2 border-[#E6E2DA] pt-6 mt-12 text-center text-[10pt] text-[#3B4640]">
           <p className="mb-2">困った時は、各画面の <strong>?マーク</strong> をクリックするとその場でヘルプが開きます。</p>
           <p>本マニュアルに記載のない内容は <strong>marusyou.reishin@gmail.com</strong> までお問い合わせください。</p>
-          <p className="text-[9pt] text-[#999] mt-4">— NocoLde —</p>
+          <p className="text-[9pt] text-[#5C6660] mt-4">— NocoLde —</p>
         </section>
       </main>
     </>

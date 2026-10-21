@@ -423,52 +423,52 @@ function PortfolioPageInner() {
     }
   };
 
-  if (isLoading) return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-bold text-[#2D4B3E] animate-pulse">読み込み中...</div>;
+  if (isLoading) return <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center font-bold text-[#2D4B3E] animate-pulse">読み込み中...</div>;
 
   return (
-    <div className="bg-[#FBFAF9] flex flex-col font-sans text-[#111111] pb-32 min-h-screen">
+    <div className="bg-[#FAFAF7] flex flex-col font-sans text-[#1F2A24] pb-32 min-h-screen">
       
-      <header className="h-20 bg-white/80 backdrop-blur-md border-b border-[#EAEAEA] flex items-center justify-between px-6 md:px-8 sticky top-0 z-10">
-        <h1 className="text-[18px] font-bold tracking-tight text-[#2D4B3E] flex items-center gap-2">作品・SNS連携管理 <HelpTooltip articleId="product_register"/></h1>
+      <header className="h-20 bg-[#F6F4EF]/95 backdrop-blur border-b border-[#E6E2DA] flex items-center justify-between px-6 md:px-8 sticky top-0 z-10">
+        <h1 className="text-[24px] md:text-[28px] font-bold tracking-[0.02em] text-[#1F2A24] flex items-center gap-2">作品・SNS連携管理 <HelpTooltip articleId="product_register"/></h1>
       </header>
 
-      <div className="max-w-[1000px] mx-auto w-full p-4 md:p-8 space-y-6">
+      <div className="w-full w-full p-4 md:p-8 space-y-6">
         
-        <div className="flex flex-wrap gap-2 bg-[#F7F7F7] p-1.5 rounded-2xl border border-[#EAEAEA] w-fit">
-          <button onClick={() => setActiveTab('list')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all ${activeTab === 'list' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}>
+        <div className="flex flex-wrap gap-2 bg-[#F6F4EF] p-1.5 rounded-2xl border border-[#E6E2DA] w-fit">
+          <button onClick={() => setActiveTab('list')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[14px] font-bold transition-all ${activeTab === 'list' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#5C6660] hover:text-[#3B4640]'}`}>
             <LayoutGrid size={16}/> 登録済み一覧
           </button>
           {/* ★ 新規追加：納品写真から作成タブ */}
-          <button onClick={() => setActiveTab('from_orders')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all ${activeTab === 'from_orders' ? 'bg-white shadow-sm text-[#D97D54]' : 'text-[#999999] hover:text-[#555555]'}`}>
+          <button onClick={() => setActiveTab('from_orders')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[14px] font-bold transition-all ${activeTab === 'from_orders' ? 'bg-white shadow-sm text-[#B9562F]' : 'text-[#5C6660] hover:text-[#3B4640]'}`}>
             <Camera size={16}/> 納品写真から作成
-            {pendingCompletedOrders.length > 0 && <span className={`ml-1 px-1.5 rounded-full text-[10px] ${activeTab === 'from_orders' ? 'bg-[#D97D54]/10 text-[#D97D54]' : 'bg-[#D97D54] text-white'}`}>{pendingCompletedOrders.length}</span>}
+            {pendingCompletedOrders.length > 0 && <span className={`ml-1 px-1.5 rounded-full text-[12px] ${activeTab === 'from_orders' ? 'bg-[#B9562F]/10 text-[#B9562F]' : 'bg-[#B9562F] text-white'}`}>{pendingCompletedOrders.length}</span>}
           </button>
-          <button onClick={() => setActiveTab('new')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all ${activeTab === 'new' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}>
+          <button onClick={() => setActiveTab('new')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[14px] font-bold transition-all ${activeTab === 'new' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#5C6660] hover:text-[#3B4640]'}`}>
             <Plus size={16}/> 手動で新規登録
           </button>
-          <button onClick={() => setActiveTab('import')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all ${activeTab === 'import' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}>
+          <button onClick={() => setActiveTab('import')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[14px] font-bold transition-all ${activeTab === 'import' ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#5C6660] hover:text-[#3B4640]'}`}>
             <LinkIcon size={16}/> 過去分登録 (URL)
           </button>
         </div>
 
         {activeTab === 'list' && (
           <div className="animate-in fade-in duration-300">
-            <h2 className="text-[14px] font-bold text-[#111111] mb-3 border-l-4 border-[#2D4B3E] pl-3">
+            <h2 className="text-[15px] font-bold text-[#1F2A24] mb-3 border-l-4 border-[#2D4B3E] pl-3">
               登録済みの作品 ＆ カタログURL
             </h2>
 
             {/* ★ 管理番号・キャプション検索 */}
-            <div className="bg-white border border-[#EAEAEA] rounded-2xl p-4 mb-6 flex items-center gap-3 shadow-sm">
-              <Search size={16} className="text-[#999]"/>
+            <div className="bg-white border border-[#E6E2DA] rounded-2xl p-4 mb-6 flex items-center gap-3 shadow-sm">
+              <Search size={16} className="text-[#5C6660]"/>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="管理番号で検索（例: 20260514-001）または キャプション・花の種類で絞り込み"
-                className="flex-1 h-10 bg-transparent text-[13px] outline-none"
+                className="flex-1 h-10 bg-transparent text-[15px] outline-none"
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="text-[11px] text-[#999] hover:text-[#2D4B3E] font-bold">クリア</button>
+                <button onClick={() => setSearchQuery('')} className="text-[13px] text-[#5C6660] hover:text-[#2D4B3E] font-bold">クリア</button>
               )}
             </div>
 
@@ -483,53 +483,53 @@ function PortfolioPageInner() {
                   )
                 : images;
               return filtered.length === 0 ? (
-                <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#EAEAEA] text-[#999999] text-[13px] font-bold">
+                <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#E6E2DA] text-[#5C6660] text-[15px] font-bold">
                   {q ? `「${searchQuery}」に一致する作品がありません` : '作品が登録されていません。タブから新規追加してください。'}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filtered.map(img => (
-                  <div key={img.id} className="bg-white rounded-2xl border border-[#EAEAEA] overflow-hidden shadow-sm hover:shadow-md transition-all group flex flex-col">
-                    <div className="relative aspect-square bg-[#FBFAF9] cursor-pointer" onClick={() => setDetailImage(img)}>
+                  <div key={img.id} className="bg-white rounded-2xl border border-[#E6E2DA] overflow-hidden shadow-sm hover:shadow-md transition-all group flex flex-col">
+                    <div className="relative aspect-square bg-[#FAFAF7] cursor-pointer" onClick={() => setDetailImage(img)}>
                       <img src={img.url} alt="Portfolio" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                      <div className="absolute top-3 right-3 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-[12px] font-bold text-[#2D4B3E] shadow-sm">
+                      <div className="absolute top-3 right-3 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-[14px] font-bold text-[#2D4B3E] shadow-sm">
                         {img.priceHidden ? '金額: お問い合わせ' : `¥${Number(img.price).toLocaleString()}`}
                       </div>
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all flex items-center justify-center">
-                        <span className="opacity-0 group-hover:opacity-100 bg-white/95 backdrop-blur px-4 py-2 rounded-full text-[11px] font-bold text-[#2D4B3E] shadow-md">
+                        <span className="opacity-0 group-hover:opacity-100 bg-white/95 backdrop-blur px-4 py-2 rounded-full text-[13px] font-bold text-[#2D4B3E] shadow-md">
                           詳細を見る
                         </span>
                       </div>
                     </div>
                     <div className="p-5 flex flex-col flex-1">
                       {img.managementNo && (
-                        <p className="text-[10px] font-mono text-[#2D4B3E] bg-[#2D4B3E]/10 px-2 py-1 rounded mb-2 w-fit">
+                        <p className="text-[12px] font-mono text-[#2D4B3E] bg-[#2D4B3E]/10 px-2 py-1 rounded mb-2 w-fit">
                           {img.managementNo}
                         </p>
                       )}
                       <div className="flex flex-wrap gap-1.5 mb-3">
-                        {img.flowerType && <span className="px-2 py-1 bg-[#2D4B3E] border border-[#2D4B3E] rounded text-[10px] font-bold text-white shadow-sm">{img.flowerType}</span>}
-                        <span className="px-2 py-1 bg-[#FBFAF9] border border-[#EAEAEA] rounded text-[10px] font-bold text-[#555555]">{img.purpose}</span>
-                        <span className="px-2 py-1 bg-[#FBFAF9] border border-[#EAEAEA] rounded text-[10px] font-bold text-[#555555]">{img.color}</span>
-                        <span className="px-2 py-1 bg-[#FBFAF9] border border-[#EAEAEA] rounded text-[10px] font-bold text-[#555555]">{img.vibe}</span>
+                        {img.flowerType && <span className="px-2 py-1 bg-[#2D4B3E] border border-[#2D4B3E] rounded text-[12px] font-bold text-white shadow-sm">{img.flowerType}</span>}
+                        <span className="px-2 py-1 bg-[#FAFAF7] border border-[#E6E2DA] rounded text-[12px] font-bold text-[#3B4640]">{img.purpose}</span>
+                        <span className="px-2 py-1 bg-[#FAFAF7] border border-[#E6E2DA] rounded text-[12px] font-bold text-[#3B4640]">{img.color}</span>
+                        <span className="px-2 py-1 bg-[#FAFAF7] border border-[#E6E2DA] rounded text-[12px] font-bold text-[#3B4640]">{img.vibe}</span>
                       </div>
-                      <p className="text-[11px] text-[#555555] line-clamp-2 leading-relaxed mb-4 flex-1">
+                      <p className="text-[13px] text-[#3B4640] line-clamp-2 leading-relaxed mb-4 flex-1">
                         {img.caption || 'キャプションなし'}
                       </p>
                       
                       <div className="space-y-2 mt-auto">
                         <button 
                           onClick={() => handleCopyUrl(img.id)}
-                          className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[11px] transition-all border ${copiedId === img.id ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-[#FBFAF9] border-[#EAEAEA] text-[#2D4B3E] hover:bg-white hover:border-[#2D4B3E]'}`}
+                          className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[13px] transition-all border ${copiedId === img.id ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-[#FAFAF7] border-[#E6E2DA] text-[#2D4B3E] hover:bg-white hover:border-[#2D4B3E]'}`}
                         >
                           {copiedId === img.id ? <><CheckCircle size={14}/> コピーしました！</> : <><Copy size={14}/> カタログURLをコピー</>}
                         </button>
                         
                         <div className="flex justify-between items-center pt-2">
-                          <a href={`/order/${currentTenantId}/${appSettings?.shops?.[0]?.id || 'default'}?img=${img.id}`} target="_blank" rel="noopener noreferrer" className="text-[10px] flex items-center gap-1 text-[#999999] hover:text-[#2D4B3E]">
+                          <a href={`/order/${currentTenantId}/${appSettings?.shops?.[0]?.id || 'default'}?img=${img.id}`} target="_blank" rel="noopener noreferrer" className="text-[12px] flex items-center gap-1 text-[#5C6660] hover:text-[#2D4B3E]">
                             <ExternalLink size={12}/> お客様画面を確認
                           </a>
-                          <button onClick={() => handleDelete(img.id)} className="text-[10px] font-bold text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 transition-colors">
+                          <button onClick={() => handleDelete(img.id)} className="text-[12px] font-bold text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 transition-colors">
                             削除
                           </button>
                         </div>
@@ -548,40 +548,40 @@ function PortfolioPageInner() {
             ========================================================= */}
         {activeTab === 'from_orders' && (
           <div className="animate-in fade-in duration-300">
-            <h2 className="text-[14px] font-bold text-[#D97D54] mb-6 border-l-4 border-[#D97D54] pl-3 flex items-center gap-2">
+            <h2 className="text-[15px] font-bold text-[#B9562F] mb-6 border-l-4 border-[#B9562F] pl-3 flex items-center gap-2">
               <Camera size={18}/> 注文詳細でアップロードされた完成写真
             </h2>
             
             {pendingCompletedOrders.length === 0 ? (
-              <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#EAEAEA] text-[#999999] text-[13px] font-bold">
+              <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#E6E2DA] text-[#5C6660] text-[15px] font-bold">
                 作品登録が必要な完成写真はありません。<br/>
-                <span className="text-[11px] font-normal block mt-2">注文詳細画面から完成写真をアップロードすると、ここに自動的に表示されます。<br/>登録済みの作品は「登録済み一覧」タブから確認できます。</span>
+                <span className="text-[13px] font-normal block mt-2">注文詳細画面から完成写真をアップロードすると、ここに自動的に表示されます。<br/>登録済みの作品は「登録済み一覧」タブから確認できます。</span>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {pendingCompletedOrders.map(order => {
                   const d = order.order_data;
                   return (
-                    <div key={order.id} className="bg-white rounded-2xl border border-[#EAEAEA] overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col group">
-                      <div className="relative aspect-square bg-[#FBFAF9]">
+                    <div key={order.id} className="bg-white rounded-2xl border border-[#E6E2DA] overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col group">
+                      <div className="relative aspect-square bg-[#FAFAF7]">
                         <img src={d.completionImage} alt="Completion" className="w-full h-full object-cover" />
-                        <div className="absolute top-3 left-3 bg-[#111111]/70 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold text-white flex items-center gap-1">
+                        <div className="absolute top-3 left-3 bg-[#1F2A24]/70 backdrop-blur px-3 py-1 rounded-full text-[12px] font-bold text-white flex items-center gap-1">
                           ID: {order.id.slice(0, 6)}
                         </div>
                       </div>
                       <div className="p-5 space-y-4">
                         <div>
-                          <p className="text-[14px] font-bold text-[#2D4B3E] truncate">{d.customerInfo?.name} 様のご注文</p>
-                          <p className="text-[11px] font-bold text-[#999999] mt-1">{d.flowerType || '未設定'} / ¥{Number(d.itemPrice || 0).toLocaleString()}</p>
+                          <p className="text-[15px] font-bold text-[#2D4B3E] truncate">{d.customerInfo?.name} 様のご注文</p>
+                          <p className="text-[13px] font-bold text-[#5C6660] mt-1">{d.flowerType || '未設定'} / ¥{Number(d.itemPrice || 0).toLocaleString()}</p>
                         </div>
                         <div className="flex flex-wrap gap-1">
-                          <span className="px-2 py-0.5 bg-[#F7F7F7] text-[#555] rounded text-[9px]">{d.flowerPurpose || '用途未定'}</span>
-                          <span className="px-2 py-0.5 bg-[#F7F7F7] text-[#555] rounded text-[9px]">{d.flowerColor || '色未定'}</span>
-                          <span className="px-2 py-0.5 bg-[#F7F7F7] text-[#555] rounded text-[9px]">{d.flowerVibe || 'イメージ未定'}</span>
+                          <span className="px-2 py-0.5 bg-[#F6F4EF] text-[#3B4640] rounded text-[12px]">{d.flowerPurpose || '用途未定'}</span>
+                          <span className="px-2 py-0.5 bg-[#F6F4EF] text-[#3B4640] rounded text-[12px]">{d.flowerColor || '色未定'}</span>
+                          <span className="px-2 py-0.5 bg-[#F6F4EF] text-[#3B4640] rounded text-[12px]">{d.flowerVibe || 'イメージ未定'}</span>
                         </div>
                         <button 
                           onClick={() => handleSelectOrderImage(order)}
-                          className="w-full flex items-center justify-center gap-2 py-3 bg-[#D97D54]/10 text-[#D97D54] rounded-xl font-bold text-[12px] hover:bg-[#D97D54] hover:text-white transition-all group-hover:shadow-md"
+                          className="w-full flex items-center justify-center gap-2 py-3 bg-[#B9562F]/10 text-[#B9562F] rounded-xl font-bold text-[14px] hover:bg-[#B9562F] hover:text-white transition-all group-hover:shadow-md"
                         >
                           この写真で作品を登録 <ArrowRight size={14}/>
                         </button>
@@ -596,38 +596,38 @@ function PortfolioPageInner() {
 
         {/* 手動登録（＆ 納品写真からの編集画面） */}
         {activeTab === 'new' && (
-          <form onSubmit={handleAddSubmit} className="bg-white p-6 md:p-8 rounded-2xl border border-[#EAEAEA] shadow-sm max-w-[800px] space-y-6 animate-in fade-in relative">
+          <form onSubmit={handleAddSubmit} className="bg-white p-6 md:p-8 rounded-2xl border border-[#E6E2DA] shadow-sm max-w-[800px] space-y-6 animate-in fade-in relative">
             
             {/* 納品写真から引き継いだ場合のお知らせバッジ */}
             {newImage.uploadFile === 'from_order' && (
-              <div className="absolute -top-3 -right-3 md:top-6 md:right-8 bg-[#D97D54] text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-md flex items-center gap-1">
+              <div className="absolute -top-3 -right-3 md:top-6 md:right-8 bg-[#B9562F] text-white text-[12px] font-bold px-3 py-1.5 rounded-full shadow-md flex items-center gap-1">
                 <CheckCircle size={12}/> 注文情報を引き継ぎました
               </div>
             )}
 
-            <h2 className="text-[16px] font-bold text-[#2D4B3E] border-b border-[#FBFAF9] pb-4">新規作品の登録</h2>
+            <h2 className="text-[16px] font-bold text-[#2D4B3E] border-b border-[#FAFAF7] pb-4">新規作品の登録</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-6">
-                <div className="relative w-full aspect-square bg-[#FBFAF9] border-2 border-dashed border-[#EAEAEA] rounded-2xl flex items-center justify-center overflow-hidden hover:bg-gray-50 transition-colors">
+                <div className="relative w-full aspect-square bg-[#FAFAF7] border-2 border-dashed border-[#E6E2DA] rounded-2xl flex items-center justify-center overflow-hidden hover:bg-gray-50 transition-colors">
                   {newImage.url ? (
                     <img src={newImage.url} alt="Preview" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="text-center text-[#999999] space-y-2">
+                    <div className="text-center text-[#5C6660] space-y-2">
                       <ImageIcon size={32} className="mx-auto opacity-50" />
-                      <span className="text-[12px] font-bold block">クリックして選択</span>
+                      <span className="text-[14px] font-bold block">クリックして選択</span>
                     </div>
                   )}
                   <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
                   {/* ★ 差し替えバッジ（写真がある時のみ） */}
                   {newImage.url && (
-                    <div className="absolute bottom-2 left-2 right-2 bg-white/95 backdrop-blur text-[10px] font-bold text-[#2D4B3E] text-center py-1.5 rounded-lg shadow-sm pointer-events-none">
+                    <div className="absolute bottom-2 left-2 right-2 bg-white/95 backdrop-blur text-[12px] font-bold text-[#2D4B3E] text-center py-1.5 rounded-lg shadow-sm pointer-events-none">
                       クリックで写真を差し替え
                     </div>
                   )}
                 </div>
                 {newImage.uploadFile === 'from_order' && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-[10px] text-amber-900 leading-relaxed">
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-[12px] text-amber-900 leading-relaxed">
                     <strong>完成写真がセットされています。</strong><br/>
                     メッセージカード等が写り込んでいる場合は、写真エリアをクリックして別の写真に差し替えできます。SNS掲載に不適切な要素が映ったままにならないようにご注意ください。
                   </div>
@@ -636,51 +636,51 @@ function PortfolioPageInner() {
               
               <div className="space-y-4">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-[#999999] flex items-center justify-between">
-                    <span>金額 (税抜)</span> <span className="text-[9px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
+                  <label className="text-[13px] font-bold text-[#5C6660] flex items-center justify-between">
+                    <span>金額 (税抜)</span> <span className="text-[12px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
                   </label>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-[#111111]">¥</span>
-                    <input type="number" required value={newImage.price} onChange={e => setNewImage({...newImage, price: e.target.value})} placeholder="例: 15000" className="flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[14px] font-bold focus:border-[#2D4B3E] outline-none" />
+                    <span className="font-bold text-[#1F2A24]">¥</span>
+                    <input type="number" required value={newImage.price} onChange={e => setNewImage({...newImage, price: e.target.value})} placeholder="例: 15000" className="flex-1 h-12 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl px-4 text-[15px] font-bold focus:border-[#2D4B3E] outline-none" />
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-[#999999] flex items-center justify-between">
-                      <span>お花の種類</span> <span className="text-[9px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
+                    <label className="text-[13px] font-bold text-[#5C6660] flex items-center justify-between">
+                      <span>お花の種類</span> <span className="text-[12px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
                     </label>
-                    <select required value={newImage.flowerType} onChange={e => setNewImage({...newImage, flowerType: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
+                    <select required value={newImage.flowerType} onChange={e => setNewImage({...newImage, flowerType: e.target.value})} className="w-full h-12 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl px-4 text-[15px] font-bold focus:border-[#2D4B3E] outline-none">
                       <option value="">選択</option>
                       {flowerItems.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
                       <option value="その他">その他</option>
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-[#999999] flex items-center justify-between">
-                      <span>用途</span> <span className="text-[9px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
+                    <label className="text-[13px] font-bold text-[#5C6660] flex items-center justify-between">
+                      <span>用途</span> <span className="text-[12px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
                     </label>
-                    <select required value={newImage.purpose} onChange={e => setNewImage({...newImage, purpose: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
+                    <select required value={newImage.purpose} onChange={e => setNewImage({...newImage, purpose: e.target.value})} className="w-full h-12 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl px-4 text-[15px] font-bold focus:border-[#2D4B3E] outline-none">
                       <option value="">選択</option>
                       {designOptions.purposes.map(p => <option key={p} value={p}>{p}</option>)}
                       <option value="その他">その他</option>
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-[#999999] flex items-center justify-between">
-                      <span>カラー</span> <span className="text-[9px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
+                    <label className="text-[13px] font-bold text-[#5C6660] flex items-center justify-between">
+                      <span>カラー</span> <span className="text-[12px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
                     </label>
-                    <select required value={newImage.color} onChange={e => setNewImage({...newImage, color: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
+                    <select required value={newImage.color} onChange={e => setNewImage({...newImage, color: e.target.value})} className="w-full h-12 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl px-4 text-[15px] font-bold focus:border-[#2D4B3E] outline-none">
                       <option value="">選択</option>
                       {designOptions.colors.map(c => <option key={c} value={c}>{c}</option>)}
                       <option value="その他">その他</option>
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-[#999999] flex items-center justify-between">
-                      <span>イメージ</span> <span className="text-[9px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
+                    <label className="text-[13px] font-bold text-[#5C6660] flex items-center justify-between">
+                      <span>イメージ</span> <span className="text-[12px] bg-red-50 text-red-500 px-1.5 py-0.5 rounded">必須</span>
                     </label>
-                    <select required value={newImage.vibe} onChange={e => setNewImage({...newImage, vibe: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold focus:border-[#2D4B3E] outline-none">
+                    <select required value={newImage.vibe} onChange={e => setNewImage({...newImage, vibe: e.target.value})} className="w-full h-12 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl px-4 text-[15px] font-bold focus:border-[#2D4B3E] outline-none">
                       <option value="">選択</option>
                       {designOptions.vibes.map(v => <option key={v} value={v}>{v}</option>)}
                       <option value="その他">その他</option>
@@ -690,8 +690,8 @@ function PortfolioPageInner() {
 
                 <div className="space-y-2 pt-2">
                   <div className="flex justify-between items-end mb-2">
-                    <label className="text-[11px] font-bold text-[#999999]">キャプション</label>
-                    <button type="button" onClick={handleGenerateCaption} disabled={isGenerating} className="flex items-center gap-1 bg-[#2D4B3E]/10 text-[#2D4B3E] px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-[#2D4B3E] hover:text-white transition-all disabled:opacity-50">
+                    <label className="text-[13px] font-bold text-[#5C6660]">キャプション</label>
+                    <button type="button" onClick={handleGenerateCaption} disabled={isGenerating} className="flex items-center gap-1 bg-[#2D4B3E]/10 text-[#2D4B3E] px-3 py-1.5 rounded-lg text-[12px] font-bold hover:bg-[#2D4B3E] hover:text-white transition-all disabled:opacity-50">
                       <Wand2 size={12} /> {isGenerating ? '生成中...' : 'APIで自動生成'}
                     </button>
                   </div>
@@ -699,13 +699,13 @@ function PortfolioPageInner() {
                     value={newImage.caption}
                     onChange={e => setNewImage({ ...newImage, caption: e.target.value })}
                     placeholder="AIボタンを押すか、直接入力してください。"
-                    className="w-full h-32 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-4 text-[13px] resize-none focus:border-[#2D4B3E] outline-none"
+                    className="w-full h-32 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl p-4 text-[15px] resize-none focus:border-[#2D4B3E] outline-none"
                   ></textarea>
                 </div>
 
                 {/* ★ 管理番号（キャプション先頭にも自動反映） */}
                 <div>
-                  <label className="text-[11px] font-bold text-[#999999]">管理番号 <span className="text-[10px] text-[#bbb]">(注文から自動引き継ぎ・キャプション先頭にも反映)</span></label>
+                  <label className="text-[13px] font-bold text-[#5C6660]">管理番号 <span className="text-[12px] text-[#bbb]">(注文から自動引き継ぎ・キャプション先頭にも反映)</span></label>
                   <input
                     type="text"
                     value={newImage.managementNo || ''}
@@ -720,14 +720,14 @@ function PortfolioPageInner() {
                       setNewImage({ ...newImage, managementNo: newMn, caption: newCap });
                     }}
                     placeholder="例: 20260514-001"
-                    className="w-full h-11 px-3 mt-1 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] font-mono outline-none focus:border-[#2D4B3E]"
+                    className="w-full h-11 px-3 mt-1 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] font-mono outline-none focus:border-[#2D4B3E]"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="pt-4 border-t border-[#EAEAEA]">
-              <button type="submit" disabled={isSaving} className="w-full md:w-auto md:px-12 h-14 bg-[#2D4B3E] text-white rounded-xl font-bold text-[14px] shadow-md hover:bg-[#1f352b] transition-all active:scale-[0.98] disabled:opacity-50 mx-auto block">
+            <div className="pt-4 border-t border-[#E6E2DA]">
+              <button type="submit" disabled={isSaving} className="w-full md:w-auto md:px-12 h-14 bg-[#2D4B3E] text-white rounded-xl font-bold text-[15px] shadow-md hover:bg-[#1f352b] transition-all active:scale-[0.98] disabled:opacity-50 mx-auto block">
                 {isSaving ? '保存中...' : '作品を登録する'}
               </button>
             </div>
@@ -738,68 +738,68 @@ function PortfolioPageInner() {
         {activeTab === 'import' && (
           <div className="space-y-6 max-w-[1000px] animate-in fade-in duration-300">
             {/* 入力エリア */}
-            <div className="bg-white p-6 md:p-8 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-5">
+            <div className="bg-white p-6 md:p-8 rounded-2xl border border-[#E6E2DA] shadow-sm space-y-5">
               <div>
                 <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2 mb-1">
                   <Sparkles size={18}/> URLから一括取り込み
                 </h2>
-                <p className="text-[12px] text-[#555]">
+                <p className="text-[14px] text-[#3B4640]">
                   InstagramなどのURLを1行に1つずつ貼り付けて、画像とキャプションを自動取得します。<br/>
-                  <span className="text-[11px] text-[#999]">※ Instagram は公開投稿のみ対応 / 1度に30件まで推奨 / 過去投稿で金額非公開のものは「金額を非公開」にチェックを入れてください</span>
+                  <span className="text-[13px] text-[#5C6660]">※ Instagram は公開投稿のみ対応 / 1度に30件まで推奨 / 過去投稿で金額非公開のものは「金額を非公開」にチェックを入れてください</span>
                 </p>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-[#555]">URL（1行に1つずつ貼り付け）</label>
+                <label className="text-[13px] font-bold text-[#3B4640]">URL（1行に1つずつ貼り付け）</label>
                 <textarea
                   value={bulkUrls}
                   onChange={e => setBulkUrls(e.target.value)}
                   rows={6}
                   placeholder={'https://www.instagram.com/p/XXXXXXX/\nhttps://www.instagram.com/p/YYYYYYY/\nhttps://www.instagram.com/p/ZZZZZZZ/'}
-                  className="w-full bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 py-3 text-[12px] font-mono outline-none focus:border-[#2D4B3E] resize-y leading-relaxed"
+                  className="w-full bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl px-4 py-3 text-[14px] font-mono outline-none focus:border-[#2D4B3E] resize-y leading-relaxed"
                   disabled={isExtracting}
                 />
-                <p className="text-[10px] text-[#999]">
+                <p className="text-[12px] text-[#5C6660]">
                   検出URL: <strong>{bulkUrls.split(/[\n,\s]+/).filter(u => /^https?:\/\//.test(u.trim())).length}</strong>件
                 </p>
               </div>
 
               {/* 一括設定 */}
-              <div className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-4 space-y-3">
-                <p className="text-[11px] font-bold text-[#2D4B3E]">全アイテムに一括適用する初期値（後から個別変更可能）</p>
+              <div className="bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl p-4 space-y-3">
+                <p className="text-[13px] font-bold text-[#2D4B3E]">全アイテムに一括適用する初期値（後から個別変更可能）</p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div>
-                    <label className="text-[10px] font-bold text-[#999]">お花の種類</label>
-                    <select value={bulkApply.flowerType} onChange={e => setBulkApply({...bulkApply, flowerType: e.target.value})} className="w-full h-10 bg-white border border-[#EAEAEA] rounded-lg px-2 text-[11px] outline-none">
+                    <label className="text-[12px] font-bold text-[#5C6660]">お花の種類</label>
+                    <select value={bulkApply.flowerType} onChange={e => setBulkApply({...bulkApply, flowerType: e.target.value})} className="w-full h-10 bg-white border border-[#E6E2DA] rounded-lg px-2 text-[13px] outline-none">
                       <option value="">未選択</option>
                       {flowerItems.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
                       <option value="その他">その他</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-[#999]">用途</label>
-                    <select value={bulkApply.purpose} onChange={e => setBulkApply({...bulkApply, purpose: e.target.value})} className="w-full h-10 bg-white border border-[#EAEAEA] rounded-lg px-2 text-[11px] outline-none">
+                    <label className="text-[12px] font-bold text-[#5C6660]">用途</label>
+                    <select value={bulkApply.purpose} onChange={e => setBulkApply({...bulkApply, purpose: e.target.value})} className="w-full h-10 bg-white border border-[#E6E2DA] rounded-lg px-2 text-[13px] outline-none">
                       <option value="">未選択</option>
                       {designOptions.purposes.map(p => <option key={p} value={p}>{p}</option>)}
                       <option value="その他">その他</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-[#999]">カラー</label>
-                    <select value={bulkApply.color} onChange={e => setBulkApply({...bulkApply, color: e.target.value})} className="w-full h-10 bg-white border border-[#EAEAEA] rounded-lg px-2 text-[11px] outline-none">
+                    <label className="text-[12px] font-bold text-[#5C6660]">カラー</label>
+                    <select value={bulkApply.color} onChange={e => setBulkApply({...bulkApply, color: e.target.value})} className="w-full h-10 bg-white border border-[#E6E2DA] rounded-lg px-2 text-[13px] outline-none">
                       <option value="">未選択</option>
                       {designOptions.colors.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-[#999]">イメージ</label>
-                    <select value={bulkApply.vibe} onChange={e => setBulkApply({...bulkApply, vibe: e.target.value})} className="w-full h-10 bg-white border border-[#EAEAEA] rounded-lg px-2 text-[11px] outline-none">
+                    <label className="text-[12px] font-bold text-[#5C6660]">イメージ</label>
+                    <select value={bulkApply.vibe} onChange={e => setBulkApply({...bulkApply, vibe: e.target.value})} className="w-full h-10 bg-white border border-[#E6E2DA] rounded-lg px-2 text-[13px] outline-none">
                       <option value="">未選択</option>
                       {designOptions.vibes.map(v => <option key={v} value={v}>{v}</option>)}
                     </select>
                   </div>
                 </div>
-                <label className="flex items-center gap-2 cursor-pointer text-[11px] font-bold text-[#555] pt-2">
+                <label className="flex items-center gap-2 cursor-pointer text-[13px] font-bold text-[#3B4640] pt-2">
                   <input type="checkbox" checked={bulkApply.priceHidden} onChange={e => setBulkApply({...bulkApply, priceHidden: e.target.checked})} className="w-4 h-4 accent-[#2D4B3E]"/>
                   金額を非公開にする（過去投稿用 / お客様画面では「お問い合わせください」と表示）
                 </label>
@@ -808,13 +808,13 @@ function PortfolioPageInner() {
               <button
                 onClick={handleBulkExtract}
                 disabled={isExtracting || !bulkUrls.trim()}
-                className="w-full h-14 bg-[#2D4B3E] text-white rounded-xl font-bold text-[14px] shadow-md hover:bg-[#1f352b] transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full h-14 bg-[#2D4B3E] text-white rounded-xl font-bold text-[15px] shadow-md hover:bg-[#1f352b] transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {isExtracting ? (
                   <>
                     <Loader2 className="animate-spin" size={18}/>
                     取得中... ({extractProgress.done}/{extractProgress.total})
-                    {extractProgress.errors > 0 && <span className="text-[11px] opacity-80">エラー: {extractProgress.errors}</span>}
+                    {extractProgress.errors > 0 && <span className="text-[13px] opacity-80">エラー: {extractProgress.errors}</span>}
                   </>
                 ) : (
                   <><Sparkles size={16}/> URLから画像を取得する</>
@@ -824,72 +824,72 @@ function PortfolioPageInner() {
 
             {/* 取込結果リスト */}
             {extractedItems.length > 0 && (
-              <div className="bg-white p-6 md:p-8 rounded-2xl border border-[#EAEAEA] shadow-sm space-y-5">
+              <div className="bg-white p-6 md:p-8 rounded-2xl border border-[#E6E2DA] shadow-sm space-y-5">
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <h3 className="text-[14px] font-bold text-[#2D4B3E]">
+                  <h3 className="text-[15px] font-bold text-[#2D4B3E]">
                     取込結果 ({extractedItems.length}件 / 選択中: {extractedItems.filter(it => it.selected).length}件)
                   </h3>
                   <div className="flex gap-2">
-                    <button onClick={() => toggleSelectAll(true)} className="text-[10px] font-bold text-[#555] bg-[#FBFAF9] border border-[#EAEAEA] px-3 py-1.5 rounded-lg hover:bg-white">すべて選択</button>
-                    <button onClick={() => toggleSelectAll(false)} className="text-[10px] font-bold text-[#555] bg-[#FBFAF9] border border-[#EAEAEA] px-3 py-1.5 rounded-lg hover:bg-white">すべて解除</button>
-                    <button onClick={applyBulkToAll} className="text-[10px] font-bold text-white bg-[#117768] px-3 py-1.5 rounded-lg hover:bg-[#0d5e54]">一括設定を全件に再適用</button>
+                    <button onClick={() => toggleSelectAll(true)} className="text-[12px] font-bold text-[#3B4640] bg-[#FAFAF7] border border-[#E6E2DA] px-3 py-1.5 rounded-lg hover:bg-white">すべて選択</button>
+                    <button onClick={() => toggleSelectAll(false)} className="text-[12px] font-bold text-[#3B4640] bg-[#FAFAF7] border border-[#E6E2DA] px-3 py-1.5 rounded-lg hover:bg-white">すべて解除</button>
+                    <button onClick={applyBulkToAll} className="text-[12px] font-bold text-white bg-[#117768] px-3 py-1.5 rounded-lg hover:bg-[#0d5e54]">一括設定を全件に再適用</button>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {extractedItems.map((it, idx) => (
-                    <div key={idx} className={`border rounded-xl overflow-hidden transition-all ${it.selected ? 'border-[#2D4B3E] bg-white' : 'border-[#EAEAEA] bg-[#FBFAF9] opacity-60'}`}>
+                    <div key={idx} className={`border rounded-xl overflow-hidden transition-all ${it.selected ? 'border-[#2D4B3E] bg-white' : 'border-[#E6E2DA] bg-[#FAFAF7] opacity-60'}`}>
                       <div className="flex gap-3 p-3">
                         <label className="flex-shrink-0 cursor-pointer">
                           <input type="checkbox" checked={it.selected} onChange={e => setExtractedItems(items => items.map((x,i) => i === idx ? {...x, selected: e.target.checked} : x))} className="w-4 h-4 accent-[#2D4B3E] mt-2"/>
                         </label>
-                        <div className="w-24 h-24 flex-shrink-0 bg-[#FBFAF9] rounded-lg overflow-hidden">
+                        <div className="w-24 h-24 flex-shrink-0 bg-[#FAFAF7] rounded-lg overflow-hidden">
                           <img src={it.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer"/>
                         </div>
                         <div className="flex-1 min-w-0 space-y-1">
-                          <a href={it.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] font-mono text-[#2D4B3E] hover:underline truncate flex items-center gap-1">
+                          <a href={it.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[12px] font-mono text-[#2D4B3E] hover:underline truncate flex items-center gap-1">
                             <ExternalLink size={10}/> {it.sourceUrl.replace(/^https?:\/\//, '').slice(0, 40)}...
                           </a>
-                          {it.title && <p className="text-[11px] font-bold text-[#111] line-clamp-1">{it.title}</p>}
-                          {it.description && <p className="text-[10px] text-[#555] line-clamp-2 leading-relaxed">{it.description}</p>}
-                          <button onClick={() => removeExtractedItem(idx)} className="text-[10px] text-red-500 font-bold hover:underline">削除</button>
+                          {it.title && <p className="text-[13px] font-bold text-[#1F2A24] line-clamp-1">{it.title}</p>}
+                          {it.description && <p className="text-[12px] text-[#3B4640] line-clamp-2 leading-relaxed">{it.description}</p>}
+                          <button onClick={() => removeExtractedItem(idx)} className="text-[12px] text-red-500 font-bold hover:underline">削除</button>
                         </div>
                       </div>
-                      <div className="px-3 pb-3 space-y-2 border-t border-[#EAEAEA] pt-3 bg-[#FBFAF9]/50">
+                      <div className="px-3 pb-3 space-y-2 border-t border-[#E6E2DA] pt-3 bg-[#FAFAF7]/50">
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="text-[9px] font-bold text-[#999]">花の種類</label>
-                            <select value={it.flowerType} onChange={e => setExtractedItems(items => items.map((x,i) => i === idx ? {...x, flowerType: e.target.value} : x))} className="w-full h-8 bg-white border border-[#EAEAEA] rounded text-[10px] px-1 outline-none">
+                            <label className="text-[12px] font-bold text-[#5C6660]">花の種類</label>
+                            <select value={it.flowerType} onChange={e => setExtractedItems(items => items.map((x,i) => i === idx ? {...x, flowerType: e.target.value} : x))} className="w-full h-8 bg-white border border-[#E6E2DA] rounded text-[12px] px-1 outline-none">
                               <option value="">選択</option>
                               {flowerItems.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
                               <option value="その他">その他</option>
                             </select>
                           </div>
                           <div>
-                            <label className="text-[9px] font-bold text-[#999]">用途</label>
-                            <select value={it.purpose} onChange={e => setExtractedItems(items => items.map((x,i) => i === idx ? {...x, purpose: e.target.value} : x))} className="w-full h-8 bg-white border border-[#EAEAEA] rounded text-[10px] px-1 outline-none">
+                            <label className="text-[12px] font-bold text-[#5C6660]">用途</label>
+                            <select value={it.purpose} onChange={e => setExtractedItems(items => items.map((x,i) => i === idx ? {...x, purpose: e.target.value} : x))} className="w-full h-8 bg-white border border-[#E6E2DA] rounded text-[12px] px-1 outline-none">
                               <option value="">選択</option>
                               {designOptions.purposes.map(p => <option key={p} value={p}>{p}</option>)}
                               <option value="その他">その他</option>
                             </select>
                           </div>
                           <div>
-                            <label className="text-[9px] font-bold text-[#999]">カラー</label>
-                            <select value={it.color} onChange={e => setExtractedItems(items => items.map((x,i) => i === idx ? {...x, color: e.target.value} : x))} className="w-full h-8 bg-white border border-[#EAEAEA] rounded text-[10px] px-1 outline-none">
+                            <label className="text-[12px] font-bold text-[#5C6660]">カラー</label>
+                            <select value={it.color} onChange={e => setExtractedItems(items => items.map((x,i) => i === idx ? {...x, color: e.target.value} : x))} className="w-full h-8 bg-white border border-[#E6E2DA] rounded text-[12px] px-1 outline-none">
                               <option value="">選択</option>
                               {designOptions.colors.map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
                           </div>
                           <div>
-                            <label className="text-[9px] font-bold text-[#999]">イメージ</label>
-                            <select value={it.vibe} onChange={e => setExtractedItems(items => items.map((x,i) => i === idx ? {...x, vibe: e.target.value} : x))} className="w-full h-8 bg-white border border-[#EAEAEA] rounded text-[10px] px-1 outline-none">
+                            <label className="text-[12px] font-bold text-[#5C6660]">イメージ</label>
+                            <select value={it.vibe} onChange={e => setExtractedItems(items => items.map((x,i) => i === idx ? {...x, vibe: e.target.value} : x))} className="w-full h-8 bg-white border border-[#E6E2DA] rounded text-[12px] px-1 outline-none">
                               <option value="">選択</option>
                               {designOptions.vibes.map(v => <option key={v} value={v}>{v}</option>)}
                             </select>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <label className="flex items-center gap-1 cursor-pointer text-[10px] font-bold text-[#555] whitespace-nowrap">
+                          <label className="flex items-center gap-1 cursor-pointer text-[12px] font-bold text-[#3B4640] whitespace-nowrap">
                             <input type="checkbox" checked={it.priceHidden} onChange={e => setExtractedItems(items => items.map((x,i) => i === idx ? {...x, priceHidden: e.target.checked} : x))} className="w-3 h-3 accent-[#2D4B3E]"/>
                             金額非公開
                           </label>
@@ -899,7 +899,7 @@ function PortfolioPageInner() {
                               value={it.price}
                               onChange={e => setExtractedItems(items => items.map((x,i) => i === idx ? {...x, price: e.target.value} : x))}
                               placeholder="¥金額 (税抜)"
-                              className="flex-1 h-8 bg-white border border-[#EAEAEA] rounded text-[11px] px-2 font-bold outline-none"
+                              className="flex-1 h-8 bg-white border border-[#E6E2DA] rounded text-[13px] px-2 font-bold outline-none"
                             />
                           )}
                         </div>
@@ -908,7 +908,7 @@ function PortfolioPageInner() {
                           onChange={e => setExtractedItems(items => items.map((x,i) => i === idx ? {...x, caption: e.target.value} : x))}
                           rows={2}
                           placeholder="キャプション（任意）"
-                          className="w-full bg-white border border-[#EAEAEA] rounded text-[10px] p-2 outline-none resize-none leading-relaxed"
+                          className="w-full bg-white border border-[#E6E2DA] rounded text-[12px] p-2 outline-none resize-none leading-relaxed"
                         />
                       </div>
                     </div>
@@ -918,7 +918,7 @@ function PortfolioPageInner() {
                 <button
                   onClick={handleBulkSave}
                   disabled={isBulkSaving || extractedItems.filter(it => it.selected).length === 0}
-                  className="w-full h-14 bg-[#117768] text-white rounded-xl font-bold text-[14px] shadow-md hover:bg-[#0d5e54] transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full h-14 bg-[#117768] text-white rounded-xl font-bold text-[15px] shadow-md hover:bg-[#0d5e54] transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {isBulkSaving ? <><Loader2 className="animate-spin" size={18}/> 保存中...</> : <><CheckCircle size={16}/> 選択した{extractedItems.filter(it => it.selected).length}件を作品として登録</>}
                 </button>
@@ -934,25 +934,25 @@ function PortfolioPageInner() {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={() => setDetailImage(null)}>
           <div className="bg-white max-w-3xl w-full max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
             {/* ヘッダー */}
-            <div className="sticky top-0 bg-white border-b border-[#EAEAEA] px-6 py-4 flex items-center justify-between rounded-t-3xl z-10">
+            <div className="sticky top-0 bg-white border-b border-[#E6E2DA] px-6 py-4 flex items-center justify-between rounded-t-3xl z-10">
               <h2 className="text-[16px] font-bold text-[#2D4B3E]">作品詳細</h2>
-              <button onClick={() => setDetailImage(null)} className="p-2 hover:bg-[#FBFAF9] rounded-full">
-                <X size={20} className="text-[#555]"/>
+              <button onClick={() => setDetailImage(null)} className="p-2 hover:bg-[#FAFAF7] rounded-full">
+                <X size={20} className="text-[#3B4640]"/>
               </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
               {/* 画像エリア */}
-              <div className="relative bg-[#FBFAF9] aspect-square md:aspect-auto">
+              <div className="relative bg-[#FAFAF7] aspect-square md:aspect-auto">
                 <img src={detailImage.url} alt="" className="w-full h-full object-cover" />
                 {detailImage.priceHidden ? (
-                  <div className="absolute top-4 right-4 bg-white/95 backdrop-blur px-4 py-2 rounded-full text-[14px] font-bold text-[#2D4B3E] shadow-md">
+                  <div className="absolute top-4 right-4 bg-white/95 backdrop-blur px-4 py-2 rounded-full text-[15px] font-bold text-[#2D4B3E] shadow-md">
                     金額: お問い合わせ
                   </div>
                 ) : (
                   <div className="absolute top-4 right-4 bg-[#2D4B3E] text-white px-4 py-2 rounded-full text-[16px] font-bold shadow-md">
                     ¥{Number(detailImage.price).toLocaleString()}
-                    <span className="text-[10px] ml-1 opacity-80">(税抜)</span>
+                    <span className="text-[12px] ml-1 opacity-80">(税抜)</span>
                   </div>
                 )}
               </div>
@@ -961,47 +961,47 @@ function PortfolioPageInner() {
               <div className="p-6 space-y-4">
                 {detailImage.managementNo && (
                   <div className="bg-[#2D4B3E]/10 px-3 py-2 rounded-lg">
-                    <p className="text-[10px] font-bold text-[#999]">管理番号</p>
-                    <p className="text-[14px] font-mono font-bold text-[#2D4B3E]">{detailImage.managementNo}</p>
+                    <p className="text-[12px] font-bold text-[#5C6660]">管理番号</p>
+                    <p className="text-[15px] font-mono font-bold text-[#2D4B3E]">{detailImage.managementNo}</p>
                   </div>
                 )}
 
                 {/* 税込価格 */}
                 {!detailImage.priceHidden && (
                   <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                    <p className="text-[10px] font-bold text-emerald-700">税込価格</p>
+                    <p className="text-[12px] font-bold text-emerald-700">税込価格</p>
                     <p className="text-[20px] font-bold text-emerald-700">
                       ¥{Math.floor(Number(detailImage.price) * 1.1).toLocaleString()}
                     </p>
-                    <p className="text-[10px] text-emerald-600">税抜 ¥{Number(detailImage.price).toLocaleString()} + 消費税 ¥{Math.floor(Number(detailImage.price) * 0.1).toLocaleString()}</p>
+                    <p className="text-[12px] text-emerald-600">税抜 ¥{Number(detailImage.price).toLocaleString()} + 消費税 ¥{Math.floor(Number(detailImage.price) * 0.1).toLocaleString()}</p>
                   </div>
                 )}
 
                 {/* タグ */}
                 <div className="space-y-2">
-                  <p className="text-[10px] font-bold text-[#999]">作品情報</p>
-                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <p className="text-[12px] font-bold text-[#5C6660]">作品情報</p>
+                  <div className="grid grid-cols-2 gap-2 text-[13px]">
                     {detailImage.flowerType && (
                       <div className="bg-[#2D4B3E] text-white px-3 py-2 rounded-lg">
-                        <span className="text-[9px] opacity-70 block">花の種類</span>
+                        <span className="text-[12px] opacity-70 block">花の種類</span>
                         <span className="font-bold">{detailImage.flowerType}</span>
                       </div>
                     )}
                     {detailImage.purpose && (
-                      <div className="bg-[#FBFAF9] border border-[#EAEAEA] px-3 py-2 rounded-lg">
-                        <span className="text-[9px] text-[#999] block">用途</span>
+                      <div className="bg-[#FAFAF7] border border-[#E6E2DA] px-3 py-2 rounded-lg">
+                        <span className="text-[12px] text-[#5C6660] block">用途</span>
                         <span className="font-bold text-[#2D4B3E]">{detailImage.purpose}</span>
                       </div>
                     )}
                     {detailImage.color && (
-                      <div className="bg-[#FBFAF9] border border-[#EAEAEA] px-3 py-2 rounded-lg">
-                        <span className="text-[9px] text-[#999] block">カラー</span>
+                      <div className="bg-[#FAFAF7] border border-[#E6E2DA] px-3 py-2 rounded-lg">
+                        <span className="text-[12px] text-[#5C6660] block">カラー</span>
                         <span className="font-bold text-[#2D4B3E]">{detailImage.color}</span>
                       </div>
                     )}
                     {detailImage.vibe && (
-                      <div className="bg-[#FBFAF9] border border-[#EAEAEA] px-3 py-2 rounded-lg">
-                        <span className="text-[9px] text-[#999] block">イメージ</span>
+                      <div className="bg-[#FAFAF7] border border-[#E6E2DA] px-3 py-2 rounded-lg">
+                        <span className="text-[12px] text-[#5C6660] block">イメージ</span>
                         <span className="font-bold text-[#2D4B3E]">{detailImage.vibe}</span>
                       </div>
                     )}
@@ -1010,9 +1010,9 @@ function PortfolioPageInner() {
 
                 {/* キャプション */}
                 <div className="space-y-2">
-                  <p className="text-[10px] font-bold text-[#999]">キャプション全文</p>
-                  <div className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg p-3 max-h-48 overflow-y-auto">
-                    <p className="text-[12px] text-[#222] whitespace-pre-wrap leading-relaxed">
+                  <p className="text-[12px] font-bold text-[#5C6660]">キャプション全文</p>
+                  <div className="bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg p-3 max-h-48 overflow-y-auto">
+                    <p className="text-[14px] text-[#222] whitespace-pre-wrap leading-relaxed">
                       {detailImage.caption || '（キャプションなし）'}
                     </p>
                   </div>
@@ -1021,29 +1021,29 @@ function PortfolioPageInner() {
                 {/* 元 Instagram URL */}
                 {detailImage.sourceInstagramUrl && (
                   <a href={detailImage.sourceInstagramUrl} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-[11px] text-[#2D4B3E] font-bold hover:underline bg-[#FBFAF9] px-3 py-2 rounded-lg">
+                    className="flex items-center gap-2 text-[13px] text-[#2D4B3E] font-bold hover:underline bg-[#FAFAF7] px-3 py-2 rounded-lg">
                     <ExternalLink size={12}/> Instagram 元投稿を見る
                   </a>
                 )}
 
                 {/* アクションボタン */}
-                <div className="space-y-2 pt-3 border-t border-[#EAEAEA]">
+                <div className="space-y-2 pt-3 border-t border-[#E6E2DA]">
                   <button
                     onClick={() => { handleCopyUrl(detailImage.id); }}
-                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[12px] transition-all border ${copiedId === detailImage.id ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-[#2D4B3E] border-[#2D4B3E] text-white hover:bg-[#1f352b]'}`}
+                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[14px] transition-all border ${copiedId === detailImage.id ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-[#2D4B3E] border-[#2D4B3E] text-white hover:bg-[#1f352b]'}`}
                   >
                     {copiedId === detailImage.id ? <><CheckCircle size={14}/> コピーしました！</> : <><Copy size={14}/> カタログURLをコピー</>}
                   </button>
                   <a
                     href={`/order/${currentTenantId}/${appSettings?.shops?.[0]?.id || 'default'}?img=${detailImage.id}`}
                     target="_blank" rel="noopener noreferrer"
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[12px] bg-white border border-[#EAEAEA] text-[#555] hover:border-[#2D4B3E] hover:text-[#2D4B3E]"
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[14px] bg-white border border-[#E6E2DA] text-[#3B4640] hover:border-[#2D4B3E] hover:text-[#2D4B3E]"
                   >
                     <ExternalLink size={14}/> お客様画面でプレビュー
                   </a>
                   <button
                     onClick={() => { handleDelete(detailImage.id); setDetailImage(null); }}
-                    className="w-full py-2 text-[11px] font-bold text-red-500 hover:bg-red-50 rounded-lg"
+                    className="w-full py-2 text-[13px] font-bold text-red-500 hover:bg-red-50 rounded-lg"
                   >
                     作品を削除
                   </button>

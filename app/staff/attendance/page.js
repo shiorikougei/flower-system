@@ -304,27 +304,27 @@ function AttendancePageInner() {
   }
 
   if (!allowed) {
-    return <main className="p-12 text-center"><p className="text-[14px] font-bold text-[#999]">この画面はオーナー権限が必要です</p></main>;
+    return <main className="p-12 text-center"><p className="text-[15px] font-bold text-[#5C6660]">この画面はオーナー権限が必要です</p></main>;
   }
 
   return (
     <main className="pb-32 font-sans text-left">
-      <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] px-6 md:px-8 py-4 sticky top-0 z-10 flex items-center justify-between">
+      <header className="bg-[#F6F4EF]/95 backdrop-blur border-b border-[#E6E2DA] px-6 md:px-8 py-4 sticky top-0 z-10 flex items-center justify-between">
         <div>
-          <h1 className="text-[18px] md:text-[20px] font-bold text-[#2D4B3E] tracking-tight flex items-center gap-2">勤怠管理 <HelpTooltip articleId="attendance_book_pdf"/></h1>
-          <p className="text-[11px] font-bold text-[#999] mt-1">出退勤・休憩記録の管理 + 給与計算</p>
+          <h1 className="text-[24px] md:text-[28px] font-bold tracking-[0.02em] text-[#1F2A24] flex items-center gap-2">勤怠管理 <HelpTooltip articleId="attendance_book_pdf"/></h1>
+          <p className="text-[13px] font-bold text-[#5C6660] mt-1">出退勤・休憩記録の管理 + 給与計算</p>
         </div>
-        <button onClick={loadAttendance} className="p-2 hover:bg-[#FBFAF9] rounded-full text-[#999]">
+        <button onClick={loadAttendance} className="p-2 hover:bg-[#FAFAF7] rounded-full text-[#5C6660]">
           <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''}/>
         </button>
       </header>
 
-      <div className="max-w-[1100px] mx-auto p-6 md:p-8 space-y-6">
+      <div className="w-full p-6 md:p-8 space-y-6">
         {/* 月別サマリー */}
-        <div className="bg-white p-5 rounded-2xl border border-[#EAEAEA] shadow-sm">
-          <h3 className="text-[14px] font-bold text-[#2D4B3E] mb-3">月別サマリー</h3>
+        <div className="bg-white p-5 rounded-2xl border border-[#E6E2DA] shadow-sm">
+          <h3 className="text-[15px] font-bold text-[#2D4B3E] mb-3">月別サマリー</h3>
           {summary.length === 0 ? (
-            <p className="text-[12px] text-[#999]">勤怠記録がありません</p>
+            <p className="text-[14px] text-[#5C6660]">勤怠記録がありません</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {summary.sort((a, b) => b.monthKey.localeCompare(a.monthKey)).map(s => {
@@ -339,37 +339,37 @@ function AttendancePageInner() {
                 const totalBreakMin = monthAttendance.reduce((sum, a) => sum + (a.break_minutes || 0), 0);
 
                 return (
-                  <div key={`${s.staffName}_${s.monthKey}`} className="bg-[#FBFAF9] p-3 rounded-xl border border-[#EAEAEA] space-y-2">
+                  <div key={`${s.staffName}_${s.monthKey}`} className="bg-[#FAFAF7] p-3 rounded-xl border border-[#E6E2DA] space-y-2">
                     <div className="flex items-start justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="text-[11px] text-[#999]">{s.monthKey}</p>
-                        <p className="text-[14px] font-bold text-[#111] mt-0.5">{s.staffName}</p>
+                        <p className="text-[13px] text-[#5C6660]">{s.monthKey}</p>
+                        <p className="text-[15px] font-bold text-[#1F2A24] mt-0.5">{s.staffName}</p>
                       </div>
                       <button
                         onClick={() => printAttendanceSheet(s.staffName, s.monthKey)}
-                        className="text-[10px] font-bold text-[#117768] border border-[#117768]/40 bg-white px-2 py-1 rounded-lg hover:bg-[#117768]/10 flex items-center gap-1 shrink-0 ml-2"
+                        className="text-[12px] font-bold text-[#117768] border border-[#117768]/40 bg-white px-2 py-1 rounded-lg hover:bg-[#117768]/10 flex items-center gap-1 shrink-0 ml-2"
                       >
                         <FileText size={11}/> 出勤簿
                       </button>
                     </div>
                     <div className="flex items-baseline justify-between">
-                      <p className="text-[20px] font-bold text-[#2D4B3E]">{s.totalHours}<span className="text-[10px] ml-1">時間</span></p>
-                      <p className="text-[10px] text-[#999]">{s.days}日勤務</p>
+                      <p className="text-[20px] font-bold text-[#2D4B3E]">{s.totalHours}<span className="text-[12px] ml-1">時間</span></p>
+                      <p className="text-[12px] text-[#5C6660]">{s.days}日勤務</p>
                     </div>
                     {totalBreakMin > 0 && (
-                      <p className="text-[10px] text-[#555]">休憩: {Math.floor(totalBreakMin/60)}h{totalBreakMin%60}m</p>
+                      <p className="text-[12px] text-[#3B4640]">休憩: {Math.floor(totalBreakMin/60)}h{totalBreakMin%60}m</p>
                     )}
                     {payroll && (
-                      <div className="pt-2 border-t border-[#EAEAEA] space-y-0.5">
-                        <div className="flex justify-between text-[10px] text-[#555]">
+                      <div className="pt-2 border-t border-[#E6E2DA] space-y-0.5">
+                        <div className="flex justify-between text-[12px] text-[#3B4640]">
                           <span>支給総額</span><span className="font-bold">¥{payroll.grossAmount.toLocaleString()}</span>
                         </div>
                         {payroll.deductions.total > 0 && (
-                          <div className="flex justify-between text-[10px] text-red-500">
+                          <div className="flex justify-between text-[12px] text-red-500">
                             <span>控除合計</span><span>− ¥{payroll.deductions.total.toLocaleString()}</span>
                           </div>
                         )}
-                        <div className="flex justify-between text-[12px] font-bold text-[#117768] pt-0.5 border-t border-[#EAEAEA]">
+                        <div className="flex justify-between text-[14px] font-bold text-[#117768] pt-0.5 border-t border-[#E6E2DA]">
                           <span>差引支給</span><span>¥{payroll.netAmount.toLocaleString()}</span>
                         </div>
                       </div>
@@ -377,7 +377,7 @@ function AttendancePageInner() {
                     {warnings.length > 0 && (
                       <div className="space-y-1 pt-1">
                         {warnings.map((w, i) => (
-                          <div key={i} className={`flex items-start gap-1 text-[10px] font-bold p-1.5 rounded ${
+                          <div key={i} className={`flex items-start gap-1 text-[12px] font-bold p-1.5 rounded ${
                             w.severity === 'high' ? 'bg-red-50 text-red-700 border border-red-200' :
                             'bg-amber-50 text-amber-700 border border-amber-200'
                           }`}>
@@ -395,21 +395,21 @@ function AttendancePageInner() {
         </div>
 
         {/* 直近の打刻記録 */}
-        <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm overflow-hidden">
-          <div className="px-5 py-3 border-b border-[#EAEAEA] flex items-center justify-between">
-            <h3 className="text-[14px] font-bold text-[#2D4B3E]">直近の打刻記録</h3>
+        <div className="bg-white rounded-2xl border border-[#E6E2DA] shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-[#E6E2DA] flex items-center justify-between">
+            <h3 className="text-[15px] font-bold text-[#2D4B3E]">直近の打刻記録</h3>
             <button
               onClick={() => setEditForm({ staffName: staffList[0]?.name || '', clockInAt: toLocalInput(new Date()), clockOutAt: '', notes: '' })}
-              className="flex items-center gap-1 bg-[#117768] text-white text-[11px] font-bold px-3 py-1.5 rounded-lg hover:bg-[#0f6a5b]"
+              className="flex items-center gap-1 bg-[#117768] text-white text-[13px] font-bold px-3 py-1.5 rounded-lg hover:bg-[#0f6a5b]"
             >
               <Plus size={12}/> 手動で追加
             </button>
           </div>
           {attendance.length === 0 ? (
-            <p className="p-8 text-center text-[12px] text-[#999]">記録がありません</p>
+            <p className="p-8 text-center text-[14px] text-[#5C6660]">記録がありません</p>
           ) : (
-            <table className="w-full text-[12px]">
-              <thead className="bg-[#FBFAF9] border-b border-[#EAEAEA] text-[10px] font-bold text-[#999]">
+            <table className="w-full text-[14px]">
+              <thead className="bg-[#FAFAF7] border-b border-[#E6E2DA] text-[12px] font-bold text-[#5C6660]">
                 <tr>
                   <th className="px-4 py-2 text-left">スタッフ</th>
                   <th className="px-4 py-2 text-left">出勤</th>
@@ -419,19 +419,19 @@ function AttendancePageInner() {
                   <th className="px-4 py-2 text-right w-24">操作</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#F7F7F7]">
+              <tbody className="divide-y divide-[#F6F4EF]">
                 {attendance.slice(0, 100).map(a => {
                   const workedMin = (a.duration_minutes || 0) - (a.break_minutes || 0);
                   return (
-                    <tr key={a.id} className="hover:bg-[#FBFAF9]/50">
-                      <td className="px-4 py-3 font-bold text-[#111]">{a.staff_name}</td>
-                      <td className="px-4 py-3 text-[#555] font-mono text-[11px]">{fmtDate(a.clock_in_at)}</td>
-                      <td className="px-4 py-3 text-[#555] font-mono text-[11px]">{a.clock_out_at ? fmtDate(a.clock_out_at) : <span className="text-[#117768] font-bold">出勤中{a.break_start_at && '（休憩中）'}</span>}</td>
-                      <td className="px-4 py-3 text-right text-[#555] text-[11px]">{a.break_minutes ? `${a.break_minutes}分` : '-'}</td>
+                    <tr key={a.id} className="hover:bg-[#FAFAF7]/50">
+                      <td className="px-4 py-3 font-bold text-[#1F2A24]">{a.staff_name}</td>
+                      <td className="px-4 py-3 text-[#3B4640] font-mono text-[13px]">{fmtDate(a.clock_in_at)}</td>
+                      <td className="px-4 py-3 text-[#3B4640] font-mono text-[13px]">{a.clock_out_at ? fmtDate(a.clock_out_at) : <span className="text-[#117768] font-bold">出勤中{a.break_start_at && '（休憩中）'}</span>}</td>
+                      <td className="px-4 py-3 text-right text-[#3B4640] text-[13px]">{a.break_minutes ? `${a.break_minutes}分` : '-'}</td>
                       <td className="px-4 py-3 text-right text-[#2D4B3E] font-bold">{workedMin > 0 ? `${Math.floor(workedMin/60)}時間${workedMin%60}分` : '-'}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => setEditForm({ id: a.id, staffName: a.staff_name, clockInAt: toLocalInput(a.clock_in_at), clockOutAt: toLocalInput(a.clock_out_at), notes: a.notes || '' })} className="text-[#999] hover:text-[#2D4B3E] p-1"><Edit2 size={12}/></button>
+                          <button onClick={() => setEditForm({ id: a.id, staffName: a.staff_name, clockInAt: toLocalInput(a.clock_in_at), clockOutAt: toLocalInput(a.clock_out_at), notes: a.notes || '' })} className="text-[#5C6660] hover:text-[#2D4B3E] p-1"><Edit2 size={12}/></button>
                           <button onClick={() => deleteAttendance(a.id)} className="text-red-300 hover:text-red-600 p-1"><Trash2 size={12}/></button>
                         </div>
                       </td>
@@ -449,32 +449,32 @@ function AttendancePageInner() {
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setEditForm(null)}>
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[15px] font-bold text-[#111]">{editForm.id ? '打刻を編集' : '打刻を手動追加'}</h3>
-              <button onClick={() => setEditForm(null)} className="text-[#999] hover:text-[#111]"><X size={18}/></button>
+              <h3 className="text-[15px] font-bold text-[#1F2A24]">{editForm.id ? '打刻を編集' : '打刻を手動追加'}</h3>
+              <button onClick={() => setEditForm(null)} className="text-[#5C6660] hover:text-[#1F2A24]"><X size={18}/></button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="text-[10px] font-bold text-[#999] tracking-widest">スタッフ</label>
-                <select value={editForm.staffName} onChange={(e) => setEditForm({...editForm, staffName: e.target.value})} className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] font-bold outline-none">
+                <label className="text-[12px] font-bold text-[#5C6660] tracking-widest">スタッフ</label>
+                <select value={editForm.staffName} onChange={(e) => setEditForm({...editForm, staffName: e.target.value})} className="w-full mt-1 h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] font-bold outline-none">
                   <option value="">選択...</option>
                   {staffList.map((s, i) => <option key={i} value={s.name}>{s.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-[10px] font-bold text-[#999] tracking-widest">出勤日時</label>
-                <input type="datetime-local" value={editForm.clockInAt} onChange={(e) => setEditForm({...editForm, clockInAt: e.target.value})} className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none"/>
+                <label className="text-[12px] font-bold text-[#5C6660] tracking-widest">出勤日時</label>
+                <input type="datetime-local" value={editForm.clockInAt} onChange={(e) => setEditForm({...editForm, clockInAt: e.target.value})} className="w-full mt-1 h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none"/>
               </div>
               <div>
-                <label className="text-[10px] font-bold text-[#999] tracking-widest">退勤日時（空欄=出勤中）</label>
-                <input type="datetime-local" value={editForm.clockOutAt} onChange={(e) => setEditForm({...editForm, clockOutAt: e.target.value})} className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none"/>
+                <label className="text-[12px] font-bold text-[#5C6660] tracking-widest">退勤日時（空欄=出勤中）</label>
+                <input type="datetime-local" value={editForm.clockOutAt} onChange={(e) => setEditForm({...editForm, clockOutAt: e.target.value})} className="w-full mt-1 h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none"/>
               </div>
               <div>
-                <label className="text-[10px] font-bold text-[#999] tracking-widest">メモ</label>
-                <input type="text" value={editForm.notes} onChange={(e) => setEditForm({...editForm, notes: e.target.value})} placeholder="例: 退勤忘れ修正" className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none"/>
+                <label className="text-[12px] font-bold text-[#5C6660] tracking-widest">メモ</label>
+                <input type="text" value={editForm.notes} onChange={(e) => setEditForm({...editForm, notes: e.target.value})} placeholder="例: 退勤忘れ修正" className="w-full mt-1 h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none"/>
               </div>
               <div className="flex gap-2 pt-2">
-                <button onClick={() => setEditForm(null)} className="flex-1 h-11 bg-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-lg">キャンセル</button>
-                <button onClick={saveAttendance} className="flex-1 h-11 bg-[#117768] text-white text-[12px] font-bold rounded-lg hover:bg-[#0f6a5b]">保存</button>
+                <button onClick={() => setEditForm(null)} className="flex-1 h-11 bg-[#E6E2DA] text-[#3B4640] text-[14px] font-bold rounded-lg">キャンセル</button>
+                <button onClick={saveAttendance} className="flex-1 h-11 bg-[#117768] text-white text-[14px] font-bold rounded-lg hover:bg-[#0f6a5b]">保存</button>
               </div>
             </div>
           </div>

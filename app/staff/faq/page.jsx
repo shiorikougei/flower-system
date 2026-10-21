@@ -116,8 +116,8 @@ export default function StaffFaqPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center">
-        <p className="text-[#999] text-[13px]">読み込み中...</p>
+      <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center">
+        <p className="text-[#5C6660] text-[15px]">読み込み中...</p>
       </div>
     );
   }
@@ -134,25 +134,25 @@ export default function StaffFaqPage() {
   const existingCategories = Array.from(new Set(items.map(it => it.category).filter(Boolean)));
 
   return (
-    <div className="min-h-screen bg-[#FBFAF9] p-6 md:p-10">
-      <div className="max-w-[1000px] mx-auto">
+    <div className="min-h-screen bg-[#FAFAF7] p-6 md:p-10">
+      <div className="w-full">
         <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
           <div>
-            <h1 className="text-[24px] font-bold text-[#2D4B3E]">よくあるご質問 管理</h1>
-            <p className="text-[12px] text-[#666] mt-1">お客様向け FAQ ページの内容を編集します。Google検索のリッチリザルトにも反映されます。</p>
+            <h1 className="text-[24px] md:text-[28px] font-bold tracking-[0.02em] text-[#1F2A24]">よくあるご質問 管理</h1>
+            <p className="text-[14px] text-[#3B4640] mt-1">お客様向け FAQ ページの内容を編集します。Google検索のリッチリザルトにも反映されます。</p>
           </div>
           <div className="flex gap-2">
             <button
               onClick={handleResetDefaults}
               disabled={saving}
-              className="px-4 h-10 bg-white border border-[#EAEAEA] text-[#666] rounded-xl text-[12px] font-bold hover:bg-[#FBFAF9] flex items-center gap-1"
+              className="px-4 h-10 bg-white border border-[#E6E2DA] text-[#3B4640] rounded-xl text-[14px] font-bold hover:bg-[#FAFAF7] flex items-center gap-1"
             >
               <RotateCcw size={14}/> デフォルトに戻す
             </button>
             <button
               onClick={() => setEditing({ _isNew: true, category: existingCategories[0] || "ご注文・配送", question: "", answer: "" })}
               disabled={saving}
-              className="px-4 h-10 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold flex items-center gap-1"
+              className="px-4 h-10 bg-[#2D4B3E] text-white rounded-xl text-[14px] font-bold flex items-center gap-1"
             >
               <Plus size={14}/> 新規追加
             </button>
@@ -160,14 +160,14 @@ export default function StaffFaqPage() {
         </div>
 
         {message && (
-          <div className={`mb-4 p-3 rounded-xl text-[12px] font-bold ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+          <div className={`mb-4 p-3 rounded-xl text-[14px] font-bold ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
             {message.text}
           </div>
         )}
 
         {/* ヒント */}
         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-          <p className="text-[11px] text-blue-900 leading-relaxed flex items-start gap-2">
+          <p className="text-[13px] text-blue-900 leading-relaxed flex items-start gap-2">
             <HelpCircle size={14} className="mt-0.5 shrink-0"/>
             <span>
               <strong>SEO効果UPのコツ</strong>: 質問は「お客様が検索しそうな自然な言葉」で。回答は <strong>2〜4文</strong> で要点を絞る。
@@ -179,20 +179,20 @@ export default function StaffFaqPage() {
         {/* カテゴリ別表示 */}
         {Object.entries(grouped).map(([cat, list]) => (
           <div key={cat} className="mb-6">
-            <h2 className="text-[14px] font-bold text-[#2D4B3E] mb-3 pb-2 border-b border-[#EAEAEA]">{cat}</h2>
+            <h2 className="text-[15px] font-bold text-[#2D4B3E] mb-3 pb-2 border-b border-[#E6E2DA]">{cat}</h2>
             <div className="space-y-2">
               {list.map((it) => (
-                <div key={it._index} className="bg-white rounded-xl p-4 border border-[#EAEAEA]">
+                <div key={it._index} className="bg-white rounded-xl p-4 border border-[#E6E2DA]">
                   <div className="flex items-start gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-bold text-[#111]">Q. {it.question}</p>
-                      <p className="text-[12px] text-[#555] mt-1.5 leading-relaxed">A. {it.answer}</p>
+                      <p className="text-[15px] font-bold text-[#1F2A24]">Q. {it.question}</p>
+                      <p className="text-[14px] text-[#3B4640] mt-1.5 leading-relaxed">A. {it.answer}</p>
                     </div>
                     <div className="flex flex-col gap-1">
                       <button
                         onClick={() => handleMove(it._index, -1)}
                         disabled={saving || it._index === 0}
-                        className="w-7 h-7 bg-[#FBFAF9] rounded-lg flex items-center justify-center disabled:opacity-30"
+                        className="w-7 h-7 bg-[#FAFAF7] rounded-lg flex items-center justify-center disabled:opacity-30"
                         title="上へ"
                       >
                         <ChevronUp size={12}/>
@@ -200,7 +200,7 @@ export default function StaffFaqPage() {
                       <button
                         onClick={() => handleMove(it._index, 1)}
                         disabled={saving || it._index === items.length - 1}
-                        className="w-7 h-7 bg-[#FBFAF9] rounded-lg flex items-center justify-center disabled:opacity-30"
+                        className="w-7 h-7 bg-[#FAFAF7] rounded-lg flex items-center justify-center disabled:opacity-30"
                         title="下へ"
                       >
                         <ChevronDown size={12}/>
@@ -210,7 +210,7 @@ export default function StaffFaqPage() {
                       <button
                         onClick={() => setEditing({ ...it })}
                         disabled={saving}
-                        className="w-7 h-7 bg-[#FBFAF9] rounded-lg flex items-center justify-center"
+                        className="w-7 h-7 bg-[#FAFAF7] rounded-lg flex items-center justify-center"
                         title="編集"
                       >
                         <Edit2 size={12}/>
@@ -232,9 +232,9 @@ export default function StaffFaqPage() {
         ))}
 
         {items.length === 0 && (
-          <div className="bg-white border border-dashed border-[#EAEAEA] rounded-2xl p-12 text-center">
-            <p className="text-[14px] font-bold text-[#999]">FAQ項目がありません</p>
-            <p className="text-[11px] text-[#CCC] mt-2">「新規追加」または「デフォルトに戻す」から始めましょう</p>
+          <div className="bg-white border border-dashed border-[#E6E2DA] rounded-2xl p-12 text-center">
+            <p className="text-[15px] font-bold text-[#5C6660]">FAQ項目がありません</p>
+            <p className="text-[13px] text-[#CCC] mt-2">「新規追加」または「デフォルトに戻す」から始めましょう</p>
           </div>
         )}
       </div>
@@ -279,20 +279,20 @@ function EditFaqModal({ item, existingCategories, onClose, onSave }) {
 
           <div className="space-y-4">
             <div>
-              <label className="text-[11px] font-bold text-[#666]">カテゴリ *</label>
+              <label className="text-[13px] font-bold text-[#3B4640]">カテゴリ *</label>
               {!customCategory && existingCategories.length > 0 ? (
                 <div className="flex gap-2">
                   <select
                     value={form.category}
                     onChange={e => setForm({ ...form, category: e.target.value })}
-                    className="flex-1 h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px]"
+                    className="flex-1 h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px]"
                   >
                     {existingCategories.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                   <button
                     type="button"
                     onClick={() => setCustomCategory(true)}
-                    className="h-11 px-3 bg-[#F5F2EE] rounded-xl text-[11px] font-bold"
+                    className="h-11 px-3 bg-[#F5F2EE] rounded-xl text-[13px] font-bold"
                   >
                     新規カテゴリ
                   </button>
@@ -302,46 +302,46 @@ function EditFaqModal({ item, existingCategories, onClose, onSave }) {
                   type="text"
                   value={form.category}
                   onChange={e => setForm({ ...form, category: e.target.value })}
-                  className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px]"
+                  className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px]"
                   placeholder="ご注文・配送 / 立札 / 決済 / お花のお手入れ など"
                 />
               )}
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#666]">質問 *（お客様目線の自然な言葉で）</label>
+              <label className="text-[13px] font-bold text-[#3B4640]">質問 *（お客様目線の自然な言葉で）</label>
               <input
                 type="text"
                 value={form.question}
                 onChange={e => setForm({ ...form, question: e.target.value })}
-                className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px]"
+                className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px]"
                 placeholder="当日のご注文・配送は可能ですか？"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-[#666]">回答 *（2〜4文で要点を）</label>
+              <label className="text-[13px] font-bold text-[#3B4640]">回答 *（2〜4文で要点を）</label>
               <textarea
                 value={form.answer}
                 onChange={e => setForm({ ...form, answer: e.target.value })}
                 rows={6}
-                className="w-full bg-[#FBFAF9] border rounded-xl px-4 py-3 text-[13px] leading-relaxed"
+                className="w-full bg-[#FAFAF7] border rounded-xl px-4 py-3 text-[15px] leading-relaxed"
                 placeholder="商品により対応可否が異なります。当日対応可能なお花の場合、午前中までのご注文で当日配送承れる場合がございます。"
               />
-              <p className="text-[10px] text-[#999] text-right mt-1">{form.answer.length} 文字</p>
+              <p className="text-[12px] text-[#5C6660] text-right mt-1">{form.answer.length} 文字</p>
             </div>
           </div>
 
           <div className="flex gap-2 mt-6">
             <button
               onClick={onClose}
-              className="flex-1 h-11 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] font-bold"
+              className="flex-1 h-11 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[14px] font-bold"
             >
               キャンセル
             </button>
             <button
               onClick={handleSubmit}
-              className="flex-1 h-11 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold flex items-center justify-center gap-1"
+              className="flex-1 h-11 bg-[#2D4B3E] text-white rounded-xl text-[14px] font-bold flex items-center justify-center gap-1"
             >
               <Save size={14}/> 保存
             </button>

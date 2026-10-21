@@ -330,15 +330,15 @@ export default function SettingsPage() {
       <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-8">
         <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Building2 size={20}/> システム基本設定 (アプリ名・ID)</h2>
         <div className="space-y-4">
-          <div className="space-y-1 bg-[#F7F7F7] p-5 rounded-2xl border border-[#EAEAEA]">
-            <label className="text-[11px] font-bold text-[#2D4B3E] flex items-center gap-2">テナントID (URL用システム連携ID)</label>
-            <p className="text-[10px] text-[#999999] mb-2">※法人ページやお客様の注文ページのURLに使用されます。</p>
-            <input type="text" value={generalConfig.tenantId || currentTenantId || ''} readOnly className="w-full h-12 bg-white border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none text-gray-500 transition-colors" />
+          <div className="space-y-1 bg-[#F6F4EF] p-5 rounded-2xl border border-[#E6E2DA]">
+            <label className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2">テナントID (URL用システム連携ID)</label>
+            <p className="text-[12px] text-[#5C6660] mb-2">※法人ページやお客様の注文ページのURLに使用されます。</p>
+            <input type="text" value={generalConfig.tenantId || currentTenantId || ''} readOnly className="w-full h-12 bg-white border border-[#E6E2DA] rounded-xl px-4 font-bold outline-none text-gray-500 transition-colors" />
           </div>
           <div className="pt-2">
             <div className="space-y-1">
-              <label className="text-[11px] font-bold text-[#999999]">アプリ名 (ショップ全体名)</label>
-              <input type="text" value={generalConfig.appName} onChange={(e)=>setGeneralConfig({...generalConfig, appName: e.target.value})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E] transition-colors" placeholder="花・花OHANA!"/>
+              <label className="text-[13px] font-bold text-[#5C6660]">アプリ名 (ショップ全体名)</label>
+              <input type="text" value={generalConfig.appName} onChange={(e)=>setGeneralConfig({...generalConfig, appName: e.target.value})} className="w-full h-12 bg-[#FAFAF7] border rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E] transition-colors" placeholder="花・花OHANA!"/>
             </div>
           </div>
         </div>
@@ -347,46 +347,46 @@ export default function SettingsPage() {
       <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-8">
         <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><ImageIcon size={20}/> ロゴ・画像・セキュリティ</h2>
         <div className="space-y-4">
-          <label className="text-[11px] font-bold text-[#999999]">ロゴ画像</label>
-          {!generalConfig.logoUrl && <input type="file" accept="image/*" onChange={(e)=>handleImg(e, 'logoUrl')} className="block w-full text-xs" />}
+          <label className="text-[13px] font-bold text-[#5C6660]">ロゴ画像</label>
+          {!generalConfig.logoUrl && <input type="file" accept="image/*" onChange={(e)=>handleImg(e, 'logoUrl')} className="block w-full text-[13px]" />}
           {generalConfig.logoUrl && (
-            <div className="p-6 bg-[#FBFAF9] rounded-2xl border space-y-6 relative">
+            <div className="p-6 bg-[#FAFAF7] rounded-2xl border space-y-6 relative">
               <button onClick={() => setGeneralConfig({...generalConfig, logoUrl: ''})} className="absolute top-4 right-4 text-red-400 hover:text-red-600 bg-white p-2 rounded-full shadow-sm"><Trash2 size={16}/></button>
-              <div className="flex items-center justify-between"><span className="text-[12px] font-bold">表示サイズ: {generalConfig.logoSize}%</span><input type="range" min="30" max="150" value={generalConfig.logoSize} onChange={(e)=>setGeneralConfig({...generalConfig, logoSize: Number(e.target.value)})} className="w-40 accent-[#2D4B3E]"/></div>
-              <div className="flex items-center justify-between"><span className="text-[12px] font-bold">白背景を透過</span><button onClick={()=>setGeneralConfig({...generalConfig, logoTransparent: !generalConfig.logoTransparent})} className={`w-12 h-6 rounded-full transition-all ${generalConfig.logoTransparent ? 'bg-[#2D4B3E]' : 'bg-gray-300'}`}><div className={`w-4 h-4 bg-white rounded-full mx-1 transition-all ${generalConfig.logoTransparent ? 'translate-x-6' : ''}`}/></button></div>
+              <div className="flex items-center justify-between"><span className="text-[14px] font-bold">表示サイズ: {generalConfig.logoSize}%</span><input type="range" min="30" max="150" value={generalConfig.logoSize} onChange={(e)=>setGeneralConfig({...generalConfig, logoSize: Number(e.target.value)})} className="w-40 accent-[#2D4B3E]"/></div>
+              <div className="flex items-center justify-between"><span className="text-[14px] font-bold">白背景を透過</span><button onClick={()=>setGeneralConfig({...generalConfig, logoTransparent: !generalConfig.logoTransparent})} className={`w-12 h-6 rounded-full transition-all ${generalConfig.logoTransparent ? 'bg-[#2D4B3E]' : 'bg-gray-300'}`}><div className={`w-4 h-4 bg-white rounded-full mx-1 transition-all ${generalConfig.logoTransparent ? 'translate-x-6' : ''}`}/></button></div>
               <div className="flex justify-center border-t pt-4 bg-white rounded-xl p-4"><img src={generalConfig.logoUrl} style={{width: `${generalConfig.logoSize}%`, mixBlendMode: generalConfig.logoTransparent ? 'multiply' : 'normal'}} className="max-h-24 object-contain" /></div>
             </div>
           )}
         </div>
 
-        <div className="space-y-4 pt-4 border-t border-[#EAEAEA]">
-          <label className="text-[11px] font-bold text-[#999999]">伝票用 背景画像</label>
-          {!generalConfig.slipBgUrl && <input type="file" accept="image/*" onChange={(e)=>handleImg(e, 'slipBgUrl')} className="block w-full text-xs" />}
+        <div className="space-y-4 pt-4 border-t border-[#E6E2DA]">
+          <label className="text-[13px] font-bold text-[#5C6660]">伝票用 背景画像</label>
+          {!generalConfig.slipBgUrl && <input type="file" accept="image/*" onChange={(e)=>handleImg(e, 'slipBgUrl')} className="block w-full text-[13px]" />}
           {generalConfig.slipBgUrl && (
-            <div className="p-6 bg-[#FBFAF9] rounded-2xl border space-y-6 relative">
+            <div className="p-6 bg-[#FAFAF7] rounded-2xl border space-y-6 relative">
               <button onClick={() => setGeneralConfig({...generalConfig, slipBgUrl: ''})} className="absolute top-4 right-4 text-red-400 hover:text-red-600 bg-white p-2 rounded-full shadow-sm"><Trash2 size={16}/></button>
-              <div className="flex items-center justify-between"><span className="text-[12px] font-bold">透過度: {generalConfig.slipBgOpacity}%</span><input type="range" min="0" max="100" value={generalConfig.slipBgOpacity} onChange={(e)=>setGeneralConfig({...generalConfig, slipBgOpacity: Number(e.target.value)})} className="w-40 accent-[#2D4B3E]"/></div>
-              <div className="flex justify-center border-t pt-4"><div className="relative w-48 h-32 bg-white border shadow-sm overflow-hidden flex flex-col justify-between p-2"><div className="absolute inset-0 z-0 grayscale-[30%] pointer-events-none" style={{ backgroundImage: `url(${generalConfig.slipBgUrl})`, backgroundSize: 'cover', opacity: generalConfig.slipBgOpacity / 100 }} /><span className="relative z-10 text-[10px] font-bold text-green-700">受 注 書</span></div></div>
+              <div className="flex items-center justify-between"><span className="text-[14px] font-bold">透過度: {generalConfig.slipBgOpacity}%</span><input type="range" min="0" max="100" value={generalConfig.slipBgOpacity} onChange={(e)=>setGeneralConfig({...generalConfig, slipBgOpacity: Number(e.target.value)})} className="w-40 accent-[#2D4B3E]"/></div>
+              <div className="flex justify-center border-t pt-4"><div className="relative w-48 h-32 bg-white border shadow-sm overflow-hidden flex flex-col justify-between p-2"><div className="absolute inset-0 z-0 grayscale-[30%] pointer-events-none" style={{ backgroundImage: `url(${generalConfig.slipBgUrl})`, backgroundSize: 'cover', opacity: generalConfig.slipBgOpacity / 100 }} /><span className="relative z-10 text-[12px] font-bold text-green-700">受 注 書</span></div></div>
             </div>
           )}
         </div>
 
         {/* ★ 領収書の印影設定 */}
-        <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
-          <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2">領収書の印影</h3>
-          <p className="text-[11px] text-[#999] leading-relaxed">
+        <div className="space-y-4 pt-6 border-t border-[#E6E2DA]">
+          <h3 className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2">領収書の印影</h3>
+          <p className="text-[13px] text-[#5C6660] leading-relaxed">
             お客様マイページから発行される領収書PDFの印影を設定します。日本の法律上「印影は必須ではない」ため、印影なしでも有効です。
           </p>
 
           <div className="space-y-2">
-            <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer ${(generalConfig.receiptStamp?.mode || 'auto') === 'none' ? 'border-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#EAEAEA]'}`}>
+            <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer ${(generalConfig.receiptStamp?.mode || 'auto') === 'none' ? 'border-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#E6E2DA]'}`}>
               <input type="radio" name="receipt-stamp-mode" value="none"
                 checked={(generalConfig.receiptStamp?.mode || 'auto') === 'none'}
                 onChange={() => setGeneralConfig({...generalConfig, receiptStamp: {...(generalConfig.receiptStamp || {}), mode: 'none'}})}
                 className="mt-1 accent-[#2D4B3E]"/>
               <div className="flex-1">
-                <p className="text-[13px] font-bold text-[#111]">A. 印影なし（テキストのみ）</p>
-                <p className="text-[11px] text-[#555] mt-1">
+                <p className="text-[15px] font-bold text-[#1F2A24]">A. 印影なし（テキストのみ）</p>
+                <p className="text-[13px] text-[#3B4640] mt-1">
                   領収書には印影を表示しません。<br/>
                   <strong>メリット:</strong> 不正利用リスクゼロ・法的にもOK<br/>
                   <strong>デメリット:</strong> 「公式っぽくない」と感じるお客様も
@@ -394,53 +394,53 @@ export default function SettingsPage() {
               </div>
             </label>
 
-            <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer ${(generalConfig.receiptStamp?.mode || 'auto') === 'auto' ? 'border-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#EAEAEA]'}`}>
+            <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer ${(generalConfig.receiptStamp?.mode || 'auto') === 'auto' ? 'border-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#E6E2DA]'}`}>
               <input type="radio" name="receipt-stamp-mode" value="auto"
                 checked={(generalConfig.receiptStamp?.mode || 'auto') === 'auto'}
                 onChange={() => setGeneralConfig({...generalConfig, receiptStamp: {...(generalConfig.receiptStamp || {}), mode: 'auto'}})}
                 className="mt-1 accent-[#2D4B3E]"/>
               <div className="flex-1">
-                <p className="text-[13px] font-bold text-[#111]">B. 自動生成印影 <span className="text-[10px] text-[#117768] ml-2">推奨</span></p>
-                <p className="text-[11px] text-[#555] mt-1">
+                <p className="text-[15px] font-bold text-[#1F2A24]">B. 自動生成印影 <span className="text-[12px] text-[#117768] ml-2">推奨</span></p>
+                <p className="text-[13px] text-[#3B4640] mt-1">
                   店舗名から自動生成される赤い丸印を表示します（実印影ではないデザイン）。<br/>
                   <strong>メリット:</strong> 安全（不正コピーされても被害がない）・店舗ごとに自動生成
                 </p>
                 {/* プレビュー */}
-                <div className="mt-3 inline-flex items-center justify-center w-20 h-20 border-2 border-red-600 rounded-full text-red-600 text-[8px] font-bold opacity-60 leading-tight text-center">
+                <div className="mt-3 inline-flex items-center justify-center w-20 h-20 border-2 border-red-600 rounded-full text-red-600 text-[11px] font-bold opacity-60 leading-tight text-center">
                   {generalConfig.appName || 'お花屋さん'}<br/>領収印
                 </div>
               </div>
             </label>
 
-            <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer ${(generalConfig.receiptStamp?.mode || 'auto') === 'image' ? 'border-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#EAEAEA]'}`}>
+            <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer ${(generalConfig.receiptStamp?.mode || 'auto') === 'image' ? 'border-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#E6E2DA]'}`}>
               <input type="radio" name="receipt-stamp-mode" value="image"
                 checked={(generalConfig.receiptStamp?.mode || 'auto') === 'image'}
                 onChange={() => setGeneralConfig({...generalConfig, receiptStamp: {...(generalConfig.receiptStamp || {}), mode: 'image'}})}
                 className="mt-1 accent-[#2D4B3E]"/>
               <div className="flex-1">
-                <p className="text-[13px] font-bold text-[#111]">C. 画像アップロード（実印影）</p>
-                <p className="text-[11px] text-[#555] mt-1 leading-relaxed">
+                <p className="text-[15px] font-bold text-[#1F2A24]">C. 画像アップロード（実印影）</p>
+                <p className="text-[13px] text-[#3B4640] mt-1 leading-relaxed">
                   実際の店舗印を画像（透過PNG推奨）でアップロードして表示します。<br/>
                   <strong>メリット:</strong> 一番リアル<br/>
                   <strong>注意:</strong> 領収書PDFから画像を抜き取って悪用されるリスクがあります（実害は限定的だが、認印の使用を推奨）
                 </p>
 
                 {(generalConfig.receiptStamp?.mode || 'auto') === 'image' && (
-                  <div className="mt-3 space-y-3 p-3 bg-white rounded-lg border border-[#EAEAEA]">
+                  <div className="mt-3 space-y-3 p-3 bg-white rounded-lg border border-[#E6E2DA]">
                     {!generalConfig.receiptStamp?.imageUrl ? (
                       <>
-                        <input type="file" accept="image/png,image/jpeg" onChange={handleStampImg} className="block w-full text-[11px]"/>
-                        <p className="text-[10px] text-[#999] leading-relaxed">
+                        <input type="file" accept="image/png,image/jpeg" onChange={handleStampImg} className="block w-full text-[13px]"/>
+                        <p className="text-[12px] text-[#5C6660] leading-relaxed">
                           推奨: 透過PNG（背景なし）・正方形・1MB以下<br/>
                           印影以外（背景）が透過されていないと、領収書上で目立つ白枠が出ます
                         </p>
                       </>
                     ) : (
                       <div className="flex items-center gap-4">
-                        <img src={generalConfig.receiptStamp.imageUrl} alt="印影" className="w-20 h-20 object-contain border border-[#EAEAEA] rounded"/>
+                        <img src={generalConfig.receiptStamp.imageUrl} alt="印影" className="w-20 h-20 object-contain border border-[#E6E2DA] rounded"/>
                         <div className="flex-1">
                           <button onClick={() => setGeneralConfig({...generalConfig, receiptStamp: {...generalConfig.receiptStamp, imageUrl: ''}})}
-                            className="text-red-500 hover:text-red-700 text-[11px] font-bold flex items-center gap-1">
+                            className="text-red-500 hover:text-red-700 text-[13px] font-bold flex items-center gap-1">
                             <Trash2 size={12}/> 画像を削除
                           </button>
                         </div>
@@ -453,11 +453,11 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
-          <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><ShieldCheck size={16}/> システムセキュリティ</h3>
+        <div className="space-y-4 pt-6 border-t border-[#E6E2DA]">
+          <h3 className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2"><ShieldCheck size={16}/> システムセキュリティ</h3>
           <div className="bg-red-50 p-6 rounded-2xl border border-red-100 space-y-3">
             <div className="space-y-1">
-              <label className="text-[11px] font-bold text-red-800">管理者パスワード (設定変更・注文削除用)</label>
+              <label className="text-[13px] font-bold text-red-800">管理者パスワード (設定変更・注文削除用)</label>
               <div className="relative w-full max-w-[240px]">
                 <input type={showPassword ? "text" : "password"} value={generalConfig.systemPassword || ''} onChange={(e)=>setGeneralConfig({...generalConfig, systemPassword: e.target.value})} className="w-full h-12 bg-white border border-red-200 rounded-xl px-4 font-bold outline-none focus:border-red-400 text-red-700 pr-10"/>
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600">
@@ -465,11 +465,11 @@ export default function SettingsPage() {
                 </button>
               </div>
               {(generalConfig.systemPassword === '7777' || !generalConfig.systemPassword) && (
-                <div className="mt-3 bg-amber-50 border-2 border-amber-300 rounded-lg p-3 text-[11px] text-amber-900 leading-relaxed">
+                <div className="mt-3 bg-amber-50 border-2 border-amber-300 rounded-lg p-3 text-[13px] text-amber-900 leading-relaxed">
                   <strong>初期パスワード「7777」のままです。</strong> セキュリティのため、推測されにくいパスワードに変更して「変更を保存」を押してください。
                 </div>
               )}
-              <p className="text-[10px] text-red-700 mt-2">
+              <p className="text-[12px] text-red-700 mt-2">
                 忘れた場合は管理者（NocoLde）に連絡すれば、登録メアド宛に再発行メールを送ります。
               </p>
             </div>
@@ -487,19 +487,19 @@ export default function SettingsPage() {
       <div className="space-y-6 animate-in fade-in">
         {/* ★ 共通システムステータスのご案内 */}
         <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 space-y-2">
-          <h3 className="text-[14px] font-bold text-emerald-900 flex items-center gap-2">
+          <h3 className="text-[15px] font-bold text-emerald-900 flex items-center gap-2">
             ℹ️ 完了ステータスは自動で追加されます
           </h3>
-          <p className="text-[12px] text-emerald-800 leading-relaxed">
+          <p className="text-[14px] text-emerald-800 leading-relaxed">
             下記の完了ステータスは <strong>受取方法に応じて自動で末尾に追加</strong> されます。
             カスタムステータス設定では設定不要です。
           </p>
-          <ul className="text-[11px] text-emerald-700 space-y-1 pl-4">
+          <ul className="text-[13px] text-emerald-700 space-y-1 pl-4">
             <li>・店頭受取の注文 → <strong>「店頭お渡し完了」</strong> が自動で選択肢に表示</li>
             <li>・自社配達の注文 → <strong>「配達完了」</strong> が自動で選択肢に表示</li>
             <li>・業者配送の注文 → <strong>「配送業者引き渡し完了」</strong> が自動で選択肢に表示</li>
           </ul>
-          <p className="text-[10px] text-emerald-600 pt-1 border-t border-emerald-200">
+          <p className="text-[12px] text-emerald-600 pt-1 border-t border-emerald-200">
             注文詳細画面のステータス更新ドロップダウンに、受取方法に該当するもののみ表示されます。
           </p>
         </div>
@@ -507,15 +507,15 @@ export default function SettingsPage() {
         {/* ① オーダー商品共通ステータス（既存） */}
         <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-4">
           <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><ListChecks size={20}/> オーダー商品 共通ステータス</h2>
-          <p className="text-[11px] text-[#999]">花の種類別に個別設定がない場合、こちらが適用されます。<span className="text-emerald-700 font-bold">完了系ステータスは自動追加されるので、制作・準備段階のステータスのみ設定してください。</span></p>
-          <div className="flex gap-2 p-1 bg-[#F7F7F7] rounded-xl mb-4">
+          <p className="text-[13px] text-[#5C6660]">花の種類別に個別設定がない場合、こちらが適用されます。<span className="text-emerald-700 font-bold">完了系ステータスは自動追加されるので、制作・準備段階のステータスのみ設定してください。</span></p>
+          <div className="flex gap-2 p-1 bg-[#F6F4EF] rounded-xl mb-4">
             {['template', 'custom'].map(t => (
-              <button key={t} onClick={() => setStatusConfig({...statusConfig, type: t})} className={`flex-1 py-3 rounded-lg font-bold text-[12px] ${statusConfig.type === t ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}>{t === 'template' ? '標準' : 'カスタム'}</button>
+              <button key={t} onClick={() => setStatusConfig({...statusConfig, type: t})} className={`flex-1 py-3 rounded-lg font-bold text-[14px] ${statusConfig.type === t ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#5C6660]'}`}>{t === 'template' ? '標準' : 'カスタム'}</button>
             ))}
           </div>
           {/* 標準モード時の案内 */}
           {statusConfig.type === 'template' && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-[11px] text-blue-900 leading-relaxed">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-[13px] text-blue-900 leading-relaxed">
               <strong>標準モードは編集できません</strong>（このまま使用されます）。<br/>
               ステータスを <strong>追加・編集・並び替え</strong> したい場合は、<strong>「カスタム」タブ</strong>に切り替えてください。
             </div>
@@ -523,32 +523,32 @@ export default function SettingsPage() {
           <div className="space-y-3">
             {(statusConfig.type === 'template' ? ['受注', '制作', '配達', '片付'] : statusConfig.customLabels).map((l, i) => (
               <div key={i} className="flex gap-2">
-                <input type="text" value={l} readOnly={statusConfig.type==='template'} onChange={(e) => { if(statusConfig.type==='custom'){ const n = [...statusConfig.customLabels]; n[i] = e.target.value; setStatusConfig({...statusConfig, customLabels: n}); } }} className={`flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none ${statusConfig.type==='template'?'text-[#999999] cursor-not-allowed':'focus:border-[#2D4B3E]'}`} />
+                <input type="text" value={l} readOnly={statusConfig.type==='template'} onChange={(e) => { if(statusConfig.type==='custom'){ const n = [...statusConfig.customLabels]; n[i] = e.target.value; setStatusConfig({...statusConfig, customLabels: n}); } }} className={`flex-1 h-12 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl px-4 text-[15px] font-bold outline-none ${statusConfig.type==='template'?'text-[#5C6660] cursor-not-allowed':'focus:border-[#2D4B3E]'}`} />
                 {statusConfig.type === 'custom' && <button onClick={() => setStatusConfig({...statusConfig, customLabels: statusConfig.customLabels.filter((_, idx) => idx !== i)})} className="text-red-300 p-2 hover:text-red-500"><Trash2 size={18}/></button>}
               </div>
             ))}
-            {statusConfig.type === 'custom' && <button onClick={() => setStatusConfig({...statusConfig, customLabels: [...statusConfig.customLabels, '新状態']})} className="w-full py-3 border-2 border-dashed border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ 項目を追加</button>}
+            {statusConfig.type === 'custom' && <button onClick={() => setStatusConfig({...statusConfig, customLabels: [...statusConfig.customLabels, '新状態']})} className="w-full py-3 border-2 border-dashed border-[#E6E2DA] rounded-xl text-[14px] font-bold text-[#5C6660] hover:text-[#2D4B3E] transition-all">+ 項目を追加</button>}
           </div>
         </div>
 
         {/* ② 花の種類別 個別ステータス */}
         <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-4">
           <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2">花の種類別 個別ステータス</h2>
-          <p className="text-[11px] text-[#999] leading-relaxed">
+          <p className="text-[13px] text-[#5C6660] leading-relaxed">
             花の種類ごとに専用ステータスを定義できます。<br/>
             設定しない種類は共通ステータスが使われます。
           </p>
           {flowerTypes.length === 0 ? (
-            <p className="text-[12px] text-[#999] italic bg-[#FBFAF9] p-4 rounded-xl">商品・納期タブで花の種類を登録すると、ここに表示されます。</p>
+            <p className="text-[14px] text-[#5C6660] italic bg-[#FAFAF7] p-4 rounded-xl">商品・納期タブで花の種類を登録すると、ここに表示されます。</p>
           ) : (
             <div className="space-y-4">
               {flowerTypes.map((ft) => {
                 const labels = statusConfig.orderTypeLabels?.[ft] || [];
                 const isEnabled = labels.length > 0;
                 return (
-                  <div key={ft} className="border border-[#EAEAEA] rounded-xl p-4">
+                  <div key={ft} className="border border-[#E6E2DA] rounded-xl p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-[13px] font-bold text-[#111]">{ft}</h3>
+                      <h3 className="text-[15px] font-bold text-[#1F2A24]">{ft}</h3>
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="checkbox"
@@ -564,7 +564,7 @@ export default function SettingsPage() {
                           }}
                           className="w-4 h-4 accent-[#2D4B3E]"
                         />
-                        <span className="text-[11px] font-bold text-[#555]">個別設定を使う</span>
+                        <span className="text-[13px] font-bold text-[#3B4640]">個別設定を使う</span>
                       </label>
                     </div>
                     {isEnabled && (
@@ -579,7 +579,7 @@ export default function SettingsPage() {
                                 newLabels[i] = e.target.value;
                                 setStatusConfig({...statusConfig, orderTypeLabels: {...statusConfig.orderTypeLabels, [ft]: newLabels}});
                               }}
-                              className="flex-1 h-10 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg px-3 text-[12px] font-bold outline-none focus:border-[#2D4B3E]"
+                              className="flex-1 h-10 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg px-3 text-[14px] font-bold outline-none focus:border-[#2D4B3E]"
                             />
                             <button onClick={() => {
                               const newLabels = labels.filter((_, idx) => idx !== i);
@@ -589,7 +589,7 @@ export default function SettingsPage() {
                         ))}
                         <button onClick={() => {
                           setStatusConfig({...statusConfig, orderTypeLabels: {...statusConfig.orderTypeLabels, [ft]: [...labels, '新状態']}});
-                        }} className="w-full py-2 border border-dashed border-[#EAEAEA] rounded-lg text-[11px] font-bold text-[#999] hover:text-[#2D4B3E]">+ 項目を追加</button>
+                        }} className="w-full py-2 border border-dashed border-[#E6E2DA] rounded-lg text-[13px] font-bold text-[#5C6660] hover:text-[#2D4B3E]">+ 項目を追加</button>
                       </div>
                     )}
                   </div>
@@ -602,7 +602,7 @@ export default function SettingsPage() {
         {/* ③ EC共通ステータス */}
         <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-4">
           <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2">EC商品 共通ステータス</h2>
-          <p className="text-[11px] text-[#999]">EC（完成品販売）のステータス。EC商品はすべてこの共通ステータスが適用されます。</p>
+          <p className="text-[13px] text-[#5C6660]">EC（完成品販売）のステータス。EC商品はすべてこの共通ステータスが適用されます。</p>
           <div className="space-y-2">
             {(statusConfig.ecLabels || []).map((l, i) => (
               <div key={i} className="flex gap-2">
@@ -614,19 +614,19 @@ export default function SettingsPage() {
                     next[i] = e.target.value;
                     setStatusConfig({...statusConfig, ecLabels: next});
                   }}
-                  className="flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"
+                  className="flex-1 h-12 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]"
                 />
                 <button onClick={() => setStatusConfig({...statusConfig, ecLabels: statusConfig.ecLabels.filter((_, idx) => idx !== i)})} className="text-red-300 p-2 hover:text-red-500"><Trash2 size={18}/></button>
               </div>
             ))}
-            <button onClick={() => setStatusConfig({...statusConfig, ecLabels: [...(statusConfig.ecLabels || []), '新状態']})} className="w-full py-3 border-2 border-dashed border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ EC項目を追加</button>
+            <button onClick={() => setStatusConfig({...statusConfig, ecLabels: [...(statusConfig.ecLabels || []), '新状態']})} className="w-full py-3 border-2 border-dashed border-[#E6E2DA] rounded-xl text-[14px] font-bold text-[#5C6660] hover:text-[#2D4B3E] transition-all">+ EC項目を追加</button>
           </div>
         </div>
 
         {/* ④ 配達管理ステータス */}
         <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-4">
           <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2">配達管理 ステータス</h2>
-          <p className="text-[11px] text-[#999]">配達画面で使用するステータス。配達中・配達完了・不在など、配達状況を管理する用です。</p>
+          <p className="text-[13px] text-[#5C6660]">配達画面で使用するステータス。配達中・配達完了・不在など、配達状況を管理する用です。</p>
           <div className="space-y-2">
             {(statusConfig.deliveryLabels || []).map((l, i) => (
               <div key={i} className="flex gap-2">
@@ -638,12 +638,12 @@ export default function SettingsPage() {
                     next[i] = e.target.value;
                     setStatusConfig({...statusConfig, deliveryLabels: next});
                   }}
-                  className="flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"
+                  className="flex-1 h-12 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]"
                 />
                 <button onClick={() => setStatusConfig({...statusConfig, deliveryLabels: statusConfig.deliveryLabels.filter((_, idx) => idx !== i)})} className="text-red-300 p-2 hover:text-red-500"><Trash2 size={18}/></button>
               </div>
             ))}
-            <button onClick={() => setStatusConfig({...statusConfig, deliveryLabels: [...(statusConfig.deliveryLabels || []), '新状態']})} className="w-full py-3 border-2 border-dashed border-[#EAEAEA] rounded-xl text-[12px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ 配達項目を追加</button>
+            <button onClick={() => setStatusConfig({...statusConfig, deliveryLabels: [...(statusConfig.deliveryLabels || []), '新状態']})} className="w-full py-3 border-2 border-dashed border-[#E6E2DA] rounded-xl text-[14px] font-bold text-[#5C6660] hover:text-[#2D4B3E] transition-all">+ 配達項目を追加</button>
           </div>
         </div>
       </div>
@@ -654,46 +654,46 @@ export default function SettingsPage() {
     <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-8 animate-in fade-in">
       <div className="border-b pb-4">
         <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Palette size={20}/> デザイン選択肢の設定</h2>
-        <p className="text-[11px] text-[#999999] mt-2">注文フォームでお客様が選択する「用途」「カラー」「イメージ」の選択肢を自由にカスタマイズできます。「その他」は自動で追加されます。</p>
+        <p className="text-[13px] text-[#5C6660] mt-2">注文フォームでお客様が選択する「用途」「カラー」「イメージ」の選択肢を自由にカスタマイズできます。「その他」は自動で追加されます。</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="space-y-3">
-          <label className="text-[14px] font-bold text-[#2D4B3E] bg-[#FBFAF9] px-4 py-2 rounded-lg inline-block border">ご用途</label>
+          <label className="text-[15px] font-bold text-[#2D4B3E] bg-[#FAFAF7] px-4 py-2 rounded-lg inline-block border">ご用途</label>
           <div className="space-y-2">
             {designOptions.purposes.map((p, i) => (
               <div key={i} className="flex gap-2">
-                <input type="text" value={p} onChange={(e) => { const n = [...designOptions.purposes]; n[i] = e.target.value; setDesignOptions({...designOptions, purposes: n}); }} className="flex-1 h-10 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-3 text-[12px] font-bold outline-none focus:border-[#2D4B3E]" />
+                <input type="text" value={p} onChange={(e) => { const n = [...designOptions.purposes]; n[i] = e.target.value; setDesignOptions({...designOptions, purposes: n}); }} className="flex-1 h-10 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl px-3 text-[14px] font-bold outline-none focus:border-[#2D4B3E]" />
                 <button onClick={() => setDesignOptions({...designOptions, purposes: designOptions.purposes.filter((_, idx) => idx !== i)})} className="text-red-300 p-1.5 hover:text-red-500"><Trash2 size={16}/></button>
               </div>
             ))}
-            <button onClick={() => setDesignOptions({...designOptions, purposes: [...designOptions.purposes, '新しい用途']})} className="w-full py-2 border-2 border-dashed border-[#EAEAEA] rounded-xl text-[11px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ 追加</button>
+            <button onClick={() => setDesignOptions({...designOptions, purposes: [...designOptions.purposes, '新しい用途']})} className="w-full py-2 border-2 border-dashed border-[#E6E2DA] rounded-xl text-[13px] font-bold text-[#5C6660] hover:text-[#2D4B3E] transition-all">+ 追加</button>
           </div>
         </div>
 
-        <div className="space-y-3 border-t md:border-t-0 md:border-l border-[#EAEAEA] md:pl-6">
-          <label className="text-[14px] font-bold text-[#2D4B3E] bg-[#FBFAF9] px-4 py-2 rounded-lg inline-block border">カラー</label>
+        <div className="space-y-3 border-t md:border-t-0 md:border-l border-[#E6E2DA] md:pl-6">
+          <label className="text-[15px] font-bold text-[#2D4B3E] bg-[#FAFAF7] px-4 py-2 rounded-lg inline-block border">カラー</label>
           <div className="space-y-2">
             {designOptions.colors.map((c, i) => (
               <div key={i} className="flex gap-2">
-                <input type="text" value={c} onChange={(e) => { const n = [...designOptions.colors]; n[i] = e.target.value; setDesignOptions({...designOptions, colors: n}); }} className="flex-1 h-10 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-3 text-[12px] font-bold outline-none focus:border-[#2D4B3E]" />
+                <input type="text" value={c} onChange={(e) => { const n = [...designOptions.colors]; n[i] = e.target.value; setDesignOptions({...designOptions, colors: n}); }} className="flex-1 h-10 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl px-3 text-[14px] font-bold outline-none focus:border-[#2D4B3E]" />
                 <button onClick={() => setDesignOptions({...designOptions, colors: designOptions.colors.filter((_, idx) => idx !== i)})} className="text-red-300 p-1.5 hover:text-red-500"><Trash2 size={16}/></button>
               </div>
             ))}
-            <button onClick={() => setDesignOptions({...designOptions, colors: [...designOptions.colors, '新しいカラー']})} className="w-full py-2 border-2 border-dashed border-[#EAEAEA] rounded-xl text-[11px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ 追加</button>
+            <button onClick={() => setDesignOptions({...designOptions, colors: [...designOptions.colors, '新しいカラー']})} className="w-full py-2 border-2 border-dashed border-[#E6E2DA] rounded-xl text-[13px] font-bold text-[#5C6660] hover:text-[#2D4B3E] transition-all">+ 追加</button>
           </div>
         </div>
 
-        <div className="space-y-3 border-t md:border-t-0 md:border-l border-[#EAEAEA] md:pl-6">
-          <label className="text-[14px] font-bold text-[#2D4B3E] bg-[#FBFAF9] px-4 py-2 rounded-lg inline-block border">イメージ</label>
+        <div className="space-y-3 border-t md:border-t-0 md:border-l border-[#E6E2DA] md:pl-6">
+          <label className="text-[15px] font-bold text-[#2D4B3E] bg-[#FAFAF7] px-4 py-2 rounded-lg inline-block border">イメージ</label>
           <div className="space-y-2">
             {designOptions.vibes.map((v, i) => (
               <div key={i} className="flex gap-2">
-                <input type="text" value={v} onChange={(e) => { const n = [...designOptions.vibes]; n[i] = e.target.value; setDesignOptions({...designOptions, vibes: n}); }} className="flex-1 h-10 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-3 text-[12px] font-bold outline-none focus:border-[#2D4B3E]" />
+                <input type="text" value={v} onChange={(e) => { const n = [...designOptions.vibes]; n[i] = e.target.value; setDesignOptions({...designOptions, vibes: n}); }} className="flex-1 h-10 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl px-3 text-[14px] font-bold outline-none focus:border-[#2D4B3E]" />
                 <button onClick={() => setDesignOptions({...designOptions, vibes: designOptions.vibes.filter((_, idx) => idx !== i)})} className="text-red-300 p-1.5 hover:text-red-500"><Trash2 size={16}/></button>
               </div>
             ))}
-            <button onClick={() => setDesignOptions({...designOptions, vibes: [...designOptions.vibes, '新しいイメージ']})} className="w-full py-2 border-2 border-dashed border-[#EAEAEA] rounded-xl text-[11px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ 追加</button>
+            <button onClick={() => setDesignOptions({...designOptions, vibes: [...designOptions.vibes, '新しいイメージ']})} className="w-full py-2 border-2 border-dashed border-[#E6E2DA] rounded-xl text-[13px] font-bold text-[#5C6660] hover:text-[#2D4B3E] transition-all">+ 追加</button>
           </div>
         </div>
       </div>
@@ -703,7 +703,7 @@ export default function SettingsPage() {
   const renderSpecialHoursList = (shop, listKey) => (
     <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
       {(shop[listKey] || []).map(sh => (
-        <div key={sh.id} className="flex flex-col gap-2 bg-[#FBFAF9] p-3 rounded-xl border border-[#EAEAEA] text-[11px] relative">
+        <div key={sh.id} className="flex flex-col gap-2 bg-[#FAFAF7] p-3 rounded-xl border border-[#E6E2DA] text-[13px] relative">
           <button onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].filter(h=>h.id!==sh.id)}:s))} className="absolute top-2 right-2 text-red-400 hover:text-red-600"><X size={14}/></button>
           <div className="flex gap-2 pr-6">
             <select value={sh.repeatType || '今年のみ'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, repeatType:e.target.value}:h)}:s))} className="border rounded p-1.5 outline-none font-bold bg-white">
@@ -731,10 +731,10 @@ export default function SettingsPage() {
           </div>
           {sh.type === 'changed' && (
             <div className="flex gap-2 items-center bg-white p-2 rounded border border-orange-200 mt-1 animate-in slide-in-from-top-1">
-              <span className="text-[10px] font-bold text-orange-600">変更後:</span>
-              <input type="time" value={sh.changedOpenTime || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, changedOpenTime:e.target.value}:h)}:s))} className="border rounded p-1 text-[10px] outline-none"/>
+              <span className="text-[12px] font-bold text-orange-600">変更後:</span>
+              <input type="time" value={sh.changedOpenTime || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, changedOpenTime:e.target.value}:h)}:s))} className="border rounded p-1 text-[12px] outline-none"/>
               <span>〜</span>
-              <input type="time" value={sh.changedCloseTime || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, changedCloseTime:e.target.value}:h)}:s))} className="border rounded p-1 text-[10px] outline-none"/>
+              <input type="time" value={sh.changedCloseTime || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, [listKey]:s[listKey].map(h=>h.id===sh.id?{...h, changedCloseTime:e.target.value}:h)}:s))} className="border rounded p-1 text-[12px] outline-none"/>
             </div>
           )}
         </div>
@@ -757,34 +757,34 @@ export default function SettingsPage() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-            <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">店舗名</label><input type="text" value={shop.name} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, name:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/></div>
-            <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">電話番号</label><input type="text" value={shop.phone} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, phone:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/></div>
+            <div className="space-y-1"><label className="text-[12px] font-bold text-[#5C6660]">店舗名</label><input type="text" value={shop.name} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, name:e.target.value}:s))} className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]"/></div>
+            <div className="space-y-1"><label className="text-[12px] font-bold text-[#5C6660]">電話番号</label><input type="text" value={shop.phone} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, phone:e.target.value}:s))} className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]"/></div>
             {/* [2026-10 B3] お客様に表示するお問い合わせ用メールアドレス（メールの一番下・プライバシーポリシーに表示） */}
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-[#999999]">お問い合わせ用メールアドレス（お客様に表示）</label>
-              <input type="email" value={shop.contactEmail || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, contactEmail:e.target.value}:s))} placeholder="例: info@example.com" className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/>
-              <p className="text-[10px] text-[#999]">お客様へのメールの一番下と、プライバシーポリシーのお問い合わせ先に表示されます（電話番号も一緒に表示されます）</p>
+              <label className="text-[12px] font-bold text-[#5C6660]">お問い合わせ用メールアドレス（お客様に表示）</label>
+              <input type="email" value={shop.contactEmail || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, contactEmail:e.target.value}:s))} placeholder="例: info@example.com" className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]"/>
+              <p className="text-[12px] text-[#5C6660]">お客様へのメールの一番下と、プライバシーポリシーのお問い合わせ先に表示されます（電話番号も一緒に表示されます）</p>
             </div>
-            <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">郵便番号</label><input type="text" value={shop.zip} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, zip:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="000-0000"/></div>
-            <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">住所</label><input type="text" value={shop.address} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, address:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/></div>
-            <div className="space-y-1 md:col-span-2"><label className="text-[10px] font-bold text-[#999999]">インボイス番号</label><input type="text" value={shop.invoiceNumber || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, invoiceNumber:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="T12345..."/></div>
+            <div className="space-y-1"><label className="text-[12px] font-bold text-[#5C6660]">郵便番号</label><input type="text" value={shop.zip} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, zip:e.target.value}:s))} className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="000-0000"/></div>
+            <div className="space-y-1"><label className="text-[12px] font-bold text-[#5C6660]">住所</label><input type="text" value={shop.address} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, address:e.target.value}:s))} className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]"/></div>
+            <div className="space-y-1 md:col-span-2"><label className="text-[12px] font-bold text-[#5C6660]">インボイス番号</label><input type="text" value={shop.invoiceNumber || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, invoiceNumber:e.target.value}:s))} className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="T12345..."/></div>
             {/* ★ 納品書のQRコード用: お店のホームページURL（空欄なら納品書にQRを出さない） */}
             <div className="space-y-1 md:col-span-2">
-              <label className="text-[10px] font-bold text-[#999999]">ホームページURL（納品書のQRコードに使用）</label>
-              <input type="url" value={shop.homepageUrl || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, homepageUrl:e.target.value.trim()}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="https://ohana5.com/"/>
-              <p className="text-[10px] text-[#999999]">https:// から始まるURLを入力してください。空欄の場合、納品書にQRコードは表示されません。</p>
+              <label className="text-[12px] font-bold text-[#5C6660]">ホームページURL（納品書のQRコードに使用）</label>
+              <input type="url" value={shop.homepageUrl || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, homepageUrl:e.target.value.trim()}:s))} className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="https://ohana5.com/"/>
+              <p className="text-[12px] text-[#5C6660]">https:// から始まるURLを入力してください。空欄の場合、納品書にQRコードは表示されません。</p>
             </div>
 
             {/* ★ [SEO-#23] 緯度経度（LocalBusiness geo） */}
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-[#999999]">緯度（Latitude）</label>
-              <input type="number" step="0.0000001" value={shop.latitude || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, latitude:e.target.value === '' ? null : Number(e.target.value)}:s))} placeholder="35.6809591" className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/>
+              <label className="text-[12px] font-bold text-[#5C6660]">緯度（Latitude）</label>
+              <input type="number" step="0.0000001" value={shop.latitude || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, latitude:e.target.value === '' ? null : Number(e.target.value)}:s))} placeholder="35.6809591" className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]"/>
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-[#999999]">経度（Longitude）</label>
-              <input type="number" step="0.0000001" value={shop.longitude || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, longitude:e.target.value === '' ? null : Number(e.target.value)}:s))} placeholder="139.7673068" className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/>
+              <label className="text-[12px] font-bold text-[#5C6660]">経度（Longitude）</label>
+              <input type="number" step="0.0000001" value={shop.longitude || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, longitude:e.target.value === '' ? null : Number(e.target.value)}:s))} placeholder="139.7673068" className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]"/>
             </div>
-            <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-xl p-3 text-[11px] text-blue-900 leading-relaxed">
+            <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-xl p-3 text-[13px] text-blue-900 leading-relaxed">
               <strong>緯度経度の取得方法</strong>:
               <a href="https://www.google.co.jp/maps" target="_blank" rel="noopener" className="underline font-bold">Google マップ</a> で店舗住所を検索 →
               店舗ピンを<strong>右クリック</strong> → 一番上の数字（例: 35.6809591, 139.7673068）をコピー →
@@ -794,40 +794,40 @@ export default function SettingsPage() {
           </div>
 
           {/* ★ [SEO-#12] 店舗紹介文（SEO・お客様向け） */}
-          <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
-            <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2">店舗紹介文（SEO対策）</h3>
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] font-bold text-amber-900 leading-relaxed">
+          <div className="space-y-4 pt-6 border-t border-[#E6E2DA]">
+            <h3 className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2">店舗紹介文（SEO対策）</h3>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[13px] font-bold text-amber-900 leading-relaxed">
               <strong>SEOで一番重要な項目です。</strong><br/>
               テンプレ文章は Google に「重複コンテンツ」と判定されて評価が下がります。<br/>
               <strong>各店舗の独自性を出した文章を必ず手入力</strong>してください。
             </div>
             <div className="space-y-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">店舗紹介・店主の想い <span className="text-red-500">（推奨: 200文字以上）</span></label>
+                <label className="text-[12px] font-bold text-[#5C6660]">店舗紹介・店主の想い <span className="text-red-500">（推奨: 200文字以上）</span></label>
                 <textarea
                   value={shop.shopIntroduction || ''}
                   onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, shopIntroduction: e.target.value } : s))}
                   placeholder="例: 1985年創業、札幌市北区の地域密着型フラワーショップです。当店は『お客様の人生の節目に寄り添うお花屋さん』をモットーに、ご出産・ご結婚・お祝い事から、お悔やみ・お供えまで、心を込めて一つひとつお花をお作りしています。代表の○○は、フラワーデザイナー歴30年以上の経験を活かし、お客様のご要望に合わせたオリジナルアレンジをご提案いたします..."
                   rows={6}
-                  className="w-full px-4 py-3 bg-[#FBFAF9] border rounded-xl text-[12px] outline-none focus:border-[#2D4B3E] resize-y"
+                  className="w-full px-4 py-3 bg-[#FAFAF7] border rounded-xl text-[14px] outline-none focus:border-[#2D4B3E] resize-y"
                 />
-                <p className="text-[10px] text-[#999]">文字数: {(shop.shopIntroduction || '').length}文字</p>
+                <p className="text-[12px] text-[#5C6660]">文字数: {(shop.shopIntroduction || '').length}文字</p>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">こだわり・強み <span className="text-red-500">（推奨: 3点以上を箇条書きで）</span></label>
+                <label className="text-[12px] font-bold text-[#5C6660]">こだわり・強み <span className="text-red-500">（推奨: 3点以上を箇条書きで）</span></label>
                 <textarea
                   value={shop.shopStrengths || ''}
                   onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, shopStrengths: e.target.value } : s))}
                   placeholder="例:&#10;・市場から仕入れた新鮮な季節の花のみを使用&#10;・配達は当日朝の市場から直送、最も新鮮な状態でお届け&#10;・立札・メッセージカードはフラワーデザイナーが手書きで対応&#10;・コーポレートギフト・冠婚葬祭の特別対応も承ります"
                   rows={5}
-                  className="w-full px-4 py-3 bg-[#FBFAF9] border rounded-xl text-[12px] outline-none focus:border-[#2D4B3E] resize-y"
+                  className="w-full px-4 py-3 bg-[#FAFAF7] border rounded-xl text-[14px] outline-none focus:border-[#2D4B3E] resize-y"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-[#999999]">創業年</label>
+                  <label className="text-[12px] font-bold text-[#5C6660]">創業年</label>
                   <input
                     type="number"
                     value={shop.foundedYear || ''}
@@ -835,73 +835,73 @@ export default function SettingsPage() {
                     placeholder="1985"
                     min="1900"
                     max={new Date().getFullYear()}
-                    className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"
+                    className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-[#999999]">代表者・店主名</label>
+                  <label className="text-[12px] font-bold text-[#5C6660]">代表者・店主名</label>
                   <input
                     type="text"
                     value={shop.ownerName || ''}
                     onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, ownerName: e.target.value } : s))}
                     placeholder="七社 愛希"
-                    className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"
+                    className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">受賞歴・資格・専門分野</label>
+                <label className="text-[12px] font-bold text-[#5C6660]">受賞歴・資格・専門分野</label>
                 <textarea
                   value={shop.shopCredentials || ''}
                   onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, shopCredentials: e.target.value } : s))}
                   placeholder="例: フラワー装飾技能士1級、コンテスト〇〇大会優勝、ブライダルブーケ専門..."
                   rows={2}
-                  className="w-full px-4 py-3 bg-[#FBFAF9] border rounded-xl text-[12px] outline-none focus:border-[#2D4B3E] resize-y"
+                  className="w-full px-4 py-3 bg-[#FAFAF7] border rounded-xl text-[14px] outline-none focus:border-[#2D4B3E] resize-y"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">主な対応シーン・用途</label>
+                <label className="text-[12px] font-bold text-[#5C6660]">主な対応シーン・用途</label>
                 <input
                   type="text"
                   value={shop.shopServices || ''}
                   onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, shopServices: e.target.value } : s))}
                   placeholder="ブライダルブーケ, スタンド花, 胡蝶蘭, お供え花, アレンジメント, プリザーブドフラワー"
-                  className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] outline-none focus:border-[#2D4B3E]"
+                  className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] outline-none focus:border-[#2D4B3E]"
                 />
-                <p className="text-[10px] text-[#999]">カンマ区切りで入力</p>
+                <p className="text-[12px] text-[#5C6660]">カンマ区切りで入力</p>
               </div>
             </div>
           </div>
 
           {/* ★ 店舗 受注通知メール設定 */}
-          <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
-            <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Mail size={16}/> 受注通知メール設定</h3>
-            <p className="text-[11px] text-[#999999]">注文・決済・見積依頼が入った時に、店舗のメールアドレスに通知メールを送信します。</p>
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] font-bold text-amber-900 leading-relaxed">
+          <div className="space-y-4 pt-6 border-t border-[#E6E2DA]">
+            <h3 className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2"><Mail size={16}/> 受注通知メール設定</h3>
+            <p className="text-[13px] text-[#5C6660]">注文・決済・見積依頼が入った時に、店舗のメールアドレスに通知メールを送信します。</p>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[13px] font-bold text-amber-900 leading-relaxed">
               通知メアドが間違っていると、お客様の個人情報が他人に届いてしまいます。<br/>
               新しいメアドを入力したら、<strong>必ず「テスト送信」</strong>で実際に届くか確認してください。
             </div>
             <div className="space-y-3">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">通知先メールアドレス（メイン）</label>
+                <label className="text-[12px] font-bold text-[#5C6660]">通知先メールアドレス（メイン）</label>
                 <input
                   type="email"
                   value={shop.notifyEmail || ''}
                   onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, notifyEmail: e.target.value } : s))}
                   placeholder="店舗のメールアドレス（例: shop@example.com）"
-                  className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"
+                  className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">CC送信先（追加で通知したい人。複数の場合はカンマ区切り）</label>
+                <label className="text-[12px] font-bold text-[#5C6660]">CC送信先（追加で通知したい人。複数の場合はカンマ区切り）</label>
                 <input
                   type="text"
                   value={shop.notifyCcEmails || ''}
                   onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, notifyCcEmails: e.target.value } : s))}
                   placeholder="例: owner@example.com, staff@example.com"
-                  className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"
+                  className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]"
                 />
               </div>
               {/* ★ [Phase1-⑤] テスト送信ボタン */}
@@ -931,12 +931,12 @@ export default function SettingsPage() {
                     alert(`テスト送信に失敗しました\n\n${e.message}`);
                   }
                 }}
-                className="w-full h-10 bg-amber-600 text-white rounded-xl text-[12px] font-bold hover:bg-amber-700 flex items-center justify-center gap-2"
+                className="w-full h-10 bg-amber-600 text-white rounded-xl text-[14px] font-bold hover:bg-amber-700 flex items-center justify-center gap-2"
               >
                 このメアドにテスト送信して確認する
               </button>
-              <div className="bg-[#FBFAF9] p-3 rounded-xl space-y-2">
-                <p className="text-[11px] font-bold text-[#2D4B3E] mb-1">通知タイミング（ON/OFF）</p>
+              <div className="bg-[#FAFAF7] p-3 rounded-xl space-y-2">
+                <p className="text-[13px] font-bold text-[#2D4B3E] mb-1">通知タイミング（ON/OFF）</p>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -944,7 +944,7 @@ export default function SettingsPage() {
                     onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, notifyOnOrder: e.target.checked } : s))}
                     className="w-4 h-4 accent-[#2D4B3E]"
                   />
-                  <span className="text-[12px] font-bold text-[#555]">お客様から注文が入った時</span>
+                  <span className="text-[14px] font-bold text-[#3B4640]">お客様から注文が入った時</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -953,7 +953,7 @@ export default function SettingsPage() {
                     onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, notifyOnPayment: e.target.checked } : s))}
                     className="w-4 h-4 accent-[#2D4B3E]"
                   />
-                  <span className="text-[12px] font-bold text-[#555]">クレカ決済が完了した時</span>
+                  <span className="text-[14px] font-bold text-[#3B4640]">クレカ決済が完了した時</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -962,19 +962,19 @@ export default function SettingsPage() {
                     onChange={(e) => setShops(shops.map(s => s.id === shop.id ? { ...s, notifyOnEstimate: e.target.checked } : s))}
                     className="w-4 h-4 accent-[#2D4B3E]"
                   />
-                  <span className="text-[12px] font-bold text-[#555]">見積依頼が入った時</span>
+                  <span className="text-[14px] font-bold text-[#3B4640]">見積依頼が入った時</span>
                 </label>
               </div>
             </div>
           </div>
 
           {/* ★ [業務-8] 入金ステータス設定（テンプレ／カスタム切替） */}
-          <div className="space-y-3 pt-6 border-t border-[#EAEAEA]">
-            <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={16}/> 入金ステータス設定</h3>
-            <p className="text-[10px] text-[#999999] leading-relaxed">
+          <div className="space-y-3 pt-6 border-t border-[#E6E2DA]">
+            <h3 className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={16}/> 入金ステータス設定</h3>
+            <p className="text-[12px] text-[#5C6660] leading-relaxed">
               受注一覧・注文詳細で選べる入金ステータスの選択肢を設定できます。
             </p>
-            <div className="flex gap-2 p-1 bg-[#F7F7F7] rounded-xl">
+            <div className="flex gap-2 p-1 bg-[#F6F4EF] rounded-xl">
               {['template', 'custom'].map(t => (
                 <button
                   key={t}
@@ -982,7 +982,7 @@ export default function SettingsPage() {
                     const nextConfig = { ...(shop.paymentStatusConfig || {}), type: t };
                     setShops(shops.map(s => s.id === shop.id ? { ...s, paymentStatusConfig: nextConfig } : s));
                   }}
-                  className={`flex-1 py-2.5 rounded-lg font-bold text-[11px] transition-all ${(shop.paymentStatusConfig?.type || 'custom') === t ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}
+                  className={`flex-1 py-2.5 rounded-lg font-bold text-[13px] transition-all ${(shop.paymentStatusConfig?.type || 'custom') === t ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#5C6660]'}`}
                 >
                   {t === 'template' ? '標準（テンプレ）' : 'カスタム'}
                 </button>
@@ -990,10 +990,10 @@ export default function SettingsPage() {
             </div>
             {(shop.paymentStatusConfig?.type || 'custom') === 'template' && (
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-2">
-                <p className="text-[11px] text-blue-900 leading-relaxed">
+                <p className="text-[13px] text-blue-900 leading-relaxed">
                   <strong>標準テンプレを使用中</strong>（編集不可）。以下の 6 項目が入金ステータスの選択肢になります：
                 </p>
-                <ul className="text-[11px] text-blue-800 space-y-1 pl-4">
+                <ul className="text-[13px] text-blue-800 space-y-1 pl-4">
                   <li>・入金済（現金）</li>
                   <li>・入金済（振込）</li>
                   <li>・入金済（クレジットカード）</li>
@@ -1001,7 +1001,7 @@ export default function SettingsPage() {
                   <li>・未入金（請求書発行）</li>
                   <li>・未入金（後日振込）</li>
                 </ul>
-                <p className="text-[10px] text-blue-700 leading-relaxed pt-1">
+                <p className="text-[12px] text-blue-700 leading-relaxed pt-1">
                   ※ 選択肢を追加・変更したい場合は「カスタム」に切り替えてください。
                 </p>
               </div>
@@ -1009,17 +1009,17 @@ export default function SettingsPage() {
           </div>
 
           {/* 既存の「入金済み系ラベル」+「未入金の内訳」設定（カスタム時のみ有効） */}
-          <div className={`space-y-3 pt-6 border-t border-[#EAEAEA] ${(shop.paymentStatusConfig?.type || 'custom') === 'template' ? 'opacity-40 pointer-events-none' : ''}`}>
-            <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={16}/> 入金済み系ラベル（受注一覧で表示）</h3>
-            <p className="text-[10px] text-[#999999] leading-relaxed">
+          <div className={`space-y-3 pt-6 border-t border-[#E6E2DA] ${(shop.paymentStatusConfig?.type || 'custom') === 'template' ? 'opacity-40 pointer-events-none' : ''}`}>
+            <h3 className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={16}/> 入金済み系ラベル（受注一覧で表示）</h3>
+            <p className="text-[12px] text-[#5C6660] leading-relaxed">
               入金完了時に選べるラベルを店舗ごとに設定できます。<br/>
               例：「入金済（現金）」「入金済（振込）」「入金済（クレジットカード）」<br/>
               ※ Stripe 決済完了時は自動で「入金済（クレジットカード）」がセットされます
             </p>
-            <div className="bg-[#FBFAF9] p-3 rounded-xl space-y-2">
+            <div className="bg-[#FAFAF7] p-3 rounded-xl space-y-2">
               {((shop.paidStatuses && shop.paidStatuses.length > 0) ? shop.paidStatuses : ['入金済（現金）', '入金済（振込）', '入金済（クレジットカード）']).map((sub, idx) => (
                 <div key={idx} className="flex items-center gap-2">
-                  <span className="text-[10px] text-[#999] w-6">{idx + 1}</span>
+                  <span className="text-[12px] text-[#5C6660] w-6">{idx + 1}</span>
                   <input
                     type="text"
                     value={sub}
@@ -1028,7 +1028,7 @@ export default function SettingsPage() {
                       current[idx] = e.target.value;
                       setShops(shops.map(s => s.id === shop.id ? { ...s, paidStatuses: current } : s));
                     }}
-                    className="flex-1 h-9 bg-white border rounded-lg px-3 text-[12px] outline-none focus:border-[#2D4B3E]"
+                    className="flex-1 h-9 bg-white border rounded-lg px-3 text-[14px] outline-none focus:border-[#2D4B3E]"
                     placeholder="例: 入金済（現金）"
                   />
                   <button
@@ -1038,7 +1038,7 @@ export default function SettingsPage() {
                       current.splice(idx, 1);
                       setShops(shops.map(s => s.id === shop.id ? { ...s, paidStatuses: current.length > 0 ? current : ['入金済（現金）'] } : s));
                     }}
-                    className="w-8 h-8 flex items-center justify-center text-[#D97D54] hover:bg-[#D97D54]/10 rounded-lg"
+                    className="w-8 h-8 flex items-center justify-center text-[#B9562F] hover:bg-[#B9562F]/10 rounded-lg"
                     title="削除"
                   >
                     <X size={14}/>
@@ -1052,7 +1052,7 @@ export default function SettingsPage() {
                   current.push('');
                   setShops(shops.map(s => s.id === shop.id ? { ...s, paidStatuses: current } : s));
                 }}
-                className="w-full py-2 bg-white border-dashed border border-[#EAEAEA] rounded-lg text-[11px] font-bold text-[#999999] hover:text-[#2D4B3E] hover:border-[#2D4B3E]/50 transition-all"
+                className="w-full py-2 bg-white border-dashed border border-[#E6E2DA] rounded-lg text-[13px] font-bold text-[#5C6660] hover:text-[#2D4B3E] hover:border-[#2D4B3E]/50 transition-all"
               >
                 + 入金済みラベルを追加
               </button>
@@ -1060,16 +1060,16 @@ export default function SettingsPage() {
           </div>
 
           {/* ★ [注文-7] 未入金の内訳設定（受注一覧での細分化用、カスタム時のみ有効） */}
-          <div className={`space-y-3 pt-6 border-t border-[#EAEAEA] ${(shop.paymentStatusConfig?.type || 'custom') === 'template' ? 'opacity-40 pointer-events-none' : ''}`}>
-            <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={16}/> 未入金の内訳（受注一覧で表示）</h3>
-            <p className="text-[10px] text-[#999999] leading-relaxed">
+          <div className={`space-y-3 pt-6 border-t border-[#E6E2DA] ${(shop.paymentStatusConfig?.type || 'custom') === 'template' ? 'opacity-40 pointer-events-none' : ''}`}>
+            <h3 className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={16}/> 未入金の内訳（受注一覧で表示）</h3>
+            <p className="text-[12px] text-[#5C6660] leading-relaxed">
               代理入力で「未入金」を選んだとき、内訳を選べるようになります。<br/>
               例：「未入金（引き取り時支払い）」「未入金（請求書発行）」のように受注一覧に表示されます。
             </p>
-            <div className="bg-[#FBFAF9] p-3 rounded-xl space-y-2">
+            <div className="bg-[#FAFAF7] p-3 rounded-xl space-y-2">
               {((shop.unpaidSubStatuses && shop.unpaidSubStatuses.length > 0) ? shop.unpaidSubStatuses : ['引き取り時支払い', '請求書発行', '後日振込']).map((sub, idx) => (
                 <div key={idx} className="flex items-center gap-2">
-                  <span className="text-[10px] text-[#999] w-6">{idx + 1}</span>
+                  <span className="text-[12px] text-[#5C6660] w-6">{idx + 1}</span>
                   <input
                     type="text"
                     value={sub}
@@ -1078,7 +1078,7 @@ export default function SettingsPage() {
                       current[idx] = e.target.value;
                       setShops(shops.map(s => s.id === shop.id ? { ...s, unpaidSubStatuses: current } : s));
                     }}
-                    className="flex-1 h-9 bg-white border rounded-lg px-3 text-[12px] outline-none focus:border-[#2D4B3E]"
+                    className="flex-1 h-9 bg-white border rounded-lg px-3 text-[14px] outline-none focus:border-[#2D4B3E]"
                     placeholder="例: 引き取り時支払い"
                   />
                   <button
@@ -1088,7 +1088,7 @@ export default function SettingsPage() {
                       current.splice(idx, 1);
                       setShops(shops.map(s => s.id === shop.id ? { ...s, unpaidSubStatuses: current.length > 0 ? current : ['引き取り時支払い'] } : s));
                     }}
-                    className="w-8 h-8 flex items-center justify-center text-[#D97D54] hover:bg-[#D97D54]/10 rounded-lg"
+                    className="w-8 h-8 flex items-center justify-center text-[#B9562F] hover:bg-[#B9562F]/10 rounded-lg"
                     title="削除"
                   >
                     <X size={14}/>
@@ -1102,68 +1102,68 @@ export default function SettingsPage() {
                   current.push('');
                   setShops(shops.map(s => s.id === shop.id ? { ...s, unpaidSubStatuses: current } : s));
                 }}
-                className="w-full py-2 bg-white border-dashed border border-[#EAEAEA] rounded-lg text-[11px] font-bold text-[#999999] hover:text-[#2D4B3E] hover:border-[#2D4B3E]/50 transition-all"
+                className="w-full py-2 bg-white border-dashed border border-[#E6E2DA] rounded-lg text-[13px] font-bold text-[#5C6660] hover:text-[#2D4B3E] hover:border-[#2D4B3E]/50 transition-all"
               >
                 + 内訳を追加
               </button>
             </div>
           </div>
 
-          <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
-            <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={16}/> 振込先口座情報 (法人請求書等用)</h3>
+          <div className="space-y-4 pt-6 border-t border-[#E6E2DA]">
+            <h3 className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2"><CreditCard size={16}/> 振込先口座情報 (法人請求書等用)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-              <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">銀行名</label><input type="text" value={shop.bankName || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, bankName:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="〇〇銀行"/></div>
-              <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">支店名</label><input type="text" value={shop.branchName || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, branchName:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="〇〇支店"/></div>
+              <div className="space-y-1"><label className="text-[12px] font-bold text-[#5C6660]">銀行名</label><input type="text" value={shop.bankName || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, bankName:e.target.value}:s))} className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="〇〇銀行"/></div>
+              <div className="space-y-1"><label className="text-[12px] font-bold text-[#5C6660]">支店名</label><input type="text" value={shop.branchName || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, branchName:e.target.value}:s))} className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="〇〇支店"/></div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">口座種別</label>
-                <select value={shop.accountType || '普通'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, accountType:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]">
+                <label className="text-[12px] font-bold text-[#5C6660]">口座種別</label>
+                <select value={shop.accountType || '普通'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, accountType:e.target.value}:s))} className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]">
                   <option value="普通">普通</option><option value="当座">当座</option><option value="貯蓄">貯蓄</option>
                 </select>
               </div>
-              <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">口座番号</label><input type="text" value={shop.accountNumber || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, accountNumber:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-mono outline-none focus:border-[#2D4B3E]" placeholder="1234567"/></div>
-              <div className="space-y-1 md:col-span-2"><label className="text-[10px] font-bold text-[#999999]">口座名義 (カナ等)</label><input type="text" value={shop.accountName || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, accountName:e.target.value}:s))} className="w-full h-11 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="カ）ハナハナオハナ"/></div>
+              <div className="space-y-1"><label className="text-[12px] font-bold text-[#5C6660]">口座番号</label><input type="text" value={shop.accountNumber || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, accountNumber:e.target.value}:s))} className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] font-mono outline-none focus:border-[#2D4B3E]" placeholder="1234567"/></div>
+              <div className="space-y-1 md:col-span-2"><label className="text-[12px] font-bold text-[#5C6660]">口座名義 (カナ等)</label><input type="text" value={shop.accountName || ''} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, accountName:e.target.value}:s))} className="w-full h-11 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="カ）ハナハナオハナ"/></div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-[#FBFAF9]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-[#FAFAF7]">
             <div className="space-y-4">
-              <label className="text-[12px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={14}/> 店舗(ご来店) 営業時間・特別日</label>
-              <div className="flex gap-2 bg-[#FBFAF9] p-3 rounded-xl border mb-2">
-                <input type="time" value={shop.openTime || '10:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, openTime:e.target.value}:s))} className="border rounded p-1 text-xs outline-none bg-white"/>
+              <label className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={14}/> 店舗(ご来店) 営業時間・特別日</label>
+              <div className="flex gap-2 bg-[#FAFAF7] p-3 rounded-xl border mb-2">
+                <input type="time" value={shop.openTime || '10:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, openTime:e.target.value}:s))} className="border rounded p-1 text-[13px] outline-none bg-white"/>
                 <span>〜</span>
-                <input type="time" value={shop.closeTime || '19:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, closeTime:e.target.value}:s))} className="border rounded p-1 text-xs outline-none bg-white"/>
+                <input type="time" value={shop.closeTime || '19:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, closeTime:e.target.value}:s))} className="border rounded p-1 text-[13px] outline-none bg-white"/>
               </div>
               {renderSpecialHoursList(shop, 'specialHours')}
-              <button onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, specialHours:[...(s.specialHours||[]), {id:Date.now(), date:'', type:'closed', repeatType:'今年のみ', note:''}]}:s))} className="w-full py-2 bg-[#FBFAF9] border-dashed border border-[#EAEAEA] rounded-xl text-[10px] font-bold text-[#999999] hover:text-[#2D4B3E] transition-all">+ 特別ルールを追加</button>
+              <button onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, specialHours:[...(s.specialHours||[]), {id:Date.now(), date:'', type:'closed', repeatType:'今年のみ', note:''}]}:s))} className="w-full py-2 bg-[#FAFAF7] border-dashed border border-[#E6E2DA] rounded-xl text-[12px] font-bold text-[#5C6660] hover:text-[#2D4B3E] transition-all">+ 特別ルールを追加</button>
             </div>
             
             <div className="space-y-4">
-              <label className="text-[12px] font-bold text-[#D97D54] flex items-center gap-2"><Truck size={14}/> 配達可能時間・特別日</label>
-              <div className="flex gap-2 bg-[#D97D54]/5 p-3 rounded-xl border border-[#D97D54]/20 mb-2">
-                <input type="time" value={shop.deliveryOpenTime || '11:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryOpenTime:e.target.value}:s))} className="border border-[#D97D54]/30 rounded p-1 text-xs outline-none bg-white"/>
+              <label className="text-[14px] font-bold text-[#B9562F] flex items-center gap-2"><Truck size={14}/> 配達可能時間・特別日</label>
+              <div className="flex gap-2 bg-[#B9562F]/5 p-3 rounded-xl border border-[#B9562F]/20 mb-2">
+                <input type="time" value={shop.deliveryOpenTime || '11:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryOpenTime:e.target.value}:s))} className="border border-[#B9562F]/30 rounded p-1 text-[13px] outline-none bg-white"/>
                 <span>〜</span>
-                <input type="time" value={shop.deliveryCloseTime || '18:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryCloseTime:e.target.value}:s))} className="border border-[#D97D54]/30 rounded p-1 text-xs outline-none bg-white"/>
+                <input type="time" value={shop.deliveryCloseTime || '18:00'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryCloseTime:e.target.value}:s))} className="border border-[#B9562F]/30 rounded p-1 text-[13px] outline-none bg-white"/>
               </div>
               {renderSpecialHoursList(shop, 'deliverySpecialHours')}
-              <button onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:[...(s.deliverySpecialHours||[]), {id:Date.now(), date:'', type:'closed', repeatType:'今年のみ', note:''}]}:s))} className="w-full py-2 bg-[#D97D54]/5 border-dashed border border-[#D97D54]/30 rounded-xl text-[10px] font-bold text-[#D97D54]/80 hover:text-[#D97D54] transition-all">+ 配達特別ルールを追加</button>
+              <button onClick={()=>setShops(shops.map(s=>s.id===shop.id?{...s, deliverySpecialHours:[...(s.deliverySpecialHours||[]), {id:Date.now(), date:'', type:'closed', repeatType:'今年のみ', note:''}]}:s))} className="w-full py-2 bg-[#B9562F]/5 border-dashed border border-[#B9562F]/30 rounded-xl text-[12px] font-bold text-[#B9562F]/80 hover:text-[#B9562F] transition-all">+ 配達特別ルールを追加</button>
             </div>
           </div>
 
-          <div className="pt-6 border-t border-[#FBFAF9] space-y-4">
-            <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><AlertCircle size={16}/> 注意書き・ご案内テキスト設定 <HelpTooltip articleId="mail_not_sent"/></h3>
-            <p className="text-[10px] text-[#999999]">お客様のオーダー画面で表示される、各受取方法ごとの注意書きを店舗別に設定できます。</p>
+          <div className="pt-6 border-t border-[#FAFAF7] space-y-4">
+            <h3 className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2"><AlertCircle size={16}/> 注意書き・ご案内テキスト設定 <HelpTooltip articleId="mail_not_sent"/></h3>
+            <p className="text-[12px] text-[#5C6660]">お客様のオーダー画面で表示される、各受取方法ごとの注意書きを店舗別に設定できます。</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">店頭受取のご案内</label>
-                <textarea value={shop.pickupNote ?? 'ご来店予定日時に店舗までお越しください。'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, pickupNote:e.target.value}:s))} className="w-full h-24 bg-[#FBFAF9] border rounded-xl p-3 text-[12px] outline-none resize-none focus:border-[#2D4B3E]"/>
+                <label className="text-[12px] font-bold text-[#5C6660]">店頭受取のご案内</label>
+                <textarea value={shop.pickupNote ?? 'ご来店予定日時に店舗までお越しください。'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, pickupNote:e.target.value}:s))} className="w-full h-24 bg-[#FAFAF7] border rounded-xl p-3 text-[14px] outline-none resize-none focus:border-[#2D4B3E]"/>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">自社配達のご案内</label>
-                <textarea value={shop.deliveryNote ?? '交通状況により配達時間が前後する場合がございます。'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryNote:e.target.value}:s))} className="w-full h-24 bg-[#FBFAF9] border rounded-xl p-3 text-[12px] outline-none resize-none focus:border-[#2D4B3E]"/>
+                <label className="text-[12px] font-bold text-[#5C6660]">自社配達のご案内</label>
+                <textarea value={shop.deliveryNote ?? '交通状況により配達時間が前後する場合がございます。'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, deliveryNote:e.target.value}:s))} className="w-full h-24 bg-[#FAFAF7] border rounded-xl p-3 text-[14px] outline-none resize-none focus:border-[#2D4B3E]"/>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#999999]">業者配送のご案内</label>
-                <textarea value={shop.shippingNote ?? '発送準備期間＋配送日数がかかります。交通状況により遅延する場合がございます。'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, shippingNote:e.target.value}:s))} className="w-full h-24 bg-[#FBFAF9] border rounded-xl p-3 text-[12px] outline-none resize-none focus:border-[#2D4B3E]"/>
+                <label className="text-[12px] font-bold text-[#5C6660]">業者配送のご案内</label>
+                <textarea value={shop.shippingNote ?? '発送準備期間＋配送日数がかかります。交通状況により遅延する場合がございます。'} onChange={(e)=>setShops(shops.map(s=>s.id===shop.id?{...s, shippingNote:e.target.value}:s))} className="w-full h-24 bg-[#FAFAF7] border rounded-xl p-3 text-[14px] outline-none resize-none focus:border-[#2D4B3E]"/>
               </div>
             </div>
           </div>
@@ -1176,7 +1176,7 @@ export default function SettingsPage() {
           bankName: '', branchName: '', accountType: '普通', accountNumber: '', accountName: '',
           pickupNote: 'ご来店予定日時に店舗までお越しください。', deliveryNote: '交通状況により配達時間が前後する場合がございます。', shippingNote: '発送準備期間＋配送日数がかかります。交通状況により遅延する場合がございます。',
         }])}
-        className="w-full py-10 border-2 border-dashed border-[#EAEAEA] rounded-2xl text-[#999999] font-bold transition-all hover:border-[#2D4B3E] shadow-sm"
+        className="w-full py-10 border-2 border-dashed border-[#E6E2DA] rounded-2xl text-[#5C6660] font-bold transition-all hover:border-[#2D4B3E] shadow-sm"
       >
         + 店舗を新規追加
       </button>
@@ -1195,8 +1195,8 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-10 md:pr-14 pt-2">
               <input type="text" value={item.name} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, name:e.target.value}:i))} className="w-full h-12 bg-transparent border-b-2 text-[20px] font-bold outline-none focus:border-[#2D4B3E] transition-all" placeholder="商品名" />
               <div className="flex items-center gap-2 justify-start md:justify-end">
-                <span className="text-[11px] font-bold text-[#999999]">配送サイズ (箱):</span>
-                <select value={item.defaultBoxSize || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, defaultBoxSize:e.target.value}:i))} className="h-10 bg-[#FBFAF9] border rounded-xl px-3 font-bold text-[13px] outline-none focus:border-[#2D4B3E]">
+                <span className="text-[13px] font-bold text-[#5C6660]">配送サイズ (箱):</span>
+                <select value={item.defaultBoxSize || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, defaultBoxSize:e.target.value}:i))} className="h-10 bg-[#FAFAF7] border rounded-xl px-3 font-bold text-[15px] outline-none focus:border-[#2D4B3E]">
                   <option value="">未設定</option>
                   {shippingSizes.map(s => <option key={s} value={s}>{s}サイズ</option>)}
                 </select>
@@ -1204,27 +1204,27 @@ export default function SettingsPage() {
             </div>
 
             <div className="grid grid-cols-3 gap-4 pt-2 mt-2">
-              <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">最低注文料金 (税抜)</label><input type="number" value={item.minPrice || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, minPrice:Number(e.target.value)}:i))} className="w-full h-10 bg-[#FBFAF9] border rounded-xl px-3 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="例: 3000"/></div>
-              <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">最大注文料金 (税抜)</label><input type="number" value={item.maxPrice || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, maxPrice:Number(e.target.value)}:i))} className="w-full h-10 bg-[#FBFAF9] border rounded-xl px-3 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="例: 50000"/></div>
-              <div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">金額の刻み幅</label><input type="number" value={item.stepPrice || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, stepPrice:Number(e.target.value)}:i))} className="w-full h-10 bg-[#FBFAF9] border rounded-xl px-3 text-[13px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="例: 1000"/></div>
+              <div className="space-y-1"><label className="text-[12px] font-bold text-[#5C6660]">最低注文料金 (税抜)</label><input type="number" value={item.minPrice || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, minPrice:Number(e.target.value)}:i))} className="w-full h-10 bg-[#FAFAF7] border rounded-xl px-3 text-[15px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="例: 3000"/></div>
+              <div className="space-y-1"><label className="text-[12px] font-bold text-[#5C6660]">最大注文料金 (税抜)</label><input type="number" value={item.maxPrice || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, maxPrice:Number(e.target.value)}:i))} className="w-full h-10 bg-[#FAFAF7] border rounded-xl px-3 text-[15px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="例: 50000"/></div>
+              <div className="space-y-1"><label className="text-[12px] font-bold text-[#5C6660]">金額の刻み幅</label><input type="number" value={item.stepPrice || ''} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, stepPrice:Number(e.target.value)}:i))} className="w-full h-10 bg-[#FAFAF7] border rounded-xl px-3 text-[15px] font-bold outline-none focus:border-[#2D4B3E]" placeholder="例: 1000"/></div>
             </div>
 
-            <div className="pt-4 pb-2 border-t border-[#FBFAF9] mt-2">
+            <div className="pt-4 pb-2 border-t border-[#FAFAF7] mt-2">
               <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between mb-3">
-                <p className="text-[12px] font-bold text-[#2D4B3E] flex items-center gap-2"><MapPin size={16}/> 取扱店舗</p>
-                <div className="flex gap-2 p-1 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA] w-fit">
-                  <button onClick={() => setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, targetShops: 'all'}:i))} className={`px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all ${isAllShops ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}>全店舗</button>
-                  <button onClick={() => setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, targetShops: Array.isArray(i.targetShops) ? i.targetShops : []}:i))} className={`px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all ${!isAllShops ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999]'}`}>指定店舗のみ</button>
+                <p className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><MapPin size={16}/> 取扱店舗</p>
+                <div className="flex gap-2 p-1 bg-[#FAFAF7] rounded-xl border border-[#E6E2DA] w-fit">
+                  <button onClick={() => setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, targetShops: 'all'}:i))} className={`px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all ${isAllShops ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#5C6660]'}`}>全店舗</button>
+                  <button onClick={() => setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, targetShops: Array.isArray(i.targetShops) ? i.targetShops : []}:i))} className={`px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all ${!isAllShops ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#5C6660]'}`}>指定店舗のみ</button>
                 </div>
               </div>
               {!isAllShops && (
-                <div className="flex flex-wrap gap-3 mt-2 p-4 bg-[#FBFAF9] rounded-2xl border border-[#EAEAEA] animate-in slide-in-from-top-2">
-                  {shops.length === 0 ? <p className="text-[11px] text-[#999999]">店舗が登録されていません</p> : shops.map(shop => {
+                <div className="flex flex-wrap gap-3 mt-2 p-4 bg-[#FAFAF7] rounded-2xl border border-[#E6E2DA] animate-in slide-in-from-top-2">
+                  {shops.length === 0 ? <p className="text-[13px] text-[#5C6660]">店舗が登録されていません</p> : shops.map(shop => {
                     const isChecked = Array.isArray(item.targetShops) && item.targetShops.includes(shop.id);
                     return (
-                      <label key={shop.id} className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-all ${isChecked ? 'bg-white border-[#2D4B3E]/30 text-[#2D4B3E] shadow-sm' : 'bg-transparent border-transparent text-[#999999] hover:bg-white'}`}>
+                      <label key={shop.id} className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-all ${isChecked ? 'bg-white border-[#2D4B3E]/30 text-[#2D4B3E] shadow-sm' : 'bg-transparent border-transparent text-[#5C6660] hover:bg-white'}`}>
                         <input type="checkbox" checked={isChecked} onChange={(e)=>{const current = Array.isArray(item.targetShops) ? item.targetShops : []; const next = e.target.checked ? [...current, shop.id] : current.filter(id => id !== shop.id); setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, targetShops: next}:i));}} className="accent-[#2D4B3E] w-3.5 h-3.5"/>
-                        <span className="text-[11px] font-bold">{shop.name}</span>
+                        <span className="text-[13px] font-bold">{shop.name}</span>
                       </label>
                     );
                   })}
@@ -1232,21 +1232,21 @@ export default function SettingsPage() {
               )}
             </div>
 
-            <div className="pt-4 pb-2 border-t border-[#FBFAF9]">
-              <p className="text-[12px] font-bold text-[#2D4B3E] mb-3 flex items-center gap-2"><Store size={16}/> 対応可能な受取方法</p>
+            <div className="pt-4 pb-2 border-t border-[#FAFAF7]">
+              <p className="text-[14px] font-bold text-[#2D4B3E] mb-3 flex items-center gap-2"><Store size={16}/> 対応可能な受取方法</p>
               <div className="flex flex-wrap gap-3">
                 {['canPickup', 'canDelivery', 'canShipping'].map(key => (
-                  <label key={key} className={`flex items-center gap-2 px-4 py-2 rounded-xl border cursor-pointer transition-all ${item[key] !== false ? 'bg-[#FBFAF9] border-[#2D4B3E]/30 text-[#2D4B3E]' : 'bg-white border-[#EAEAEA] text-[#999999]'}`}>
+                  <label key={key} className={`flex items-center gap-2 px-4 py-2 rounded-xl border cursor-pointer transition-all ${item[key] !== false ? 'bg-[#FAFAF7] border-[#2D4B3E]/30 text-[#2D4B3E]' : 'bg-white border-[#E6E2DA] text-[#5C6660]'}`}>
                     <input type="checkbox" checked={item[key] !== false} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, [key]:e.target.checked}:i))} className="accent-[#2D4B3E] w-4 h-4"/>
-                    <span className="text-[12px] font-bold">{key==='canPickup'?'店頭受取':key==='canDelivery'?'自社配達':'業者配送'}</span>
+                    <span className="text-[14px] font-bold">{key==='canPickup'?'店頭受取':key==='canDelivery'?'自社配達':'業者配送'}</span>
                   </label>
                 ))}
               </div>
             </div>
 
             {/* ★ 店舗注文受付のみ表示 (お客様画面では非表示) */}
-            <div className="pt-4 pb-2 border-t border-[#FBFAF9]">
-              <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${item.staffOnly ? 'bg-orange-50 border-orange-300' : 'bg-white border-[#EAEAEA] hover:border-orange-200'}`}>
+            <div className="pt-4 pb-2 border-t border-[#FAFAF7]">
+              <label className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${item.staffOnly ? 'bg-orange-50 border-orange-300' : 'bg-white border-[#E6E2DA] hover:border-orange-200'}`}>
                 <input
                   type="checkbox"
                   checked={!!item.staffOnly}
@@ -1254,10 +1254,10 @@ export default function SettingsPage() {
                   className="accent-orange-600 w-5 h-5 mt-0.5"
                 />
                 <div className="flex-1">
-                  <p className={`text-[13px] font-bold ${item.staffOnly ? 'text-orange-700' : 'text-[#2D4B3E]'}`}>
+                  <p className={`text-[15px] font-bold ${item.staffOnly ? 'text-orange-700' : 'text-[#2D4B3E]'}`}>
                     店舗注文受付のみ表示
                   </p>
-                  <p className="text-[10px] text-[#999999] leading-tight mt-1">
+                  <p className="text-[12px] text-[#5C6660] leading-tight mt-1">
                     ONにすると、お客様のオンライン注文画面では表示されず、<strong>スタッフの店舗注文受付ページからのみ</strong>選択できるようになります。<br/>
                     （電話・店頭限定の商品や、関係者向け商品などに）
                   </p>
@@ -1265,15 +1265,15 @@ export default function SettingsPage() {
               </label>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-[#FBFAF9] pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 border-t border-[#FAFAF7] pt-6">
               <div className="space-y-4">
-                <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={16}/> 納期設定</p>
-                <div className="space-y-2"><label className="text-[9px] font-bold text-[#999999]">通常納期 (日後)</label><input type="number" value={item.normalLeadDays} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, normalLeadDays:Number(e.target.value)}:i))} className="w-full bg-[#FBFAF9] border rounded-lg h-10 px-3 font-bold outline-none focus:border-[#2D4B3E]"/></div>
-                <div className="space-y-2"><label className="text-[9px] font-bold text-[#999999]">業者配送 発送準備(日)</label><input type="number" value={item.shippingLeadDays} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, shippingLeadDays:Number(e.target.value)}:i))} className="w-full bg-[#FBFAF9] border rounded-lg h-10 px-3 font-bold outline-none focus:border-[#2D4B3E]"/></div>
+                <p className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={16}/> 納期設定</p>
+                <div className="space-y-2"><label className="text-[12px] font-bold text-[#5C6660]">通常納期 (日後)</label><input type="number" value={item.normalLeadDays} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, normalLeadDays:Number(e.target.value)}:i))} className="w-full bg-[#FAFAF7] border rounded-lg h-10 px-3 font-bold outline-none focus:border-[#2D4B3E]"/></div>
+                <div className="space-y-2"><label className="text-[12px] font-bold text-[#5C6660]">業者配送 発送準備(日)</label><input type="number" value={item.shippingLeadDays} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, shippingLeadDays:Number(e.target.value)}:i))} className="w-full bg-[#FAFAF7] border rounded-lg h-10 px-3 font-bold outline-none focus:border-[#2D4B3E]"/></div>
 
                 {/* ★ 要件⑤: お急ぎ電話案内のON/OFF（デフォルトON） */}
-                <div className="bg-[#FBFAF9] p-3 rounded-xl border space-y-1">
-                  <label className="flex items-center justify-between text-[11px] font-bold cursor-pointer">
+                <div className="bg-[#FAFAF7] p-3 rounded-xl border space-y-1">
+                  <label className="flex items-center justify-between text-[13px] font-bold cursor-pointer">
                     お急ぎ電話案内を表示
                     <input
                       type="checkbox"
@@ -1282,30 +1282,30 @@ export default function SettingsPage() {
                       className="accent-[#2D4B3E] w-4 h-4"
                     />
                   </label>
-                  <p className="text-[9px] text-[#999999] leading-tight">納期より早くご希望の場合に「店舗へ直接お電話ください」と注文画面に表示します。</p>
+                  <p className="text-[12px] text-[#5C6660] leading-tight">納期より早くご希望の場合に「店舗へ直接お電話ください」と注文画面に表示します。</p>
                 </div>
               </div>
-              <div className="space-y-4 px-4 border-l border-r border-[#FBFAF9]">
-                <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2"><ShieldCheck size={16}/> 持込設定</p>
+              <div className="space-y-4 px-4 border-l border-r border-[#FAFAF7]">
+                <p className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2"><ShieldCheck size={16}/> 持込設定</p>
                 {['canBringFlowers', 'canBringVase'].map(key => (
-                  <div key={key} className="bg-[#FBFAF9] p-3 rounded-xl border space-y-2">
-                    <label className="flex items-center justify-between text-[12px] font-bold">{key==='canBringFlowers'?'花材持込':'花器持込'}<input type="checkbox" checked={item[key]} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, [key]:e.target.checked}:i))} className="accent-[#2D4B3E] w-4 h-4"/></label>
-                    {item[key] && <div className="flex items-center justify-between text-[10px] font-bold text-[#555555]"><span>持込時納期</span><div className="flex items-center gap-1"><input type="number" value={item[key+'LeadDays']||7} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, [key+'LeadDays']:Number(e.target.value)}:i))} className="w-10 border rounded text-center h-8 font-bold"/>日後</div></div>}
+                  <div key={key} className="bg-[#FAFAF7] p-3 rounded-xl border space-y-2">
+                    <label className="flex items-center justify-between text-[14px] font-bold">{key==='canBringFlowers'?'花材持込':'花器持込'}<input type="checkbox" checked={item[key]} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, [key]:e.target.checked}:i))} className="accent-[#2D4B3E] w-4 h-4"/></label>
+                    {item[key] && <div className="flex items-center justify-between text-[12px] font-bold text-[#3B4640]"><span>持込時納期</span><div className="flex items-center gap-1"><input type="number" value={item[key+'LeadDays']||7} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, [key+'LeadDays']:Number(e.target.value)}:i))} className="w-10 border rounded text-center h-8 font-bold"/>日後</div></div>}
                   </div>
                 ))}
               </div>
               <div className="space-y-4">
-                <p className="text-[13px] font-bold text-[#2D4B3E] flex items-center gap-2"><RotateCcw size={16}/> 器の回収/返却</p>
-                <div className="bg-[#FBFAF9] p-3 rounded-xl border space-y-3">
-                  <label className="flex items-center justify-between text-[12px] font-bold cursor-pointer">器の回収を必要とする<input type="checkbox" checked={item.hasReturn} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, hasReturn:e.target.checked}:i))} className="accent-[#2D4B3E] w-5 h-5"/></label>
-                  <p className="text-[9px] text-[#999999] leading-tight font-bold">※注文時に「器返却あり」の送料計算を自動で有効化します。</p>
+                <p className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2"><RotateCcw size={16}/> 器の回収/返却</p>
+                <div className="bg-[#FAFAF7] p-3 rounded-xl border space-y-3">
+                  <label className="flex items-center justify-between text-[14px] font-bold cursor-pointer">器の回収を必要とする<input type="checkbox" checked={item.hasReturn} onChange={(e)=>setFlowerItems(flowerItems.map(i=>i.id===item.id?{...i, hasReturn:e.target.checked}:i))} className="accent-[#2D4B3E] w-5 h-5"/></label>
+                  <p className="text-[12px] text-[#5C6660] leading-tight font-bold">※注文時に「器返却あり」の送料計算を自動で有効化します。</p>
                 </div>
               </div>
             </div>
           </div>
         );
       })}
-      <button onClick={()=>setFlowerItems([...flowerItems, {id:Date.now(), name:'', targetShops: 'all', normalLeadDays:2, shippingLeadDays:3, canBringFlowers:false, hasReturn:false, canPickup:true, canDelivery:true, canShipping:true, minPrice:3000, maxPrice:50000, stepPrice:1000}])} className="w-full py-10 border-2 border-dashed border-[#EAEAEA] rounded-2xl text-[#999999] font-bold transition-all hover:border-[#2D4B3E]">+ 商品を追加</button>
+      <button onClick={()=>setFlowerItems([...flowerItems, {id:Date.now(), name:'', targetShops: 'all', normalLeadDays:2, shippingLeadDays:3, canBringFlowers:false, hasReturn:false, canPickup:true, canDelivery:true, canShipping:true, minPrice:3000, maxPrice:50000, stepPrice:1000}])} className="w-full py-10 border-2 border-dashed border-[#E6E2DA] rounded-2xl text-[#5C6660] font-bold transition-all hover:border-[#2D4B3E]">+ 商品を追加</button>
     </div>
   );
 
@@ -1313,43 +1313,43 @@ export default function SettingsPage() {
     <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-10 animate-in fade-in text-left">
       <h2 className="text-[18px] font-bold text-[#2D4B3E] border-b pb-4 flex items-center gap-2"><Truck size={20}/> 配送・送料・時間枠</h2>
       <section className="space-y-6">
-        <label className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={16}/> 受取・配達の時間枠</label>
+        <label className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={16}/> 受取・配達の時間枠</label>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {['pickup', 'delivery', 'shipping'].map(method => (
             <div key={method} className={`p-4 rounded-2xl border ${method==='pickup'?'bg-orange-50/50 border-orange-200':method==='delivery'?'bg-blue-50/50 border-blue-200':'bg-green-50/50 border-green-200'}`}>
-              <h3 className={`text-[13px] font-bold mb-3 flex items-center gap-1 ${method==='pickup'?'text-orange-800':method==='delivery'?'text-blue-800':'text-green-800'}`}>{method==='pickup' ? <Store size={14}/> : method==='delivery' ? <Truck size={14}/> : <Package size={14}/>}{method==='pickup' ? '店頭受取' : method==='delivery' ? '自社配達' : '業者配送'}</h3>
+              <h3 className={`text-[15px] font-bold mb-3 flex items-center gap-1 ${method==='pickup'?'text-orange-800':method==='delivery'?'text-blue-800':'text-green-800'}`}>{method==='pickup' ? <Store size={14}/> : method==='delivery' ? <Truck size={14}/> : <Package size={14}/>}{method==='pickup' ? '店頭受取' : method==='delivery' ? '自社配達' : '業者配送'}</h3>
               <div className="space-y-2">
                 {timeSlots[method].map((slot, i) => (
                   <div key={i} className="flex gap-2">
-                    <input type="text" value={slot} onChange={(e) => handleTimeSlotChange(method, i, e.target.value)} className={`flex-1 px-3 py-1.5 rounded-lg border bg-white text-[13px] font-bold outline-none focus:border-[#2D4B3E] ${method==='pickup'?'border-orange-200':method==='delivery'?'border-blue-200':'border-green-200'}`} />
+                    <input type="text" value={slot} onChange={(e) => handleTimeSlotChange(method, i, e.target.value)} className={`flex-1 px-3 py-1.5 rounded-lg border bg-white text-[15px] font-bold outline-none focus:border-[#2D4B3E] ${method==='pickup'?'border-orange-200':method==='delivery'?'border-blue-200':'border-green-200'}`} />
                     <button onClick={() => removeTimeSlot(method, i)} className="text-red-300 p-1.5 hover:text-red-500 transition-colors"><X size={14}/></button>
                   </div>
                 ))}
-                <button onClick={() => addTimeSlot(method)} className={`text-[11px] font-bold flex items-center gap-1 mt-2 transition-colors ${method==='pickup'?'text-orange-600 hover:text-orange-800':method==='delivery'?'text-blue-600 hover:text-blue-800':'text-green-600 hover:text-green-800'}`}><Plus size={14}/> 枠を追加</button>
+                <button onClick={() => addTimeSlot(method)} className={`text-[13px] font-bold flex items-center gap-1 mt-2 transition-colors ${method==='pickup'?'text-orange-600 hover:text-orange-800':method==='delivery'?'text-blue-600 hover:text-blue-800':'text-green-600 hover:text-green-800'}`}><Plus size={14}/> 枠を追加</button>
               </div>
             </div>
           ))}
         </div>
       </section>
-      <div className="space-y-4 pt-6 border-t border-[#EAEAEA]">
-        <label className="text-[14px] font-bold text-[#2D4B3E]">自社配達エリアと料金</label>
+      <div className="space-y-4 pt-6 border-t border-[#E6E2DA]">
+        <label className="text-[15px] font-bold text-[#2D4B3E]">自社配達エリアと料金</label>
         <div className="space-y-2">
           {deliveryAreas.map(a => (
-            <div key={a.id} className="flex gap-2 bg-[#FBFAF9] p-2 rounded-xl border border-[#EAEAEA]">
-              <input type="text" value={a.name} onChange={(e)=>setDeliveryAreas(deliveryAreas.map(x=>x.id===a.id?{...x, name:e.target.value}:x))} className="flex-[2] h-10 bg-white border rounded-xl px-3 text-[13px] font-bold focus:border-[#2D4B3E] outline-none" placeholder="判定用キーワード (例: 中央区, 北区)"/>
-              <div className="flex-1 flex items-center gap-1 bg-white border rounded-xl px-3 h-10"><span className="text-[10px] text-[#999999] font-bold">¥</span><input type="number" value={a.fee} onChange={(e)=>setDeliveryAreas(deliveryAreas.map(x=>x.id===a.id?{...x, fee:Number(e.target.value)}:x))} className="w-full bg-transparent text-right font-bold text-[13px] outline-none"/></div>
+            <div key={a.id} className="flex gap-2 bg-[#FAFAF7] p-2 rounded-xl border border-[#E6E2DA]">
+              <input type="text" value={a.name} onChange={(e)=>setDeliveryAreas(deliveryAreas.map(x=>x.id===a.id?{...x, name:e.target.value}:x))} className="flex-[2] h-10 bg-white border rounded-xl px-3 text-[15px] font-bold focus:border-[#2D4B3E] outline-none" placeholder="判定用キーワード (例: 中央区, 北区)"/>
+              <div className="flex-1 flex items-center gap-1 bg-white border rounded-xl px-3 h-10"><span className="text-[12px] text-[#5C6660] font-bold">¥</span><input type="number" value={a.fee} onChange={(e)=>setDeliveryAreas(deliveryAreas.map(x=>x.id===a.id?{...x, fee:Number(e.target.value)}:x))} className="w-full bg-transparent text-right font-bold text-[15px] outline-none"/></div>
               <button onClick={()=>setDeliveryAreas(deliveryAreas.filter(x=>x.id!==a.id))} className="text-red-300 px-2 hover:text-red-500"><Trash2 size={16}/></button>
             </div>
           ))}
-          <button onClick={()=>setDeliveryAreas([...deliveryAreas, {id:Date.now(), name:'', fee:0}])} className="py-3 border border-dashed rounded-xl text-[11px] font-bold text-[#999999] hover:text-[#2D4B3E] w-full transition-all">+ 配達エリアを追加</button>
+          <button onClick={()=>setDeliveryAreas([...deliveryAreas, {id:Date.now(), name:'', fee:0}])} className="py-3 border border-dashed rounded-xl text-[13px] font-bold text-[#5C6660] hover:text-[#2D4B3E] w-full transition-all">+ 配達エリアを追加</button>
         </div>
       </div>
-      <div className="pt-6 space-y-4 border-t border-[#EAEAEA]">
-        <label className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Box size={16}/> 梱包（箱代）の計算ロジック</label>
-        <div className="flex gap-2 bg-[#FBFAF9] p-1 rounded-xl w-fit">{[{id:'flat',l:'一律'},{id:'price_based',l:'商品代ベース'}].map(t=>(<button key={t.id} onClick={()=>setBoxFeeConfig({...boxFeeConfig, type:t.id})} className={`px-4 py-2 rounded-lg text-xs font-bold ${boxFeeConfig.type===t.id?'bg-white shadow text-[#2D4B3E]':'text-[#999999]'}`}>{t.l}</button>))}</div>
+      <div className="pt-6 space-y-4 border-t border-[#E6E2DA]">
+        <label className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2"><Box size={16}/> 梱包（箱代）の計算ロジック</label>
+        <div className="flex gap-2 bg-[#FAFAF7] p-1 rounded-xl w-fit">{[{id:'flat',l:'一律'},{id:'price_based',l:'商品代ベース'}].map(t=>(<button key={t.id} onClick={()=>setBoxFeeConfig({...boxFeeConfig, type:t.id})} className={`px-4 py-2 rounded-lg text-[13px] font-bold ${boxFeeConfig.type===t.id?'bg-white shadow text-[#2D4B3E]':'text-[#5C6660]'}`}>{t.l}</button>))}</div>
 
         {/* ★ 自社配達時の箱代加算オプション */}
-        <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA] space-y-2">
+        <div className="bg-[#FAFAF7] p-4 rounded-xl border border-[#E6E2DA] space-y-2">
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"
@@ -1358,8 +1358,8 @@ export default function SettingsPage() {
               className="mt-1 w-4 h-4 accent-[#2D4B3E]"
             />
             <div>
-              <p className="text-[12px] font-bold text-[#111]">自社配達時も箱代を加算する</p>
-              <p className="text-[10px] text-[#555] mt-1 leading-relaxed">
+              <p className="text-[14px] font-bold text-[#1F2A24]">自社配達時も箱代を加算する</p>
+              <p className="text-[12px] text-[#3B4640] mt-1 leading-relaxed">
                 通常、箱代は<strong>業者配送（佐川等）の時のみ</strong>加算されます。<br/>
                 自社で配達する場合も箱代を取りたい場合は ON にしてください。
               </p>
@@ -1369,20 +1369,20 @@ export default function SettingsPage() {
 
         {/* ★ EC専用 箱サイズ別 箱代マスター（業者配送のサイズマスタと連動） */}
         <div className="bg-orange-50 p-5 rounded-xl border-2 border-orange-200 space-y-3">
-          <h3 className="text-[13px] font-bold text-orange-900 flex items-center gap-2">EC専用 箱サイズ別 箱代</h3>
-          <p className="text-[10px] text-orange-800 leading-relaxed">
+          <h3 className="text-[15px] font-bold text-orange-900 flex items-center gap-2">EC専用 箱サイズ別 箱代</h3>
+          <p className="text-[12px] text-orange-800 leading-relaxed">
             EC商品の梱包代。商品登録時に選んだ箱サイズに応じて加算されます（カート内の最大サイズで計算）。<br/>
             <strong>業者配送のサイズマスタ（下の「業者配送 サイズ・地域マスタ」のサイズ）と連動します</strong>。サイズを追加・削除すると自動で反映されます。
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {shippingSizes.length === 0 ? (
-              <p className="col-span-full text-[11px] text-orange-700 italic">下の「業者配送 サイズ・地域マスタ」でサイズを登録してください。</p>
+              <p className="col-span-full text-[13px] text-orange-700 italic">下の「業者配送 サイズ・地域マスタ」でサイズを登録してください。</p>
             ) : (
               shippingSizes.map(size => (
                 <div key={size} className="bg-white border border-orange-200 rounded-lg p-3 space-y-2">
-                  <label className="text-[11px] font-bold text-orange-900 block">{size} サイズ</label>
-                  <div className="flex items-center gap-1.5 bg-[#FBFAF9] border border-orange-300 rounded-md px-2 h-10 focus-within:border-orange-500 focus-within:bg-white transition-colors">
-                    <span className="text-[13px] font-bold text-orange-700">¥</span>
+                  <label className="text-[13px] font-bold text-orange-900 block">{size} サイズ</label>
+                  <div className="flex items-center gap-1.5 bg-[#FAFAF7] border border-orange-300 rounded-md px-2 h-10 focus-within:border-orange-500 focus-within:bg-white transition-colors">
+                    <span className="text-[15px] font-bold text-orange-700">¥</span>
                     <input
                       type="number"
                       value={boxFeeConfig.ecBoxFees?.[size] ?? 0}
@@ -1390,7 +1390,7 @@ export default function SettingsPage() {
                         ...boxFeeConfig,
                         ecBoxFees: { ...(boxFeeConfig.ecBoxFees || {}), [size]: Number(e.target.value) }
                       })}
-                      className="flex-1 bg-transparent text-[14px] font-bold text-right outline-none border-0 min-w-0"
+                      className="flex-1 bg-transparent text-[15px] font-bold text-right outline-none border-0 min-w-0"
                     />
                   </div>
                 </div>
@@ -1401,57 +1401,57 @@ export default function SettingsPage() {
 
         {boxFeeConfig.type === 'flat' ? (
           <div className="space-y-2">
-            <div className="flex items-center gap-2 bg-[#FBFAF9] p-4 rounded-xl border w-fit">
-              <span className="text-[12px] font-bold">一律加算:</span>
+            <div className="flex items-center gap-2 bg-[#FAFAF7] p-4 rounded-xl border w-fit">
+              <span className="text-[14px] font-bold">一律加算:</span>
               <input type="number" value={boxFeeConfig.flatFee} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, flatFee:Number(e.target.value)})} className="w-20 h-8 rounded border px-2 text-right font-bold focus:border-[#2D4B3E] outline-none"/>円
-              <span className="text-[10px] text-[#999] mx-2">対応サイズ:</span>
-              <select value={boxFeeConfig.flatSize || ''} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, flatSize: e.target.value})} className="h-8 bg-white border rounded px-2 text-[11px] font-bold outline-none focus:border-[#2D4B3E]">
+              <span className="text-[12px] text-[#5C6660] mx-2">対応サイズ:</span>
+              <select value={boxFeeConfig.flatSize || ''} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, flatSize: e.target.value})} className="h-8 bg-white border rounded px-2 text-[13px] font-bold outline-none focus:border-[#2D4B3E]">
                 <option value="">未指定</option>
                 {shippingSizes.map(s => <option key={s} value={s}>{s}サイズ</option>)}
               </select>
             </div>
-            <p className="text-[10px] text-[#999]">※ 業者配送料金はこの「対応サイズ」で計算されます。未指定の場合は先頭サイズ ({shippingSizes[0] || '80'}サイズ) で計算。</p>
+            <p className="text-[12px] text-[#5C6660]">※ 業者配送料金はこの「対応サイズ」で計算されます。未指定の場合は先頭サイズ ({shippingSizes[0] || '80'}サイズ) で計算。</p>
           </div>
         ) : (
-          <div className="space-y-2 bg-[#FBFAF9] p-4 rounded-xl border">
-            <p className="text-[10px] text-[#555]">商品代に応じた箱代＋使用サイズを設定。配送料金は「使用サイズ」で計算されます。</p>
+          <div className="space-y-2 bg-[#FAFAF7] p-4 rounded-xl border">
+            <p className="text-[12px] text-[#3B4640]">商品代に応じた箱代＋使用サイズを設定。配送料金は「使用サイズ」で計算されます。</p>
             {boxFeeConfig.priceTiers.map((tier, i) => (
-              <div key={i} className="flex items-center gap-2 text-[12px] font-bold flex-wrap">
+              <div key={i} className="flex items-center gap-2 text-[14px] font-bold flex-wrap">
                 <input type="number" value={tier.minPrice} onChange={(e)=>{const n=[...boxFeeConfig.priceTiers];n[i].minPrice=Number(e.target.value);setBoxFeeConfig({...boxFeeConfig,priceTiers:n})}} className="w-24 h-9 rounded border px-2 focus:border-[#2D4B3E] outline-none"/>
-                <span className="text-[#555]">円以上なら 箱代</span>
+                <span className="text-[#3B4640]">円以上なら 箱代</span>
                 <input type="number" value={tier.fee} onChange={(e)=>{const n=[...boxFeeConfig.priceTiers];n[i].fee=Number(e.target.value);setBoxFeeConfig({...boxFeeConfig,priceTiers:n})}} className="w-20 h-9 rounded border px-2 text-right focus:border-[#2D4B3E] outline-none"/>
-                <span className="text-[#555]">円</span>
-                <span className="text-[10px] text-[#999] ml-2">使用サイズ:</span>
-                <select value={tier.size || ''} onChange={(e)=>{const n=[...boxFeeConfig.priceTiers];n[i].size=e.target.value;setBoxFeeConfig({...boxFeeConfig,priceTiers:n})}} className="h-9 bg-white border rounded px-2 text-[11px] font-bold outline-none focus:border-[#2D4B3E]">
+                <span className="text-[#3B4640]">円</span>
+                <span className="text-[12px] text-[#5C6660] ml-2">使用サイズ:</span>
+                <select value={tier.size || ''} onChange={(e)=>{const n=[...boxFeeConfig.priceTiers];n[i].size=e.target.value;setBoxFeeConfig({...boxFeeConfig,priceTiers:n})}} className="h-9 bg-white border rounded px-2 text-[13px] font-bold outline-none focus:border-[#2D4B3E]">
                   <option value="">未指定</option>
                   {shippingSizes.map(s => <option key={s} value={s}>{s}サイズ</option>)}
                 </select>
                 <button onClick={()=>setBoxFeeConfig({...boxFeeConfig, priceTiers: boxFeeConfig.priceTiers.filter((_, idx) => idx !== i)})} className="text-red-300 hover:text-red-500 ml-1">✕</button>
               </div>
             ))}
-            <button onClick={()=>setBoxFeeConfig({...boxFeeConfig, priceTiers:[...boxFeeConfig.priceTiers, {minPrice:0,fee:0,size:''}]})} className="text-[10px] text-[#2D4B3E] font-bold mt-2">+ 条件追加</button>
+            <button onClick={()=>setBoxFeeConfig({...boxFeeConfig, priceTiers:[...boxFeeConfig.priceTiers, {minPrice:0,fee:0,size:''}]})} className="text-[12px] text-[#2D4B3E] font-bold mt-2">+ 条件追加</button>
           </div>
         )}
       </div>
-      <div className="space-y-4 border-t border-[#EAEAEA] pt-8">
-        <div className="flex justify-between items-center"><label className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><CalendarIcon size={16}/> クール便 適用期間設定</label><button onClick={()=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: [...boxFeeConfig.coolBinPeriods, {id:Date.now(), start:'06-01', end:'09-30', note:''}]})} className="text-[10px] bg-[#2D4B3E] text-white px-3 py-1.5 rounded-full font-bold shadow-sm transition-all hover:bg-[#1f352b]">+ 期間を追加</button></div>
+      <div className="space-y-4 border-t border-[#E6E2DA] pt-8">
+        <div className="flex justify-between items-center"><label className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2"><CalendarIcon size={16}/> クール便 適用期間設定</label><button onClick={()=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: [...boxFeeConfig.coolBinPeriods, {id:Date.now(), start:'06-01', end:'09-30', note:''}]})} className="text-[12px] bg-[#2D4B3E] text-white px-3 py-1.5 rounded-full font-bold shadow-sm transition-all hover:bg-[#1f352b]">+ 期間を追加</button></div>
         <div className="grid grid-cols-1 gap-3">
           {boxFeeConfig.coolBinPeriods.map(p => (
-            <div key={p.id} className="flex flex-wrap gap-2 items-center bg-[#FBFAF9] p-3 rounded-2xl border border-[#EAEAEA] shadow-sm"><input type="text" value={p.start} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.map(x=>x.id===p.id?{...x, start:e.target.value}:x)})} className="w-16 h-9 border rounded-lg text-center text-[11px] font-bold outline-none focus:border-[#2D4B3E]"/><span className="text-[11px] text-[#999999]">〜</span><input type="text" value={p.end} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.map(x=>x.id===p.id?{...x, end:e.target.value}:x)})} className="w-16 h-9 border rounded-lg text-center text-[11px] font-bold outline-none focus:border-[#2D4B3E]"/><input type="text" placeholder="理由メモ" value={p.note} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.map(x=>x.id===p.id?{...x, note:e.target.value}:x)})} className="flex-1 h-9 border rounded-lg px-3 text-[11px] outline-none font-bold focus:border-[#2D4B3E]"/><button onClick={()=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.filter(x=>x.id!==p.id)})} className="text-red-300 hover:text-red-500 transition-colors"><Trash2 size={16}/></button></div>
+            <div key={p.id} className="flex flex-wrap gap-2 items-center bg-[#FAFAF7] p-3 rounded-2xl border border-[#E6E2DA] shadow-sm"><input type="text" value={p.start} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.map(x=>x.id===p.id?{...x, start:e.target.value}:x)})} className="w-16 h-9 border rounded-lg text-center text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/><span className="text-[13px] text-[#5C6660]">〜</span><input type="text" value={p.end} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.map(x=>x.id===p.id?{...x, end:e.target.value}:x)})} className="w-16 h-9 border rounded-lg text-center text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/><input type="text" placeholder="理由メモ" value={p.note} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.map(x=>x.id===p.id?{...x, note:e.target.value}:x)})} className="flex-1 h-9 border rounded-lg px-3 text-[13px] outline-none font-bold focus:border-[#2D4B3E]"/><button onClick={()=>setBoxFeeConfig({...boxFeeConfig, coolBinPeriods: boxFeeConfig.coolBinPeriods.filter(x=>x.id!==p.id)})} className="text-red-300 hover:text-red-500 transition-colors"><Trash2 size={16}/></button></div>
           ))}
         </div>
       </div>
       <div className="bg-[#2D4B3E]/5 p-6 rounded-2xl border border-[#2D4B3E]/10 space-y-4">
-        <div className="font-bold text-[#2D4B3E] text-[14px] flex items-center gap-2"><RotateCcw size={18}/> 器回収/返却時の加算送料</div>
-        <div className="grid grid-cols-2 gap-4"><div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">計算タイプ</label><select value={boxFeeConfig.returnFeeType} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, returnFeeType:e.target.value})} className="w-full h-10 bg-white border rounded-xl px-3 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"><option value="flat">固定金額 (¥)</option><option value="percent">基本送料の○%</option></select></div><div className="space-y-1"><label className="text-[10px] font-bold text-[#999999]">{boxFeeConfig.returnFeeType === 'flat' ? '加算金額 (¥)' : '加算率 (%)'}</label><input type="number" value={boxFeeConfig.returnFeeValue} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, returnFeeValue:Number(e.target.value)})} className="w-full h-10 bg-white border rounded-xl px-3 text-[13px] font-bold text-right outline-none focus:border-[#2D4B3E]"/></div></div>
+        <div className="font-bold text-[#2D4B3E] text-[15px] flex items-center gap-2"><RotateCcw size={18}/> 器回収/返却時の加算送料</div>
+        <div className="grid grid-cols-2 gap-4"><div className="space-y-1"><label className="text-[12px] font-bold text-[#5C6660]">計算タイプ</label><select value={boxFeeConfig.returnFeeType} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, returnFeeType:e.target.value})} className="w-full h-10 bg-white border rounded-xl px-3 text-[15px] font-bold outline-none focus:border-[#2D4B3E]"><option value="flat">固定金額 (¥)</option><option value="percent">基本送料の○%</option></select></div><div className="space-y-1"><label className="text-[12px] font-bold text-[#5C6660]">{boxFeeConfig.returnFeeType === 'flat' ? '加算金額 (¥)' : '加算率 (%)'}</label><input type="number" value={boxFeeConfig.returnFeeValue} onChange={(e)=>setBoxFeeConfig({...boxFeeConfig, returnFeeValue:Number(e.target.value)})} className="w-full h-10 bg-white border rounded-xl px-3 text-[15px] font-bold text-right outline-none focus:border-[#2D4B3E]"/></div></div>
       </div>
-      <div className="space-y-6 pt-4 border-t border-[#EAEAEA]">
-        <div className="flex justify-between items-center"><label className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Ruler size={16}/> 業者配送 サイズ・地域マスタ</label><div className="flex gap-2"><button onClick={()=>{const s=prompt('サイズを入力(例:140)'); if(s) setShippingSizes([...shippingSizes, s]);}} className="text-[10px] bg-[#2D4B3E] text-white px-3 py-1.5 rounded-full font-bold shadow-sm hover:bg-[#1f352b] transition-all">+ サイズ追加</button><button onClick={()=>{const r=prompt('新しい地域名を入力'); if(r) setShippingRates([...shippingRates, {region:r, leadDays:1}]);}} className="text-[10px] bg-[#2D4B3E] text-white px-3 py-1.5 rounded-full font-bold shadow-sm hover:bg-[#1f352b] transition-all">+ 地域追加</button></div></div>
-        <div className="flex flex-wrap gap-2 mb-4 bg-[#FBFAF9] p-4 rounded-2xl border border-[#EAEAEA]"><span className="text-[11px] font-bold text-[#999999] w-full mb-1">登録サイズ (×で削除可):</span>{shippingSizes.map((s, i) => (<div key={i} className="flex items-center gap-2 bg-white border rounded-full pl-3 pr-1 py-1 shadow-sm transition-all hover:border-red-200"><span className="text-[11px] font-bold text-[#2D4B3E]">{s}サイズ</span><button onClick={() => { if(confirm(`${s}サイズを削除しますか？`)){ setShippingSizes(shippingSizes.filter((_, idx)=>idx!==i)); }}} className="w-5 h-5 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"><X size={12}/></button></div>))}</div>
+      <div className="space-y-6 pt-4 border-t border-[#E6E2DA]">
+        <div className="flex justify-between items-center"><label className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2"><Ruler size={16}/> 業者配送 サイズ・地域マスタ</label><div className="flex gap-2"><button onClick={()=>{const s=prompt('サイズを入力(例:140)'); if(s) setShippingSizes([...shippingSizes, s]);}} className="text-[12px] bg-[#2D4B3E] text-white px-3 py-1.5 rounded-full font-bold shadow-sm hover:bg-[#1f352b] transition-all">+ サイズ追加</button><button onClick={()=>{const r=prompt('新しい地域名を入力'); if(r) setShippingRates([...shippingRates, {region:r, leadDays:1}]);}} className="text-[12px] bg-[#2D4B3E] text-white px-3 py-1.5 rounded-full font-bold shadow-sm hover:bg-[#1f352b] transition-all">+ 地域追加</button></div></div>
+        <div className="flex flex-wrap gap-2 mb-4 bg-[#FAFAF7] p-4 rounded-2xl border border-[#E6E2DA]"><span className="text-[13px] font-bold text-[#5C6660] w-full mb-1">登録サイズ (×で削除可):</span>{shippingSizes.map((s, i) => (<div key={i} className="flex items-center gap-2 bg-white border rounded-full pl-3 pr-1 py-1 shadow-sm transition-all hover:border-red-200"><span className="text-[13px] font-bold text-[#2D4B3E]">{s}サイズ</span><button onClick={() => { if(confirm(`${s}サイズを削除しますか？`)){ setShippingSizes(shippingSizes.filter((_, idx)=>idx!==i)); }}} className="w-5 h-5 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"><X size={12}/></button></div>))}</div>
         <div className="overflow-x-auto border rounded-2xl">
-          <table className="w-full text-left text-[10px] min-w-[1100px] bg-white">
-            <thead className="bg-[#FBFAF9] border-b text-[#999999]"><tr><th className="p-3 w-32 font-bold">地域・地方名</th><th className="p-3 text-center border-l bg-green-50 text-green-800">配送日数</th>{shippingSizes.map(s=><th key={s} className="p-3 text-center border-l bg-gray-50">{s}サイズ</th>)}{shippingSizes.map(s=><th key={'c'+s} className="p-3 text-center border-l bg-blue-50 text-blue-500">{s}クール加算</th>)}<th className="p-3"></th></tr></thead>
-            <tbody className="divide-y">{shippingRates.map((r, i) => (<tr key={i} className="hover:bg-gray-50/50 transition-colors"><td className="p-3"><input type="text" value={r.region} onChange={(e)=>{const n=[...shippingRates]; n[i].region=e.target.value; setShippingRates(n);}} className="w-full border-none bg-transparent font-bold text-[11px] outline-none" /></td><td className="p-1 border-l bg-green-50/30"><div className="flex items-center justify-center gap-1"><input type="number" value={r.leadDays || 1} onChange={(e)=>{const n=[...shippingRates]; n[i].leadDays=Number(e.target.value); setShippingRates(n);}} className="w-12 border rounded p-1.5 text-center font-bold text-green-900 outline-none"/></div></td>{shippingSizes.map(s => <td key={s} className="p-1 border-l"><input type="number" value={r['fee'+s]||0} onChange={(e)=>{const n=[...shippingRates]; n[i]['fee'+s]=Number(e.target.value); setShippingRates(n);}} className="w-16 border rounded p-1.5 mx-auto block text-right font-bold outline-none focus:border-[#2D4B3E]"/></td>)}{shippingSizes.map(s => <td key={'c'+s} className="p-1 border-l bg-blue-50/10"><input type="number" value={r['cool'+s]||0} onChange={(e)=>{const n=[...shippingRates]; n[i]['cool'+s]=Number(e.target.value); setShippingRates(n);}} className="w-16 border border-blue-100 rounded p-1.5 mx-auto block text-right text-blue-500 font-bold outline-none focus:border-blue-400"/></td>)}<td className="p-1 text-center"><button onClick={()=>{if(confirm('削除しますか？')){setShippingRates(shippingRates.filter((_, idx)=>idx!==i))}}} className="text-red-300 hover:text-red-500 p-2"><Trash2 size={14}/></button></td></tr>))}</tbody>
+          <table className="w-full text-left text-[12px] min-w-[1100px] bg-white">
+            <thead className="bg-[#FAFAF7] border-b text-[#5C6660]"><tr><th className="p-3 w-32 font-bold">地域・地方名</th><th className="p-3 text-center border-l bg-green-50 text-green-800">配送日数</th>{shippingSizes.map(s=><th key={s} className="p-3 text-center border-l bg-gray-50">{s}サイズ</th>)}{shippingSizes.map(s=><th key={'c'+s} className="p-3 text-center border-l bg-blue-50 text-blue-500">{s}クール加算</th>)}<th className="p-3"></th></tr></thead>
+            <tbody className="divide-y">{shippingRates.map((r, i) => (<tr key={i} className="hover:bg-gray-50/50 transition-colors"><td className="p-3"><input type="text" value={r.region} onChange={(e)=>{const n=[...shippingRates]; n[i].region=e.target.value; setShippingRates(n);}} className="w-full border-none bg-transparent font-bold text-[13px] outline-none" /></td><td className="p-1 border-l bg-green-50/30"><div className="flex items-center justify-center gap-1"><input type="number" value={r.leadDays || 1} onChange={(e)=>{const n=[...shippingRates]; n[i].leadDays=Number(e.target.value); setShippingRates(n);}} className="w-12 border rounded p-1.5 text-center font-bold text-green-900 outline-none"/></div></td>{shippingSizes.map(s => <td key={s} className="p-1 border-l"><input type="number" value={r['fee'+s]||0} onChange={(e)=>{const n=[...shippingRates]; n[i]['fee'+s]=Number(e.target.value); setShippingRates(n);}} className="w-16 border rounded p-1.5 mx-auto block text-right font-bold outline-none focus:border-[#2D4B3E]"/></td>)}{shippingSizes.map(s => <td key={'c'+s} className="p-1 border-l bg-blue-50/10"><input type="number" value={r['cool'+s]||0} onChange={(e)=>{const n=[...shippingRates]; n[i]['cool'+s]=Number(e.target.value); setShippingRates(n);}} className="w-16 border border-blue-100 rounded p-1.5 mx-auto block text-right text-blue-500 font-bold outline-none focus:border-blue-400"/></td>)}<td className="p-1 text-center"><button onClick={()=>{if(confirm('削除しますか？')){setShippingRates(shippingRates.filter((_, idx)=>idx!==i))}}} className="text-red-300 hover:text-red-500 p-2"><Trash2 size={14}/></button></td></tr>))}</tbody>
           </table>
         </div>
       </div>
@@ -1465,24 +1465,24 @@ export default function SettingsPage() {
           <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><LayoutTemplate size={20}/> 立札デザイン・店舗紐付け</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             <div className="space-y-4">
-              <label className="text-[12px] font-bold text-[#999999]">店舗ごとのテンプレート選択</label>
-              {shops.length === 0 ? <p className="text-sm text-[#999999]">店舗を登録してください</p> : shops.map(shop => (
-                <div key={shop.id} className="bg-[#FBFAF9] p-4 rounded-2xl border border-[#EAEAEA] space-y-2">
-                  <span className="font-bold text-[13px] text-[#2D4B3E]">{shop.name}</span>
+              <label className="text-[14px] font-bold text-[#5C6660]">店舗ごとのテンプレート選択</label>
+              {shops.length === 0 ? <p className="text-[15px] text-[#5C6660]">店舗を登録してください</p> : shops.map(shop => (
+                <div key={shop.id} className="bg-[#FAFAF7] p-4 rounded-2xl border border-[#E6E2DA] space-y-2">
+                  <span className="font-bold text-[15px] text-[#2D4B3E]">{shop.name}</span>
                   <div className="flex flex-col gap-1">
                     {tateMaster.map(tate => (
                       <label key={tate.id} className="flex items-center gap-2 cursor-pointer bg-white p-2 rounded-lg border hover:border-[#2D4B3E] transition-all">
                         <input type="checkbox" checked={(shop.enabledTatePatterns || []).includes(tate.id)} onChange={(e)=>{const current = shop.enabledTatePatterns || []; const next = e.target.checked ? [...current, tate.id] : current.filter(p=>p!==tate.id); setShops(shops.map(s=>s.id===shop.id?{...s, enabledTatePatterns:next}:s));}} className="accent-[#2D4B3E]"/>
-                        <span className="text-[11px] font-bold flex-1">{tate.label}</span>
-                        <button onClick={(e)=>{e.preventDefault(); setSelectedPreviewTate(tate)}} className="text-[9px] bg-[#F7F7F7] px-2 py-1 rounded text-[#555555]">プレビュー</button>
+                        <span className="text-[13px] font-bold flex-1">{tate.label}</span>
+                        <button onClick={(e)=>{e.preventDefault(); setSelectedPreviewTate(tate)}} className="text-[12px] bg-[#F6F4EF] px-2 py-1 rounded text-[#3B4640]">プレビュー</button>
                       </label>
                     ))}
                   </div>
                 </div>
               ))}
             </div>
-            <div className="sticky top-24 h-fit bg-[#FBFAF9] p-8 rounded-2xl border border-[#EAEAEA] shadow-inner text-center">
-              <span className="text-[10px] font-bold text-[#999999] block mb-4">プレビュー ({selectedPreviewTate.label})</span>
+            <div className="sticky top-24 h-fit bg-[#FAFAF7] p-8 rounded-2xl border border-[#E6E2DA] shadow-inner text-center">
+              <span className="text-[12px] font-bold text-[#5C6660] block mb-4">プレビュー ({selectedPreviewTate.label})</span>
               <TatefudaPreview tatePattern={selectedPreviewTate.id} layout={selectedPreviewTate.layout} isOsonae={['p1', 'p3', 'p4'].includes(selectedPreviewTate.id)} input1="御開店" input2="山田太郎" input3="株式会社〇〇" input3a="株式会社〇〇" input3b="代表 山田太郎" />
             </div>
           </div>
@@ -1496,10 +1496,10 @@ export default function SettingsPage() {
       <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Clock size={20}/> 代理入力の特別ルール</h2>
       <div className="space-y-4">
         {[{ label: '最短納期の制限を完全に無視する', key: 'ignoreLeadTime' }, { label: '注文金額の自由入力を許可', key: 'allowCustomPrice' }].map(item => (
-          <label key={item.key} className="flex items-center justify-between bg-[#FBFAF9] p-5 rounded-2xl cursor-pointer border border-transparent hover:border-[#EAEAEA] shadow-sm"><span className="font-bold text-[14px]">{item.label}</span><input type="checkbox" checked={staffOrderConfig[item.key]} onChange={(e)=>setStaffOrderConfig({...staffOrderConfig, [item.key]:e.target.checked})} className="w-6 h-6 accent-[#2D4B3E]"/></label>
+          <label key={item.key} className="flex items-center justify-between bg-[#FAFAF7] p-5 rounded-2xl cursor-pointer border border-transparent hover:border-[#E6E2DA] shadow-sm"><span className="font-bold text-[15px]">{item.label}</span><input type="checkbox" checked={staffOrderConfig[item.key]} onChange={(e)=>setStaffOrderConfig({...staffOrderConfig, [item.key]:e.target.checked})} className="w-6 h-6 accent-[#2D4B3E]"/></label>
         ))}
-        <label className="flex items-center justify-between bg-[#FBFAF9] p-5 rounded-2xl cursor-pointer border border-transparent hover:border-[#EAEAEA] shadow-sm"><span className="font-bold text-[14px]">お客様への自動返信メールを送らない</span><input type="checkbox" checked={!staffOrderConfig.sendAutoReply} onChange={(e)=>setStaffOrderConfig({...staffOrderConfig, sendAutoReply:!e.target.checked})} className="w-6 h-6 accent-[#2D4B3E]"/></label>
-        <div className="pt-4 space-y-1"><label className="text-[11px] font-bold text-[#999999]">スタッフ専用 支払い方法（カンマ区切り）</label><input type="text" value={(staffOrderConfig.paymentMethods||[]).join(', ')} onChange={(e)=>setStaffOrderConfig({...staffOrderConfig, paymentMethods:e.target.value.split(',').map(s=>s.trim()).filter(Boolean)})} className="w-full h-12 bg-[#FBFAF9] border rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]"/></div>
+        <label className="flex items-center justify-between bg-[#FAFAF7] p-5 rounded-2xl cursor-pointer border border-transparent hover:border-[#E6E2DA] shadow-sm"><span className="font-bold text-[15px]">お客様への自動返信メールを送らない</span><input type="checkbox" checked={!staffOrderConfig.sendAutoReply} onChange={(e)=>setStaffOrderConfig({...staffOrderConfig, sendAutoReply:!e.target.checked})} className="w-6 h-6 accent-[#2D4B3E]"/></label>
+        <div className="pt-4 space-y-1"><label className="text-[13px] font-bold text-[#5C6660]">スタッフ専用 支払い方法（カンマ区切り）</label><input type="text" value={(staffOrderConfig.paymentMethods||[]).join(', ')} onChange={(e)=>setStaffOrderConfig({...staffOrderConfig, paymentMethods:e.target.value.split(',').map(s=>s.trim()).filter(Boolean)})} className="w-full h-12 bg-[#FAFAF7] border rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]"/></div>
       </div>
     </div>
   );
@@ -1512,13 +1512,13 @@ export default function SettingsPage() {
     return (
       <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-6 animate-in fade-in text-left max-w-[800px]">
         <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2">LINE公式アカウント連携 <HelpTooltip articleId="line_setup"/></h2>
-        <p className="text-[12px] text-[#555555] leading-relaxed">
+        <p className="text-[14px] text-[#3B4640] leading-relaxed">
           LINE Messaging API と連携すると、注文確認・完成写真・入金確認等の通知を
           <strong className="text-[#117768]"> メール + LINE 両方</strong>でお客様にお届けできます。
         </p>
 
         {/* 有効化トグル */}
-        <div className={`p-5 rounded-2xl border ${lineConfig.enabled ? 'bg-green-50 border-green-200' : 'bg-[#FBFAF9] border-[#EAEAEA]'}`}>
+        <div className={`p-5 rounded-2xl border ${lineConfig.enabled ? 'bg-green-50 border-green-200' : 'bg-[#FAFAF7] border-[#E6E2DA]'}`}>
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"
@@ -1527,8 +1527,8 @@ export default function SettingsPage() {
               className="mt-1 w-5 h-5 accent-[#117768]"
             />
             <div>
-              <p className="text-[14px] font-bold text-[#111]">LINE連携を有効にする</p>
-              <p className="text-[11px] text-[#555] mt-1">
+              <p className="text-[15px] font-bold text-[#1F2A24]">LINE連携を有効にする</p>
+              <p className="text-[13px] text-[#3B4640] mt-1">
                 チェックを入れ、下の認証情報を全て入力した状態で「変更を保存」してください。
               </p>
             </div>
@@ -1537,61 +1537,61 @@ export default function SettingsPage() {
 
         {/* 認証情報 */}
         <div className="space-y-3">
-          <h3 className="text-[14px] font-bold text-[#2D4B3E]">認証情報</h3>
-          <p className="text-[11px] text-[#999] leading-relaxed">
+          <h3 className="text-[15px] font-bold text-[#2D4B3E]">認証情報</h3>
+          <p className="text-[13px] text-[#5C6660] leading-relaxed">
             LINE Developers Console で発行した値を入力してください。
             <a href="https://developers.line.biz/console/" target="_blank" rel="noopener noreferrer" className="text-[#117768] underline ml-1">LINE Developers Console を開く →</a>
           </p>
           <div>
-            <label className="text-[11px] font-bold text-[#555] tracking-widest">Channel Access Token（長期）</label>
+            <label className="text-[13px] font-bold text-[#3B4640] tracking-widest">Channel Access Token（長期）</label>
             <input type="password" value={lineConfig.channelAccessToken}
               onChange={(e) => setLineConfig({ ...lineConfig, channelAccessToken: e.target.value })}
               placeholder="JI4dF3rN..."
-              className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] font-mono outline-none focus:border-[#2D4B3E]"/>
+              className="w-full mt-1 h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[14px] font-mono outline-none focus:border-[#2D4B3E]"/>
           </div>
           <div>
-            <label className="text-[11px] font-bold text-[#555] tracking-widest">Channel Secret</label>
+            <label className="text-[13px] font-bold text-[#3B4640] tracking-widest">Channel Secret</label>
             <input type="password" value={lineConfig.channelSecret}
               onChange={(e) => setLineConfig({ ...lineConfig, channelSecret: e.target.value })}
               placeholder="abcdef1234..."
-              className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] font-mono outline-none focus:border-[#2D4B3E]"/>
+              className="w-full mt-1 h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[14px] font-mono outline-none focus:border-[#2D4B3E]"/>
           </div>
           <div>
-            <label className="text-[11px] font-bold text-[#555] tracking-widest">Channel ID（任意）</label>
+            <label className="text-[13px] font-bold text-[#3B4640] tracking-widest">Channel ID（任意）</label>
             <input type="text" value={lineConfig.channelId}
               onChange={(e) => setLineConfig({ ...lineConfig, channelId: e.target.value })}
               placeholder="1234567890"
-              className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] font-mono outline-none focus:border-[#2D4B3E]"/>
+              className="w-full mt-1 h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[14px] font-mono outline-none focus:border-[#2D4B3E]"/>
           </div>
           <div>
-            <label className="text-[11px] font-bold text-[#555] tracking-widest">友達追加用URL（お客様へ案内）</label>
+            <label className="text-[13px] font-bold text-[#3B4640] tracking-widest">友達追加用URL（お客様へ案内）</label>
             <input type="url" value={lineConfig.addFriendUrl}
               onChange={(e) => setLineConfig({ ...lineConfig, addFriendUrl: e.target.value })}
               placeholder="https://lin.ee/xxxxxx"
-              className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[12px] outline-none focus:border-[#2D4B3E]"/>
-            <p className="text-[10px] text-[#999] mt-1">マイページや確認メール末尾に「LINEで通知を受け取る」リンクとして表示されます</p>
+              className="w-full mt-1 h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[14px] outline-none focus:border-[#2D4B3E]"/>
+            <p className="text-[12px] text-[#5C6660] mt-1">マイページや確認メール末尾に「LINEで通知を受け取る」リンクとして表示されます</p>
           </div>
         </div>
 
         {/* Webhook URL（コピペ用） */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2">
-          <p className="text-[12px] font-bold text-blue-900">LINE Developers に設定する Webhook URL</p>
+          <p className="text-[14px] font-bold text-blue-900">LINE Developers に設定する Webhook URL</p>
           <div className="flex items-center gap-2">
-            <code className="flex-1 bg-white px-3 py-2 rounded-lg text-[11px] font-mono text-blue-900 break-all border border-blue-200">{webhookUrl}</code>
+            <code className="flex-1 bg-white px-3 py-2 rounded-lg text-[13px] font-mono text-blue-900 break-all border border-blue-200">{webhookUrl}</code>
             <button
               onClick={() => { navigator.clipboard?.writeText(webhookUrl); alert('コピーしました'); }}
-              className="px-3 py-2 bg-blue-600 text-white text-[11px] font-bold rounded-lg hover:bg-blue-700"
+              className="px-3 py-2 bg-blue-600 text-white text-[13px] font-bold rounded-lg hover:bg-blue-700"
             >コピー</button>
           </div>
-          <p className="text-[10px] text-blue-800 leading-relaxed">
+          <p className="text-[12px] text-blue-800 leading-relaxed">
             このURLを LINE Developers Console → Messaging API設定 → Webhook URL に設定して、「Webhookの利用」をオンにしてください。
           </p>
         </div>
 
         {/* 連携手順 */}
-        <details className="border border-[#EAEAEA] rounded-xl">
-          <summary className="cursor-pointer p-4 text-[12px] font-bold text-[#2D4B3E] hover:bg-[#FBFAF9]">LINE連携の手順を見る</summary>
-          <div className="p-4 pt-0 text-[11px] text-[#555] leading-relaxed space-y-2">
+        <details className="border border-[#E6E2DA] rounded-xl">
+          <summary className="cursor-pointer p-4 text-[14px] font-bold text-[#2D4B3E] hover:bg-[#FAFAF7]">LINE連携の手順を見る</summary>
+          <div className="p-4 pt-0 text-[13px] text-[#3B4640] leading-relaxed space-y-2">
             <p><strong>1.</strong> <a href="https://developers.line.biz/console/" target="_blank" rel="noopener noreferrer" className="text-[#117768] underline">LINE Developers Console</a> にログイン</p>
             <p><strong>2.</strong> プロバイダーを作成 → 「Messaging API」のチャネルを作成</p>
             <p><strong>3.</strong> 「Messaging API設定」タブで <strong>Channel Access Token（長期）</strong> を発行 → 上欄にペースト</p>
@@ -1600,7 +1600,7 @@ export default function SettingsPage() {
             <p><strong>6.</strong> 「応答メッセージ」をOFF、「あいさつメッセージ」と「Webhook」をONに設定</p>
             <p><strong>7.</strong> LINE公式アカウントの<strong>友達追加URL</strong>（lin.ee/...）を上欄にペースト</p>
             <p><strong>8.</strong> ページ上部「変更を保存」 → 「LINE連携を有効にする」にチェック</p>
-            <p className="pt-2 border-t border-[#EAEAEA] text-[#117768] font-bold">✓ 設定完了！お客様が公式LINEを友達追加 → メアドを送信 → 自動で紐付けされます</p>
+            <p className="pt-2 border-t border-[#E6E2DA] text-[#117768] font-bold">✓ 設定完了！お客様が公式LINEを友達追加 → メアドを送信 → 自動で紐付けされます</p>
           </div>
         </details>
       </div>
@@ -1619,26 +1619,26 @@ export default function SettingsPage() {
       <div className="space-y-6 animate-in fade-in max-w-[900px]">
         <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-4">
           <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2"><CalendarDays size={18}/> シフトパターン <HelpTooltip articleId="shift_setup"/></h2>
-          <p className="text-[11px] text-[#999]">早番・遅番など、店舗で使うシフトパターンを自由に登録できます。</p>
+          <p className="text-[13px] text-[#5C6660]">早番・遅番など、店舗で使うシフトパターンを自由に登録できます。</p>
           <div className="space-y-2">
             {shiftConfig.patterns.map((p, i) => (
-              <div key={p.id} className="flex flex-wrap items-center gap-2 p-3 rounded-xl border border-[#EAEAEA]" style={{ background: p.color + '40' }}>
+              <div key={p.id} className="flex flex-wrap items-center gap-2 p-3 rounded-xl border border-[#E6E2DA]" style={{ background: p.color + '40' }}>
                 <input type="text" value={p.name} onChange={e => updatePattern(i, 'name', e.target.value)} placeholder="名称"
-                  className="flex-1 min-w-[120px] h-10 px-3 bg-white border border-[#EAEAEA] rounded-lg text-[13px] font-bold outline-none"/>
+                  className="flex-1 min-w-[120px] h-10 px-3 bg-white border border-[#E6E2DA] rounded-lg text-[15px] font-bold outline-none"/>
                 <input type="time" value={p.startTime} onChange={e => updatePattern(i, 'startTime', e.target.value)}
-                  className="w-28 h-10 px-2 bg-white border border-[#EAEAEA] rounded-lg text-[12px] outline-none"/>
-                <span className="text-[#999]">〜</span>
+                  className="w-28 h-10 px-2 bg-white border border-[#E6E2DA] rounded-lg text-[14px] outline-none"/>
+                <span className="text-[#5C6660]">〜</span>
                 <input type="time" value={p.endTime} onChange={e => updatePattern(i, 'endTime', e.target.value)}
-                  className="w-28 h-10 px-2 bg-white border border-[#EAEAEA] rounded-lg text-[12px] outline-none"/>
+                  className="w-28 h-10 px-2 bg-white border border-[#E6E2DA] rounded-lg text-[14px] outline-none"/>
                 <input type="color" value={p.color || '#FFE4B5'} onChange={e => updatePattern(i, 'color', e.target.value)}
-                  className="w-10 h-10 border border-[#EAEAEA] rounded-lg cursor-pointer"/>
+                  className="w-10 h-10 border border-[#E6E2DA] rounded-lg cursor-pointer"/>
                 <button onClick={() => setShiftConfig({...shiftConfig, patterns: shiftConfig.patterns.filter((_, idx) => idx !== i)})}
                   className="text-red-300 hover:text-red-500 p-1"><Trash2 size={14}/></button>
               </div>
             ))}
             <button
               onClick={() => setShiftConfig({...shiftConfig, patterns: [...shiftConfig.patterns, { id: `pat_${Date.now()}`, name: '', startTime: '10:00', endTime: '18:00', color: '#FFE4B5' }]})}
-              className="text-[12px] font-bold text-[#2D4B3E] border border-dashed border-[#2D4B3E]/40 rounded-xl px-4 py-2 hover:bg-[#2D4B3E]/5"
+              className="text-[14px] font-bold text-[#2D4B3E] border border-dashed border-[#2D4B3E]/40 rounded-xl px-4 py-2 hover:bg-[#2D4B3E]/5"
             >
               <Plus size={12} className="inline mr-1"/> パターンを追加
             </button>
@@ -1647,16 +1647,16 @@ export default function SettingsPage() {
 
         <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-4">
           <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2"><User size={18}/> 必要人数（曜日別）</h2>
-          <p className="text-[11px] text-[#999]">曜日ごとに最低でも必要なスタッフ人数。自動シフト作成時の目安になります。</p>
+          <p className="text-[13px] text-[#5C6660]">曜日ごとに最低でも必要なスタッフ人数。自動シフト作成時の目安になります。</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {Object.entries(dayLabels).map(([key, label]) => (
-              <div key={key} className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl p-3 text-center">
-                <p className="text-[12px] font-bold text-[#555] mb-2">{label}{key === 'holiday' ? '日' : '曜'}</p>
+              <div key={key} className="bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl p-3 text-center">
+                <p className="text-[14px] font-bold text-[#3B4640] mb-2">{label}{key === 'holiday' ? '日' : '曜'}</p>
                 <input type="number" min="0" max="20"
                   value={shiftConfig.requiredStaff?.[key] ?? 1}
                   onChange={e => setShiftConfig({...shiftConfig, requiredStaff: {...(shiftConfig.requiredStaff || {}), [key]: Number(e.target.value)}})}
-                  className="w-16 h-10 text-center text-[16px] font-bold bg-white border border-[#EAEAEA] rounded-lg outline-none"/>
-                <p className="text-[10px] text-[#999] mt-1">名</p>
+                  className="w-16 h-10 text-center text-[16px] font-bold bg-white border border-[#E6E2DA] rounded-lg outline-none"/>
+                <p className="text-[12px] text-[#5C6660] mt-1">名</p>
               </div>
             ))}
           </div>
@@ -1666,22 +1666,22 @@ export default function SettingsPage() {
           <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2"><CalendarIcon size={18}/> 休み希望の運用ルール</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] font-bold text-[#999] tracking-widest">提出〆切日</label>
+              <label className="text-[13px] font-bold text-[#5C6660] tracking-widest">提出〆切日</label>
               <div className="mt-1 flex items-center gap-2">
-                <span className="text-[12px] text-[#555]">毎月</span>
+                <span className="text-[14px] text-[#3B4640]">毎月</span>
                 <input type="number" min="1" max="31"
                   value={shiftConfig.holidayRule?.submitDeadlineDay ?? 20}
                   onChange={e => setShiftConfig({...shiftConfig, holidayRule: {...(shiftConfig.holidayRule || {}), submitDeadlineDay: Number(e.target.value)}})}
-                  className="w-16 h-10 px-3 text-center bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] font-bold outline-none"/>
-                <span className="text-[12px] text-[#555]">日まで翌月分</span>
+                  className="w-16 h-10 px-3 text-center bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] font-bold outline-none"/>
+                <span className="text-[14px] text-[#3B4640]">日まで翌月分</span>
               </div>
             </div>
             <div>
-              <label className="text-[11px] font-bold text-[#999] tracking-widest">第〇希望まで提出可能</label>
+              <label className="text-[13px] font-bold text-[#5C6660] tracking-widest">第〇希望まで提出可能</label>
               <select
                 value={shiftConfig.holidayRule?.maxPriorities ?? 1}
                 onChange={e => setShiftConfig({...shiftConfig, holidayRule: {...(shiftConfig.holidayRule || {}), maxPriorities: Number(e.target.value)}})}
-                className="w-full mt-1 h-10 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] font-bold outline-none"
+                className="w-full mt-1 h-10 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] font-bold outline-none"
               >
                 <option value={1}>第1希望のみ</option>
                 <option value={2}>第2希望まで</option>
@@ -1689,7 +1689,7 @@ export default function SettingsPage() {
               </select>
             </div>
           </div>
-          <p className="text-[10px] text-[#999] bg-[#FBFAF9] p-2 rounded-lg leading-relaxed">
+          <p className="text-[12px] text-[#5C6660] bg-[#FAFAF7] p-2 rounded-lg leading-relaxed">
             〆切日を過ぎても受付けるが、自動シフト作成時の優先度が下がる仕様です。
           </p>
         </div>
@@ -1697,17 +1697,17 @@ export default function SettingsPage() {
         {/* ★ 給与計算設定 */}
         <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-4">
           <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2">給与計算（控除率・残業） <HelpTooltip articleId="payroll_setup"/></h2>
-          <p className="text-[11px] text-[#999] leading-relaxed">
+          <p className="text-[13px] text-[#5C6660] leading-relaxed">
             勤怠記録と時給から、設定した料率通りに給与計算します。<strong className="text-amber-600">最終チェックは社会保険労務士にご依頼ください。</strong>
           </p>
           <div className={`p-3 rounded-xl border ${payrollConfig.enabled ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
             <div className="flex items-center gap-2">
-              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${payrollConfig.enabled ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'}`}>
+              <span className={`text-[13px] font-bold px-2 py-0.5 rounded-full ${payrollConfig.enabled ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'}`}>
                 {payrollConfig.enabled ? '✓ ON' : 'OFF'}
               </span>
-              <p className="text-[12px] font-bold text-[#111]">給与計算機能（サブスク連動）</p>
+              <p className="text-[14px] font-bold text-[#1F2A24]">給与計算機能（サブスク連動）</p>
             </div>
-            <p className="text-[10px] text-[#555] mt-2 leading-relaxed">
+            <p className="text-[12px] text-[#3B4640] mt-2 leading-relaxed">
               {payrollConfig.enabled
                 ? '給与計算サブスクが有効です。下の各項目で料率を調整してください。'
                 : 'NocoLdeのサブスクで「給与計算」を契約するとON。サイドバー下部の「機能アップグレード」からお申し込みください。'}
@@ -1715,48 +1715,48 @@ export default function SettingsPage() {
           </div>
 
           {payrollConfig.enabled && (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-3 border-t border-[#EAEAEA]">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-3 border-t border-[#E6E2DA]">
               <div>
-                <label className="text-[10px] font-bold text-[#999] tracking-widest">雇用保険率 (%)</label>
+                <label className="text-[12px] font-bold text-[#5C6660] tracking-widest">雇用保険率 (%)</label>
                 <input type="number" step="0.1" value={payrollConfig.employmentInsuranceRate}
                   onChange={e => setPayrollConfig({...payrollConfig, employmentInsuranceRate: Number(e.target.value)})}
-                  className="w-full mt-1 h-10 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] font-bold outline-none"/>
-                <p className="text-[9px] text-[#999] mt-0.5">標準 0.6%</p>
+                  className="w-full mt-1 h-10 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] font-bold outline-none"/>
+                <p className="text-[12px] text-[#5C6660] mt-0.5">標準 0.6%</p>
               </div>
               <div>
-                <label className="text-[10px] font-bold text-[#999] tracking-widest">社会保険率 (%)</label>
+                <label className="text-[12px] font-bold text-[#5C6660] tracking-widest">社会保険率 (%)</label>
                 <input type="number" step="0.1" value={payrollConfig.socialInsuranceRate}
                   onChange={e => setPayrollConfig({...payrollConfig, socialInsuranceRate: Number(e.target.value)})}
-                  className="w-full mt-1 h-10 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] font-bold outline-none"/>
-                <p className="text-[9px] text-[#999] mt-0.5">健保+厚年合計</p>
+                  className="w-full mt-1 h-10 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] font-bold outline-none"/>
+                <p className="text-[12px] text-[#5C6660] mt-0.5">健保+厚年合計</p>
               </div>
               <div>
-                <label className="text-[10px] font-bold text-[#999] tracking-widest">所得税率 (%)</label>
+                <label className="text-[12px] font-bold text-[#5C6660] tracking-widest">所得税率 (%)</label>
                 <input type="number" step="0.01" value={payrollConfig.incomeTaxRate}
                   onChange={e => setPayrollConfig({...payrollConfig, incomeTaxRate: Number(e.target.value)})}
-                  className="w-full mt-1 h-10 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] font-bold outline-none"/>
-                <p className="text-[9px] text-[#999] mt-0.5">簡易源泉</p>
+                  className="w-full mt-1 h-10 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] font-bold outline-none"/>
+                <p className="text-[12px] text-[#5C6660] mt-0.5">簡易源泉</p>
               </div>
               <div>
-                <label className="text-[10px] font-bold text-[#999] tracking-widest">所得税の課税開始ライン (円)</label>
+                <label className="text-[12px] font-bold text-[#5C6660] tracking-widest">所得税の課税開始ライン (円)</label>
                 <input type="number" value={payrollConfig.incomeTaxThreshold}
                   onChange={e => setPayrollConfig({...payrollConfig, incomeTaxThreshold: Number(e.target.value)})}
-                  className="w-full mt-1 h-10 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] font-bold outline-none"/>
-                <p className="text-[9px] text-[#999] mt-0.5">月給がこの金額未満なら<br/>所得税は引かない（標準: 88,000円）</p>
+                  className="w-full mt-1 h-10 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] font-bold outline-none"/>
+                <p className="text-[12px] text-[#5C6660] mt-0.5">月給がこの金額未満なら<br/>所得税は引かない（標準: 88,000円）</p>
               </div>
               <div>
-                <label className="text-[10px] font-bold text-[#999] tracking-widest">残業割増 (%)</label>
+                <label className="text-[12px] font-bold text-[#5C6660] tracking-widest">残業割増 (%)</label>
                 <input type="number" value={payrollConfig.overtimePremiumRate}
                   onChange={e => setPayrollConfig({...payrollConfig, overtimePremiumRate: Number(e.target.value)})}
-                  className="w-full mt-1 h-10 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] font-bold outline-none"/>
-                <p className="text-[9px] text-[#999] mt-0.5">法定 25%以上</p>
+                  className="w-full mt-1 h-10 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] font-bold outline-none"/>
+                <p className="text-[12px] text-[#5C6660] mt-0.5">法定 25%以上</p>
               </div>
               <div>
-                <label className="text-[10px] font-bold text-[#999] tracking-widest">残業判定 (時間/日)</label>
+                <label className="text-[12px] font-bold text-[#5C6660] tracking-widest">残業判定 (時間/日)</label>
                 <input type="number" value={payrollConfig.overtimeThresholdHours}
                   onChange={e => setPayrollConfig({...payrollConfig, overtimeThresholdHours: Number(e.target.value)})}
-                  className="w-full mt-1 h-10 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] font-bold outline-none"/>
-                <p className="text-[9px] text-[#999] mt-0.5">これ超で残業</p>
+                  className="w-full mt-1 h-10 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] font-bold outline-none"/>
+                <p className="text-[12px] text-[#5C6660] mt-0.5">これ超で残業</p>
               </div>
             </div>
           )}
@@ -1769,38 +1769,38 @@ export default function SettingsPage() {
     <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-6 animate-in fade-in text-left">
       <div>
         <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><User size={20}/> スタッフ管理 <HelpTooltip articleId="role_explain"/></h2>
-        <p className="text-[11px] text-[#999] mt-1 leading-relaxed">
+        <p className="text-[13px] text-[#5C6660] mt-1 leading-relaxed">
           スタッフを登録すると、各画面の上部のセレクターから「現在誰が操作しているか」を切り替えられます。
           権限により見れる機能が変わります。
         </p>
       </div>
 
       {/* 権限の凡例 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px]">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[13px]">
         <div className="bg-[#2D4B3E]/5 border border-[#2D4B3E]/20 rounded-xl p-3">
           <p className="font-bold text-[#2D4B3E] mb-1">オーナー</p>
-          <p className="text-[#555] leading-relaxed">全機能・設定変更・売上・スタッフ管理</p>
+          <p className="text-[#3B4640] leading-relaxed">全機能・設定変更・売上・スタッフ管理</p>
         </div>
         <div className="bg-[#117768]/5 border border-[#117768]/20 rounded-xl p-3">
           <p className="font-bold text-[#117768] mb-1">スタッフ</p>
-          <p className="text-[#555] leading-relaxed">注文管理・売上閲覧・顧客管理(設定×)</p>
+          <p className="text-[#3B4640] leading-relaxed">注文管理・売上閲覧・顧客管理(設定×)</p>
         </div>
-        <div className="bg-[#D97D54]/5 border border-[#D97D54]/20 rounded-xl p-3">
-          <p className="font-bold text-[#D97D54] mb-1">バイト</p>
-          <p className="text-[#555] leading-relaxed">注文一覧・対応のみ(売上・設定×)</p>
+        <div className="bg-[#B9562F]/5 border border-[#B9562F]/20 rounded-xl p-3">
+          <p className="font-bold text-[#B9562F] mb-1">バイト</p>
+          <p className="text-[#3B4640] leading-relaxed">注文一覧・対応のみ(売上・設定×)</p>
         </div>
       </div>
 
       {/* ★ PIN認証設定 */}
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
-        <p className="text-[13px] font-bold text-amber-900">スタッフ切替時のPIN認証 <HelpTooltip articleId="pin_lock"/></p>
+        <p className="text-[15px] font-bold text-amber-900">スタッフ切替時のPIN認証 <HelpTooltip articleId="pin_lock"/></p>
         <label className="flex items-start gap-3 cursor-pointer">
           <input type="checkbox" checked={Boolean(staffAuthConfig.requirePin)}
             onChange={(e) => setStaffAuthConfig({...staffAuthConfig, requirePin: e.target.checked})}
             className="mt-1 w-4 h-4 accent-amber-600"/>
           <div>
-            <p className="text-[12px] font-bold text-amber-900">オーナー切替時にPIN認証を必須にする</p>
-            <p className="text-[10px] text-amber-700 mt-1">設定変更・スタッフ管理など権限の高いオーナーへの切替時に4桁PIN必要</p>
+            <p className="text-[14px] font-bold text-amber-900">オーナー切替時にPIN認証を必須にする</p>
+            <p className="text-[12px] text-amber-700 mt-1">設定変更・スタッフ管理など権限の高いオーナーへの切替時に4桁PIN必要</p>
           </div>
         </label>
         <label className="flex items-start gap-3 cursor-pointer">
@@ -1809,8 +1809,8 @@ export default function SettingsPage() {
             disabled={!staffAuthConfig.requirePin}
             className="mt-1 w-4 h-4 accent-amber-600 disabled:opacity-50"/>
           <div className={!staffAuthConfig.requirePin ? 'opacity-50' : ''}>
-            <p className="text-[12px] font-bold text-amber-900">スタッフ・バイト切替時もPINを必須にする</p>
-            <p className="text-[10px] text-amber-700 mt-1">忙しい店舗ではOFF推奨。誰がやっても操作履歴に残るので証跡は確保されます</p>
+            <p className="text-[14px] font-bold text-amber-900">スタッフ・バイト切替時もPINを必須にする</p>
+            <p className="text-[12px] text-amber-700 mt-1">忙しい店舗ではOFF推奨。誰がやっても操作履歴に残るので証跡は確保されます</p>
           </div>
         </label>
       </div>
@@ -1826,17 +1826,17 @@ export default function SettingsPage() {
             setStaffList(next);
           };
           return (
-          <div key={i} className="bg-[#FBFAF9] p-4 rounded-2xl border border-[#EAEAEA] space-y-3">
+          <div key={i} className="bg-[#FAFAF7] p-4 rounded-2xl border border-[#E6E2DA] space-y-3">
             <div className="flex flex-col md:flex-row md:items-center gap-3">
             <div className="flex flex-col flex-1 min-w-0">
-              <span className="font-bold text-[14px]">{s.name}</span>
-              <span className="text-[9px] text-[#999999] font-bold tracking-tight">所属: {s.store === 'all' ? '全店' : shops.find(sh=>sh.id===Number(s.store))?.name || '不明'}</span>
+              <span className="font-bold text-[15px]">{s.name}</span>
+              <span className="text-[12px] text-[#5C6660] font-bold tracking-tight">所属: {s.store === 'all' ? '全店' : shops.find(sh=>sh.id===Number(s.store))?.name || '不明'}</span>
             </div>
             {/* ★ ② PIN: 値は一切表示しない。状態バッジ＋「変更」ボタンで上書きのみ */}
             <button
               type="button"
               onClick={() => setPinEditTarget({ idx: i, value: '', confirm: '' })}
-              className={`h-10 px-3 rounded-lg text-[11px] font-bold border-2 transition-all flex items-center gap-1.5 ${
+              className={`h-10 px-3 rounded-lg text-[13px] font-bold border-2 transition-all flex items-center gap-1.5 ${
                 s.pin
                   ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:border-emerald-400'
                   : 'bg-red-50 border-red-200 text-red-700 hover:border-red-400'
@@ -1853,10 +1853,10 @@ export default function SettingsPage() {
                 next[i] = { ...next[i], role: e.target.value };
                 setStaffList(next);
               }}
-              className={`h-10 px-3 bg-white border rounded-lg text-[12px] font-bold outline-none focus:border-[#2D4B3E] ${
+              className={`h-10 px-3 bg-white border rounded-lg text-[14px] font-bold outline-none focus:border-[#2D4B3E] ${
                 (s.role || 'staff') === 'owner' ? 'border-[#2D4B3E]/40 text-[#2D4B3E]' :
                 (s.role || 'staff') === 'staff' ? 'border-[#117768]/40 text-[#117768]' :
-                'border-[#D97D54]/40 text-[#D97D54]'
+                'border-[#B9562F]/40 text-[#B9562F]'
               }`}
             >
               <option value="owner">オーナー</option>
@@ -1867,61 +1867,61 @@ export default function SettingsPage() {
             </div>
 
             {/* ★ 固定休 */}
-            <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-[#EAEAEA]">
-              <span className="text-[10px] font-bold text-[#999] tracking-widest">固定休:</span>
+            <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-[#E6E2DA]">
+              <span className="text-[12px] font-bold text-[#5C6660] tracking-widest">固定休:</span>
               {Object.entries(dayLabels).map(([key, label]) => (
                 <button
                   key={key}
                   onClick={() => toggleDayOff(key)}
-                  className={`w-9 h-9 rounded-lg text-[11px] font-bold transition-all ${
+                  className={`w-9 h-9 rounded-lg text-[13px] font-bold transition-all ${
                     fixedDayOff.includes(key)
-                      ? 'bg-[#D97D54] text-white border border-[#D97D54]'
-                      : 'bg-white text-[#555] border border-[#EAEAEA] hover:border-[#D97D54]/40'
+                      ? 'bg-[#B9562F] text-white border border-[#B9562F]'
+                      : 'bg-white text-[#3B4640] border border-[#E6E2DA] hover:border-[#B9562F]/40'
                   }`}
                 >
                   {label}
                 </button>
               ))}
-              {fixedDayOff.length === 0 && <span className="text-[10px] text-[#999]">なし（毎日勤務可能）</span>}
+              {fixedDayOff.length === 0 && <span className="text-[12px] text-[#5C6660]">なし（毎日勤務可能）</span>}
             </div>
 
             {/* ★ 基本出勤時間（自動シフト生成のデフォルト） */}
-            <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-[#EAEAEA]">
-              <span className="text-[10px] font-bold text-[#999] tracking-widest">基本出勤時間:</span>
+            <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-[#E6E2DA]">
+              <span className="text-[12px] font-bold text-[#5C6660] tracking-widest">基本出勤時間:</span>
               <input type="time" value={s.defaultStartTime || ''}
                 onChange={(e) => { const next = [...staffList]; next[i] = {...next[i], defaultStartTime: e.target.value}; setStaffList(next); }}
-                className="h-8 px-2 bg-white border border-[#EAEAEA] rounded text-[11px] outline-none"/>
-              <span className="text-[#999] text-[11px]">〜</span>
+                className="h-8 px-2 bg-white border border-[#E6E2DA] rounded text-[13px] outline-none"/>
+              <span className="text-[#5C6660] text-[13px]">〜</span>
               <input type="time" value={s.defaultEndTime || ''}
                 onChange={(e) => { const next = [...staffList]; next[i] = {...next[i], defaultEndTime: e.target.value}; setStaffList(next); }}
-                className="h-8 px-2 bg-white border border-[#EAEAEA] rounded text-[11px] outline-none"/>
-              <span className="text-[10px] text-[#999]">（自動シフト生成時のデフォルト時間）</span>
+                className="h-8 px-2 bg-white border border-[#E6E2DA] rounded text-[13px] outline-none"/>
+              <span className="text-[12px] text-[#5C6660]">（自動シフト生成時のデフォルト時間）</span>
             </div>
 
             {/* ★ 給与設定（payrollConfig.enabled の時だけ表示） */}
             {payrollConfig.enabled && (
-              <div className="pt-2 border-t border-[#EAEAEA] space-y-2">
+              <div className="pt-2 border-t border-[#E6E2DA] space-y-2">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <span className="text-[10px] font-bold text-[#117768] tracking-widest">給与:</span>
-                  <label className="flex items-center gap-1.5 text-[11px] font-bold cursor-pointer">
+                  <span className="text-[12px] font-bold text-[#117768] tracking-widest">給与:</span>
+                  <label className="flex items-center gap-1.5 text-[13px] font-bold cursor-pointer">
                     <input type="checkbox" checked={Boolean(s.payrollEnabled)}
                       onChange={(e) => { const next = [...staffList]; next[i] = {...next[i], payrollEnabled: e.target.checked}; setStaffList(next); }}
                       className="w-4 h-4 accent-[#117768]"/>
                     給与計算対象
                   </label>
                   <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-[#999]">時給</span>
+                    <span className="text-[12px] text-[#5C6660]">時給</span>
                     <input type="number" placeholder="1100" value={s.hourlyWage || ''}
                       onChange={(e) => { const next = [...staffList]; next[i] = {...next[i], hourlyWage: Number(e.target.value) || 0}; setStaffList(next); }}
-                      className="w-20 h-8 px-2 bg-white border border-[#EAEAEA] rounded text-[11px] text-right font-bold outline-none"/>
-                    <span className="text-[10px] text-[#999]">円</span>
+                      className="w-20 h-8 px-2 bg-white border border-[#E6E2DA] rounded text-[13px] text-right font-bold outline-none"/>
+                    <span className="text-[12px] text-[#5C6660]">円</span>
                   </div>
                 </div>
 
                 {s.payrollEnabled && (
                   <>
-                    <div className="flex items-center gap-3 flex-wrap text-[11px]">
-                      <span className="text-[10px] font-bold text-[#999]">控除:</span>
+                    <div className="flex items-center gap-3 flex-wrap text-[13px]">
+                      <span className="text-[12px] font-bold text-[#5C6660]">控除:</span>
                       {[
                         { key: 'employment', label: '雇用保険' },
                         { key: 'social', label: '社会保険' },
@@ -1941,22 +1941,22 @@ export default function SettingsPage() {
                       ))}
                     </div>
 
-                    <div className="flex items-center gap-3 flex-wrap text-[11px]">
-                      <span className="text-[10px] font-bold text-[#999]">扶養:</span>
+                    <div className="flex items-center gap-3 flex-wrap text-[13px]">
+                      <span className="text-[12px] font-bold text-[#5C6660]">扶養:</span>
                       <select value={s.dependencyLimitYen ?? 0}
                         onChange={(e) => { const next = [...staffList]; next[i] = {...next[i], dependencyLimitYen: Number(e.target.value)}; setStaffList(next); }}
-                        className="h-8 px-2 bg-white border border-[#EAEAEA] rounded text-[11px] font-bold outline-none">
+                        className="h-8 px-2 bg-white border border-[#E6E2DA] rounded text-[13px] font-bold outline-none">
                         <option value="0">対象外</option>
                         <option value="1030000">103万円</option>
                         <option value="1300000">130万円</option>
                         <option value="1500000">150万円</option>
                         <option value="2010000">201万円</option>
                       </select>
-                      <span className="text-[10px] font-bold text-[#999] ml-2">月上限:</span>
+                      <span className="text-[12px] font-bold text-[#5C6660] ml-2">月上限:</span>
                       <input type="number" placeholder="160" value={s.monthlyHourLimit || ''}
                         onChange={(e) => { const next = [...staffList]; next[i] = {...next[i], monthlyHourLimit: Number(e.target.value) || 0}; setStaffList(next); }}
-                        className="w-16 h-8 px-2 bg-white border border-[#EAEAEA] rounded text-[11px] text-right font-bold outline-none"/>
-                      <span className="text-[10px] text-[#999]">時間/月</span>
+                        className="w-16 h-8 px-2 bg-white border border-[#E6E2DA] rounded text-[13px] text-right font-bold outline-none"/>
+                      <span className="text-[12px] text-[#5C6660]">時間/月</span>
                     </div>
                   </>
                 )}
@@ -1966,9 +1966,9 @@ export default function SettingsPage() {
           );
         })}
 
-        <div className="flex flex-col md:flex-row gap-2 pt-4 border-t border-[#EAEAEA]">
-          <input type="text" placeholder="氏名" value={newStaffName} onChange={(e)=>setNewStaffName(e.target.value)} className="flex-[2] h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E]"/>
-          <select value={newStaffStore} onChange={(e)=>setNewStaffStore(e.target.value)} className="flex-1 h-12 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl px-4 text-[13px] font-bold outline-none focus:border-[#2D4B3E]">
+        <div className="flex flex-col md:flex-row gap-2 pt-4 border-t border-[#E6E2DA]">
+          <input type="text" placeholder="氏名" value={newStaffName} onChange={(e)=>setNewStaffName(e.target.value)} className="flex-[2] h-12 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E]"/>
+          <select value={newStaffStore} onChange={(e)=>setNewStaffStore(e.target.value)} className="flex-1 h-12 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl px-4 text-[15px] font-bold outline-none focus:border-[#2D4B3E]">
             <option value="all">全店</option>
             {shops.map(shop=><option key={shop.id} value={shop.id}>{shop.name}</option>)}
           </select>
@@ -1977,7 +1977,7 @@ export default function SettingsPage() {
               setStaffList([...staffList,{name:newStaffName, store:newStaffStore, role: 'staff'}]);
               setNewStaffName('');
             }
-          }} className="bg-[#2D4B3E] text-white px-6 h-12 rounded-xl font-bold text-[13px] shadow-sm hover:bg-[#1f352b] transition-all">追加</button>
+          }} className="bg-[#2D4B3E] text-white px-6 h-12 rounded-xl font-bold text-[15px] shadow-sm hover:bg-[#1f352b] transition-all">追加</button>
         </div>
       </div>
     </div>
@@ -1985,10 +1985,10 @@ export default function SettingsPage() {
 
   const renderMessageTab = () => (
     <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-6 animate-in fade-in text-left">
-      <div className="flex justify-between items-center border-b border-[#EAEAEA] pb-4">
+      <div className="flex justify-between items-center border-b border-[#E6E2DA] pb-4">
         <div>
           <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2"><Mail size={20}/> 案内文・テンプレート管理</h2>
-          <p className="text-[11px] text-[#999999] mt-1">注文画面や通知メールで使用する定型文を管理します。店舗ごとに内容を変えることも可能です。</p>
+          <p className="text-[13px] text-[#5C6660] mt-1">注文画面や通知メールで使用する定型文を管理します。店舗ごとに内容を変えることも可能です。</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -2001,11 +2001,11 @@ export default function SettingsPage() {
               setAutoReplyTemplates([...autoReplyTemplates, ...toAdd]);
               alert(`${toAdd.length}件のプリセットを追加しました`);
             }}
-            className="text-[11px] bg-white border border-[#2D4B3E] text-[#2D4B3E] px-4 py-2 rounded-full font-bold transition-all hover:bg-[#2D4B3E]/5"
+            className="text-[13px] bg-white border border-[#2D4B3E] text-[#2D4B3E] px-4 py-2 rounded-full font-bold transition-all hover:bg-[#2D4B3E]/5"
           >
             プリセット読み込み
           </button>
-          <button onClick={() => setAutoReplyTemplates([...autoReplyTemplates, { id: `t_${Date.now()}`, trigger: 'custom', targetShops: 'all', enabled: true, subject: '新しいテンプレート', body: '' }])} className="text-[11px] bg-[#2D4B3E] text-white px-4 py-2 rounded-full font-bold shadow-sm transition-all hover:bg-[#1f352b]">+ 追加</button>
+          <button onClick={() => setAutoReplyTemplates([...autoReplyTemplates, { id: `t_${Date.now()}`, trigger: 'custom', targetShops: 'all', enabled: true, subject: '新しいテンプレート', body: '' }])} className="text-[13px] bg-[#2D4B3E] text-white px-4 py-2 rounded-full font-bold shadow-sm transition-all hover:bg-[#1f352b]">+ 追加</button>
         </div>
       </div>
       <div className="space-y-8">
@@ -2014,17 +2014,17 @@ export default function SettingsPage() {
           const isEnabled = template.enabled !== false;
           const isAllShops = template.targetShops === 'all' || template.targetShops === undefined;
           return (
-            <div key={template.id} className={`bg-[#FBFAF9] p-6 rounded-2xl border border-[#EAEAEA] space-y-4 relative group ${!isEnabled ? 'opacity-60' : ''}`}>
+            <div key={template.id} className={`bg-[#FAFAF7] p-6 rounded-2xl border border-[#E6E2DA] space-y-4 relative group ${!isEnabled ? 'opacity-60' : ''}`}>
               <button onClick={() => setAutoReplyTemplates(autoReplyTemplates.filter(t => t.id !== template.id))} className="absolute top-6 right-6 text-red-300 hover:text-red-500 bg-white p-2 rounded-full shadow-sm"><Trash2 size={16}/></button>
 
               {/* ★ トリガー情報 + 有効化トグル */}
               {triggerInfo && (
-                <div className="flex items-start justify-between gap-3 pr-12 pb-3 border-b border-[#EAEAEA]">
+                <div className="flex items-start justify-between gap-3 pr-12 pb-3 border-b border-[#E6E2DA]">
                   <div className="flex-1 min-w-0">
-                    <p className="text-[12px] font-bold text-[#2D4B3E]">
+                    <p className="text-[14px] font-bold text-[#2D4B3E]">
                       {triggerInfo.auto ? '自動送信' : '手動送信'} ／ {triggerInfo.label}
                     </p>
-                    <p className="text-[10px] text-[#999999] leading-relaxed mt-1">{triggerInfo.description}</p>
+                    <p className="text-[12px] text-[#5C6660] leading-relaxed mt-1">{triggerInfo.description}</p>
                   </div>
                   <label className="flex items-center gap-2 cursor-pointer shrink-0">
                     <input
@@ -2033,15 +2033,15 @@ export default function SettingsPage() {
                       onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].enabled = e.target.checked; setAutoReplyTemplates(newT); }}
                       className="w-4 h-4 accent-[#2D4B3E]"
                     />
-                    <span className="text-[10px] font-bold text-[#555555]">{isEnabled ? '有効' : '無効'}</span>
+                    <span className="text-[12px] font-bold text-[#3B4640]">{isEnabled ? '有効' : '無効'}</span>
                   </label>
                 </div>
               )}
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-12">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-[#999999]">案内の種類（いつ使うか）</label>
-                  <select value={template.trigger} onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].trigger = e.target.value; setAutoReplyTemplates(newT); }} className="w-full h-12 bg-white border border-[#EAEAEA] rounded-xl px-4 font-bold text-[13px] outline-none focus:border-[#2D4B3E]">
+                  <label className="text-[13px] font-bold text-[#5C6660]">案内の種類（いつ使うか）</label>
+                  <select value={template.trigger} onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].trigger = e.target.value; setAutoReplyTemplates(newT); }} className="w-full h-12 bg-white border border-[#E6E2DA] rounded-xl px-4 font-bold text-[15px] outline-none focus:border-[#2D4B3E]">
                     <option value="order_confirmed">ご注文受付（自動送信）</option>
                     <option value="restock_notification">入荷のお知らせ</option>
                     <option value="mypage_magic_link">注文履歴の確認URL</option>
@@ -2051,22 +2051,22 @@ export default function SettingsPage() {
                 </div>
                 
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-[#999999]">適用する店舗</label>
-                  <div className="flex gap-2 p-1 bg-white rounded-xl border border-[#EAEAEA]">
-                    <button onClick={() => { const newT = [...autoReplyTemplates]; newT[index].targetShops = 'all'; setAutoReplyTemplates(newT); }} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${isAllShops ? 'bg-[#2D4B3E] text-white' : 'text-[#999999]'}`}>全店舗</button>
-                    <button onClick={() => { const newT = [...autoReplyTemplates]; newT[index].targetShops = Array.isArray(template.targetShops) && template.targetShops !== 'all' ? template.targetShops : []; setAutoReplyTemplates(newT); }} className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${!isAllShops ? 'bg-[#2D4B3E] text-white' : 'text-[#999999]'}`}>指定店舗のみ</button>
+                  <label className="text-[13px] font-bold text-[#5C6660]">適用する店舗</label>
+                  <div className="flex gap-2 p-1 bg-white rounded-xl border border-[#E6E2DA]">
+                    <button onClick={() => { const newT = [...autoReplyTemplates]; newT[index].targetShops = 'all'; setAutoReplyTemplates(newT); }} className={`flex-1 py-1.5 rounded-lg text-[12px] font-bold transition-all ${isAllShops ? 'bg-[#2D4B3E] text-white' : 'text-[#5C6660]'}`}>全店舗</button>
+                    <button onClick={() => { const newT = [...autoReplyTemplates]; newT[index].targetShops = Array.isArray(template.targetShops) && template.targetShops !== 'all' ? template.targetShops : []; setAutoReplyTemplates(newT); }} className={`flex-1 py-1.5 rounded-lg text-[12px] font-bold transition-all ${!isAllShops ? 'bg-[#2D4B3E] text-white' : 'text-[#5C6660]'}`}>指定店舗のみ</button>
                   </div>
                 </div>
               </div>
 
               {!isAllShops && (
-                <div className="flex flex-wrap gap-2 p-4 bg-white rounded-2xl border border-[#EAEAEA] animate-in slide-in-from-top-2">
-                  {shops.length === 0 ? <p className="text-[11px] text-[#999999]">店舗が登録されていません</p> : shops.map(shop => {
+                <div className="flex flex-wrap gap-2 p-4 bg-white rounded-2xl border border-[#E6E2DA] animate-in slide-in-from-top-2">
+                  {shops.length === 0 ? <p className="text-[13px] text-[#5C6660]">店舗が登録されていません</p> : shops.map(shop => {
                     const isChecked = Array.isArray(template.targetShops) && template.targetShops.includes(shop.id);
                     return (
-                      <label key={shop.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer transition-all ${isChecked ? 'bg-[#2D4B3E]/5 border-[#2D4B3E] text-[#2D4B3E] shadow-sm' : 'text-[#999999] border-transparent hover:bg-gray-50'}`}>
+                      <label key={shop.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer transition-all ${isChecked ? 'bg-[#2D4B3E]/5 border-[#2D4B3E] text-[#2D4B3E] shadow-sm' : 'text-[#5C6660] border-transparent hover:bg-gray-50'}`}>
                         <input type="checkbox" checked={isChecked} onChange={(e)=>{const current = Array.isArray(template.targetShops) ? template.targetShops : []; const next = e.target.checked ? [...current, shop.id] : current.filter(id => id !== shop.id); const newT = [...autoReplyTemplates]; newT[index].targetShops = next; setAutoReplyTemplates(newT);}} className="accent-[#2D4B3E] w-3.5 h-3.5"/>
-                        <span className="text-[11px] font-bold">{shop.name}</span>
+                        <span className="text-[13px] font-bold">{shop.name}</span>
                       </label>
                     );
                   })}
@@ -2074,14 +2074,14 @@ export default function SettingsPage() {
               )}
 
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-[#999999]">件名 / 表示タイトル</label>
-                <input type="text" value={template.subject} onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].subject = e.target.value; setAutoReplyTemplates(newT); }} className="w-full h-12 bg-white border border-[#EAEAEA] rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E]" />
+                <label className="text-[13px] font-bold text-[#5C6660]">件名 / 表示タイトル</label>
+                <input type="text" value={template.subject} onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].subject = e.target.value; setAutoReplyTemplates(newT); }} className="w-full h-12 bg-white border border-[#E6E2DA] rounded-xl px-4 font-bold outline-none focus:border-[#2D4B3E]" />
               </div>
               
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-[#999999]">本文設定</label>
+                <label className="text-[13px] font-bold text-[#5C6660]">本文設定</label>
                 <div className="relative">
-                  <textarea value={template.body} onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].body = e.target.value; setAutoReplyTemplates(newT); }} className="w-full h-64 bg-white border border-[#EAEAEA] rounded-2xl p-5 pb-16 text-[13px] font-bold outline-none resize-none leading-relaxed focus:border-[#2D4B3E]" />
+                  <textarea value={template.body} onChange={(e) => { const newT = [...autoReplyTemplates]; newT[index].body = e.target.value; setAutoReplyTemplates(newT); }} className="w-full h-64 bg-white border border-[#E6E2DA] rounded-2xl p-5 pb-16 text-[15px] font-bold outline-none resize-none leading-relaxed focus:border-[#2D4B3E]" />
                   
                   {/* ★ トリガーに応じた変数ボタン（クリックでコピー） */}
                   <div className="absolute bottom-4 left-4 right-4 flex flex-wrap gap-1.5">
@@ -2107,7 +2107,7 @@ export default function SettingsPage() {
                         key={tag}
                         type="button"
                         onClick={() => handleCopyTag(tag)}
-                        className="px-2 py-1 bg-[#F7F7F7] border border-[#EAEAEA] text-[9px] font-bold text-[#2D4B3E] rounded-md hover:bg-[#EAEAEA] transition-colors cursor-pointer flex items-center gap-1"
+                        className="px-2 py-1 bg-[#F6F4EF] border border-[#E6E2DA] text-[12px] font-bold text-[#2D4B3E] rounded-md hover:bg-[#E6E2DA] transition-colors cursor-pointer flex items-center gap-1"
                       >
                         {copiedTag === tag ? (
                           <span className="text-green-600">✓ コピーしました</span>
@@ -2138,33 +2138,33 @@ export default function SettingsPage() {
         <div className="space-y-6">
           
           {isB2BEnabled && (
-            <div className="p-6 bg-[#FBFAF9] rounded-2xl border border-[#EAEAEA] space-y-4">
-              <h3 className="text-[14px] font-bold text-[#111111] flex items-center gap-2"><Building2 size={16}/> 法人のお客様向け</h3>
+            <div className="p-6 bg-[#FAFAF7] rounded-2xl border border-[#E6E2DA] space-y-4">
+              <h3 className="text-[15px] font-bold text-[#1F2A24] flex items-center gap-2"><Building2 size={16}/> 法人のお客様向け</h3>
               <div className="space-y-2">
-                 <label className="text-[11px] font-bold text-[#999999]">法人ポータル・注文画面</label>
+                 <label className="text-[13px] font-bold text-[#5C6660]">法人ポータル・注文画面</label>
                  <div className="flex gap-2">
-                   <input type="text" readOnly value={`${baseUrl}/corporate/${tid}`} className="flex-1 h-12 px-4 bg-white border border-[#EAEAEA] rounded-xl text-[13px] font-mono outline-none text-[#555555]" />
-                   <button onClick={() => { navigator.clipboard.writeText(`${baseUrl}/corporate/${tid}`); alert('コピーしました！'); }} className="px-6 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold hover:bg-[#1f352b] transition-all">コピー</button>
+                   <input type="text" readOnly value={`${baseUrl}/corporate/${tid}`} className="flex-1 h-12 px-4 bg-white border border-[#E6E2DA] rounded-xl text-[15px] font-mono outline-none text-[#3B4640]" />
+                   <button onClick={() => { navigator.clipboard.writeText(`${baseUrl}/corporate/${tid}`); alert('コピーしました！'); }} className="px-6 bg-[#2D4B3E] text-white rounded-xl text-[14px] font-bold hover:bg-[#1f352b] transition-all">コピー</button>
                  </div>
               </div>
               <div className="space-y-2 pt-2">
-                 <label className="text-[11px] font-bold text-[#999999]">法人アカウント 新規登録フォーム</label>
+                 <label className="text-[13px] font-bold text-[#5C6660]">法人アカウント 新規登録フォーム</label>
                  <div className="flex gap-2">
-                   <input type="text" readOnly value={`${baseUrl}/corporate/register/${tid}`} className="flex-1 h-12 px-4 bg-white border border-[#EAEAEA] rounded-xl text-[13px] font-mono outline-none text-[#555555]" />
-                   <button onClick={() => { navigator.clipboard.writeText(`${baseUrl}/corporate/register/${tid}`); alert('コピーしました！'); }} className="px-6 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold hover:bg-[#1f352b] transition-all">コピー</button>
+                   <input type="text" readOnly value={`${baseUrl}/corporate/register/${tid}`} className="flex-1 h-12 px-4 bg-white border border-[#E6E2DA] rounded-xl text-[15px] font-mono outline-none text-[#3B4640]" />
+                   <button onClick={() => { navigator.clipboard.writeText(`${baseUrl}/corporate/register/${tid}`); alert('コピーしました！'); }} className="px-6 bg-[#2D4B3E] text-white rounded-xl text-[14px] font-bold hover:bg-[#1f352b] transition-all">コピー</button>
                  </div>
               </div>
             </div>
           )}
 
-          <div className="p-6 bg-[#FBFAF9] rounded-2xl border border-[#EAEAEA] space-y-4">
-            <h3 className="text-[14px] font-bold text-[#111111] flex items-center gap-2"><Store size={16}/> 一般のお客様向け (店舗別注文ページ)</h3>
-            {shops.length === 0 ? <p className="text-[12px] text-[#999999]">店舗を登録してください。</p> : shops.map(shop => (
+          <div className="p-6 bg-[#FAFAF7] rounded-2xl border border-[#E6E2DA] space-y-4">
+            <h3 className="text-[15px] font-bold text-[#1F2A24] flex items-center gap-2"><Store size={16}/> 一般のお客様向け (店舗別注文ページ)</h3>
+            {shops.length === 0 ? <p className="text-[14px] text-[#5C6660]">店舗を登録してください。</p> : shops.map(shop => (
                <div key={shop.id} className="space-y-1">
-                 <label className="text-[11px] font-bold text-[#2D4B3E]">{shop.name}</label>
+                 <label className="text-[13px] font-bold text-[#2D4B3E]">{shop.name}</label>
                  <div className="flex gap-2">
-                   <input type="text" readOnly value={`${baseUrl}/order/${tid}/${shop.id}`} className="flex-1 h-12 px-4 bg-white border border-[#EAEAEA] rounded-xl text-[13px] font-mono outline-none text-[#555555]" />
-                   <button onClick={() => { navigator.clipboard.writeText(`${baseUrl}/order/${tid}/${shop.id}`); alert('コピーしました！'); }} className="px-6 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold hover:bg-[#1f352b] transition-all">コピー</button>
+                   <input type="text" readOnly value={`${baseUrl}/order/${tid}/${shop.id}`} className="flex-1 h-12 px-4 bg-white border border-[#E6E2DA] rounded-xl text-[15px] font-mono outline-none text-[#3B4640]" />
+                   <button onClick={() => { navigator.clipboard.writeText(`${baseUrl}/order/${tid}/${shop.id}`); alert('コピーしました！'); }} className="px-6 bg-[#2D4B3E] text-white rounded-xl text-[14px] font-bold hover:bg-[#1f352b] transition-all">コピー</button>
                  </div>
                </div>
             ))}
@@ -2175,18 +2175,18 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FBFAF9] flex flex-col font-sans text-left pb-40">
+    <div className="min-h-screen bg-[#FAFAF7] flex flex-col font-sans text-left pb-40">
       {/* ★ [2026-10] ノートPCでタブが右にはみ出して選べなかった -> 収まらない分は 2 段目に折り返す（高さは自動） */}
-      <header className="min-h-20 py-2 bg-white/80 backdrop-blur-md border-b flex items-center justify-between px-6 md:px-12 sticky top-0 z-50 shadow-sm">
-        <h1 className="text-[16px] font-bold text-[#2D4B3E] tracking-tight">システム設定</h1>
+      <header className="min-h-20 py-2 bg-[#F6F4EF]/95 backdrop-blur border-b flex items-center justify-between px-6 md:px-12 sticky top-0 z-50 shadow-sm">
+        <h1 className="text-[24px] md:text-[28px] font-bold tracking-[0.02em] text-[#1F2A24]">システム設定</h1>
         {/* ★ カテゴリ別タブ表示 */}
         <div className="hidden md:flex flex-1 mx-6 flex-wrap gap-x-2 gap-y-1.5 min-w-0">
           {tabCategories.map(cat => (
             <div key={cat.name} className="flex flex-col items-start shrink-0">
-              <span className="text-[8px] font-bold text-[#999999] tracking-widest mb-0.5 px-1">{cat.name}</span>
-              <div className="flex bg-[#F7F7F7] p-1 rounded-xl border border-[#EAEAEA]">
+              <span className="text-[11px] font-bold text-[#5C6660] tracking-widest mb-0.5 px-1">{cat.name}</span>
+              <div className="flex bg-[#F6F4EF] p-1 rounded-xl border border-[#E6E2DA]">
                 {cat.tabs.map(t => (
-                  <button key={t.id} onClick={() => setActiveTab(t.id)} className={`whitespace-nowrap px-3 py-1 text-[11px] font-bold rounded-lg transition-all ${activeTab === t.id ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#999999] hover:text-[#555555]'}`}>{t.label}</button>
+                  <button key={t.id} onClick={() => setActiveTab(t.id)} className={`whitespace-nowrap px-3 py-1 text-[13px] font-bold rounded-lg transition-all ${activeTab === t.id ? 'bg-white shadow-sm text-[#2D4B3E]' : 'text-[#5C6660] hover:text-[#3B4640]'}`}>{t.label}</button>
                 ))}
               </div>
             </div>
@@ -2194,12 +2194,12 @@ export default function SettingsPage() {
         </div>
         <div className="flex items-center gap-4 shrink-0">
           {!isAdmin ? (
-            <div className="flex items-center gap-2 bg-white px-2 py-1.5 rounded-xl border border-[#EAEAEA] shadow-sm">
-              <input type="password" placeholder="Pass" value={adminPassword} onChange={(e)=>setAdminPassword(e.target.value)} className="w-16 h-8 px-2 bg-[#FBFAF9] text-[11px] font-bold outline-none rounded-lg border focus:border-[#2D4B3E]"/>
-              <button onClick={handleLogin} className="px-3 h-8 bg-[#2D4B3E] text-white text-[11px] font-bold rounded-lg transition-all hover:bg-[#1f352b] active:scale-95">解除</button>
+            <div className="flex items-center gap-2 bg-white px-2 py-1.5 rounded-xl border border-[#E6E2DA] shadow-sm">
+              <input type="password" placeholder="Pass" value={adminPassword} onChange={(e)=>setAdminPassword(e.target.value)} className="w-16 h-8 px-2 bg-[#FAFAF7] text-[13px] font-bold outline-none rounded-lg border focus:border-[#2D4B3E]"/>
+              <button onClick={handleLogin} className="px-3 h-8 bg-[#2D4B3E] text-white text-[13px] font-bold rounded-lg transition-all hover:bg-[#1f352b] active:scale-95">解除</button>
             </div>
           ) : (
-            <button onClick={saveSettings} disabled={isSaving} className={`px-6 py-2.5 rounded-xl text-[12px] font-bold shadow-md transition-all ${isSaving ? 'bg-gray-400' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b] active:scale-95'}`}>{isSaving ? '保存中...' : '変更を保存'}</button>
+            <button onClick={saveSettings} disabled={isSaving} className={`px-6 py-2.5 rounded-xl text-[14px] font-bold shadow-md transition-all ${isSaving ? 'bg-gray-400' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b] active:scale-95'}`}>{isSaving ? '保存中...' : '変更を保存'}</button>
           )}
         </div>
       </header>
@@ -2207,17 +2207,17 @@ export default function SettingsPage() {
       <div className="md:hidden bg-white border-b p-2 sticky top-20 z-40 shadow-sm space-y-2">
         {tabCategories.map(cat => (
           <div key={cat.name}>
-            <p className="text-[9px] font-bold text-[#999999] tracking-widest px-1 mb-1">{cat.name}</p>
+            <p className="text-[12px] font-bold text-[#5C6660] tracking-widest px-1 mb-1">{cat.name}</p>
             <div className="flex overflow-x-auto hide-scrollbar gap-1">
               {cat.tabs.map(t => (
-                <button key={t.id} onClick={() => setActiveTab(t.id)} className={`whitespace-nowrap px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all ${activeTab === t.id ? 'bg-[#2D4B3E] text-white shadow-md' : 'bg-[#FBFAF9] text-[#999999]'}`}>{t.label}</button>
+                <button key={t.id} onClick={() => setActiveTab(t.id)} className={`whitespace-nowrap px-3 py-1.5 text-[13px] font-bold rounded-lg transition-all ${activeTab === t.id ? 'bg-[#2D4B3E] text-white shadow-md' : 'bg-[#FAFAF7] text-[#5C6660]'}`}>{t.label}</button>
               ))}
             </div>
           </div>
         ))}
       </div>
 
-      <main className={`flex-1 max-w-[1000px] mx-auto w-full py-10 px-6 transition-all ${!isAdmin ? 'opacity-40 pointer-events-none grayscale' : ''}`}>
+      <main className={`flex-1 max-w-[1100px] w-full py-8 px-4 md:px-10 transition-all ${!isAdmin ? 'opacity-40 pointer-events-none grayscale' : ''}`}>
         {activeTab === 'general' && renderGeneralTab()}
         {activeTab === 'status' && renderStatusTab()}
         {activeTab === 'design' && renderDesignTab()} 
@@ -2242,12 +2242,12 @@ export default function SettingsPage() {
               ? 'bg-white border-[#117768]/30 text-[#117768]'
               : 'bg-white border-red-300 text-red-700'
           }`}>
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[14px] font-bold ${
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[15px] font-bold ${
               toast.type === 'success' ? 'bg-[#117768]' : 'bg-red-500'
             }`}>
               {toast.type === 'success' ? '✓' : '!'}
             </div>
-            <span className="text-[13px] font-bold">{toast.message}</span>
+            <span className="text-[15px] font-bold">{toast.message}</span>
           </div>
         </div>
       )}
@@ -2266,16 +2266,16 @@ export default function SettingsPage() {
               <div className="w-14 h-14 mx-auto bg-amber-100 rounded-full flex items-center justify-center mb-3">
                 <Lock size={24} className="text-amber-600"/>
               </div>
-              <h3 className="text-[16px] font-bold text-[#111]">
+              <h3 className="text-[16px] font-bold text-[#1F2A24]">
                 {staffList[pinEditTarget.idx]?.name} のPINを{staffList[pinEditTarget.idx]?.pin ? '変更' : '新規登録'}
               </h3>
-              <p className="text-[11px] text-[#999] mt-2 leading-relaxed">
+              <p className="text-[13px] text-[#5C6660] mt-2 leading-relaxed">
                 セキュリティのため、現在のPINは表示されません。<br/>
                 新しい4桁PINを2回入力して登録してください。
               </p>
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-[#999999] block">新しいPIN（4桁）</label>
+              <label className="text-[13px] font-bold text-[#5C6660] block">新しいPIN（4桁）</label>
               <input
                 type="password"
                 inputMode="numeric"
@@ -2287,11 +2287,11 @@ export default function SettingsPage() {
                   ...pinEditTarget,
                   value: e.target.value.replace(/\D/g, '').slice(0, 4),
                 })}
-                className="w-full h-14 text-center text-[28px] font-bold tracking-[0.5em] bg-[#FBFAF9] border-2 border-[#EAEAEA] rounded-xl outline-none focus:border-amber-500 font-mono"
+                className="w-full h-14 text-center text-[28px] font-bold tracking-[0.5em] bg-[#FAFAF7] border-2 border-[#E6E2DA] rounded-xl outline-none focus:border-amber-500 font-mono"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-[#999999] block">確認用（もう一度）</label>
+              <label className="text-[13px] font-bold text-[#5C6660] block">確認用（もう一度）</label>
               <input
                 type="password"
                 inputMode="numeric"
@@ -2310,16 +2310,16 @@ export default function SettingsPage() {
                     setPinEditTarget(null);
                   }
                 }}
-                className="w-full h-14 text-center text-[28px] font-bold tracking-[0.5em] bg-[#FBFAF9] border-2 border-[#EAEAEA] rounded-xl outline-none focus:border-amber-500 font-mono"
+                className="w-full h-14 text-center text-[28px] font-bold tracking-[0.5em] bg-[#FAFAF7] border-2 border-[#E6E2DA] rounded-xl outline-none focus:border-amber-500 font-mono"
               />
               {pinEditTarget.confirm.length === 4 && pinEditTarget.value !== pinEditTarget.confirm && (
-                <p className="text-[11px] font-bold text-red-600">PINが一致しません</p>
+                <p className="text-[13px] font-bold text-red-600">PINが一致しません</p>
               )}
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setPinEditTarget(null)}
-                className="flex-1 h-11 bg-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-xl hover:bg-[#DCDCDC]"
+                className="flex-1 h-11 bg-[#E6E2DA] text-[#3B4640] text-[14px] font-bold rounded-xl hover:bg-[#DCDCDC]"
               >
                 キャンセル
               </button>
@@ -2332,7 +2332,7 @@ export default function SettingsPage() {
                     setStaffList(next);
                     setPinEditTarget(null);
                   }}
-                  className="px-3 h-11 bg-white border border-red-200 text-red-600 text-[11px] font-bold rounded-xl hover:bg-red-50"
+                  className="px-3 h-11 bg-white border border-red-200 text-red-600 text-[13px] font-bold rounded-xl hover:bg-red-50"
                 >
                   PIN削除
                 </button>
@@ -2353,12 +2353,12 @@ export default function SettingsPage() {
                   setPinEditTarget(null);
                 }}
                 disabled={pinEditTarget.value.length !== 4 || pinEditTarget.value !== pinEditTarget.confirm}
-                className="flex-1 h-11 bg-amber-600 text-white text-[12px] font-bold rounded-xl hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 h-11 bg-amber-600 text-white text-[14px] font-bold rounded-xl hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 登録
               </button>
             </div>
-            <p className="text-[10px] text-[#999] text-center leading-relaxed">
+            <p className="text-[12px] text-[#5C6660] text-center leading-relaxed">
               「保存」ボタンで全体設定を保存するまでDBには反映されません
             </p>
           </div>

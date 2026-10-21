@@ -311,28 +311,28 @@ function StaffProductsPageInner() {
 
   return (
     <main className="pb-32 font-sans">
-      <header className="h-20 bg-white/80 backdrop-blur-md border-b border-[#EAEAEA] flex items-center justify-between px-6 md:px-8 sticky top-0 z-10">
+      <header className="h-20 bg-[#F6F4EF]/95 backdrop-blur border-b border-[#E6E2DA] flex items-center justify-between px-6 md:px-8 sticky top-0 z-10">
         <div>
-          <h1 className="text-[18px] font-bold tracking-tight text-[#2D4B3E] flex items-center gap-2">商品管理（EC） <HelpTooltip articleId="product_register"/> <HelpTooltip articleId="restock_notification" size={14}/></h1>
-          <p className="text-[11px] text-[#999999] mt-0.5">プリセット商品のカタログ・在庫を管理</p>
+          <h1 className="text-[24px] md:text-[28px] font-bold tracking-[0.02em] text-[#1F2A24] flex items-center gap-2">商品管理（EC） <HelpTooltip articleId="product_register"/> <HelpTooltip articleId="restock_notification" size={14}/></h1>
+          <p className="text-[13px] text-[#5C6660] mt-0.5">プリセット商品のカタログ・在庫を管理</p>
         </div>
         <div className="flex items-center gap-2">
           <a
             href="/staff/products/qr-print"
-            className="flex items-center gap-2 px-4 h-11 bg-white border border-[#EAEAEA] text-[#2D4B3E] rounded-xl font-bold text-[12px] hover:border-[#2D4B3E] transition-all"
+            className="flex items-center gap-2 px-4 h-11 bg-white border border-[#E6E2DA] text-[#2D4B3E] rounded-xl font-bold text-[14px] hover:border-[#2D4B3E] transition-all"
           >
             QRコード印刷
           </a>
           <button
             onClick={openNew}
-            className="flex items-center gap-2 px-5 h-11 bg-[#2D4B3E] text-white rounded-xl font-bold text-[13px] hover:bg-[#1f352b] transition-all shadow-md"
+            className="flex items-center gap-2 px-5 h-11 bg-[#2D4B3E] text-white rounded-xl font-bold text-[15px] hover:bg-[#1f352b] transition-all shadow-md"
           >
             <Plus size={16} /> 新規商品
           </button>
         </div>
       </header>
 
-      <div className="max-w-[1200px] mx-auto p-4 md:p-8 space-y-6">
+      <div className="w-full p-4 md:p-8 space-y-6">
 
         {message && (
           <div className={`flex items-start gap-2 p-4 rounded-xl border ${
@@ -340,61 +340,61 @@ function StaffProductsPageInner() {
             : 'bg-green-50 text-green-700 border-green-200'
           }`}>
             <AlertCircle size={16} className="shrink-0 mt-0.5" />
-            <p className="text-[12px] font-bold flex-1">{message.text}</p>
-            <button onClick={() => setMessage(null)} className="text-[#999999] hover:text-[#111111]"><X size={14}/></button>
+            <p className="text-[14px] font-bold flex-1">{message.text}</p>
+            <button onClick={() => setMessage(null)} className="text-[#5C6660] hover:text-[#1F2A24]"><X size={14}/></button>
           </div>
         )}
 
         {products.length === 0 ? (
-          <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#EAEAEA]">
+          <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#E6E2DA]">
             <Package size={32} className="mx-auto text-[#CCC] mb-3" />
-            <p className="text-[13px] font-bold text-[#999999]">商品が登録されていません</p>
-            <p className="text-[11px] text-[#CCC] mt-1">「新規商品」ボタンから追加してください</p>
+            <p className="text-[15px] font-bold text-[#5C6660]">商品が登録されていません</p>
+            <p className="text-[13px] text-[#CCC] mt-1">「新規商品」ボタンから追加してください</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {products.map(p => (
-              <div key={p.id} className={`bg-white rounded-2xl border overflow-hidden flex flex-col group transition-all hover:shadow-md ${p.is_active ? 'border-[#EAEAEA]' : 'border-[#EAEAEA] opacity-60'}`}>
-                <div className="relative aspect-square bg-[#FBFAF9]">
+              <div key={p.id} className={`bg-white rounded-2xl border overflow-hidden flex flex-col group transition-all hover:shadow-md ${p.is_active ? 'border-[#E6E2DA]' : 'border-[#E6E2DA] opacity-60'}`}>
+                <div className="relative aspect-square bg-[#FAFAF7]">
                   {p.image_url ? (
                     <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-[#CCC]"><ImageIcon size={32} /></div>
                   )}
                   {p.stock === 0 && (
-                    <div className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded">在庫切れ</div>
+                    <div className="absolute top-2 left-2 bg-red-500 text-white text-[12px] font-bold px-2 py-1 rounded">在庫切れ</div>
                   )}
                   {!p.is_active && (
-                    <div className="absolute top-2 right-2 bg-[#999999] text-white text-[10px] font-bold px-2 py-1 rounded">非公開</div>
+                    <div className="absolute top-2 right-2 bg-[#5C6660] text-white text-[12px] font-bold px-2 py-1 rounded">非公開</div>
                   )}
                   {/* ★ 再入荷不可バッジ（在庫数で枝分かれ） */}
                   {!p.restock_allowed && Number(p.stock) === 1 && (
-                    <div className="absolute bottom-2 left-2 bg-amber-100 text-amber-800 text-[9px] font-bold px-2 py-0.5 rounded-full border border-amber-300">一点物</div>
+                    <div className="absolute bottom-2 left-2 bg-amber-100 text-amber-800 text-[12px] font-bold px-2 py-0.5 rounded-full border border-amber-300">一点物</div>
                   )}
                   {!p.restock_allowed && Number(p.stock) >= 2 && (
-                    <div className="absolute bottom-2 left-2 bg-purple-100 text-purple-800 text-[9px] font-bold px-2 py-0.5 rounded-full border border-purple-300">限定商品</div>
+                    <div className="absolute bottom-2 left-2 bg-purple-100 text-purple-800 text-[12px] font-bold px-2 py-0.5 rounded-full border border-purple-300">限定商品</div>
                   )}
                 </div>
                 <div className="p-4 space-y-2 flex-1 flex flex-col">
-                  <p className="text-[14px] font-bold text-[#111111]">{p.name}</p>
-                  {p.category && <p className="text-[10px] text-[#999999]">{p.category}</p>}
-                  <p className="text-[12px] text-[#555555] line-clamp-2 leading-relaxed flex-1">{p.description || '—'}</p>
+                  <p className="text-[15px] font-bold text-[#1F2A24]">{p.name}</p>
+                  {p.category && <p className="text-[12px] text-[#5C6660]">{p.category}</p>}
+                  <p className="text-[14px] text-[#3B4640] line-clamp-2 leading-relaxed flex-1">{p.description || '—'}</p>
                   <div className="flex items-center justify-between pt-2">
                     <p className="text-[16px] font-bold text-[#2D4B3E]">¥{p.price.toLocaleString()}</p>
-                    <p className="text-[11px] text-[#999999]">在庫: <span className={p.stock <= 3 ? 'text-red-500 font-bold' : 'text-[#555555] font-bold'}>{p.stock}</span></p>
+                    <p className="text-[13px] text-[#5C6660]">在庫: <span className={p.stock <= 3 ? 'text-red-500 font-bold' : 'text-[#3B4640] font-bold'}>{p.stock}</span></p>
                   </div>
 
                   {/* 入荷通知の待機件数 */}
                   {(pendingNotifyCounts[p.id] || 0) > 0 && p.stock > 0 && (
                     <button
                       onClick={() => dispatchNotifications(p.id)}
-                      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold bg-[#D97D54]/10 text-[#D97D54] border border-[#D97D54]/30 hover:bg-[#D97D54] hover:text-white transition-all"
+                      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[13px] font-bold bg-[#B9562F]/10 text-[#B9562F] border border-[#B9562F]/30 hover:bg-[#B9562F] hover:text-white transition-all"
                     >
                       <Send size={12}/> {pendingNotifyCounts[p.id]}件の入荷通知を送信
                     </button>
                   )}
                   {(pendingNotifyCounts[p.id] || 0) > 0 && p.stock === 0 && (
-                    <div className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-bold text-[#999999] bg-[#FBFAF9]">
+                    <div className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-bold text-[#5C6660] bg-[#FAFAF7]">
                       <Bell size={11}/> {pendingNotifyCounts[p.id]}件の入荷待ち
                     </div>
                   )}
@@ -403,20 +403,20 @@ function StaffProductsPageInner() {
                     <button
                       onClick={() => toggleActive(p)}
                       title={p.is_active ? 'クリックで非公開にする' : 'クリックで公開する'}
-                      className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-[11px] font-bold transition-all ${p.is_active ? 'text-green-600 hover:bg-green-50' : 'text-[#999999] hover:bg-[#F7F7F7]'}`}
+                      className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-[13px] font-bold transition-all ${p.is_active ? 'text-green-600 hover:bg-green-50' : 'text-[#5C6660] hover:bg-[#F6F4EF]'}`}
                     >
                       {p.is_active ? <ToggleRight size={14}/> : <ToggleLeft size={14}/>}
                       {p.is_active ? '公開中' : '非公開'}
                     </button>
                     <button
                       onClick={() => openEdit(p)}
-                      className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-[11px] font-bold text-[#555555] hover:bg-[#FBFAF9] transition-all"
+                      className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-[13px] font-bold text-[#3B4640] hover:bg-[#FAFAF7] transition-all"
                     >
                       <Edit2 size={12}/> 編集
                     </button>
                     <button
                       onClick={() => deleteProduct(p.id)}
-                      className="py-2 px-3 rounded-lg text-[11px] font-bold text-red-400 hover:bg-red-50 hover:text-red-600 transition-all"
+                      className="py-2 px-3 rounded-lg text-[13px] font-bold text-red-400 hover:bg-red-50 hover:text-red-600 transition-all"
                     >
                       <Trash2 size={12}/>
                     </button>
@@ -430,22 +430,22 @@ function StaffProductsPageInner() {
 
       {/* 編集モーダル */}
       {editTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111111]/40 backdrop-blur-sm p-4" onClick={() => !isSaving && setEditTarget(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1F2A24]/40 backdrop-blur-sm p-4" onClick={() => !isSaving && setEditTarget(null)}>
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-white border-b border-[#EAEAEA] p-5 flex justify-between items-center">
+            <div className="sticky top-0 bg-white border-b border-[#E6E2DA] p-5 flex justify-between items-center">
               <h2 className="text-[16px] font-bold text-[#2D4B3E]">{editTarget.id ? '商品を編集' : '新規商品を追加'}</h2>
-              <button onClick={() => setEditTarget(null)} disabled={isSaving} className="text-[#999999] hover:text-[#111111]"><X size={18}/></button>
+              <button onClick={() => setEditTarget(null)} disabled={isSaving} className="text-[#5C6660] hover:text-[#1F2A24]"><X size={18}/></button>
             </div>
 
             <div className="p-6 space-y-5">
               {/* メイン画像 */}
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-[#999999]">商品画像（メイン）</label>
-                <div className="aspect-square w-48 mx-auto bg-[#FBFAF9] border-2 border-dashed border-[#EAEAEA] rounded-2xl flex items-center justify-center overflow-hidden relative">
+                <label className="text-[13px] font-bold text-[#5C6660]">商品画像（メイン）</label>
+                <div className="aspect-square w-48 mx-auto bg-[#FAFAF7] border-2 border-dashed border-[#E6E2DA] rounded-2xl flex items-center justify-center overflow-hidden relative">
                   {(editTarget._previewUrl || editTarget.image_url) ? (
                     <img src={editTarget._previewUrl || editTarget.image_url} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="text-center text-[#CCC] text-[11px]"><ImageIcon size={28} className="mx-auto mb-1"/>クリックして選択</div>
+                    <div className="text-center text-[#CCC] text-[13px]"><ImageIcon size={28} className="mx-auto mb-1"/>クリックして選択</div>
                   )}
                   <input
                     type="file"
@@ -465,13 +465,13 @@ function StaffProductsPageInner() {
 
               {/* 追加画像（最大4枚、メインと合わせて合計5枚） */}
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-[#999999]">追加画像（最大4枚 / メインと合わせて5枚まで）</label>
+                <label className="text-[13px] font-bold text-[#5C6660]">追加画像（最大4枚 / メインと合わせて5枚まで）</label>
                 <div className="grid grid-cols-4 gap-3">
                   {[0,1,2,3].map(idx => {
                     const entry = (editTarget.image_urls || [])[idx];
                     const previewSrc = entry?._previewUrl || (typeof entry === 'string' ? entry : '');
                     return (
-                      <div key={idx} className="aspect-square bg-[#FBFAF9] border-2 border-dashed border-[#EAEAEA] rounded-xl flex items-center justify-center overflow-hidden relative">
+                      <div key={idx} className="aspect-square bg-[#FAFAF7] border-2 border-dashed border-[#E6E2DA] rounded-xl flex items-center justify-center overflow-hidden relative">
                         {previewSrc ? (
                           <>
                             <img src={previewSrc} alt="" className="w-full h-full object-cover" />
@@ -482,12 +482,12 @@ function StaffProductsPageInner() {
                                 next.splice(idx, 1);
                                 setEditTarget({ ...editTarget, image_urls: next });
                               }}
-                              className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] hover:bg-red-600"
+                              className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-[12px] hover:bg-red-600"
                               title="削除"
                             ><X size={12}/></button>
                           </>
                         ) : (
-                          <div className="text-center text-[#CCC] text-[9px]"><ImageIcon size={20} className="mx-auto mb-0.5"/>追加</div>
+                          <div className="text-center text-[#CCC] text-[12px]"><ImageIcon size={20} className="mx-auto mb-0.5"/>追加</div>
                         )}
                         {!previewSrc && (
                           <input
@@ -512,44 +512,44 @@ function StaffProductsPageInner() {
                     );
                   })}
                 </div>
-                <p className="text-[10px] text-[#999999]">商品の角度違い・サイズ感・ディテール写真など、お客様の購買判断に役立つ画像を追加できます。</p>
+                <p className="text-[12px] text-[#5C6660]">商品の角度違い・サイズ感・ディテール写真など、お客様の購買判断に役立つ画像を追加できます。</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-[#999999]">商品名 *</label>
+                  <label className="text-[13px] font-bold text-[#5C6660]">商品名 *</label>
                   <input type="text" value={editTarget.name} onChange={(e) => setEditTarget({ ...editTarget, name: e.target.value })}
-                    className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] font-bold focus:border-[#2D4B3E] outline-none" />
+                    className="w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] font-bold focus:border-[#2D4B3E] outline-none" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-[#999999]">カテゴリ</label>
+                  <label className="text-[13px] font-bold text-[#5C6660]">カテゴリ</label>
                   <input type="text" value={editTarget.category || ''} onChange={(e) => setEditTarget({ ...editTarget, category: e.target.value })}
                     placeholder="例: ブーケ・スタンド花 など"
-                    className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] font-bold focus:border-[#2D4B3E] outline-none" />
+                    className="w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] font-bold focus:border-[#2D4B3E] outline-none" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-[#999999]">価格（税抜）*</label>
+                  <label className="text-[13px] font-bold text-[#5C6660]">価格（税抜）*</label>
                   <input type="number" value={editTarget.price} onChange={(e) => setEditTarget({ ...editTarget, price: e.target.value })}
-                    className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] font-bold focus:border-[#2D4B3E] outline-none" />
+                    className="w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] font-bold focus:border-[#2D4B3E] outline-none" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-[#999999]">在庫数</label>
+                  <label className="text-[13px] font-bold text-[#5C6660]">在庫数</label>
                   <input type="number" value={editTarget.stock} onChange={(e) => setEditTarget({ ...editTarget, stock: e.target.value })}
-                    className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] font-bold focus:border-[#2D4B3E] outline-none" />
+                    className="w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] font-bold focus:border-[#2D4B3E] outline-none" />
                 </div>
                 <div className="space-y-1 md:col-span-2">
-                  <label className="text-[11px] font-bold text-[#999999]">説明</label>
+                  <label className="text-[13px] font-bold text-[#5C6660]">説明</label>
                   <textarea value={editTarget.description || ''} onChange={(e) => setEditTarget({ ...editTarget, description: e.target.value })}
-                    className="w-full h-24 px-4 py-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] resize-none focus:border-[#2D4B3E] outline-none" />
+                    className="w-full h-24 px-4 py-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] resize-none focus:border-[#2D4B3E] outline-none" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-[#999999]">並び順</label>
+                  <label className="text-[13px] font-bold text-[#5C6660]">並び順</label>
                   <input type="number" value={editTarget.display_order} onChange={(e) => setEditTarget({ ...editTarget, display_order: e.target.value })}
-                    className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] font-bold focus:border-[#2D4B3E] outline-none" />
+                    className="w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] font-bold focus:border-[#2D4B3E] outline-none" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-[#999999]">公開状態</label>
-                  <label className="flex items-center gap-2 h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] font-bold cursor-pointer">
+                  <label className="text-[13px] font-bold text-[#5C6660]">公開状態</label>
+                  <label className="flex items-center gap-2 h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] font-bold cursor-pointer">
                     <input type="checkbox" checked={editTarget.is_active} onChange={(e) => setEditTarget({ ...editTarget, is_active: e.target.checked })}
                       className="w-5 h-5 accent-[#2D4B3E]" />
                     {editTarget.is_active ? '販売中' : '非公開（停止中）'}
@@ -559,14 +559,14 @@ function StaffProductsPageInner() {
 
               {/* ★ [SEO-#10] 星評価（AggregateRating）- SEO検索結果に星評価表示 */}
               <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 space-y-3">
-                <h3 className="text-[13px] font-bold text-yellow-900 flex items-center gap-2">商品レビュー評価（SEO効果大）</h3>
-                <p className="text-[10px] text-yellow-800 leading-relaxed">
+                <h3 className="text-[15px] font-bold text-yellow-900 flex items-center gap-2">商品レビュー評価（SEO効果大）</h3>
+                <p className="text-[12px] text-yellow-800 leading-relaxed">
                   Google検索結果に <strong>4.5 (123件)</strong> のような表示が出るようになります。<br/>
                   クリック率が <strong>3〜5倍</strong> アップする最強のSEO効果
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-yellow-900">平均評価（1.0〜5.0）</label>
+                    <label className="text-[12px] font-bold text-yellow-900">平均評価（1.0〜5.0）</label>
                     <input
                       type="number"
                       value={editTarget.rating_value ?? ''}
@@ -579,7 +579,7 @@ function StaffProductsPageInner() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-yellow-900">レビュー件数</label>
+                    <label className="text-[12px] font-bold text-yellow-900">レビュー件数</label>
                     <input
                       type="number"
                       value={editTarget.rating_count ?? ''}
@@ -591,14 +591,14 @@ function StaffProductsPageInner() {
                   </div>
                 </div>
                 <div className="bg-white rounded-lg p-3 border border-yellow-200">
-                  <p className="text-[10px] font-bold text-yellow-900 mb-2">入力例（Googleレビュー・Instagram・お客様の声から集計）</p>
-                  <ul className="text-[10px] text-yellow-800 space-y-0.5">
+                  <p className="text-[12px] font-bold text-yellow-900 mb-2">入力例（Googleレビュー・Instagram・お客様の声から集計）</p>
+                  <ul className="text-[12px] text-yellow-800 space-y-0.5">
                     <li>• Googleマップのレビュー平均</li>
                     <li>• Instagramでハッシュタグ付き投稿数</li>
                     <li>• 実際にいただいたお客様の声</li>
                     <li>• 過去の販売実績数（推定）</li>
                   </ul>
-                  <p className="text-[10px] text-red-600 font-bold mt-2">
+                  <p className="text-[12px] text-red-600 font-bold mt-2">
                     虚偽の評価はGoogleガイドライン違反になりペナルティの対象です。実態に即した数値を入れてください。
                   </p>
                 </div>
@@ -619,8 +619,8 @@ function StaffProductsPageInner() {
                     className="mt-0.5 w-5 h-5 accent-[#2D4B3E]"
                   />
                   <div className="flex-1">
-                    <p className="text-[13px] font-bold text-[#111111]">この商品は再入荷できる商品</p>
-                    <p className="text-[11px] text-amber-900 mt-1 leading-relaxed">
+                    <p className="text-[15px] font-bold text-[#1F2A24]">この商品は再入荷できる商品</p>
+                    <p className="text-[13px] text-amber-900 mt-1 leading-relaxed">
                       <strong>OFF（推奨）:</strong> ドライフラワーなど一点ものの商品。在庫0になるとお客様ページから自動非表示<br/>
                       <strong>ON:</strong> 同じ商品を継続的に作る場合。在庫0でも「入荷通知に登録」ボタンが表示され、入荷時に登録者へ自動メール送信されます
                     </p>
@@ -630,9 +630,9 @@ function StaffProductsPageInner() {
 
               {/* ★ 箱サイズ（業者配送マスタ連動） */}
               <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
-                <label className="text-[13px] font-bold text-orange-900 block mb-2">箱サイズ（梱包代+送料計算用）</label>
+                <label className="text-[15px] font-bold text-orange-900 block mb-2">箱サイズ（梱包代+送料計算用）</label>
                 {shippingSizes.length === 0 ? (
-                  <p className="text-[11px] text-orange-700 italic">設定 → 商品・配送 → 配送・時間枠 → 業者配送 サイズ・地域マスタ でサイズを登録してください。</p>
+                  <p className="text-[13px] text-orange-700 italic">設定 → 商品・配送 → 配送・時間枠 → 業者配送 サイズ・地域マスタ でサイズを登録してください。</p>
                 ) : (
                   <div className="grid grid-cols-4 gap-2">
                     {shippingSizes.map(size => (
@@ -640,7 +640,7 @@ function StaffProductsPageInner() {
                         key={size}
                         type="button"
                         onClick={() => setEditTarget({ ...editTarget, box_size: size })}
-                        className={`h-10 rounded-lg border-2 font-bold text-[12px] transition-all ${
+                        className={`h-10 rounded-lg border-2 font-bold text-[14px] transition-all ${
                           (editTarget.box_size || shippingSizes[0]) === size
                             ? 'bg-orange-600 border-orange-600 text-white'
                             : 'bg-white border-orange-200 text-orange-800 hover:border-orange-400'
@@ -651,14 +651,14 @@ function StaffProductsPageInner() {
                     ))}
                   </div>
                 )}
-                <p className="text-[10px] text-orange-700 mt-2 leading-relaxed">
+                <p className="text-[12px] text-orange-700 mt-2 leading-relaxed">
                   カート内の<strong>最大サイズの箱代</strong>がご注文時に加算されます（業者配送の送料計算もこのサイズを使用）。料金は設定 → 商品・配送 → 配送・時間枠 で変更可能。
                 </p>
               </div>
 
               {/* ★ オプション設定 */}
               <div className="bg-pink-50 border border-pink-200 rounded-xl p-4 space-y-4">
-                <label className="text-[13px] font-bold text-pink-900 block">オプション設定（この商品で選択可能なオプション）</label>
+                <label className="text-[15px] font-bold text-pink-900 block">オプション設定（この商品で選択可能なオプション）</label>
 
                 {/* ラッピング */}
                 <div className="bg-white rounded-lg p-3 border border-pink-100">
@@ -676,12 +676,12 @@ function StaffProductsPageInner() {
                       className="mt-0.5 w-5 h-5 accent-pink-600"
                     />
                     <div className="flex-1">
-                      <p className="text-[13px] font-bold text-[#111111]">ラッピング</p>
+                      <p className="text-[15px] font-bold text-[#1F2A24]">ラッピング</p>
                     </div>
                   </label>
                   {editTarget.options?.wrapping?.enabled && (
                     <div className="mt-3 ml-8 flex items-center gap-2">
-                      <label className="text-[11px] font-bold text-[#555555]">料金（税抜）</label>
+                      <label className="text-[13px] font-bold text-[#3B4640]">料金（税抜）</label>
                       <input
                         type="number"
                         value={editTarget.options?.wrapping?.price ?? 220}
@@ -692,9 +692,9 @@ function StaffProductsPageInner() {
                             wrapping: { ...editTarget.options?.wrapping, price: Number(e.target.value) || 0 },
                           },
                         })}
-                        className="w-24 h-8 px-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded text-[12px] font-bold focus:border-pink-600 outline-none"
+                        className="w-24 h-8 px-2 bg-[#FAFAF7] border border-[#E6E2DA] rounded text-[14px] font-bold focus:border-pink-600 outline-none"
                       />
-                      <span className="text-[11px] text-[#555555]">円</span>
+                      <span className="text-[13px] text-[#3B4640]">円</span>
                     </div>
                   )}
                 </div>
@@ -715,12 +715,12 @@ function StaffProductsPageInner() {
                       className="mt-0.5 w-5 h-5 accent-pink-600"
                     />
                     <div className="flex-1">
-                      <p className="text-[13px] font-bold text-[#111111]">メッセージカード（紙）</p>
+                      <p className="text-[15px] font-bold text-[#1F2A24]">メッセージカード（紙）</p>
                     </div>
                   </label>
                   {editTarget.options?.messageCard?.enabled && (
                     <div className="mt-3 ml-8 flex items-center gap-2">
-                      <label className="text-[11px] font-bold text-[#555555]">料金（税抜）</label>
+                      <label className="text-[13px] font-bold text-[#3B4640]">料金（税抜）</label>
                       <input
                         type="number"
                         value={editTarget.options?.messageCard?.price ?? 0}
@@ -731,9 +731,9 @@ function StaffProductsPageInner() {
                             messageCard: { ...editTarget.options?.messageCard, price: Number(e.target.value) || 0 },
                           },
                         })}
-                        className="w-24 h-8 px-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded text-[12px] font-bold focus:border-pink-600 outline-none"
+                        className="w-24 h-8 px-2 bg-[#FAFAF7] border border-[#E6E2DA] rounded text-[14px] font-bold focus:border-pink-600 outline-none"
                       />
-                      <span className="text-[11px] text-[#555555]">円（0=無料）</span>
+                      <span className="text-[13px] text-[#3B4640]">円（0=無料）</span>
                     </div>
                   )}
                 </div>
@@ -754,14 +754,14 @@ function StaffProductsPageInner() {
                       className="mt-0.5 w-5 h-5 accent-pink-600"
                     />
                     <div className="flex-1">
-                      <p className="text-[13px] font-bold text-[#111111]">文字入れ（ガラス面等）</p>
+                      <p className="text-[15px] font-bold text-[#1F2A24]">文字入れ（ガラス面等）</p>
                     </div>
                   </label>
                   {editTarget.options?.textInsertion?.enabled && (
                     <div className="mt-3 ml-8 space-y-3">
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="text-[11px] font-bold text-[#555555] block mb-1">料金（税抜）</label>
+                          <label className="text-[13px] font-bold text-[#3B4640] block mb-1">料金（税抜）</label>
                           <input
                             type="number"
                             value={editTarget.options?.textInsertion?.price ?? 4400}
@@ -772,11 +772,11 @@ function StaffProductsPageInner() {
                                 textInsertion: { ...editTarget.options?.textInsertion, price: Number(e.target.value) || 0 },
                               },
                             })}
-                            className="w-full h-8 px-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded text-[12px] font-bold focus:border-pink-600 outline-none"
+                            className="w-full h-8 px-2 bg-[#FAFAF7] border border-[#E6E2DA] rounded text-[14px] font-bold focus:border-pink-600 outline-none"
                           />
                         </div>
                         <div>
-                          <label className="text-[11px] font-bold text-[#555555] block mb-1">最大文字数</label>
+                          <label className="text-[13px] font-bold text-[#3B4640] block mb-1">最大文字数</label>
                           <input
                             type="number"
                             value={editTarget.options?.textInsertion?.maxLength ?? 30}
@@ -787,11 +787,11 @@ function StaffProductsPageInner() {
                                 textInsertion: { ...editTarget.options?.textInsertion, maxLength: Number(e.target.value) || 30 },
                               },
                             })}
-                            className="w-full h-8 px-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded text-[12px] font-bold focus:border-pink-600 outline-none"
+                            className="w-full h-8 px-2 bg-[#FAFAF7] border border-[#E6E2DA] rounded text-[14px] font-bold focus:border-pink-600 outline-none"
                           />
                         </div>
                       </div>
-                      <label className="flex items-center gap-2 text-[12px] font-bold text-[#555555]">
+                      <label className="flex items-center gap-2 text-[14px] font-bold text-[#3B4640]">
                         <input
                           type="checkbox"
                           checked={Boolean(editTarget.options?.textInsertion?.allowKanji)}
@@ -807,7 +807,7 @@ function StaffProductsPageInner() {
                         漢字を許可する（OFF=ひらがな・カタカナ・英数字のみ）
                       </label>
                       <div>
-                        <label className="text-[11px] font-bold text-[#555555] block mb-1">文字入れ位置の選択肢（カンマ区切り）</label>
+                        <label className="text-[13px] font-bold text-[#3B4640] block mb-1">文字入れ位置の選択肢（カンマ区切り）</label>
                         <input
                           type="text"
                           value={(editTarget.options?.textInsertion?.positions || []).join(', ')}
@@ -822,9 +822,9 @@ function StaffProductsPageInner() {
                             });
                           }}
                           placeholder="例: 真ん中, 右下, 下"
-                          className="w-full h-9 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded text-[12px] font-bold focus:border-pink-600 outline-none"
+                          className="w-full h-9 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded text-[14px] font-bold focus:border-pink-600 outline-none"
                         />
-                        <p className="text-[10px] text-[#999999] mt-1">お客様が文字入れ位置を選ぶ際の選択肢を入力（例: 真ん中, 右下, 下）</p>
+                        <p className="text-[12px] text-[#5C6660] mt-1">お客様が文字入れ位置を選ぶ際の選択肢を入力（例: 真ん中, 右下, 下）</p>
                       </div>
                     </div>
                   )}
@@ -832,13 +832,13 @@ function StaffProductsPageInner() {
               </div>
             </div>
 
-            <div className="sticky bottom-0 bg-white border-t border-[#EAEAEA] p-5 flex gap-3">
+            <div className="sticky bottom-0 bg-white border-t border-[#E6E2DA] p-5 flex gap-3">
               <button onClick={() => setEditTarget(null)} disabled={isSaving}
-                className="flex-1 h-12 rounded-xl border border-[#EAEAEA] text-[#555555] font-bold text-[13px] hover:bg-[#FBFAF9]">
+                className="flex-1 h-12 rounded-xl border border-[#E6E2DA] text-[#3B4640] font-bold text-[15px] hover:bg-[#FAFAF7]">
                 キャンセル
               </button>
               <button onClick={saveProduct} disabled={isSaving}
-                className="flex-1 h-12 rounded-xl bg-[#2D4B3E] text-white font-bold text-[13px] hover:bg-[#1f352b] flex items-center justify-center gap-2 disabled:opacity-50">
+                className="flex-1 h-12 rounded-xl bg-[#2D4B3E] text-white font-bold text-[15px] hover:bg-[#1f352b] flex items-center justify-center gap-2 disabled:opacity-50">
                 <Save size={14}/> {isSaving ? '保存中...' : '保存する'}
               </button>
             </div>

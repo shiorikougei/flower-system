@@ -169,51 +169,51 @@ function ShiftPageInner() {
   }
 
   if (!allowed) {
-    return <main className="p-12 text-center"><p className="text-[14px] font-bold text-[#999]">この画面はオーナー権限が必要です</p></main>;
+    return <main className="p-12 text-center"><p className="text-[15px] font-bold text-[#5C6660]">この画面はオーナー権限が必要です</p></main>;
   }
 
   return (
     <main className="pb-32 font-sans text-left">
-      <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] px-6 md:px-8 py-4 sticky top-0 z-10">
+      <header className="bg-[#F6F4EF]/95 backdrop-blur border-b border-[#E6E2DA] px-6 md:px-8 py-4 sticky top-0 z-10">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
           <div>
-            <h1 className="text-[18px] md:text-[20px] font-bold text-[#2D4B3E] tracking-tight flex items-center gap-2">シフト管理 <HelpTooltip articleId="shift_auto_generate"/></h1>
-            <p className="text-[11px] font-bold text-[#999] mt-1">月別シフトの確認・編集・自動生成</p>
+            <h1 className="text-[24px] md:text-[28px] font-bold tracking-[0.02em] text-[#1F2A24] flex items-center gap-2">シフト管理 <HelpTooltip articleId="shift_auto_generate"/></h1>
+            <p className="text-[13px] font-bold text-[#5C6660] mt-1">月別シフトの確認・編集・自動生成</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={generateShifts} disabled={isGenerating} className="bg-[#117768] text-white text-[12px] font-bold px-4 h-9 rounded-lg hover:bg-[#0f6a5b] disabled:opacity-50 flex items-center gap-1.5">
+            <button onClick={generateShifts} disabled={isGenerating} className="bg-[#117768] text-white text-[14px] font-bold px-4 h-9 rounded-lg hover:bg-[#0f6a5b] disabled:opacity-50 flex items-center gap-1.5">
               <Sparkles size={14}/> {isGenerating ? '生成中...' : '自動生成'}
             </button>
-            <button onClick={() => changeMonth(-1)} className="w-9 h-9 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg flex items-center justify-center hover:bg-[#EAEAEA]"><ChevronLeft size={16}/></button>
+            <button onClick={() => changeMonth(-1)} className="w-9 h-9 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg flex items-center justify-center hover:bg-[#E6E2DA]"><ChevronLeft size={16}/></button>
             <span className="text-[15px] font-bold text-[#2D4B3E] min-w-[100px] text-center">{year}年{month}月</span>
-            <button onClick={() => changeMonth(1)} className="w-9 h-9 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg flex items-center justify-center hover:bg-[#EAEAEA]"><ChevronRight size={16}/></button>
-            <button onClick={loadShifts} className="p-2 hover:bg-[#FBFAF9] rounded-full text-[#999]"><RefreshCw size={16} className={isLoading ? 'animate-spin' : ''}/></button>
+            <button onClick={() => changeMonth(1)} className="w-9 h-9 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg flex items-center justify-center hover:bg-[#E6E2DA]"><ChevronRight size={16}/></button>
+            <button onClick={loadShifts} className="p-2 hover:bg-[#FAFAF7] rounded-full text-[#5C6660]"><RefreshCw size={16} className={isLoading ? 'animate-spin' : ''}/></button>
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <button onClick={() => setViewMode('shift')} className={`px-3 py-1.5 text-[11px] font-bold rounded-lg ${viewMode === 'shift' ? 'bg-[#2D4B3E] text-white' : 'bg-[#FBFAF9] text-[#555]'}`}>
+          <button onClick={() => setViewMode('shift')} className={`px-3 py-1.5 text-[13px] font-bold rounded-lg ${viewMode === 'shift' ? 'bg-[#2D4B3E] text-white' : 'bg-[#FAFAF7] text-[#3B4640]'}`}>
             <CalendarDays size={11} className="inline mr-1"/> シフト表
           </button>
-          <button onClick={() => setViewMode('holiday')} className={`px-3 py-1.5 text-[11px] font-bold rounded-lg ${viewMode === 'holiday' ? 'bg-[#2D4B3E] text-white' : 'bg-[#FBFAF9] text-[#555]'}`}>
+          <button onClick={() => setViewMode('holiday')} className={`px-3 py-1.5 text-[13px] font-bold rounded-lg ${viewMode === 'holiday' ? 'bg-[#2D4B3E] text-white' : 'bg-[#FAFAF7] text-[#3B4640]'}`}>
             <Heart size={11} className="inline mr-1"/> 希望休一覧 ({holidayRequests.length})
           </button>
-          <button onClick={() => setViewMode('attendance_check')} className={`px-3 py-1.5 text-[11px] font-bold rounded-lg ${viewMode === 'attendance_check' ? 'bg-[#2D4B3E] text-white' : 'bg-[#FBFAF9] text-[#555]'}`}>
+          <button onClick={() => setViewMode('attendance_check')} className={`px-3 py-1.5 text-[13px] font-bold rounded-lg ${viewMode === 'attendance_check' ? 'bg-[#2D4B3E] text-white' : 'bg-[#FAFAF7] text-[#3B4640]'}`}>
             <BarChart2 size={11} className="inline mr-1"/> 打刻照合
           </button>
         </div>
       </header>
 
-      <div className="max-w-[1400px] mx-auto p-4 md:p-6">
+      <div className="w-full p-4 md:p-6">
         {staffList.length === 0 ? (
-          <p className="p-12 text-center text-[#999] text-[13px]">スタッフが登録されていません。設定→スタッフ管理から追加してください。</p>
+          <p className="p-12 text-center text-[#5C6660] text-[15px]">スタッフが登録されていません。設定→スタッフ管理から追加してください。</p>
         ) : viewMode === 'holiday' ? (
           // ★ 希望休一覧モード
-          <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm p-5">
-            <h3 className="text-[14px] font-bold text-[#2D4B3E] mb-4 flex items-center gap-2">
+          <div className="bg-white rounded-2xl border border-[#E6E2DA] shadow-sm p-5">
+            <h3 className="text-[15px] font-bold text-[#2D4B3E] mb-4 flex items-center gap-2">
               <Heart size={14} className="text-amber-500"/> {year}年{month}月の希望休
             </h3>
             {holidayRequests.length === 0 ? (
-              <p className="text-[12px] text-[#999] text-center py-8">提出された希望休はありません</p>
+              <p className="text-[14px] text-[#5C6660] text-center py-8">提出された希望休はありません</p>
             ) : (
               <div className="space-y-2">
                 {Object.entries(holidayRequests.reduce((acc, h) => {
@@ -221,11 +221,11 @@ function ShiftPageInner() {
                   acc[h.staff_name].push(h);
                   return acc;
                 }, {})).map(([name, reqs]) => (
-                  <div key={name} className="bg-[#FBFAF9] rounded-xl p-3 border border-[#EAEAEA]">
-                    <p className="text-[13px] font-bold text-[#111] mb-2">{name} <span className="text-[10px] text-[#999] font-normal ml-1">{reqs.length}日</span></p>
+                  <div key={name} className="bg-[#FAFAF7] rounded-xl p-3 border border-[#E6E2DA]">
+                    <p className="text-[15px] font-bold text-[#1F2A24] mb-2">{name} <span className="text-[12px] text-[#5C6660] font-normal ml-1">{reqs.length}日</span></p>
                     <div className="flex flex-wrap gap-1.5">
                       {reqs.sort((a,b) => a.date.localeCompare(b.date)).map(r => (
-                        <span key={r.id} className="bg-amber-100 border border-amber-300 rounded px-2 py-1 text-[11px] font-bold text-amber-900">
+                        <span key={r.id} className="bg-amber-100 border border-amber-300 rounded px-2 py-1 text-[13px] font-bold text-amber-900">
                           {new Date(r.date).getDate()}日 ({DAY_LABELS[DAY_KEYS[new Date(r.date).getDay()]]})
                         </span>
                       ))}
@@ -237,15 +237,15 @@ function ShiftPageInner() {
           </div>
         ) : viewMode === 'attendance_check' ? (
           // ★ 打刻 vs シフト 照合モード
-          <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm overflow-hidden">
-            <div className="p-5 border-b border-[#EAEAEA]">
-              <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2">
+          <div className="bg-white rounded-2xl border border-[#E6E2DA] shadow-sm overflow-hidden">
+            <div className="p-5 border-b border-[#E6E2DA]">
+              <h3 className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2">
                 <BarChart2 size={14}/> 予定 vs 実績 ({year}年{month}月)
               </h3>
-              <p className="text-[10px] text-[#999] mt-1">遅刻=出勤打刻 &gt; 予定+15分 / 早退=退勤打刻 &lt; 予定-15分 / 欠勤=予定あり打刻なし</p>
+              <p className="text-[12px] text-[#5C6660] mt-1">遅刻=出勤打刻 &gt; 予定+15分 / 早退=退勤打刻 &lt; 予定-15分 / 欠勤=予定あり打刻なし</p>
             </div>
-            <table className="w-full text-[11px]">
-              <thead className="bg-[#FBFAF9] border-b border-[#EAEAEA] text-[10px] font-bold text-[#999]">
+            <table className="w-full text-[13px]">
+              <thead className="bg-[#FAFAF7] border-b border-[#E6E2DA] text-[12px] font-bold text-[#5C6660]">
                 <tr>
                   <th className="px-3 py-2 text-left">日付</th>
                   <th className="px-3 py-2 text-left">スタッフ</th>
@@ -254,7 +254,7 @@ function ShiftPageInner() {
                   <th className="px-3 py-2 text-center">判定</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#F7F7F7]">
+              <tbody className="divide-y divide-[#F6F4EF]">
                 {(() => {
                   // シフトと打刻を日付・スタッフでマッチング
                   const rows = [];
@@ -283,15 +283,15 @@ function ShiftPageInner() {
                     rows.push({ sh, att, status, statusClass });
                   });
                   if (rows.length === 0) {
-                    return <tr><td colSpan="5" className="text-center py-8 text-[#999]">シフト or 打刻データがありません</td></tr>;
+                    return <tr><td colSpan="5" className="text-center py-8 text-[#5C6660]">シフト or 打刻データがありません</td></tr>;
                   }
                   return rows.sort((a,b) => a.sh.date.localeCompare(b.sh.date)).map(({ sh, att, status, statusClass }, i) => (
                     <tr key={i}>
                       <td className="px-3 py-2 font-mono">{sh.date.slice(5)}</td>
                       <td className="px-3 py-2 font-bold">{sh.staff_name}</td>
-                      <td className="px-3 py-2 text-[#555]">{sh.start_time}-{sh.end_time}</td>
-                      <td className="px-3 py-2 text-[#555]">{att ? `${new Date(att.clock_in_at).toTimeString().slice(0,5)}-${att.clock_out_at ? new Date(att.clock_out_at).toTimeString().slice(0,5) : '出勤中'}` : '-'}</td>
-                      <td className="px-3 py-2 text-center"><span className={`px-2 py-0.5 rounded text-[10px] font-bold ${statusClass}`}>{status}</span></td>
+                      <td className="px-3 py-2 text-[#3B4640]">{sh.start_time}-{sh.end_time}</td>
+                      <td className="px-3 py-2 text-[#3B4640]">{att ? `${new Date(att.clock_in_at).toTimeString().slice(0,5)}-${att.clock_out_at ? new Date(att.clock_out_at).toTimeString().slice(0,5) : '出勤中'}` : '-'}</td>
+                      <td className="px-3 py-2 text-center"><span className={`px-2 py-0.5 rounded text-[12px] font-bold ${statusClass}`}>{status}</span></td>
                     </tr>
                   ));
                 })()}
@@ -299,28 +299,28 @@ function ShiftPageInner() {
             </table>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm overflow-x-auto">
-            <table className="border-collapse text-[10px]">
+          <div className="bg-white rounded-2xl border border-[#E6E2DA] shadow-sm overflow-x-auto">
+            <table className="border-collapse text-[12px]">
               <thead>
                 <tr>
-                  <th className="sticky left-0 z-20 bg-[#FBFAF9] border border-[#EAEAEA] px-3 py-2 min-w-[120px] text-left font-bold text-[#999]">スタッフ</th>
+                  <th className="sticky left-0 z-20 bg-[#FAFAF7] border border-[#E6E2DA] px-3 py-2 min-w-[120px] text-left font-bold text-[#5C6660]">スタッフ</th>
                   {dates.map(d => (
-                    <th key={d.dateStr} className={`border border-[#EAEAEA] px-1 py-2 min-w-[44px] font-bold ${
-                      d.dayKey === 'sun' ? 'text-red-500 bg-red-50' : d.dayKey === 'sat' ? 'text-blue-500 bg-blue-50' : 'text-[#555] bg-[#FBFAF9]'
+                    <th key={d.dateStr} className={`border border-[#E6E2DA] px-1 py-2 min-w-[44px] font-bold ${
+                      d.dayKey === 'sun' ? 'text-red-500 bg-red-50' : d.dayKey === 'sat' ? 'text-blue-500 bg-blue-50' : 'text-[#3B4640] bg-[#FAFAF7]'
                     }`}>
                       <div>{d.day}</div>
-                      <div className="text-[9px] opacity-70">{DAY_LABELS[d.dayKey]}</div>
+                      <div className="text-[12px] opacity-70">{DAY_LABELS[d.dayKey]}</div>
                     </th>
                   ))}
                 </tr>
                 {/* 必要人数 vs 実数の行 */}
                 <tr>
-                  <th className="sticky left-0 z-20 bg-white border border-[#EAEAEA] px-3 py-1.5 text-right text-[9px] font-bold text-[#999]">出勤数 / 必要</th>
+                  <th className="sticky left-0 z-20 bg-white border border-[#E6E2DA] px-3 py-1.5 text-right text-[12px] font-bold text-[#5C6660]">出勤数 / 必要</th>
                   {dates.map(d => {
                     const c = dailyCount[d.dateStr];
                     return (
-                      <th key={d.dateStr} className={`border border-[#EAEAEA] px-0.5 py-1.5 font-bold text-[10px] ${
-                        c?.lacking ? 'bg-red-50 text-red-600' : 'bg-white text-[#555]'
+                      <th key={d.dateStr} className={`border border-[#E6E2DA] px-0.5 py-1.5 font-bold text-[12px] ${
+                        c?.lacking ? 'bg-red-50 text-red-600' : 'bg-white text-[#3B4640]'
                       }`}>
                         {c?.working ?? 0}/{c?.required ?? 0}
                       </th>
@@ -331,10 +331,10 @@ function ShiftPageInner() {
               <tbody>
                 {staffList.map(s => (
                   <tr key={s.name}>
-                    <td className="sticky left-0 z-10 bg-white border border-[#EAEAEA] px-3 py-2 font-bold text-[12px] min-w-[120px]">
+                    <td className="sticky left-0 z-10 bg-white border border-[#E6E2DA] px-3 py-2 font-bold text-[14px] min-w-[120px]">
                       <div>{s.name}</div>
                       {Array.isArray(s.fixedDayOff) && s.fixedDayOff.length > 0 && (
-                        <div className="text-[8px] text-[#D97D54] font-normal mt-0.5">固休: {s.fixedDayOff.map(k => DAY_LABELS[k] || (k === 'holiday' ? '祝' : k)).join('')}</div>
+                        <div className="text-[11px] text-[#B9562F] font-normal mt-0.5">固休: {s.fixedDayOff.map(k => DAY_LABELS[k] || (k === 'holiday' ? '祝' : k)).join('')}</div>
                       )}
                     </td>
                     {dates.map(d => {
@@ -344,25 +344,25 @@ function ShiftPageInner() {
                         <td
                           key={d.dateStr}
                           onClick={() => setEditCell({ staff: s, date: d.dateStr, current: sh })}
-                          className={`border border-[#EAEAEA] cursor-pointer hover:opacity-80 transition-all p-1 text-center ${
-                            sh?.is_off ? 'bg-[#D97D54]/10 text-[#D97D54]' :
+                          className={`border border-[#E6E2DA] cursor-pointer hover:opacity-80 transition-all p-1 text-center ${
+                            sh?.is_off ? 'bg-[#B9562F]/10 text-[#B9562F]' :
                             sh ? '' :
-                            isFixedOff ? 'bg-[#D97D54]/5' : 'bg-white'
+                            isFixedOff ? 'bg-[#B9562F]/5' : 'bg-white'
                           }`}
                           style={sh && !sh.is_off ? { background: shiftConfig?.patterns?.find(p => p.id === sh.pattern_id)?.color + '60' } : {}}
                         >
                           {sh?.is_off ? (
-                            <span className="text-[10px] font-bold">休</span>
+                            <span className="text-[12px] font-bold">休</span>
                           ) : sh ? (
-                            <div className="text-[9px] font-bold leading-tight">
+                            <div className="text-[12px] font-bold leading-tight">
                               {sh.pattern_name && <div>{sh.pattern_name}</div>}
                               {sh.start_time && sh.end_time && (
-                                <div className="text-[8px] opacity-80">{sh.start_time}-{sh.end_time}</div>
+                                <div className="text-[11px] opacity-80">{sh.start_time}-{sh.end_time}</div>
                               )}
                               {sh.locked && <Lock size={8} className="inline"/>}
                             </div>
                           ) : isFixedOff ? (
-                            <span className="text-[9px] text-[#D97D54]/60">固休</span>
+                            <span className="text-[12px] text-[#B9562F]/60">固休</span>
                           ) : (
                             <span className="text-[#CCC]">-</span>
                           )}
@@ -383,17 +383,17 @@ function ShiftPageInner() {
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-[15px] font-bold text-[#111]">{editCell.staff.name}</h3>
-                <p className="text-[11px] text-[#999]">{editCell.date}</p>
+                <h3 className="text-[15px] font-bold text-[#1F2A24]">{editCell.staff.name}</h3>
+                <p className="text-[13px] text-[#5C6660]">{editCell.date}</p>
               </div>
-              <button onClick={() => { setEditCell(null); setCustomMode(false); }} className="text-[#999] hover:text-[#111]"><X size={18}/></button>
+              <button onClick={() => { setEditCell(null); setCustomMode(false); }} className="text-[#5C6660] hover:text-[#1F2A24]"><X size={18}/></button>
             </div>
 
             {!customMode ? (
               <>
                 {/* シフトパターン選択 */}
                 <div className="space-y-2">
-                  <p className="text-[11px] font-bold text-[#555]">シフトを選択</p>
+                  <p className="text-[13px] font-bold text-[#3B4640]">シフトを選択</p>
                   <div className="grid grid-cols-2 gap-2">
                     {(shiftConfig?.patterns || []).map(p => (
                       <button
@@ -408,11 +408,11 @@ function ShiftPageInner() {
                           isOff: false,
                           locked: editCell.current?.locked || false,
                         })}
-                        className="p-3 rounded-xl border border-[#EAEAEA] hover:border-[#2D4B3E] text-left"
+                        className="p-3 rounded-xl border border-[#E6E2DA] hover:border-[#2D4B3E] text-left"
                         style={{ background: p.color + '40' }}
                       >
-                        <p className="text-[13px] font-bold">{p.name}</p>
-                        <p className="text-[10px] text-[#555]">{p.startTime}〜{p.endTime}</p>
+                        <p className="text-[15px] font-bold">{p.name}</p>
+                        <p className="text-[12px] text-[#3B4640]">{p.startTime}〜{p.endTime}</p>
                       </button>
                     ))}
                     <button
@@ -422,10 +422,10 @@ function ShiftPageInner() {
                         isOff: true,
                         locked: editCell.current?.locked || false,
                       })}
-                      className="p-3 rounded-xl border border-[#D97D54]/40 bg-[#D97D54]/10 hover:bg-[#D97D54]/20 text-left"
+                      className="p-3 rounded-xl border border-[#B9562F]/40 bg-[#B9562F]/10 hover:bg-[#B9562F]/20 text-left"
                     >
-                      <p className="text-[13px] font-bold text-[#D97D54]">休み</p>
-                      <p className="text-[10px] text-[#999]">出勤なし</p>
+                      <p className="text-[15px] font-bold text-[#B9562F]">休み</p>
+                      <p className="text-[12px] text-[#5C6660]">出勤なし</p>
                     </button>
                     {/* ★ カスタム時間 */}
                     <button
@@ -440,8 +440,8 @@ function ShiftPageInner() {
                       }}
                       className="p-3 rounded-xl border border-dashed border-[#117768]/50 bg-[#117768]/5 hover:bg-[#117768]/10 text-left"
                     >
-                      <p className="text-[13px] font-bold text-[#117768]">カスタム時間</p>
-                      <p className="text-[10px] text-[#999]">時刻を自由入力</p>
+                      <p className="text-[15px] font-bold text-[#117768]">カスタム時間</p>
+                      <p className="text-[12px] text-[#5C6660]">時刻を自由入力</p>
                     </button>
                   </div>
                 </div>
@@ -450,36 +450,36 @@ function ShiftPageInner() {
               <>
                 {/* カスタム時間入力 */}
                 <div className="space-y-3">
-                  <button onClick={() => setCustomMode(false)} className="text-[10px] text-[#999] hover:text-[#2D4B3E]">← パターン選択に戻る</button>
-                  <p className="text-[11px] font-bold text-[#117768]">カスタム時間で登録</p>
+                  <button onClick={() => setCustomMode(false)} className="text-[12px] text-[#5C6660] hover:text-[#2D4B3E]">← パターン選択に戻る</button>
+                  <p className="text-[13px] font-bold text-[#117768]">カスタム時間で登録</p>
                   <div>
-                    <label className="text-[10px] font-bold text-[#999] tracking-widest">名称（任意）</label>
+                    <label className="text-[12px] font-bold text-[#5C6660] tracking-widest">名称（任意）</label>
                     <input
                       type="text"
                       value={customForm.name}
                       onChange={e => setCustomForm({...customForm, name: e.target.value})}
                       placeholder="例: 研修・短時間・臨時 など"
-                      className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none"
+                      className="w-full mt-1 h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none"
                     />
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
-                      <label className="text-[10px] font-bold text-[#999] tracking-widest">開始</label>
+                      <label className="text-[12px] font-bold text-[#5C6660] tracking-widest">開始</label>
                       <input
                         type="time"
                         value={customForm.startTime}
                         onChange={e => setCustomForm({...customForm, startTime: e.target.value})}
-                        className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none"
+                        className="w-full mt-1 h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none"
                       />
                     </div>
-                    <span className="text-[#999] mt-5">〜</span>
+                    <span className="text-[#5C6660] mt-5">〜</span>
                     <div className="flex-1">
-                      <label className="text-[10px] font-bold text-[#999] tracking-widest">終了</label>
+                      <label className="text-[12px] font-bold text-[#5C6660] tracking-widest">終了</label>
                       <input
                         type="time"
                         value={customForm.endTime}
                         onChange={e => setCustomForm({...customForm, endTime: e.target.value})}
-                        className="w-full mt-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none"
+                        className="w-full mt-1 h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none"
                       />
                     </div>
                   </div>
@@ -499,7 +499,7 @@ function ShiftPageInner() {
                       });
                       setCustomMode(false);
                     }}
-                    className="w-full h-11 bg-[#117768] text-white text-[13px] font-bold rounded-lg hover:bg-[#0f6a5b]"
+                    className="w-full h-11 bg-[#117768] text-white text-[15px] font-bold rounded-lg hover:bg-[#0f6a5b]"
                   >
                     この時間で登録
                   </button>
@@ -508,7 +508,7 @@ function ShiftPageInner() {
             )}
 
             {/* ロック切替・削除 */}
-            <div className="flex gap-2 pt-3 border-t border-[#EAEAEA]">
+            <div className="flex gap-2 pt-3 border-t border-[#E6E2DA]">
               {editCell.current && (
                 <>
                   <button
@@ -523,20 +523,20 @@ function ShiftPageInner() {
                       isOff: editCell.current.is_off,
                       locked: !editCell.current.locked,
                     })}
-                    className="flex-1 h-10 bg-[#FBFAF9] border border-[#EAEAEA] text-[#555] text-[11px] font-bold rounded-lg flex items-center justify-center gap-1 hover:bg-[#EAEAEA]"
+                    className="flex-1 h-10 bg-[#FAFAF7] border border-[#E6E2DA] text-[#3B4640] text-[13px] font-bold rounded-lg flex items-center justify-center gap-1 hover:bg-[#E6E2DA]"
                   >
                     {editCell.current.locked ? <><Unlock size={12}/> ロック解除</> : <><Lock size={12}/> ロック</>}
                   </button>
                   <button
                     onClick={() => clearCell(editCell.staff.name, editCell.date)}
-                    className="flex-1 h-10 bg-red-50 border border-red-200 text-red-600 text-[11px] font-bold rounded-lg hover:bg-red-100"
+                    className="flex-1 h-10 bg-red-50 border border-red-200 text-red-600 text-[13px] font-bold rounded-lg hover:bg-red-100"
                   >
                     クリア（未割当に戻す）
                   </button>
                 </>
               )}
             </div>
-            <p className="text-[10px] text-[#999] leading-relaxed">
+            <p className="text-[12px] text-[#5C6660] leading-relaxed">
               ロックすると、自動シフト作成（次フェーズで実装予定）で上書きされなくなります
             </p>
           </div>

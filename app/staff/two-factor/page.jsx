@@ -89,12 +89,12 @@ export default function TwoFactorPage() {
 
   return (
     <main className="pb-32 font-sans">
-      <header className="h-20 bg-white/80 backdrop-blur-md border-b border-[#EAEAEA] flex items-center px-6 md:px-8 sticky top-0 z-10">
+      <header className="h-20 bg-white/80 backdrop-blur-md border-b border-[#E6E2DA] flex items-center px-6 md:px-8 sticky top-0 z-10">
         <div>
           <h1 className="text-[18px] font-bold tracking-tight text-[#2D4B3E] flex items-center gap-2">
             <Shield size={18} /> 2段階認証（2FA）
           </h1>
-          <p className="text-[11px] text-[#999999] mt-0.5">アカウント乗っ取りから店舗を守る最強の対策</p>
+          <p className="text-[13px] text-[#5C6660] mt-0.5">アカウント乗っ取りから店舗を守る最強の対策</p>
         </div>
       </header>
 
@@ -104,17 +104,17 @@ export default function TwoFactorPage() {
             message.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'
           }`}>
             {message.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-            <p className="text-[12px] font-bold">{message.text}</p>
+            <p className="text-[14px] font-bold">{message.text}</p>
           </div>
         )}
 
         {/* 説明 */}
-        <div className="bg-[#FBFAF9] border border-[#EAEAEA] rounded-2xl p-5 space-y-3">
-          <h2 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Smartphone size={16} /> 2段階認証とは</h2>
-          <p className="text-[12px] text-[#555] leading-relaxed">
+        <div className="bg-[#FAFAF7] border border-[#E6E2DA] rounded-2xl p-5 space-y-3">
+          <h2 className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2"><Smartphone size={16} /> 2段階認証とは</h2>
+          <p className="text-[14px] text-[#3B4640] leading-relaxed">
             ログイン時に <strong>パスワード + 認証アプリの6桁コード</strong> の両方を求めることで、パスワードが漏洩しても不正ログインを防げます。
           </p>
-          <ul className="text-[11px] text-[#555] space-y-1 ml-4 list-disc">
+          <ul className="text-[13px] text-[#3B4640] space-y-1 ml-4 list-disc">
             <li>Google Authenticator（推奨・無料）</li>
             <li>1Password（パスワードマネージャー併用）</li>
             <li>Microsoft Authenticator</li>
@@ -123,21 +123,21 @@ export default function TwoFactorPage() {
 
         {/* 登録済み認証要素 */}
         {isLoading ? (
-          <div className="text-center py-8 text-[12px] text-[#999]">読み込み中...</div>
+          <div className="text-center py-8 text-[14px] text-[#5C6660]">読み込み中...</div>
         ) : factors.length === 0 ? (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-center">
             <Lock size={32} className="mx-auto text-amber-600 mb-3" />
-            <p className="text-[14px] font-bold text-amber-900 mb-1">まだ2段階認証が設定されていません</p>
-            <p className="text-[11px] text-amber-700">下のボタンから登録してください（5分で完了）</p>
+            <p className="text-[15px] font-bold text-amber-900 mb-1">まだ2段階認証が設定されていません</p>
+            <p className="text-[13px] text-amber-700">下のボタンから登録してください（5分で完了）</p>
           </div>
         ) : (
-          <div className="bg-white border border-[#EAEAEA] rounded-2xl p-5 space-y-3">
-            <h3 className="text-[13px] font-bold text-[#2D4B3E]">登録済みの認証要素</h3>
+          <div className="bg-white border border-[#E6E2DA] rounded-2xl p-5 space-y-3">
+            <h3 className="text-[15px] font-bold text-[#2D4B3E]">登録済みの認証要素</h3>
             {factors.map(f => (
-              <div key={f.id} className="flex items-center justify-between p-3 bg-[#FBFAF9] rounded-xl border border-[#EAEAEA]">
+              <div key={f.id} className="flex items-center justify-between p-3 bg-[#FAFAF7] rounded-xl border border-[#E6E2DA]">
                 <div>
-                  <p className="text-[13px] font-bold text-[#111]">{f.friendly_name || 'TOTP'}</p>
-                  <p className="text-[10px] text-[#999]">登録日: {new Date(f.created_at).toLocaleDateString('ja-JP')}</p>
+                  <p className="text-[15px] font-bold text-[#1F2A24]">{f.friendly_name || 'TOTP'}</p>
+                  <p className="text-[12px] text-[#5C6660]">登録日: {new Date(f.created_at).toLocaleDateString('ja-JP')}</p>
                 </div>
                 <button onClick={() => removeFactor(f.id)} className="text-red-500 hover:text-red-700 p-2">
                   <Trash2 size={16} />
@@ -151,7 +151,7 @@ export default function TwoFactorPage() {
         {!enrolling && !enrollData && (
           <button
             onClick={startEnroll}
-            className="w-full h-12 bg-[#2D4B3E] text-white rounded-xl text-[13px] font-bold hover:bg-[#1f352b] flex items-center justify-center gap-2"
+            className="w-full h-12 bg-[#2D4B3E] text-white rounded-xl text-[15px] font-bold hover:bg-[#1f352b] flex items-center justify-center gap-2"
           >
             <Shield size={16} /> {factors.length > 0 ? '別のデバイスを追加登録' : '2段階認証を登録する'}
           </button>
@@ -159,23 +159,23 @@ export default function TwoFactorPage() {
 
         {enrollData && (
           <div className="bg-white border-2 border-[#2D4B3E] rounded-2xl p-6 space-y-5">
-            <h3 className="text-[14px] font-bold text-[#2D4B3E] text-center">認証アプリで読み取り</h3>
+            <h3 className="text-[15px] font-bold text-[#2D4B3E] text-center">認証アプリで読み取り</h3>
 
             {enrollData.qr && (
-              <div className="bg-white p-4 rounded-xl border border-[#EAEAEA] flex justify-center">
+              <div className="bg-white p-4 rounded-xl border border-[#E6E2DA] flex justify-center">
                 <img src={enrollData.qr} alt="QRコード" className="w-48 h-48" />
               </div>
             )}
 
-            <details className="bg-[#FBFAF9] rounded-xl border border-[#EAEAEA] p-3">
-              <summary className="text-[11px] font-bold text-[#555] cursor-pointer">QRが読めない場合は手動入力</summary>
-              <div className="mt-2 p-2 bg-white border border-[#EAEAEA] rounded text-[10px] font-mono break-all">
+            <details className="bg-[#FAFAF7] rounded-xl border border-[#E6E2DA] p-3">
+              <summary className="text-[13px] font-bold text-[#3B4640] cursor-pointer">QRが読めない場合は手動入力</summary>
+              <div className="mt-2 p-2 bg-white border border-[#E6E2DA] rounded text-[12px] font-mono break-all">
                 {enrollData.secret}
               </div>
             </details>
 
             <div>
-              <label className="text-[11px] font-bold text-[#999] block mb-2">アプリに表示された6桁コードを入力</label>
+              <label className="text-[13px] font-bold text-[#5C6660] block mb-2">アプリに表示された6桁コードを入力</label>
               <input
                 type="text"
                 inputMode="numeric"
@@ -184,7 +184,7 @@ export default function TwoFactorPage() {
                 onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 onKeyDown={(e) => { if (e.key === 'Enter' && verifyCode.length === 6) verifyEnroll(); }}
                 autoFocus
-                className="w-full h-14 text-center text-[28px] font-bold tracking-[0.5em] bg-[#FBFAF9] border-2 border-[#EAEAEA] rounded-xl outline-none focus:border-[#2D4B3E] font-mono"
+                className="w-full h-14 text-center text-[28px] font-bold tracking-[0.5em] bg-[#FAFAF7] border-2 border-[#E6E2DA] rounded-xl outline-none focus:border-[#2D4B3E] font-mono"
                 placeholder="000000"
               />
             </div>
@@ -192,14 +192,14 @@ export default function TwoFactorPage() {
             <div className="flex gap-2">
               <button
                 onClick={() => { setEnrolling(false); setEnrollData(null); setVerifyCode(''); }}
-                className="flex-1 h-11 bg-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-xl"
+                className="flex-1 h-11 bg-[#E6E2DA] text-[#3B4640] text-[14px] font-bold rounded-xl"
               >
                 キャンセル
               </button>
               <button
                 onClick={verifyEnroll}
                 disabled={verifyCode.length !== 6}
-                className="flex-1 h-11 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-xl disabled:opacity-50 hover:bg-[#1f352b]"
+                className="flex-1 h-11 bg-[#2D4B3E] text-white text-[14px] font-bold rounded-xl disabled:opacity-50 hover:bg-[#1f352b]"
               >
                 登録を完了
               </button>
