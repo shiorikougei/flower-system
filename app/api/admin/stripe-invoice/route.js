@@ -14,6 +14,7 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { requireOwner } from '@/utils/adminAuth';
+import { publicErrorMessage } from '@/utils/safeError';
 
 export const runtime = 'nodejs';
 
@@ -76,6 +77,6 @@ export async function POST(request) {
     });
   } catch (err) {
     console.error('[stripe-invoice]', err);
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err, 'サーバーエラー') }, { status: 500 });
   }
 }

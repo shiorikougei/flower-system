@@ -9,6 +9,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendEmail, noReplyFooter } from "@/utils/email";
+import { publicErrorMessage } from '@/utils/safeError';
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -320,6 +321,6 @@ export async function GET(request) {
 
     return NextResponse.json({ ok: true, ...results, ranAt: now.toISOString() });
   } catch (e) {
-    return NextResponse.json({ ok: false, error: e?.message, ...results }, { status: 500 });
+    return NextResponse.json({ ok: false, error: publicErrorMessage(e), ...results }, { status: 500 });
   }
 }

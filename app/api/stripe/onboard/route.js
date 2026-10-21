@@ -10,6 +10,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe, APP_URL } from '@/utils/stripe';
+import { publicErrorMessage } from '@/utils/safeError';
 
 export async function POST(request) {
   try {
@@ -85,6 +86,6 @@ export async function POST(request) {
     return NextResponse.json({ url: accountLink.url });
   } catch (err) {
     console.error('[/api/stripe/onboard] error:', err);
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err, 'サーバーエラー') }, { status: 500 });
   }
 }

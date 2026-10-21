@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe, STRIPE_CLIENT_ID } from '@/utils/stripe';
+import { publicErrorMessage } from '@/utils/safeError';
 
 export async function POST(request) {
   try {
@@ -64,6 +65,6 @@ export async function POST(request) {
     return NextResponse.json({ disconnected: true });
   } catch (err) {
     console.error('[/api/stripe/disconnect] error:', err);
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err, 'サーバーエラー') }, { status: 500 });
   }
 }

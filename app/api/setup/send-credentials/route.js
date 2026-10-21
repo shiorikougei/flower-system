@@ -9,6 +9,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail, noReplyFooter } from '@/utils/email';
 import { requireOwner } from '@/utils/adminAuth';
+import { publicErrorMessage } from '@/utils/safeError';
 
 export const runtime = 'nodejs';
 
@@ -99,6 +100,6 @@ export async function POST(request) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('[send-credentials]', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err) }, { status: 500 });
   }
 }

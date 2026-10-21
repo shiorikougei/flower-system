@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail, shopContactInfo } from '@/utils/email';
 import { findTemplateFor, renderTemplate, bodyToHtml } from '@/utils/emailTemplates';
+import { publicErrorMessage } from '@/utils/safeError';
 
 export async function POST(request) {
   try {
@@ -106,7 +107,7 @@ export async function POST(request) {
     return NextResponse.json({ sent, total: pendings.length });
   } catch (err) {
     console.error('[stock-notify dispatch] error:', err);
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err, 'サーバーエラー') }, { status: 500 });
   }
 }
 

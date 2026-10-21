@@ -8,6 +8,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireOwner } from '@/utils/adminAuth';
+import { publicErrorMessage } from '@/utils/safeError';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -63,7 +64,7 @@ export async function POST(request) {
     await saveOwnerData(supabaseAdmin, { ...data, invoices });
     return NextResponse.json({ ok: true, record });
   } catch (e) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(e) }, { status: 500 });
   }
 }
 
@@ -92,7 +93,7 @@ export async function PATCH(request) {
     await saveOwnerData(supabaseAdmin, { ...data, invoices });
     return NextResponse.json({ ok: true, record: invoices[idx] });
   } catch (e) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(e) }, { status: 500 });
   }
 }
 
@@ -110,6 +111,6 @@ export async function DELETE(request) {
     await saveOwnerData(supabaseAdmin, { ...data, invoices });
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(e) }, { status: 500 });
   }
 }

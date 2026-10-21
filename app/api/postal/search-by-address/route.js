@@ -7,6 +7,7 @@
 // 配達伝票の郵便番号は後で電話確認等で取得する想定
 
 import { NextResponse } from "next/server";
+import { publicErrorMessage } from '@/utils/safeError';
 
 /**
  * 住所文字列の正規化
@@ -122,7 +123,7 @@ export async function GET(request) {
   } catch (e) {
     return NextResponse.json({
       ok: false,
-      error: e?.message || "internal error",
+      error: publicErrorMessage(e, undefined),
     }, { status: 500 });
   }
 }

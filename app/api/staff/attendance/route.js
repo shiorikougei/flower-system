@@ -5,6 +5,7 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { publicErrorMessage } from '@/utils/safeError';
 
 export const runtime = 'nodejs';
 
@@ -146,7 +147,7 @@ export async function POST(request) {
     return NextResponse.json({ error: '不正なaction' }, { status: 400 });
   } catch (err) {
     console.error('[attendance POST]', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err) }, { status: 500 });
   }
 }
 
@@ -211,7 +212,7 @@ export async function PUT(request) {
     }
   } catch (err) {
     console.error('[attendance PUT]', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err) }, { status: 500 });
   }
 }
 
@@ -234,7 +235,7 @@ export async function DELETE(request) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err) }, { status: 500 });
   }
 }
 
@@ -281,6 +282,6 @@ export async function GET(request) {
 
     return NextResponse.json({ items: data || [], summary: summaryArr });
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err) }, { status: 500 });
   }
 }
