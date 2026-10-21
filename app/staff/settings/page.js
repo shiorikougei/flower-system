@@ -2177,10 +2177,23 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-[#FAFAF7] flex flex-col font-sans text-left pb-40">
       {/* ★ [2026-10] ノートPCでタブが右にはみ出して選べなかった -> 収まらない分は 2 段目に折り返す（高さは自動） */}
-      <header className="min-h-20 py-2 bg-[#F6F4EF]/95 backdrop-blur border-b flex items-center justify-between px-6 md:px-12 sticky top-0 z-50 shadow-sm">
-        <h1 className="text-[24px] md:text-[28px] font-bold tracking-[0.02em] text-[#1F2A24]">システム設定</h1>
+      {/* [2026-10 画面リニューアル] 1 段目: タイトルとロック解除・保存 / 2 段目: タブ（収まらない分は折り返す） */}
+      <header className="bg-[#F6F4EF]/95 backdrop-blur border-b border-[#E0DCD3] px-4 md:px-10 pt-5 pb-3 sticky top-0 z-50 space-y-3">
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="text-[24px] md:text-[28px] font-bold tracking-[0.02em] text-[#1F2A24]">システム設定</h1>
+        <div className="flex items-center gap-4 shrink-0">
+          {!isAdmin ? (
+            <div className="flex items-center gap-2 bg-white px-2 py-1.5 rounded-xl border border-[#E6E2DA] shadow-sm">
+              <input type="password" placeholder="Pass" value={adminPassword} onChange={(e)=>setAdminPassword(e.target.value)} className="w-16 h-8 px-2 bg-[#FAFAF7] text-[13px] font-bold outline-none rounded-lg border focus:border-[#2D4B3E]"/>
+              <button onClick={handleLogin} className="px-3 h-8 bg-[#2D4B3E] text-white text-[13px] font-bold rounded-lg transition-all hover:bg-[#1f352b] active:scale-95">解除</button>
+            </div>
+          ) : (
+            <button onClick={saveSettings} disabled={isSaving} className={`px-6 py-2.5 rounded-xl text-[14px] font-bold shadow-md transition-all ${isSaving ? 'bg-gray-400' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b] active:scale-95'}`}>{isSaving ? '保存中...' : '変更を保存'}</button>
+          )}
+        </div>
+        </div>
         {/* ★ カテゴリ別タブ表示 */}
-        <div className="hidden md:flex flex-1 mx-6 flex-wrap gap-x-2 gap-y-1.5 min-w-0">
+        <div className="hidden md:flex flex-wrap gap-x-3 gap-y-2 min-w-0">
           {tabCategories.map(cat => (
             <div key={cat.name} className="flex flex-col items-start shrink-0">
               <span className="text-[11px] font-bold text-[#5C6660] tracking-widest mb-0.5 px-1">{cat.name}</span>
@@ -2191,16 +2204,6 @@ export default function SettingsPage() {
               </div>
             </div>
           ))}
-        </div>
-        <div className="flex items-center gap-4 shrink-0">
-          {!isAdmin ? (
-            <div className="flex items-center gap-2 bg-white px-2 py-1.5 rounded-xl border border-[#E6E2DA] shadow-sm">
-              <input type="password" placeholder="Pass" value={adminPassword} onChange={(e)=>setAdminPassword(e.target.value)} className="w-16 h-8 px-2 bg-[#FAFAF7] text-[13px] font-bold outline-none rounded-lg border focus:border-[#2D4B3E]"/>
-              <button onClick={handleLogin} className="px-3 h-8 bg-[#2D4B3E] text-white text-[13px] font-bold rounded-lg transition-all hover:bg-[#1f352b] active:scale-95">解除</button>
-            </div>
-          ) : (
-            <button onClick={saveSettings} disabled={isSaving} className={`px-6 py-2.5 rounded-xl text-[14px] font-bold shadow-md transition-all ${isSaving ? 'bg-gray-400' : 'bg-[#2D4B3E] text-white hover:bg-[#1f352b] active:scale-95'}`}>{isSaving ? '保存中...' : '変更を保存'}</button>
-          )}
         </div>
       </header>
 

@@ -62,7 +62,7 @@ export default function ManualPage() {
             <p className="font-bold text-[#2D4B3E] mb-2">目次</p>
             {HELP_CATEGORIES.map((cat, i) => (
               <div key={cat.id} className="flex items-center justify-between text-[#3B4640]">
-                <span>{cat.icon} {i + 1}. {cat.name}</span>
+                <span>{i + 1}. {cat.name}</span>
                 <span className="text-[#5C6660]">{cat.articles.length}記事</span>
               </div>
             ))}
@@ -79,7 +79,7 @@ export default function ManualPage() {
           <section key={cat.id} className="manual-category mb-12">
             <div className="border-b-4 border-[#2D4B3E] pb-3 mb-6">
               <p className="text-[10pt] tracking-widest text-[#5C6660]">CHAPTER {ci + 1}</p>
-              <h1 className="text-[24pt] font-bold text-[#2D4B3E]">{cat.icon} {cat.name}</h1>
+              <h1 className="text-[24pt] font-bold text-[#2D4B3E]">{cat.name}</h1>
             </div>
 
             {cat.articles.map((article, ai) => (

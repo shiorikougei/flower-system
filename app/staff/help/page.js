@@ -1,7 +1,14 @@
 'use client';
 import { useState, useMemo, useEffect } from 'react';
 import { HELP_CATEGORIES, getAllArticles } from '@/utils/helpContent';
-import { Search, ChevronDown, ChevronRight, BookOpen, Printer } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, BookOpen, Printer, Rocket, ClipboardList, Calculator, Flower2, ShoppingCart, Camera, Users, CalendarDays, Clock, MessageCircle, CreditCard, Lock, LifeBuoy } from 'lucide-react';
+
+// [2026-10] ヘルプのカテゴリのアイコン（utils/helpContent.js の icon はアイコンの名前）
+const CATEGORY_ICONS = { Rocket, ClipboardList, Calculator, Flower2, ShoppingCart, Camera, Users, CalendarDays, Clock, MessageCircle, CreditCard, Lock, LifeBuoy };
+function CategoryIcon({ name, size = 20 }) {
+  const Icon = CATEGORY_ICONS[name];
+  return Icon ? <Icon size={size} className="text-[#2D4B3E]" aria-hidden="true" /> : null;
+}
 
 export default function HelpCenterPage() {
   const [query, setQuery] = useState('');
@@ -86,7 +93,7 @@ export default function HelpCenterPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 print:hidden">
               {HELP_CATEGORIES.map(c => (
                 <a key={c.id} href={`#cat-${c.id}`} className="bg-white border border-[#E6E2DA] rounded-xl p-3 hover:border-[#2D4B3E] hover:shadow-md transition-all">
-                  <div className="text-[20px]">{c.icon}</div>
+                  <div><CategoryIcon name={c.icon} size={20} /></div>
                   <div className="text-[14px] font-bold text-[#2D4B3E] mt-1">{c.name}</div>
                   <div className="text-[12px] text-[#5C6660] mt-0.5">{c.articles.length}件の記事</div>
                 </a>
@@ -97,7 +104,7 @@ export default function HelpCenterPage() {
             {HELP_CATEGORIES.map(c => (
               <section key={c.id} id={`cat-${c.id}`}>
                 <h2 className="text-[16px] font-bold text-[#2D4B3E] mb-3 flex items-center gap-2 pb-2 border-b border-[#E6E2DA]">
-                  <span className="text-[22px]">{c.icon}</span>
+                  <span className="inline-flex"><CategoryIcon name={c.icon} size={22} /></span>
                   {c.name}
                 </h2>
                 <div className="space-y-3">

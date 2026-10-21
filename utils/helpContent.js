@@ -9,7 +9,7 @@ export const HELP_CATEGORIES = [
   {
     id: 'start',
     name: 'はじめに',
-    icon: '🚀',
+    icon: 'Rocket',
     articles: [
       {
         id: 'shop_contact_email',
@@ -55,7 +55,7 @@ export const HELP_CATEGORIES = [
   {
     id: 'orders',
     name: '注文管理',
-    icon: '📋',
+    icon: 'ClipboardList',
     articles: [
       {
         id: 'order_print',
@@ -192,12 +192,12 @@ export const HELP_CATEGORIES = [
           { title: '1. サイドバー → 注文入力', body: '受付区分（電話 / 店頭）と受付スタッフを選択' },
           { title: '2. お花の種類・受取方法を選ぶ', body: '配達・配送を選ぶと、すぐ下に住所入力欄が表示されます' },
           { title: '3. 配達先住所を入力', body: '郵便番号を入れると都道府県・市区町村が自動入力。自社配達/業者配送の料金が並んで表示されます' },
-          { title: '4. 過去顧客検索', body: '電話番号を入力 → 「🔍 過去注文検索」ボタン → 自動で名前・メアド・LINE連携状態が入力されます' },
+          { title: '4. 過去顧客検索', body: '電話番号を入力 → 「過去注文検索」ボタン → 自動で名前・メアド・LINE連携状態が入力されます' },
           { title: '5. メール/LINE 通知の選択', body: '注文確認をメールで送るか、LINE併送するかチェック（電話受付でメアド不明でもLINE連携あれば送信可）' },
           { title: '6. その他項目を入力', body: '用途・カラー・イメージ・予算・社内メモ（メインカラー下の欄）' },
           { title: '7. 注文を確定', body: '右下の「注文を登録」ボタン' },
         ],
-        tip: 'メインカラーのすぐ下に「📝 社内メモ / 要望」欄あり。アレルギー・特別配慮を残せます。',
+        tip: 'メインカラーのすぐ下に「社内メモ / 要望」欄あり。アレルギー・特別配慮を残せます。',
       },
       {
         id: 'phone_lookup',
@@ -205,9 +205,9 @@ export const HELP_CATEGORIES = [
         summary: '電話受付でメアド/住所が分からない時の救済',
         steps: [
           { title: '1. 注文入力 → 注文者情報', body: '電話番号欄に番号を入力' },
-          { title: '2. 「🔍 過去注文検索」を押す', body: '電話番号で過去注文を全件検索' },
-          { title: '3. 結果バナー確認', body: '✅ 過去N回ご注文 → 名前・メアド・住所が自動入力 / 💬 LINE連携の有無も表示' },
-          { title: '4. LINE連携済みの場合', body: '「📤 ご注文確認の通知」セクションで「💬 LINEで送る」をON → 注文確定後にLINE通知が飛びます' },
+          { title: '2. 「過去注文検索」を押す', body: '電話番号で過去注文を全件検索' },
+          { title: '3. 結果バナー確認', body: '過去N回ご注文 → 名前・メアド・住所が自動入力 / LINE連携の有無も表示' },
+          { title: '4. LINE連携済みの場合', body: '「ご注文確認の通知」セクションで「LINEで送る」をON → 注文確定後にLINE通知が飛びます' },
         ],
         tip: 'メアドを聞き出さなくても LINE 経由で確認が送れるので、電話受付の負担が激減！',
       },
@@ -216,7 +216,7 @@ export const HELP_CATEGORIES = [
   {
     id: 'estimate',
     name: 'お見積もり機能',
-    icon: '💰',
+    icon: 'Calculator',
     articles: [
       {
         id: 'estimate_reject_trash',
@@ -241,14 +241,14 @@ export const HELP_CATEGORIES = [
           { title: '4. Instagram投稿の参考', body: '管理番号 or 投稿URLで指定可能（URL取得方法のアコーディオン付き）' },
           { title: '5. 送信', body: '店舗の登録メールに通知メールが届きます（HTML整形）' },
         ],
-        tip: 'スタッフは「💰 お見積もり依頼管理」ページで一覧・回答・正式注文化が可能。',
+        tip: 'スタッフは「お見積もり依頼管理」ページで一覧・回答・正式注文化が可能。',
       },
       {
         id: 'estimate_reply',
         title: '見積依頼に回答する（スタッフ側）',
         summary: '料金自動計算＋メッセージ自動生成で楽に回答',
         steps: [
-          { title: '1. サイドバー → 💰 お見積もり依頼', body: '一覧で未回答の依頼を確認（黄色バッジ）' },
+          { title: '1. サイドバー → お見積もり依頼', body: '一覧で未回答の依頼を確認（黄色バッジ）' },
           { title: '2. 内容を確認', body: '構造化された依頼項目＋参考画像サムネイル' },
           { title: '3. 「回答する」をクリック', body: '回答フォームが開く（依頼内容を初期値として自動セット）' },
           { title: '4. 商品代を入力（必須）', body: '入力すると箱代サイズ（80/100/120/140等）が自動判定。商品代は必ず入力してください（空欄のままだと、お客様の注文金額がずれることがあります）' },
@@ -303,7 +303,7 @@ export const HELP_CATEGORIES = [
   {
     id: 'customer_flow',
     name: 'お客様画面の流れ',
-    icon: '🌸',
+    icon: 'Flower2',
     articles: [
       {
         id: 'customer_delivery_flow',
@@ -365,7 +365,7 @@ export const HELP_CATEGORIES = [
   {
     id: 'ec',
     name: 'EC機能（商品販売）',
-    icon: '🛒',
+    icon: 'ShoppingCart',
     articles: [
       {
         id: 'product_register',
@@ -418,7 +418,7 @@ export const HELP_CATEGORIES = [
   {
     id: 'portfolio',
     name: '作品・SNS連携',
-    icon: '📸',
+    icon: 'Camera',
     articles: [
       {
         id: 'portfolio_workflow',
@@ -437,7 +437,7 @@ export const HELP_CATEGORIES = [
         summary: '作品ごとに 20260514-001 形式の管理番号',
         steps: [
           { title: '1. 注文 → 完成写真アップ', body: '管理番号 (例: 20260514-001) が自動付与される' },
-          { title: '2. 作品管理に転用すると管理番号が引き継がれる', body: 'キャプション冒頭に「📋 20260514-001」自動挿入' },
+          { title: '2. 作品管理に転用すると管理番号が引き継がれる', body: 'キャプション冒頭に「20260514-001」自動挿入' },
           { title: '3. 検索バーで一発呼び出し', body: '作品管理ページ上部の検索バーに管理番号を入力 → 該当作品にジャンプ' },
         ],
         tip: 'お見積もり依頼でお客様が管理番号で参考投稿を指定できるようになりました。',
@@ -447,7 +447,7 @@ export const HELP_CATEGORIES = [
         title: '作品の詳細を確認する',
         summary: '一覧から作品をクリックして全情報を表示',
         steps: [
-          { title: '1. 登録済み一覧で作品をクリック', body: 'カードホバー時に「🔍 詳細を見る」ヒント表示' },
+          { title: '1. 登録済み一覧で作品をクリック', body: 'カードホバー時に「詳細を見る」ヒント表示' },
           { title: '2. 詳細モーダルが開く', body: '画像大表示、税抜/税込価格、花の種類・用途・色・イメージのタグ、キャプション全文' },
           { title: '3. 操作可能', body: 'カタログURLコピー / お客様画面でプレビュー / 作品を削除' },
         ],
@@ -457,7 +457,7 @@ export const HELP_CATEGORIES = [
   {
     id: 'customer',
     name: '顧客管理',
-    icon: '👥',
+    icon: 'Users',
     articles: [
       {
         id: 'customer_card',
@@ -466,7 +466,7 @@ export const HELP_CATEGORIES = [
         steps: [
           { title: '1. 顧客管理を開く', body: 'サイドバー → 顧客管理' },
           { title: '2. お客様をクリック', body: '詳細モーダルが開く' },
-          { title: '3. 各セクションを確認', body: '🎨 好み傾向 / 🎂 記念日 / 💬 LINE連携 / 過去注文タイムライン' },
+          { title: '3. 各セクションを確認', body: '好み傾向 / 記念日 / LINE連携 / 過去注文タイムライン' },
           { title: '注文詳細から開くこともできる', body: '注文詳細の上の「その他」→「顧客カルテを開く」から直接開けます' },
         ],
       },
@@ -486,7 +486,7 @@ export const HELP_CATEGORIES = [
   {
     id: 'shift',
     name: 'シフト管理',
-    icon: '📅',
+    icon: 'CalendarDays',
     articles: [
       {
         id: 'shift_setup',
@@ -528,7 +528,7 @@ export const HELP_CATEGORIES = [
   {
     id: 'attendance',
     name: '勤怠管理・給与',
-    icon: '🕐',
+    icon: 'Clock',
     articles: [
       {
         id: 'punch_clock',
@@ -570,7 +570,7 @@ export const HELP_CATEGORIES = [
   {
     id: 'line',
     name: 'LINE連携',
-    icon: '💬',
+    icon: 'MessageCircle',
     articles: [
       {
         id: 'line_setup',
@@ -590,11 +590,11 @@ export const HELP_CATEGORIES = [
         title: 'LINE連携・解除用テキストキーワード',
         summary: 'お客様からのLINEメッセージでアカウント連携／解除',
         steps: [
-          { title: '連携希望', body: 'お客様が「📧 LINE連携を希望します」と完全一致で送信 → LINE連携手順を案内' },
+          { title: '連携希望', body: 'お客様が「LINE連携を希望します」と完全一致で送信 → LINE連携手順を案内' },
           { title: '連携解除', body: 'お客様が「停止」or「stop」と完全一致で送信 → 連携解除' },
           { title: '完全一致のみ', body: '部分一致や似たメッセージには反応しないので、雑談中の誤動作を防止' },
         ],
-        tip: 'LINEリッチメニューに「📧 LINE連携を希望します」テキストアクションを設定すると、お客様がタップ1つで連携可能！',
+        tip: 'LINEリッチメニューに「LINE連携を希望します」テキストアクションを設定すると、お客様がタップ1つで連携可能！',
       },
       {
         id: 'line_notification_pref',
@@ -613,7 +613,7 @@ export const HELP_CATEGORIES = [
   {
     id: 'payment',
     name: '決済設定（Stripe）',
-    icon: '💳',
+    icon: 'CreditCard',
     articles: [
       {
         id: 'stripe_new_account',
@@ -667,16 +667,16 @@ export const HELP_CATEGORIES = [
   {
     id: 'staff_role',
     name: 'スタッフ権限・PIN',
-    icon: '🔐',
+    icon: 'Lock',
     articles: [
       {
         id: 'role_explain',
         title: 'スタッフ権限の違い',
         summary: 'オーナー/スタッフ/バイトの3段階',
         steps: [
-          { title: 'オーナー🟢', body: '全機能アクセス可・設定変更・スタッフ管理・売上・操作履歴' },
-          { title: 'スタッフ🔵', body: '注文管理・売上閲覧・顧客管理。設定変更不可' },
-          { title: 'バイト🟠', body: '注文一覧・対応のみ。売上や設定は見えません' },
+          { title: 'オーナー', body: '全機能アクセス可・設定変更・スタッフ管理・売上・操作履歴' },
+          { title: 'スタッフ', body: '注文管理・売上閲覧・顧客管理。設定変更不可' },
+          { title: 'バイト', body: '注文一覧・対応のみ。売上や設定は見えません' },
         ],
         tip: '権限はスタッフ管理で各人にプルダウンで設定。サイドバーの表示も自動で変わる。',
       },
@@ -697,7 +697,7 @@ export const HELP_CATEGORIES = [
   {
     id: 'troubleshoot',
     name: 'トラブル時',
-    icon: '🆘',
+    icon: 'LifeBuoy',
     articles: [
       {
         id: 'cant_login',
@@ -724,7 +724,7 @@ export const HELP_CATEGORIES = [
           { title: '1. お客様のメアドを確認', body: 'タイポがないか確認（受注一覧 → 注文詳細）' },
           { title: '2. 迷惑メールフォルダを案内', body: 'お客様に確認をお願いする' },
           { title: '3. 設定→案内文管理を確認', body: 'テンプレートが「有効」になっているか確認' },
-          { title: '4. LINE併送で補完', body: '注文入力時の「💬 LINEで送る」をONにしておけばLINE経由でも届く' },
+          { title: '4. LINE併送で補完', body: '注文入力時の「LINEで送る」をONにしておけばLINE経由でも届く' },
         ],
       },
       {
@@ -732,8 +732,8 @@ export const HELP_CATEGORIES = [
         title: '操作履歴データの削除（NocoLde管理者向け）',
         summary: 'テスト操作で蓄積した履歴をきれいに消す',
         steps: [
-          { title: '1. NocoLde管理者画面 → 危険な操作タブ', body: '⚠️ スーパー管理者権限が必要' },
-          { title: '2. 📜 操作履歴のみ カード', body: '「操作履歴を全削除」ボタン' },
+          { title: '1. NocoLde管理者画面 → 危険な操作タブ', body: 'スーパー管理者権限が必要' },
+          { title: '2. 操作履歴のみ カード', body: '「操作履歴を全削除」ボタン' },
           { title: '3. 確認ダイアログ → OK', body: 'audit_log テーブルが全件クリア（他データは無影響）' },
         ],
         tip: '勤怠やシフトは別カードなので、操作履歴だけピンポイントで削除できる。一括削除カードもあり、4カテゴリ全部消したい時は「全テストデータ一括削除」をどうぞ。',

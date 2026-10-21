@@ -499,7 +499,7 @@ function SalesPageInner() {
             <h3 className="text-[14px] font-bold text-white/80 mb-2 flex items-center gap-2">
               <DollarSign size={16}/> {viewMode === 'monthly' ? '全期間 累計売上' : viewMode === 'daily' ? `${targetMonth.replace('-','年')}月 合計売上` : '未回収 合計金額'}
             </h3>
-            <p className="text-[32px] font-bold tracking-tight">¥{currentTotalSales.toLocaleString()}</p>
+            <p className="ui-num font-bold tracking-tight whitespace-nowrap" style={{ fontSize: 'clamp(20px, 2.1vw, 32px)' }}>¥{currentTotalSales.toLocaleString()}</p>
           </div>
           <div className="bg-white p-6 rounded-2xl border border-[#E6E2DA] shadow-sm flex flex-col justify-center">
             <h3 className="text-[14px] font-bold text-[#5C6660] mb-1 flex items-center gap-2">
