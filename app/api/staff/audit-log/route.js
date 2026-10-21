@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'node:crypto';
+import { publicErrorMessage } from '@/utils/safeError';
 
 export const runtime = 'nodejs';
 
@@ -105,7 +106,7 @@ export async function POST(request) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('[audit-log POST]', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err) }, { status: 500 });
   }
 }
 
@@ -132,6 +133,6 @@ export async function GET(request) {
     const { data } = await q;
     return NextResponse.json({ items: data || [] });
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err) }, { status: 500 });
   }
 }

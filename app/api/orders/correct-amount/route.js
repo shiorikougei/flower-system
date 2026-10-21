@@ -9,6 +9,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendEmail, noReplyFooter, shopContactEmail } from "@/utils/email";
+import { publicErrorMessage } from '@/utils/safeError';
 
 export const runtime = "nodejs";
 
@@ -189,7 +190,7 @@ export async function POST(request) {
       .update(updatePayload)
       .eq("id", orderId);
     if (updErr) {
-      return NextResponse.json({ error: `更新失敗: ${updErr.message}` }, { status: 500 });
+      return NextResponse.json({ error: '更新に失敗しました。少しおいてもう一度お試しください' }, { status: 500 });
     }
 
     // 店舗情報取得（メール送信用）
@@ -448,6 +449,6 @@ export async function POST(request) {
     });
   } catch (e) {
     console.error("[correct-amount]", e);
-    return NextResponse.json({ error: e?.message || "internal error" }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(e, undefined) }, { status: 500 });
   }
 }

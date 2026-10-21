@@ -6,6 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { publicErrorMessage } from '@/utils/safeError';
 
 export const runtime = 'nodejs';
 
@@ -50,7 +51,7 @@ export async function GET(request) {
     const { data } = await q.limit(2000);
     return NextResponse.json({ items: data || [] });
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err) }, { status: 500 });
   }
 }
 
@@ -85,7 +86,7 @@ export async function PUT(request) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('[shift PUT]', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err) }, { status: 500 });
   }
 }
 
@@ -102,6 +103,6 @@ export async function DELETE(request) {
     await q;
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err) }, { status: 500 });
   }
 }

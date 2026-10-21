@@ -14,6 +14,7 @@ import { sendEmail, shopContactEmail } from '@/utils/email';
 import { findTemplateFor, renderTemplate, bodyToHtml, formatOrderItems, formatOrderBreakdown, formatRecipientInfo, formatLineAddFriendBlock } from '@/utils/emailTemplates';
 import { sendLineParallelToEmail, getNotificationPreference } from '@/utils/line';
 import { createMypageMagicUrl } from '@/utils/mypageLink';
+import { publicErrorMessage } from '@/utils/safeError';
 
 export async function POST(request) {
   try {
@@ -146,6 +147,6 @@ export async function POST(request) {
     return NextResponse.json({ sent: true, email: emailResult, line: lineResult, preference: pref });
   } catch (err) {
     console.error('[send-template-email] error:', err);
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err, 'サーバーエラー') }, { status: 500 });
   }
 }

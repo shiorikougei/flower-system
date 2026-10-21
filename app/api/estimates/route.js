@@ -722,6 +722,11 @@ export async function PATCH(request) {
 
       return NextResponse.json({ ok: true });
     } else if (action === 'accept') {
+      // [2026-10] 古い「承諾」の入口は閉じる（どの画面からも使っていない）。
+      //   見積からの注文は、見積のページ → /api/orders（金額はサーバーで見積案から確定）だけにする。
+      //   下の古い処理は残してあるが、ここで必ず止まる
+      return NextResponse.json({ error: 'この方法でのご注文は受け付けていません。お見積もりのページからご注文ください' }, { status: 410 });
+      // eslint-disable-next-line no-unreachable
       // お客様承諾 → 正式注文に変換
       // [2026-10] お客様用の鍵がある見積は、鍵が合わないと受け付けない
       if (!isValidCustomerToken(cur, customerToken)) {

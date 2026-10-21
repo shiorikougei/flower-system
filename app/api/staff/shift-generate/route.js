@@ -15,6 +15,7 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { publicErrorMessage } from '@/utils/safeError';
 
 export const runtime = 'nodejs';
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -179,6 +180,6 @@ export async function POST(request) {
     });
   } catch (err) {
     console.error('[shift-generate]', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err) }, { status: 500 });
   }
 }

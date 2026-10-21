@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendEmail, noReplyFooter, shopContactEmail } from "@/utils/email";
 import { customerEstimateUrl } from "@/utils/estimateThread";
+import { publicErrorMessage } from '@/utils/safeError';
 
 export const runtime = "nodejs";
 
@@ -148,6 +149,6 @@ export async function POST(request) {
     });
   } catch (e) {
     console.error("[/api/staff/send-estimate-reminder]", e);
-    return NextResponse.json({ error: e?.message || "送信に失敗しました" }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(e, '送信に失敗しました') }, { status: 500 });
   }
 }

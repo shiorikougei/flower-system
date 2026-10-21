@@ -12,6 +12,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail, shopContactEmail } from '@/utils/email';
 import { findTemplateFor, renderTemplate, bodyToHtml } from '@/utils/emailTemplates';
+import { publicErrorMessage } from '@/utils/safeError';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -118,6 +119,6 @@ export async function GET(request) {
     });
   } catch (err) {
     console.error('[cron/anniversary-reminders] error:', err);
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err, 'サーバーエラー') }, { status: 500 });
   }
 }

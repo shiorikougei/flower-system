@@ -12,6 +12,7 @@ import { createClient } from '@supabase/supabase-js';
 import { incrementUsage, getMonthlyUsage, getAiPricing } from '@/utils/aiUsage';
 import { requireAuthedUser } from '@/utils/adminAuth';
 import { rateLimit } from '@/utils/rateLimit';
+import { publicErrorMessage } from '@/utils/safeError';
 
 export const runtime = 'nodejs';
 
@@ -139,6 +140,6 @@ export async function POST(request) {
     return NextResponse.json({ caption, source: 'openai', usage: usageInfo });
   } catch (err) {
     console.error('[generate-caption] error:', err);
-    return NextResponse.json({ error: err.message || 'Failed to generate' }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err, undefined) }, { status: 500 });
   }
 }

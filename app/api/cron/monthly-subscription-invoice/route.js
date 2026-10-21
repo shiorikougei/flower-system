@@ -11,6 +11,7 @@ import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from '@/utils/email';
 import { DEFAULT_PRICING, calcMonthlyFee, calcWithManualOverride } from '@/utils/subscriptionPricing';
 import { FEATURE_GROUPS } from '@/utils/features';
+import { publicErrorMessage } from '@/utils/safeError';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -236,6 +237,6 @@ export async function GET(request) {
     });
   } catch (err) {
     console.error('[monthly-subscription-invoice]', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err) }, { status: 500 });
   }
 }

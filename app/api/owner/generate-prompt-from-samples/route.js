@@ -13,6 +13,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { incrementUsage } from '@/utils/aiUsage';
 import { requireOwner } from '@/utils/adminAuth';
+import { publicErrorMessage } from '@/utils/safeError';
 
 export const runtime = 'nodejs';
 
@@ -115,6 +116,6 @@ ${sampleText}
     return NextResponse.json({ prompt: generatedPrompt, usage: usageInfo });
   } catch (err) {
     console.error('[generate-prompt-from-samples] error:', err);
-    return NextResponse.json({ error: err.message || 'サーバーエラー' }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err, 'サーバーエラー') }, { status: 500 });
   }
 }

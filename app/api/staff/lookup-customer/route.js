@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireTenantStaff } from '@/utils/adminAuth';
 import { rateLimit, getClientIp } from '@/utils/rateLimit';
+import { publicErrorMessage } from '@/utils/safeError';
 
 export const runtime = 'nodejs';
 
@@ -61,7 +62,7 @@ export async function GET(request) {
 
     if (error) {
       console.error('[lookup-customer]', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: publicErrorMessage(error) }, { status: 500 });
     }
 
     // 電話番号で絞り込み (jsonb 内のフィールドを正規化して比較)
@@ -127,6 +128,6 @@ export async function GET(request) {
     });
   } catch (err) {
     console.error('[lookup-customer]', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err) }, { status: 500 });
   }
 }

@@ -6,6 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import { requireOwner } from '@/utils/adminAuth';
+import { publicErrorMessage } from '@/utils/safeError';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -85,6 +86,6 @@ export async function POST(request) {
     });
   } catch (err) {
     console.error('[danger-clear]', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: publicErrorMessage(err) }, { status: 500 });
   }
 }
