@@ -95,32 +95,32 @@ export default function ShopCatalogPage() {
   const targetShop = appSettings?.shops?.find(s => String(s.id) === String(shopId)) || appSettings?.shops?.[0] || { name: appName };
 
   if (isLoading) {
-    return <div className="min-h-screen bg-[#FBFAF9] flex items-center justify-center font-sans text-[#2D4B3E] font-bold animate-pulse">読み込み中...</div>;
+    return <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center font-sans text-[#2D4B3E] font-bold animate-pulse">読み込み中...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-[#FBFAF9] font-sans text-[#111111] pb-32">
+    <div className="min-h-screen bg-[#FAFAF7] font-sans text-[#1F2A24] pb-32">
       {/* ヘッダー */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-[#EAEAEA]">
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-[#E6E2DA]">
         <div className="max-w-[1100px] mx-auto h-16 px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {logoUrl ? <img src={logoUrl} alt={appName} className="h-6 object-contain" /> : <span className="font-serif font-bold text-[18px] text-[#2D4B3E]">{targetShop.name}</span>}
           </div>
           <div className="flex items-center gap-2">
-            <Link href={`/order/${tenantId}/${shopId}`} className="hidden sm:flex items-center gap-1 text-[11px] font-bold text-[#555555] hover:text-[#2D4B3E] px-2 py-1">
+            <Link href={`/order/${tenantId}/${shopId}`} className="hidden sm:flex items-center gap-1 text-[13px] font-bold text-[#3B4640] hover:text-[#2D4B3E] px-2 py-1">
               <Sparkles size={12}/> カスタム注文
             </Link>
-            <Link href={`/order/${tenantId}/${shopId}/history`} className="hidden sm:flex items-center gap-1 text-[11px] font-bold text-[#555555] hover:text-[#2D4B3E] px-2 py-1">
+            <Link href={`/order/${tenantId}/${shopId}/history`} className="hidden sm:flex items-center gap-1 text-[13px] font-bold text-[#3B4640] hover:text-[#2D4B3E] px-2 py-1">
               <Search size={12}/> 注文確認
             </Link>
             <Link
               href={`/order/${tenantId}/${shopId}/cart`}
-              className="relative flex items-center gap-1.5 h-10 px-4 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold hover:bg-[#1f352b] transition-all"
+              className="relative flex items-center gap-1.5 h-10 px-4 bg-[#2D4B3E] text-white rounded-xl text-[14px] font-bold hover:bg-[#1f352b] transition-all"
             >
               <ShoppingCart size={16} />
               カート
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#D97D54] text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#B9562F] text-white text-[12px] font-bold rounded-full flex items-center justify-center border-2 border-white">
                   {cartCount}
                 </span>
               )}
@@ -139,12 +139,12 @@ export default function ShopCatalogPage() {
         />
         <div>
           <h1 className="text-[24px] font-bold text-[#2D4B3E]">商品ラインナップ</h1>
-          <p className="text-[12px] text-[#555555] mt-1">気に入った商品をカートに追加して、まとめてご注文いただけます。</p>
+          <p className="text-[14px] text-[#3B4640] mt-1">気に入った商品をカートに追加して、まとめてご注文いただけます。</p>
         </div>
 
         {/* [SEO-#16/#20] カテゴリから探す（カテゴリ専用ページへ） */}
         <div>
-          <h2 className="text-[13px] font-bold text-[#2D4B3E] mb-3">カテゴリから探す</h2>
+          <h2 className="text-[15px] font-bold text-[#2D4B3E] mb-3">カテゴリから探す</h2>
           <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3">
             {[
               { slug: 'bouquet', label: '花束・ブーケ', Icon: Flower2 },
@@ -157,10 +157,10 @@ export default function ShopCatalogPage() {
               <Link
                 key={c.slug}
                 href={`/category/${tenantId}/${c.slug}`}
-                className="block p-3 bg-white border border-[#EAEAEA] rounded-xl hover:border-[#2D4B3E] hover:shadow-sm transition-all text-center"
+                className="block p-3 bg-white border border-[#E6E2DA] rounded-xl hover:border-[#2D4B3E] hover:shadow-sm transition-all text-center"
               >
                 <div className="mb-1 flex justify-center text-[#2D4B3E]"><c.Icon size={24}/></div>
-                <p className="text-[10px] md:text-[11px] font-bold text-[#2D4B3E]">{c.label}</p>
+                <p className="text-[12px] md:text-[13px] font-bold text-[#2D4B3E]">{c.label}</p>
               </Link>
             ))}
           </div>
@@ -169,13 +169,13 @@ export default function ShopCatalogPage() {
         {/* 検索 & カテゴリ */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999999]" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5C6660]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="商品名で検索"
-              className="w-full h-11 pl-10 pr-4 bg-white border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"
+              className="w-full h-11 pl-10 pr-4 bg-white border border-[#E6E2DA] rounded-xl text-[15px] outline-none focus:border-[#2D4B3E]"
             />
           </div>
           {categories.length > 1 && (
@@ -184,7 +184,7 @@ export default function ShopCatalogPage() {
                 <button
                   key={c}
                   onClick={() => setSelectedCategory(c)}
-                  className={`shrink-0 px-4 h-11 rounded-xl text-[12px] font-bold transition-all ${selectedCategory === c ? 'bg-[#2D4B3E] text-white' : 'bg-white border border-[#EAEAEA] text-[#555555] hover:border-[#2D4B3E]'}`}
+                  className={`shrink-0 px-4 h-11 rounded-xl text-[14px] font-bold transition-all ${selectedCategory === c ? 'bg-[#2D4B3E] text-white' : 'bg-white border border-[#E6E2DA] text-[#3B4640] hover:border-[#2D4B3E]'}`}
                 >
                   {c === 'all' ? 'すべて' : c}
                 </button>
@@ -195,42 +195,42 @@ export default function ShopCatalogPage() {
 
         {/* 商品リスト */}
         {filteredProducts.length === 0 ? (
-          <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#EAEAEA]">
+          <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#E6E2DA]">
             <Package size={32} className="mx-auto text-[#CCC] mb-3" />
-            <p className="text-[13px] font-bold text-[#999999]">該当する商品がありません</p>
+            <p className="text-[15px] font-bold text-[#5C6660]">該当する商品がありません</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
             {filteredProducts.map(p => {
               const isOutOfStock = p.stock === 0;
               return (
-                <div key={p.id} className={`bg-white rounded-2xl border border-[#EAEAEA] overflow-hidden hover:shadow-md transition-all flex flex-col group ${isOutOfStock ? 'opacity-80' : ''}`}>
-                  <button onClick={() => !isOutOfStock && setSelectedProduct(p)} className="block aspect-square bg-[#FBFAF9] relative overflow-hidden">
+                <div key={p.id} className={`bg-white rounded-2xl border border-[#E6E2DA] overflow-hidden hover:shadow-md transition-all flex flex-col group ${isOutOfStock ? 'opacity-80' : ''}`}>
+                  <button onClick={() => !isOutOfStock && setSelectedProduct(p)} className="block aspect-square bg-[#FAFAF7] relative overflow-hidden">
                     {p.image_url ? (
                       <img src={p.image_url} alt={p.name} className={`w-full h-full object-cover transition-transform duration-300 ${isOutOfStock ? 'grayscale' : 'group-hover:scale-105'}`} />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-[#CCC]"><Package size={32}/></div>
                     )}
                     {isOutOfStock && (
-                      <div className="absolute top-3 left-3 bg-[#111111]/80 text-white text-[10px] font-bold px-2 py-1 rounded">在庫切れ</div>
+                      <div className="absolute top-3 left-3 bg-[#1F2A24]/80 text-white text-[12px] font-bold px-2 py-1 rounded">在庫切れ</div>
                     )}
                   </button>
                   <div className="p-4 space-y-2 flex-1 flex flex-col">
-                    {p.category && <p className="text-[10px] text-[#999999]">{p.category}</p>}
+                    {p.category && <p className="text-[12px] text-[#5C6660]">{p.category}</p>}
                     {/* [SEO] 商品名は個別ページへの<a>リンクに（クローラが追跡可能） */}
-                    <Link href={`/products/${tenantId}/${p.id}`} className="text-left text-[13px] font-bold text-[#111111] hover:text-[#2D4B3E] line-clamp-2 min-h-[2.6em]">{p.name}</Link>
-                    <p className="text-[15px] font-bold text-[#2D4B3E]">¥{p.price.toLocaleString()}<span className="text-[10px] font-normal text-[#999999] ml-1">(税抜)</span></p>
+                    <Link href={`/products/${tenantId}/${p.id}`} className="text-left text-[15px] font-bold text-[#1F2A24] hover:text-[#2D4B3E] line-clamp-2 min-h-[2.6em]">{p.name}</Link>
+                    <p className="text-[15px] font-bold text-[#2D4B3E]">¥{p.price.toLocaleString()}<span className="text-[12px] font-normal text-[#5C6660] ml-1">(税抜)</span></p>
                     {isOutOfStock ? (
                       <button
                         onClick={() => setNotifyTarget(p)}
-                        className="mt-auto w-full h-10 bg-white border border-[#D97D54] text-[#D97D54] rounded-xl text-[12px] font-bold hover:bg-[#D97D54] hover:text-white transition-all flex items-center justify-center gap-1.5"
+                        className="mt-auto w-full h-10 bg-white border border-[#B9562F] text-[#B9562F] rounded-xl text-[14px] font-bold hover:bg-[#B9562F] hover:text-white transition-all flex items-center justify-center gap-1.5"
                       >
                         <Bell size={14}/> 入荷したら通知
                       </button>
                     ) : (
                       <button
                         onClick={() => setSelectedProduct(p)}
-                        className="mt-auto w-full h-10 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold hover:bg-[#1f352b] transition-all flex items-center justify-center gap-1.5"
+                        className="mt-auto w-full h-10 bg-[#2D4B3E] text-white rounded-xl text-[14px] font-bold hover:bg-[#1f352b] transition-all flex items-center justify-center gap-1.5"
                       >
                         <ShoppingCart size={14}/> 詳細を見てカートへ
                       </button>
@@ -243,35 +243,35 @@ export default function ShopCatalogPage() {
         )}
 
         {/* [UX-#38] FAQ・ブログへの導線 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-12 pt-8 border-t border-[#EAEAEA]">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-12 pt-8 border-t border-[#E6E2DA]">
           <Link
             href={`/order/${tenantId}/${shopId}/faq`}
-            className="p-4 bg-white border border-[#EAEAEA] rounded-2xl hover:border-[#2D4B3E] transition-all text-center"
+            className="p-4 bg-white border border-[#E6E2DA] rounded-2xl hover:border-[#2D4B3E] transition-all text-center"
           >
             <div className="mb-1 flex justify-center text-[#2D4B3E]"><HelpCircle size={24}/></div>
-            <p className="text-[12px] font-bold text-[#2D4B3E]">よくあるご質問</p>
-            <p className="text-[10px] text-[#999] mt-0.5">配達・支払い等</p>
+            <p className="text-[14px] font-bold text-[#2D4B3E]">よくあるご質問</p>
+            <p className="text-[12px] text-[#5C6660] mt-0.5">配達・支払い等</p>
           </Link>
           <Link
             href={`/blog/${tenantId}`}
-            className="p-4 bg-white border border-[#EAEAEA] rounded-2xl hover:border-[#2D4B3E] transition-all text-center"
+            className="p-4 bg-white border border-[#E6E2DA] rounded-2xl hover:border-[#2D4B3E] transition-all text-center"
           >
             <div className="mb-1 flex justify-center text-[#2D4B3E]"><BookOpen size={24}/></div>
-            <p className="text-[12px] font-bold text-[#2D4B3E]">お花のブログ</p>
-            <p className="text-[10px] text-[#999] mt-0.5">お役立ち情報</p>
+            <p className="text-[14px] font-bold text-[#2D4B3E]">お花のブログ</p>
+            <p className="text-[12px] text-[#5C6660] mt-0.5">お役立ち情報</p>
           </Link>
           <Link
             href={`/order/${tenantId}/${shopId}/estimate`}
-            className="p-4 bg-white border border-[#EAEAEA] rounded-2xl hover:border-[#2D4B3E] transition-all text-center"
+            className="p-4 bg-white border border-[#E6E2DA] rounded-2xl hover:border-[#2D4B3E] transition-all text-center"
           >
             <div className="mb-1 flex justify-center text-[#2D4B3E]"><MessageCircle size={24}/></div>
-            <p className="text-[12px] font-bold text-[#2D4B3E]">お見積もり</p>
-            <p className="text-[10px] text-[#999] mt-0.5">特別な相談</p>
+            <p className="text-[14px] font-bold text-[#2D4B3E]">お見積もり</p>
+            <p className="text-[12px] text-[#5C6660] mt-0.5">特別な相談</p>
           </Link>
         </div>
         {/* [2026-10 B3] お店ごとのプライバシーポリシー */}
         <div className="text-center mt-6">
-          <Link href={`/order/${tenantId}/${shopId}/privacy`} className="text-[11px] text-[#777] underline hover:text-[#2D4B3E]">プライバシーポリシー</Link>
+          <Link href={`/order/${tenantId}/${shopId}/privacy`} className="text-[13px] text-[#4A544E] underline hover:text-[#2D4B3E]">プライバシーポリシー</Link>
         </div>
       </main>
 
@@ -295,7 +295,7 @@ export default function ShopCatalogPage() {
 
       {/* カート追加トースト */}
       {addingToast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#2D4B3E] text-white px-5 py-3 rounded-xl shadow-lg text-[12px] font-bold animate-in fade-in slide-in-from-bottom-2 z-50">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#2D4B3E] text-white px-5 py-3 rounded-xl shadow-lg text-[14px] font-bold animate-in fade-in slide-in-from-bottom-2 z-50">
           {addingToast}
         </div>
       )}
@@ -364,17 +364,17 @@ function ProductDetailModal({ product, onClose, onAddToCart }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111111]/40 backdrop-blur-sm p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1F2A24]/40 backdrop-blur-sm p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="sticky top-0 bg-white border-b border-[#EAEAEA] p-4 flex justify-between items-center">
-          <h3 className="text-[14px] font-bold text-[#2D4B3E]">商品詳細</h3>
-          <button onClick={onClose} className="text-[#999999] hover:text-[#111111]"><X size={18}/></button>
+        <div className="sticky top-0 bg-white border-b border-[#E6E2DA] p-4 flex justify-between items-center">
+          <h3 className="text-[15px] font-bold text-[#2D4B3E]">商品詳細</h3>
+          <button onClick={onClose} className="text-[#5C6660] hover:text-[#1F2A24]"><X size={18}/></button>
         </div>
         <div className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               {/* メイン画像 */}
-              <div className="aspect-square bg-[#FBFAF9] rounded-2xl overflow-hidden">
+              <div className="aspect-square bg-[#FAFAF7] rounded-2xl overflow-hidden">
                 {currentImage ? <img src={currentImage} alt={product.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[#CCC]"><Package size={48}/></div>}
               </div>
               {/* サムネイル（複数画像がある場合） */}
@@ -384,7 +384,7 @@ function ProductDetailModal({ product, onClose, onAddToCart }) {
                     <button
                       key={i}
                       onClick={() => setImageIdx(i)}
-                      className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${i === imageIdx ? 'border-[#2D4B3E]' : 'border-transparent hover:border-[#EAEAEA]'}`}
+                      className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${i === imageIdx ? 'border-[#2D4B3E]' : 'border-transparent hover:border-[#E6E2DA]'}`}
                     >
                       <img src={img} alt="" className="w-full h-full object-cover"/>
                     </button>
@@ -393,25 +393,25 @@ function ProductDetailModal({ product, onClose, onAddToCart }) {
               )}
             </div>
             <div className="space-y-4">
-              {product.category && <p className="text-[10px] text-[#999999]">{product.category}</p>}
-              <h2 className="text-[20px] font-bold text-[#111111]">{product.name}</h2>
-              <p className="text-[26px] font-bold text-[#2D4B3E]">¥{product.price.toLocaleString()}<span className="text-[11px] font-normal text-[#999999] ml-1">(税抜)</span></p>
-              <p className="text-[12px] text-[#555555] leading-relaxed whitespace-pre-wrap">{product.description || '—'}</p>
-              <p className="text-[11px] text-[#999999]">在庫: <span className="font-bold text-[#555555]">{product.stock}</span></p>
+              {product.category && <p className="text-[12px] text-[#5C6660]">{product.category}</p>}
+              <h2 className="text-[20px] font-bold text-[#1F2A24]">{product.name}</h2>
+              <p className="text-[26px] font-bold text-[#2D4B3E]">¥{product.price.toLocaleString()}<span className="text-[13px] font-normal text-[#5C6660] ml-1">(税抜)</span></p>
+              <p className="text-[14px] text-[#3B4640] leading-relaxed whitespace-pre-wrap">{product.description || '—'}</p>
+              <p className="text-[13px] text-[#5C6660]">在庫: <span className="font-bold text-[#3B4640]">{product.stock}</span></p>
             </div>
           </div>
 
           {/* ★ オプション選択 */}
           {(opts.wrapping?.enabled || opts.messageCard?.enabled || opts.textInsertion?.enabled) && (
             <div className="bg-pink-50 border border-pink-200 rounded-2xl p-5 space-y-4">
-              <p className="text-[13px] font-bold text-pink-900">オプション</p>
+              <p className="text-[15px] font-bold text-pink-900">オプション</p>
 
               {opts.wrapping?.enabled && (
                 <label className="flex items-start gap-3 cursor-pointer bg-white p-3 rounded-lg border border-pink-100">
                   <input type="checkbox" checked={wrappingOn} onChange={(e) => setWrappingOn(e.target.checked)} className="mt-0.5 w-5 h-5 accent-pink-600" />
                   <div className="flex-1 flex items-center justify-between">
-                    <span className="text-[13px] font-bold text-[#111111] flex items-center gap-1"><Gift size={13}/> ラッピング</span>
-                    <span className="text-[12px] font-bold text-pink-700">+¥{(Number(opts.wrapping?.price)||0).toLocaleString()}</span>
+                    <span className="text-[15px] font-bold text-[#1F2A24] flex items-center gap-1"><Gift size={13}/> ラッピング</span>
+                    <span className="text-[14px] font-bold text-pink-700">+¥{(Number(opts.wrapping?.price)||0).toLocaleString()}</span>
                   </div>
                 </label>
               )}
@@ -421,8 +421,8 @@ function ProductDetailModal({ product, onClose, onAddToCart }) {
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input type="checkbox" checked={messageCardOn} onChange={(e) => setMessageCardOn(e.target.checked)} className="mt-0.5 w-5 h-5 accent-pink-600" />
                     <div className="flex-1 flex items-center justify-between">
-                      <span className="text-[13px] font-bold text-[#111111] flex items-center gap-1"><Mail size={13}/> メッセージカード（紙）</span>
-                      <span className="text-[12px] font-bold text-pink-700">{(Number(opts.messageCard?.price)||0) === 0 ? '無料' : `+¥${(Number(opts.messageCard?.price)||0).toLocaleString()}`}</span>
+                      <span className="text-[15px] font-bold text-[#1F2A24] flex items-center gap-1"><Mail size={13}/> メッセージカード（紙）</span>
+                      <span className="text-[14px] font-bold text-pink-700">{(Number(opts.messageCard?.price)||0) === 0 ? '無料' : `+¥${(Number(opts.messageCard?.price)||0).toLocaleString()}`}</span>
                     </div>
                   </label>
                   {messageCardOn && (
@@ -431,7 +431,7 @@ function ProductDetailModal({ product, onClose, onAddToCart }) {
                         value={messageCardText}
                         onChange={(e) => setMessageCardText(e.target.value)}
                         placeholder="メッセージ内容（任意）"
-                        className="w-full h-20 px-3 py-2 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[12px] resize-none focus:border-pink-600 outline-none"
+                        className="w-full h-20 px-3 py-2 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[14px] resize-none focus:border-pink-600 outline-none"
                       />
                     </div>
                   )}
@@ -443,14 +443,14 @@ function ProductDetailModal({ product, onClose, onAddToCart }) {
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input type="checkbox" checked={textInsertionOn} onChange={(e) => setTextInsertionOn(e.target.checked)} className="mt-0.5 w-5 h-5 accent-pink-600" />
                     <div className="flex-1 flex items-center justify-between">
-                      <span className="text-[13px] font-bold text-[#111111] flex items-center gap-1"><Pen size={13}/> 文字入れ</span>
-                      <span className="text-[12px] font-bold text-pink-700">+¥{(Number(opts.textInsertion?.price)||0).toLocaleString()}</span>
+                      <span className="text-[15px] font-bold text-[#1F2A24] flex items-center gap-1"><Pen size={13}/> 文字入れ</span>
+                      <span className="text-[14px] font-bold text-pink-700">+¥{(Number(opts.textInsertion?.price)||0).toLocaleString()}</span>
                     </div>
                   </label>
                   {textInsertionOn && (
                     <div className="mt-3 ml-8 space-y-3">
                       <div>
-                        <label className="text-[11px] font-bold text-[#555555] block mb-1">
+                        <label className="text-[13px] font-bold text-[#3B4640] block mb-1">
                           入れる文字（{tiMax}文字まで{tiAllowKanji ? '' : '・漢字不可'}）
                         </label>
                         <input
@@ -459,19 +459,19 @@ function ProductDetailModal({ product, onClose, onAddToCart }) {
                           onChange={(e) => setTextInsertionText(e.target.value)}
                           maxLength={tiMax}
                           placeholder={tiAllowKanji ? '例: お誕生日おめでとう' : '例: 2025.7.18'}
-                          className="w-full h-10 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] font-bold focus:border-pink-600 outline-none"
+                          className="w-full h-10 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] font-bold focus:border-pink-600 outline-none"
                         />
-                        <p className="text-[10px] text-[#999999] mt-1">{textInsertionText.length} / {tiMax}文字</p>
+                        <p className="text-[12px] text-[#5C6660] mt-1">{textInsertionText.length} / {tiMax}文字</p>
                       </div>
                       <div>
-                        <label className="text-[11px] font-bold text-[#555555] block mb-1">文字入れ位置</label>
+                        <label className="text-[13px] font-bold text-[#3B4640] block mb-1">文字入れ位置</label>
                         <div className="flex gap-2 flex-wrap">
                           {(opts.textInsertion?.positions || []).map(pos => (
                             <button
                               key={pos}
                               type="button"
                               onClick={() => setTextInsertionPos(pos)}
-                              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border-2 transition-all ${textInsertionPos === pos ? 'bg-pink-600 text-white border-pink-600' : 'bg-white text-[#555555] border-[#EAEAEA] hover:border-pink-300'}`}
+                              className={`px-3 py-1.5 rounded-lg text-[13px] font-bold border-2 transition-all ${textInsertionPos === pos ? 'bg-pink-600 text-white border-pink-600' : 'bg-white text-[#3B4640] border-[#E6E2DA] hover:border-pink-300'}`}
                             >
                               {pos}
                             </button>
@@ -479,7 +479,7 @@ function ProductDetailModal({ product, onClose, onAddToCart }) {
                         </div>
                       </div>
                       {tiError && (
-                        <p className="text-[11px] font-bold text-red-600 flex items-center gap-1"><AlertCircle size={12}/> {tiError}</p>
+                        <p className="text-[13px] font-bold text-red-600 flex items-center gap-1"><AlertCircle size={12}/> {tiError}</p>
                       )}
                     </div>
                   )}
@@ -490,28 +490,28 @@ function ProductDetailModal({ product, onClose, onAddToCart }) {
 
           <div className="pt-4 border-t border-[#F0F0F0] space-y-3">
             <div className="flex items-center gap-3">
-              <p className="text-[11px] font-bold text-[#999999]">個数:</p>
-              <div className="flex items-center bg-[#FBFAF9] rounded-xl border border-[#EAEAEA]">
-                <button onClick={() => setQty(Math.max(1, qty - 1))} className="w-10 h-10 text-[#555555] hover:bg-white rounded-l-xl">
+              <p className="text-[13px] font-bold text-[#5C6660]">個数:</p>
+              <div className="flex items-center bg-[#FAFAF7] rounded-xl border border-[#E6E2DA]">
+                <button onClick={() => setQty(Math.max(1, qty - 1))} className="w-10 h-10 text-[#3B4640] hover:bg-white rounded-l-xl">
                   <Minus size={14} className="mx-auto" />
                 </button>
                 <span className="w-12 text-center font-bold">{qty}</span>
-                <button onClick={() => setQty(Math.min(maxQty, qty + 1))} className="w-10 h-10 text-[#555555] hover:bg-white rounded-r-xl">
+                <button onClick={() => setQty(Math.min(maxQty, qty + 1))} className="w-10 h-10 text-[#3B4640] hover:bg-white rounded-r-xl">
                   <Plus size={14} className="mx-auto" />
                 </button>
               </div>
             </div>
             {optionsTotal > 0 && (
-              <div className="bg-[#FBFAF9] rounded-xl p-3 text-[12px] space-y-1">
-                <div className="flex justify-between"><span className="text-[#555555]">商品代</span><span className="font-bold">¥{(product.price * qty).toLocaleString()}</span></div>
-                <div className="flex justify-between"><span className="text-[#555555]">オプション (×{qty})</span><span className="font-bold text-pink-700">+¥{(optionsTotal * qty).toLocaleString()}</span></div>
-                <div className="flex justify-between pt-1 border-t border-[#EAEAEA]"><span className="font-bold text-[#111111]">小計</span><span className="font-bold text-[#2D4B3E]">¥{(totalPerUnit * qty).toLocaleString()}</span></div>
+              <div className="bg-[#FAFAF7] rounded-xl p-3 text-[14px] space-y-1">
+                <div className="flex justify-between"><span className="text-[#3B4640]">商品代</span><span className="font-bold">¥{(product.price * qty).toLocaleString()}</span></div>
+                <div className="flex justify-between"><span className="text-[#3B4640]">オプション (×{qty})</span><span className="font-bold text-pink-700">+¥{(optionsTotal * qty).toLocaleString()}</span></div>
+                <div className="flex justify-between pt-1 border-t border-[#E6E2DA]"><span className="font-bold text-[#1F2A24]">小計</span><span className="font-bold text-[#2D4B3E]">¥{(totalPerUnit * qty).toLocaleString()}</span></div>
               </div>
             )}
             <button
               onClick={handleSubmit}
               disabled={textInsertionOn && Boolean(tiError)}
-              className="w-full h-12 bg-[#2D4B3E] text-white rounded-xl text-[13px] font-bold hover:bg-[#1f352b] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full h-12 bg-[#2D4B3E] text-white rounded-xl text-[15px] font-bold hover:bg-[#1f352b] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ShoppingCart size={16}/> {qty}個をカートに追加（¥{(totalPerUnit * qty).toLocaleString()}）
             </button>
@@ -551,46 +551,46 @@ function NotifyModal({ product, tenantId, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111111]/40 backdrop-blur-sm p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1F2A24]/40 backdrop-blur-sm p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-        <div className="sticky top-0 bg-white border-b border-[#EAEAEA] p-4 flex justify-between items-center">
-          <h3 className="text-[14px] font-bold text-[#2D4B3E] flex items-center gap-2"><Bell size={16}/> 入荷通知の登録</h3>
-          <button onClick={onClose} className="text-[#999999] hover:text-[#111111]"><X size={18}/></button>
+        <div className="sticky top-0 bg-white border-b border-[#E6E2DA] p-4 flex justify-between items-center">
+          <h3 className="text-[15px] font-bold text-[#2D4B3E] flex items-center gap-2"><Bell size={16}/> 入荷通知の登録</h3>
+          <button onClick={onClose} className="text-[#5C6660] hover:text-[#1F2A24]"><X size={18}/></button>
         </div>
         <div className="p-6">
           {done ? (
             <div className="text-center space-y-3 py-4">
               <CheckCircle2 size={40} className="mx-auto text-green-500" />
-              <p className="text-[13px] font-bold text-[#111111]">登録完了しました</p>
-              <p className="text-[12px] text-[#555555] leading-relaxed">
+              <p className="text-[15px] font-bold text-[#1F2A24]">登録完了しました</p>
+              <p className="text-[14px] text-[#3B4640] leading-relaxed">
                 「{product.name}」が入荷次第、メールにてお知らせいたします。
               </p>
-              <button onClick={onClose} className="mt-4 px-6 h-10 bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold">閉じる</button>
+              <button onClick={onClose} className="mt-4 px-6 h-10 bg-[#2D4B3E] text-white rounded-xl text-[14px] font-bold">閉じる</button>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA] flex gap-3">
+              <div className="bg-[#FAFAF7] p-4 rounded-xl border border-[#E6E2DA] flex gap-3">
                 {product.image_url && <img src={product.image_url} alt={product.name} className="w-14 h-14 rounded-lg object-cover"/>}
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold text-[#111111] truncate">{product.name}</p>
-                  <p className="text-[11px] text-[#D97D54] mt-0.5">在庫切れ中</p>
+                  <p className="text-[15px] font-bold text-[#1F2A24] truncate">{product.name}</p>
+                  <p className="text-[13px] text-[#B9562F] mt-0.5">在庫切れ中</p>
                 </div>
               </div>
-              <p className="text-[12px] text-[#555555] leading-relaxed">
+              <p className="text-[14px] text-[#3B4640] leading-relaxed">
                 こちらの商品が入荷した際にメールでお知らせいたします。
               </p>
               <div className="space-y-2">
                 <input type="text" placeholder="お名前（任意）" value={name} onChange={(e) => setName(e.target.value)}
-                  className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />
+                  className="w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] outline-none focus:border-[#2D4B3E]" />
                 <input type="email" required placeholder="メールアドレス" value={email} onChange={(e) => setEmail(e.target.value)}
-                  className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]" />
+                  className="w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] outline-none focus:border-[#2D4B3E]" />
               </div>
-              {error && <p className="text-red-500 text-[11px] font-bold">{error}</p>}
+              {error && <p className="text-red-500 text-[13px] font-bold">{error}</p>}
               <button type="submit" disabled={isSubmitting}
-                className="w-full h-12 bg-[#2D4B3E] text-white rounded-xl text-[13px] font-bold hover:bg-[#1f352b] disabled:opacity-50">
+                className="w-full h-12 bg-[#2D4B3E] text-white rounded-xl text-[15px] font-bold hover:bg-[#1f352b] disabled:opacity-50">
                 {isSubmitting ? '送信中...' : '通知を登録する'}
               </button>
-              <p className="text-[10px] text-[#999999] text-center">※ご登録後の連絡先変更・解除は店舗までご連絡ください</p>
+              <p className="text-[12px] text-[#5C6660] text-center">※ご登録後の連絡先変更・解除は店舗までご連絡ください</p>
             </form>
           )}
         </div>

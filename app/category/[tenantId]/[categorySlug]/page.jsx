@@ -128,17 +128,17 @@ export default async function CategoryPage({ params }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(itemListJsonLd) }}
       />
-      <main className="min-h-screen bg-[#FBFAF9] font-sans text-[#111111] pb-32">
+      <main className="min-h-screen bg-[#FAFAF7] font-sans text-[#1F2A24] pb-32">
         {/* ヘッダー */}
-        <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-[#EAEAEA]">
+        <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-[#E6E2DA]">
           <div className="max-w-[1100px] mx-auto h-16 px-6 flex items-center justify-between">
             <Link
               href={`/order/${tenantId}/${shopId}/shop`}
-              className="text-[12px] font-bold text-[#555] hover:text-[#2D4B3E]"
+              className="text-[14px] font-bold text-[#3B4640] hover:text-[#2D4B3E]"
             >
               ← 全商品に戻る
             </Link>
-            <span className="font-serif font-bold text-[14px] text-[#2D4B3E]">
+            <span className="font-serif font-bold text-[15px] text-[#2D4B3E]">
               {shopName}
             </span>
           </div>
@@ -159,20 +159,20 @@ export default async function CategoryPage({ params }) {
             <h1 className="text-[28px] md:text-[36px] font-bold text-[#2D4B3E] mb-2">
               {categoryInfo.name}
             </h1>
-            <p className="text-[13px] text-[#555] leading-relaxed">
+            <p className="text-[15px] text-[#3B4640] leading-relaxed">
               {categoryInfo.desc}
             </p>
-            <p className="text-[11px] text-[#999] mt-2">{products.length}件の商品</p>
+            <p className="text-[13px] text-[#5C6660] mt-2">{products.length}件の商品</p>
           </div>
 
           {/* 商品一覧 */}
           {products.length === 0 ? (
-            <div className="bg-white border border-dashed border-[#EAEAEA] rounded-2xl p-12 text-center">
-              <p className="text-[14px] font-bold text-[#999]">この商品カテゴリは現在準備中です</p>
-              <p className="text-[11px] text-[#CCC] mt-2">他のカテゴリをご覧ください</p>
+            <div className="bg-white border border-dashed border-[#E6E2DA] rounded-2xl p-12 text-center">
+              <p className="text-[15px] font-bold text-[#5C6660]">この商品カテゴリは現在準備中です</p>
+              <p className="text-[13px] text-[#CCC] mt-2">他のカテゴリをご覧ください</p>
               <Link
                 href={`/order/${tenantId}/${shopId}/shop`}
-                className="inline-block mt-4 px-5 h-11 leading-[44px] bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold"
+                className="inline-block mt-4 px-5 h-11 leading-[44px] bg-[#2D4B3E] text-white rounded-xl text-[14px] font-bold"
               >
                 全商品を見る
               </Link>
@@ -185,9 +185,9 @@ export default async function CategoryPage({ params }) {
                   <Link
                     key={p.id}
                     href={`/products/${tenantId}/${p.id}`}
-                    className="bg-white rounded-2xl border border-[#EAEAEA] overflow-hidden hover:shadow-md transition-all flex flex-col group"
+                    className="bg-white rounded-2xl border border-[#E6E2DA] overflow-hidden hover:shadow-md transition-all flex flex-col group"
                   >
-                    <div className="aspect-square bg-[#FBFAF9] relative overflow-hidden">
+                    <div className="aspect-square bg-[#FAFAF7] relative overflow-hidden">
                       {p.image_url ? (
                         <img
                           src={p.image_url}
@@ -199,12 +199,12 @@ export default async function CategoryPage({ params }) {
                         <div className="w-full h-full flex items-center justify-center text-[#CCC]"><Package size={32} /></div>
                       )}
                       {isOutOfStock && (
-                        <div className="absolute top-3 left-3 bg-[#111]/80 text-white text-[10px] font-bold px-2 py-1 rounded">在庫切れ</div>
+                        <div className="absolute top-3 left-3 bg-[#1F2A24]/80 text-white text-[12px] font-bold px-2 py-1 rounded">在庫切れ</div>
                       )}
                     </div>
                     <div className="p-4 flex-1 flex flex-col">
-                      {p.category && <p className="text-[10px] text-[#999]">{p.category}</p>}
-                      <p className="text-[13px] font-bold text-[#111] line-clamp-2 mt-1">{p.name}</p>
+                      {p.category && <p className="text-[12px] text-[#5C6660]">{p.category}</p>}
+                      <p className="text-[15px] font-bold text-[#1F2A24] line-clamp-2 mt-1">{p.name}</p>
                       <p className="text-[15px] font-bold text-[#2D4B3E] mt-auto pt-2">¥{p.price.toLocaleString()}</p>
                     </div>
                   </Link>
@@ -214,8 +214,8 @@ export default async function CategoryPage({ params }) {
           )}
 
           {/* [SEO-#20] 関連カテゴリへの内部リンク */}
-          <div className="mt-12 pt-8 border-t border-[#EAEAEA]">
-            <h2 className="text-[14px] font-bold text-[#2D4B3E] mb-4">他のカテゴリも見る</h2>
+          <div className="mt-12 pt-8 border-t border-[#E6E2DA]">
+            <h2 className="text-[15px] font-bold text-[#2D4B3E] mb-4">他のカテゴリも見る</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {Object.entries(CATEGORY_LABELS)
                 .filter(([slug]) => slug !== categorySlug)
@@ -224,9 +224,9 @@ export default async function CategoryPage({ params }) {
                   <Link
                     key={slug}
                     href={`/category/${tenantId}/${slug}`}
-                    className="block p-3 bg-white border border-[#EAEAEA] rounded-xl hover:border-[#2D4B3E] transition-all text-center"
+                    className="block p-3 bg-white border border-[#E6E2DA] rounded-xl hover:border-[#2D4B3E] transition-all text-center"
                   >
-                    <p className="text-[12px] font-bold text-[#2D4B3E]">{info.name}</p>
+                    <p className="text-[14px] font-bold text-[#2D4B3E]">{info.name}</p>
                   </Link>
                 ))}
             </div>

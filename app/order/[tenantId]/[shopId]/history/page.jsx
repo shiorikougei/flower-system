@@ -142,17 +142,17 @@ export default function OrderHistoryPage() {
     if (o.payment_status === 'paid') return { label: '入金済', cls: 'bg-green-50 text-green-700 border-green-200' };
     if (o.payment_status === 'failed') return { label: '決済失敗', cls: 'bg-red-50 text-red-700 border-red-200' };
     if (o.payment_status === 'processing') return { label: '決済処理中', cls: 'bg-blue-50 text-blue-700 border-blue-200' };
-    if (o.payment_status === 'refunded') return { label: '返金済', cls: 'bg-[#FBFAF9] text-[#999999] border-[#EAEAEA]' };
+    if (o.payment_status === 'refunded') return { label: '返金済', cls: 'bg-[#FAFAF7] text-[#5C6660] border-[#E6E2DA]' };
     const ps = o.order_data?.paymentStatus || '未入金';
     const isPaid = ps && !ps.includes('未');
-    return { label: ps, cls: isPaid ? 'bg-green-50 text-green-700 border-green-200' : 'bg-[#D97D54]/10 text-[#D97D54] border-[#D97D54]/20' };
+    return { label: ps, cls: isPaid ? 'bg-green-50 text-green-700 border-green-200' : 'bg-[#B9562F]/10 text-[#B9562F] border-[#B9562F]/20' };
   }
 
   return (
-    <div className="min-h-screen bg-[#FBFAF9] font-sans text-[#111111] pb-32">
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-[#EAEAEA]">
+    <div className="min-h-screen bg-[#FAFAF7] font-sans text-[#1F2A24] pb-32">
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-[#E6E2DA]">
         <div className="max-w-[800px] mx-auto h-16 px-6 flex items-center justify-between">
-          <Link href={`/order/${tenantId}/${shopId}`} className="flex items-center gap-1 text-[12px] font-bold text-[#555555] hover:text-[#2D4B3E]">
+          <Link href={`/order/${tenantId}/${shopId}`} className="flex items-center gap-1 text-[14px] font-bold text-[#3B4640] hover:text-[#2D4B3E]">
             <ChevronLeft size={16}/> 戻る
           </Link>
           <h1 className="text-[16px] font-bold text-[#2D4B3E]">ご注文の確認・マイページ</h1>
@@ -163,19 +163,19 @@ export default function OrderHistoryPage() {
       <main className="max-w-[800px] mx-auto px-6 pt-10 space-y-8">
         <div>
           <h1 className="text-[24px] font-bold text-[#2D4B3E]">マイページにログイン</h1>
-          <p className="text-[12px] text-[#555555] mt-1">ご注文時のメールアドレスでログインしてください。</p>
+          <p className="text-[14px] text-[#3B4640] mt-1">ご注文時のメールアドレスでログインしてください。</p>
         </div>
 
         {/* メールアドレス入力 */}
-        <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-4">
+        <div className="bg-white p-6 rounded-2xl border border-[#E6E2DA] space-y-4">
           <div className="space-y-1">
-            <label className="text-[11px] font-bold text-[#999999]">ご注文時のメールアドレス</label>
+            <label className="text-[13px] font-bold text-[#5C6660]">ご注文時のメールアドレス</label>
             <input
               type="email"
               value={email}
               onChange={(e) => { setEmail(e.target.value); setMagicLinkSent(false); }}
               placeholder="example@example.com"
-              className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none"
+              className="w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] focus:border-[#2D4B3E] outline-none"
             />
           </div>
 
@@ -183,20 +183,20 @@ export default function OrderHistoryPage() {
           {hasPassword && (
             <form onSubmit={handlePasswordLogin} className="space-y-3 animate-in fade-in">
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-[#999999] flex items-center gap-1"><Lock size={11}/> パスワード</label>
+                <label className="text-[13px] font-bold text-[#5C6660] flex items-center gap-1"><Lock size={11}/> パスワード</label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="パスワード"
-                  className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none"
+                  className="w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] focus:border-[#2D4B3E] outline-none"
                   required
                 />
               </div>
               <button
                 type="submit"
                 disabled={isLoggingIn}
-                className="w-full h-12 bg-[#2D4B3E] text-white rounded-xl font-bold text-[13px] hover:bg-[#1f352b] disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full h-12 bg-[#2D4B3E] text-white rounded-xl font-bold text-[15px] hover:bg-[#1f352b] disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <KeyRound size={16}/> {isLoggingIn ? 'ログイン中...' : 'パスワードでログイン'}
               </button>
@@ -204,7 +204,7 @@ export default function OrderHistoryPage() {
                 type="button"
                 onClick={sendMagicLink}
                 disabled={magicLinkSending}
-                className="w-full text-[11px] text-[#999] hover:text-[#2D4B3E] underline pt-1"
+                className="w-full text-[13px] text-[#5C6660] hover:text-[#2D4B3E] underline pt-1"
               >
                 パスワードを忘れた場合（メールでログインリンクを受け取る）
               </button>
@@ -214,7 +214,7 @@ export default function OrderHistoryPage() {
           {/* パスワード未設定 or 未確認: Magic Link 優先 */}
           {(!hasPassword || hasPassword === null) && email.trim() && (
             <div className="space-y-3 animate-in fade-in">
-              <p className="text-[11px] text-[#999999] leading-relaxed bg-[#FBFAF9] p-3 rounded-lg">
+              <p className="text-[13px] text-[#5C6660] leading-relaxed bg-[#FAFAF7] p-3 rounded-lg">
                 {hasPassword === null
                   ? 'メールアドレスを確認中...'
                   : '初回ログインです。お送りするメールのリンクからログインしてください。マイページでパスワードを設定すれば次回からはパスワードでログインできます。'}
@@ -222,14 +222,14 @@ export default function OrderHistoryPage() {
               {magicLinkSent ? (
                 <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2 text-green-700">
                   <CheckCircle2 size={16}/>
-                  <p className="text-[12px] font-bold">ログインリンクをメールでお送りしました</p>
+                  <p className="text-[14px] font-bold">ログインリンクをメールでお送りしました</p>
                 </div>
               ) : (
                 <button
                   type="button"
                   onClick={sendMagicLink}
                   disabled={magicLinkSending || !email.trim()}
-                  className="w-full h-12 bg-[#2D4B3E] text-white rounded-xl font-bold text-[13px] hover:bg-[#1f352b] disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full h-12 bg-[#2D4B3E] text-white rounded-xl font-bold text-[15px] hover:bg-[#1f352b] disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   <Mail size={16}/> {magicLinkSending ? '送信中...' : 'ログインリンクをメールで受け取る'}
                 </button>
@@ -241,32 +241,32 @@ export default function OrderHistoryPage() {
         {error && (
           <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700">
             <AlertCircle size={16}/>
-            <p className="text-[12px] font-bold">{error}</p>
+            <p className="text-[14px] font-bold">{error}</p>
           </div>
         )}
 
         {/* 注文番号での検索（個別注文のみ確認したい場合の補助） */}
-        <details className="bg-white rounded-2xl border border-[#EAEAEA]">
-          <summary className="cursor-pointer p-5 text-[13px] font-bold text-[#555] hover:bg-[#FBFAF9] flex items-center gap-2">
+        <details className="bg-white rounded-2xl border border-[#E6E2DA]">
+          <summary className="cursor-pointer p-5 text-[15px] font-bold text-[#3B4640] hover:bg-[#FAFAF7] flex items-center gap-2">
             <Search size={14}/> 注文番号で単一注文を検索する（ログイン不要）
           </summary>
-          <form onSubmit={handleSearch} className="p-5 pt-0 space-y-4 border-t border-[#EAEAEA]">
+          <form onSubmit={handleSearch} className="p-5 pt-0 space-y-4 border-t border-[#E6E2DA]">
             <div className="space-y-1">
-              <label className="text-[11px] font-bold text-[#999999]">ご注文番号</label>
+              <label className="text-[13px] font-bold text-[#5C6660]">ご注文番号</label>
               <input
                 type="text"
                 value={orderId}
                 onChange={(e) => setOrderId(e.target.value)}
                 placeholder="例: 1a2b3c4d  または完全な注文番号"
-                className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] focus:border-[#2D4B3E] outline-none"
+                className="w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] focus:border-[#2D4B3E] outline-none"
                 required
               />
-              <p className="text-[10px] text-[#999999]">注文確認メールに記載の最初の8文字でも検索できます</p>
+              <p className="text-[12px] text-[#5C6660]">注文確認メールに記載の最初の8文字でも検索できます</p>
             </div>
             <button
               type="submit"
               disabled={isSearching || !email.trim()}
-              className="w-full h-11 bg-white border border-[#2D4B3E] text-[#2D4B3E] rounded-xl font-bold text-[12px] hover:bg-[#2D4B3E] hover:text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full h-11 bg-white border border-[#2D4B3E] text-[#2D4B3E] rounded-xl font-bold text-[14px] hover:bg-[#2D4B3E] hover:text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Search size={14}/> {isSearching ? '検索中...' : '注文を検索する'}
             </button>
@@ -275,48 +275,48 @@ export default function OrderHistoryPage() {
 
         {searched && !error && results.length > 0 && (
           <div className="space-y-4">
-            <h2 className="text-[14px] font-bold text-[#2D4B3E]">検索結果 ({results.length}件)</h2>
+            <h2 className="text-[15px] font-bold text-[#2D4B3E]">検索結果 ({results.length}件)</h2>
             {results.map(o => {
               const d = o.order_data || {};
               const badge = paymentBadge(o);
               return (
-                <div key={o.id} className="bg-white p-5 rounded-2xl border border-[#EAEAEA] space-y-3">
+                <div key={o.id} className="bg-white p-5 rounded-2xl border border-[#E6E2DA] space-y-3">
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <p className="text-[11px] text-[#999999]">ご注文番号: <code className="text-[#555555] bg-[#FBFAF9] px-2 py-0.5 rounded text-[10px]">{String(o.id).slice(0, 8)}</code></p>
-                    <p className="text-[11px] text-[#999999]">ご注文日時: {formatDate(o.created_at)}</p>
+                    <p className="text-[13px] text-[#5C6660]">ご注文番号: <code className="text-[#3B4640] bg-[#FAFAF7] px-2 py-0.5 rounded text-[12px]">{String(o.id).slice(0, 8)}</code></p>
+                    <p className="text-[13px] text-[#5C6660]">ご注文日時: {formatDate(o.created_at)}</p>
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${badge.cls}`}>{badge.label}</span>
-                    {d.status === 'completed' && <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-[#FBFAF9] text-[#555555] border border-[#EAEAEA]">手配完了</span>}
-                    {d.status === 'キャンセル' && <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-red-50 text-red-700 border border-red-200">キャンセル</span>}
+                    <span className={`text-[12px] font-bold px-3 py-1 rounded-full border ${badge.cls}`}>{badge.label}</span>
+                    {d.status === 'completed' && <span className="text-[12px] font-bold px-3 py-1 rounded-full bg-[#FAFAF7] text-[#3B4640] border border-[#E6E2DA]">手配完了</span>}
+                    {d.status === 'キャンセル' && <span className="text-[12px] font-bold px-3 py-1 rounded-full bg-red-50 text-red-700 border border-red-200">キャンセル</span>}
                   </div>
 
-                  <div className="bg-[#FBFAF9] p-4 rounded-xl border border-[#EAEAEA] space-y-2 text-[12px]">
-                    <p className="text-[#555555]"><span className="text-[#999999]">お名前:</span> <span className="font-bold">{d.customerInfo?.name} 様</span></p>
+                  <div className="bg-[#FAFAF7] p-4 rounded-xl border border-[#E6E2DA] space-y-2 text-[14px]">
+                    <p className="text-[#3B4640]"><span className="text-[#5C6660]">お名前:</span> <span className="font-bold">{d.customerInfo?.name} 様</span></p>
                     {Array.isArray(d.cartItems) && d.cartItems.length > 0 ? (
                       <>
-                        <p className="text-[#999999]">ご注文内容:</p>
+                        <p className="text-[#5C6660]">ご注文内容:</p>
                         {d.cartItems.map((c, i) => (
-                          <p key={i} className="text-[#555555] pl-3">• {c.name} × {c.qty} (¥{Number(c.price).toLocaleString()})</p>
+                          <p key={i} className="text-[#3B4640] pl-3">• {c.name} × {c.qty} (¥{Number(c.price).toLocaleString()})</p>
                         ))}
                       </>
                     ) : (
                       <>
-                        {d.flowerType && <p className="text-[#555555]"><span className="text-[#999999]">商品:</span> <span className="font-bold">{d.flowerType}</span></p>}
-                        {d.flowerPurpose && <p className="text-[#555555]"><span className="text-[#999999]">用途:</span> {d.flowerPurpose}</p>}
+                        {d.flowerType && <p className="text-[#3B4640]"><span className="text-[#5C6660]">商品:</span> <span className="font-bold">{d.flowerType}</span></p>}
+                        {d.flowerPurpose && <p className="text-[#3B4640]"><span className="text-[#5C6660]">用途:</span> {d.flowerPurpose}</p>}
                       </>
                     )}
-                    {d.selectedDate && <p className="text-[#555555]"><span className="text-[#999999]">納品希望日:</span> {d.selectedDate}</p>}
+                    {d.selectedDate && <p className="text-[#3B4640]"><span className="text-[#5C6660]">納品希望日:</span> {d.selectedDate}</p>}
                   </div>
 
                   <div className="flex justify-between items-baseline pt-3 border-t border-[#F0F0F0]">
-                    <span className="text-[12px] font-bold text-[#555555]">合計（税込）</span>
+                    <span className="text-[14px] font-bold text-[#3B4640]">合計（税込）</span>
                     <span className="text-[18px] font-bold text-[#2D4B3E]">¥{totalOf(o).toLocaleString()}</span>
                   </div>
 
                   {o.payment_status === 'paid' && (
-                    <div className="flex items-center gap-2 text-green-700 text-[11px] pt-1">
+                    <div className="flex items-center gap-2 text-green-700 text-[13px] pt-1">
                       <CheckCircle2 size={14}/> お支払い完了 {o.paid_at && `（${formatDate(o.paid_at)}）`}
                     </div>
                   )}
@@ -327,10 +327,10 @@ export default function OrderHistoryPage() {
         )}
 
         {searched && !error && results.length === 0 && !isSearching && (
-          <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#EAEAEA]">
+          <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#E6E2DA]">
             <Package size={32} className="mx-auto text-[#CCC] mb-3"/>
-            <p className="text-[13px] font-bold text-[#999999]">該当する注文が見つかりません</p>
-            <p className="text-[11px] text-[#CCC] mt-1">ご注文番号とメールアドレスをご確認ください</p>
+            <p className="text-[15px] font-bold text-[#5C6660]">該当する注文が見つかりません</p>
+            <p className="text-[13px] text-[#CCC] mt-1">ご注文番号とメールアドレスをご確認ください</p>
           </div>
         )}
       </main>

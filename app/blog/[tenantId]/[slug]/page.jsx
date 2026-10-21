@@ -19,15 +19,15 @@ function renderMarkdown(md) {
   html = html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
   // コードブロック
-  html = html.replace(/```([\s\S]*?)```/g, '<pre class="bg-[#F5F2EE] p-4 rounded-xl overflow-x-auto text-[12px] my-4"><code>$1</code></pre>');
+  html = html.replace(/```([\s\S]*?)```/g, '<pre class="bg-[#F5F2EE] p-4 rounded-xl overflow-x-auto text-[14px] my-4"><code>$1</code></pre>');
 
   // 見出し
   html = html.replace(/^### (.*)$/gm, '<h3 class="text-[16px] font-bold text-[#2D4B3E] mt-6 mb-2">$1</h3>');
-  html = html.replace(/^## (.*)$/gm, '<h2 class="text-[20px] font-bold text-[#2D4B3E] mt-8 mb-3 pb-2 border-b border-[#EAEAEA]">$1</h2>');
+  html = html.replace(/^## (.*)$/gm, '<h2 class="text-[20px] font-bold text-[#2D4B3E] mt-8 mb-3 pb-2 border-b border-[#E6E2DA]">$1</h2>');
   html = html.replace(/^# (.*)$/gm, '<h1 class="text-[24px] font-bold text-[#2D4B3E] mt-8 mb-4">$1</h1>');
 
   // インラインコード
-  html = html.replace(/`([^`]+)`/g, '<code class="bg-[#F5F2EE] px-1.5 py-0.5 rounded text-[12px]">$1</code>');
+  html = html.replace(/`([^`]+)`/g, '<code class="bg-[#F5F2EE] px-1.5 py-0.5 rounded text-[14px]">$1</code>');
 
   // 太字・斜体
   html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
@@ -58,7 +58,7 @@ function renderMarkdown(md) {
   });
 
   // 引用
-  html = html.replace(/^> (.*)$/gm, '<blockquote class="border-l-4 border-[#2D4B3E] pl-4 py-1 my-4 text-[#555] italic">$1</blockquote>');
+  html = html.replace(/^> (.*)$/gm, '<blockquote class="border-l-4 border-[#2D4B3E] pl-4 py-1 my-4 text-[#3B4640] italic">$1</blockquote>');
 
   // 段落（連続改行で区切る）
   html = html.split(/\n\n+/).map(para => {
@@ -66,7 +66,7 @@ function renderMarkdown(md) {
     if (!trimmed) return '';
     // 既にHTMLタグで始まってる場合はそのまま
     if (/^<(h\d|ul|ol|pre|blockquote|img)/.test(trimmed)) return trimmed;
-    return `<p class="my-3 leading-[1.9] text-[14px]">${trimmed.replace(/\n/g, '<br/>')}</p>`;
+    return `<p class="my-3 leading-[1.9] text-[15px]">${trimmed.replace(/\n/g, '<br/>')}</p>`;
   }).join('\n');
 
   return html;
@@ -181,13 +181,13 @@ export default async function BlogPostPage({ params }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(articleJsonLd) }}
       />
-      <main className="min-h-screen bg-[#FBFAF9] font-sans text-[#111] pb-32">
-        <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-[#EAEAEA]">
+      <main className="min-h-screen bg-[#FAFAF7] font-sans text-[#1F2A24] pb-32">
+        <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-[#E6E2DA]">
           <div className="max-w-[800px] mx-auto h-16 px-6 flex items-center justify-between">
-            <Link href={`/blog/${tenantId}`} className="text-[12px] font-bold text-[#555] hover:text-[#2D4B3E]">
+            <Link href={`/blog/${tenantId}`} className="text-[14px] font-bold text-[#3B4640] hover:text-[#2D4B3E]">
               ← ブログ一覧
             </Link>
-            <span className="font-serif font-bold text-[14px] text-[#2D4B3E]">{shopName}</span>
+            <span className="font-serif font-bold text-[15px] text-[#2D4B3E]">{shopName}</span>
           </div>
         </header>
 
@@ -204,7 +204,7 @@ export default async function BlogPostPage({ params }) {
           {post.tags && post.tags.length > 0 && (
             <div className="flex gap-2 mb-3 flex-wrap">
               {post.tags.map(tag => (
-                <span key={tag} className="text-[10px] bg-[#F5F2EE] text-[#666] px-2 py-0.5 rounded-full">
+                <span key={tag} className="text-[12px] bg-[#F5F2EE] text-[#3B4640] px-2 py-0.5 rounded-full">
                   #{tag}
                 </span>
               ))}
@@ -215,7 +215,7 @@ export default async function BlogPostPage({ params }) {
           <h1 className="text-[24px] md:text-[32px] font-bold text-[#2D4B3E] leading-tight mb-3">{post.title}</h1>
 
           {/* メタ情報 */}
-          <div className="flex items-center gap-2 text-[12px] text-[#999] mb-6 pb-6 border-b border-[#EAEAEA]">
+          <div className="flex items-center gap-2 text-[14px] text-[#5C6660] mb-6 pb-6 border-b border-[#E6E2DA]">
             {post.published_at && (
               <time dateTime={post.published_at}>
                 {new Date(post.published_at).toLocaleDateString("ja-JP", {
@@ -228,7 +228,7 @@ export default async function BlogPostPage({ params }) {
 
           {/* カバー画像 */}
           {post.cover_image_url && (
-            <div className="aspect-[16/9] bg-[#FBFAF9] rounded-2xl overflow-hidden mb-8">
+            <div className="aspect-[16/9] bg-[#FAFAF7] rounded-2xl overflow-hidden mb-8">
               <img src={post.cover_image_url} alt={post.title} className="w-full h-full object-cover" />
             </div>
           )}
@@ -240,24 +240,24 @@ export default async function BlogPostPage({ params }) {
           />
 
           {/* [SEO-#20] CTA - 店舗に戻る/EC */}
-          <div className="mt-12 pt-8 border-t border-[#EAEAEA] grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="mt-12 pt-8 border-t border-[#E6E2DA] grid grid-cols-1 md:grid-cols-3 gap-3">
             <Link
               href={`/order/${tenantId}/${shopId}/shop`}
-              className="block p-4 bg-white border border-[#EAEAEA] rounded-xl hover:border-[#2D4B3E] transition-all text-center"
+              className="block p-4 bg-white border border-[#E6E2DA] rounded-xl hover:border-[#2D4B3E] transition-all text-center"
             >
-              <p className="text-[13px] font-bold text-[#2D4B3E]">商品を見る</p>
+              <p className="text-[15px] font-bold text-[#2D4B3E]">商品を見る</p>
             </Link>
             <Link
               href={`/order/${tenantId}/${shopId}/custom`}
-              className="block p-4 bg-white border border-[#EAEAEA] rounded-xl hover:border-[#2D4B3E] transition-all text-center"
+              className="block p-4 bg-white border border-[#E6E2DA] rounded-xl hover:border-[#2D4B3E] transition-all text-center"
             >
-              <p className="text-[13px] font-bold text-[#2D4B3E]">カスタム注文</p>
+              <p className="text-[15px] font-bold text-[#2D4B3E]">カスタム注文</p>
             </Link>
             <Link
               href={`/blog/${tenantId}`}
-              className="block p-4 bg-white border border-[#EAEAEA] rounded-xl hover:border-[#2D4B3E] transition-all text-center"
+              className="block p-4 bg-white border border-[#E6E2DA] rounded-xl hover:border-[#2D4B3E] transition-all text-center"
             >
-              <p className="text-[13px] font-bold text-[#2D4B3E]">他の記事も読む</p>
+              <p className="text-[15px] font-bold text-[#2D4B3E]">他の記事も読む</p>
             </Link>
           </div>
         </article>

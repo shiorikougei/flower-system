@@ -200,10 +200,10 @@ export default function CartPage() {
   const targetShop = appSettings?.shops?.find(s => String(s.id) === String(shopId)) || appSettings?.shops?.[0] || { name: appName };
 
   return (
-    <div className="min-h-screen bg-[#FBFAF9] font-sans text-[#111111] pb-32">
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-[#EAEAEA]">
+    <div className="min-h-screen bg-[#FAFAF7] font-sans text-[#1F2A24] pb-32">
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-[#E6E2DA]">
         <div className="max-w-[800px] mx-auto h-16 px-6 flex items-center justify-between">
-          <Link href={`/order/${tenantId}/${shopId}/shop`} className="flex items-center gap-1 text-[12px] font-bold text-[#555555] hover:text-[#2D4B3E]">
+          <Link href={`/order/${tenantId}/${shopId}/shop`} className="flex items-center gap-1 text-[14px] font-bold text-[#3B4640] hover:text-[#2D4B3E]">
             <ChevronLeft size={16}/> 商品一覧に戻る
           </Link>
           <div className="flex items-center gap-3">
@@ -216,10 +216,10 @@ export default function CartPage() {
         <h1 className="text-[24px] font-bold text-[#2D4B3E] flex items-center gap-3"><ShoppingCart size={24}/>カート</h1>
 
         {cart.length === 0 ? (
-          <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#EAEAEA]">
+          <div className="bg-white p-12 text-center rounded-2xl border border-dashed border-[#E6E2DA]">
             <Package size={32} className="mx-auto text-[#CCC] mb-3" />
-            <p className="text-[13px] font-bold text-[#999999]">カートは空です</p>
-            <Link href={`/order/${tenantId}/${shopId}/shop`} className="inline-block mt-4 px-5 h-11 leading-[44px] bg-[#2D4B3E] text-white rounded-xl text-[12px] font-bold">
+            <p className="text-[15px] font-bold text-[#5C6660]">カートは空です</p>
+            <Link href={`/order/${tenantId}/${shopId}/shop`} className="inline-block mt-4 px-5 h-11 leading-[44px] bg-[#2D4B3E] text-white rounded-xl text-[14px] font-bold">
               商品を見に行く
             </Link>
           </div>
@@ -232,32 +232,32 @@ export default function CartPage() {
                 const opt = item.selectedOptions || {};
                 const optTotal = calcOptionsTotal(opt);
                 return (
-                  <div key={key} className="bg-white p-4 rounded-2xl border border-[#EAEAEA] flex gap-4">
-                    <div className="w-20 h-20 shrink-0 bg-[#FBFAF9] rounded-xl overflow-hidden">
+                  <div key={key} className="bg-white p-4 rounded-2xl border border-[#E6E2DA] flex gap-4">
+                    <div className="w-20 h-20 shrink-0 bg-[#FAFAF7] rounded-xl overflow-hidden">
                       {item.imageUrl ? <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[#CCC]"><Package size={20}/></div>}
                     </div>
                     <div className="flex-1 min-w-0 space-y-2">
-                      <p className="text-[13px] font-bold text-[#111111] truncate">{item.name}</p>
-                      <p className="text-[13px] font-bold text-[#2D4B3E]">¥{item.price.toLocaleString()}{optTotal > 0 && <span className="text-[10px] font-normal text-pink-700 ml-1">+ オプション¥{optTotal.toLocaleString()}</span>}</p>
+                      <p className="text-[15px] font-bold text-[#1F2A24] truncate">{item.name}</p>
+                      <p className="text-[15px] font-bold text-[#2D4B3E]">¥{item.price.toLocaleString()}{optTotal > 0 && <span className="text-[12px] font-normal text-pink-700 ml-1">+ オプション¥{optTotal.toLocaleString()}</span>}</p>
                       {/* オプション表示 */}
                       {(opt.wrapping || opt.messageCard || opt.textInsertion) && (
                         <div className="bg-pink-50 rounded-lg p-2 space-y-1">
                           {opt.wrapping && (
-                            <p className="text-[10px] text-pink-900 flex items-center gap-1"><Gift size={11}/> ラッピング (+¥{(opt.wrapping.price||0).toLocaleString()})</p>
+                            <p className="text-[12px] text-pink-900 flex items-center gap-1"><Gift size={11}/> ラッピング (+¥{(opt.wrapping.price||0).toLocaleString()})</p>
                           )}
                           {opt.messageCard && (
-                            <p className="text-[10px] text-pink-900 flex items-center gap-1"><Mail size={11}/> メッセージカード{opt.messageCard.text ? ` 「${opt.messageCard.text.slice(0,15)}${opt.messageCard.text.length>15?'…':''}」` : ''} {opt.messageCard.price > 0 ? `(+¥${(opt.messageCard.price||0).toLocaleString()})` : '(無料)'}</p>
+                            <p className="text-[12px] text-pink-900 flex items-center gap-1"><Mail size={11}/> メッセージカード{opt.messageCard.text ? ` 「${opt.messageCard.text.slice(0,15)}${opt.messageCard.text.length>15?'…':''}」` : ''} {opt.messageCard.price > 0 ? `(+¥${(opt.messageCard.price||0).toLocaleString()})` : '(無料)'}</p>
                           )}
                           {opt.textInsertion && (
-                            <p className="text-[10px] text-pink-900 flex items-center gap-1"><Pen size={11}/> 文字入れ「{opt.textInsertion.text}」({opt.textInsertion.position}) (+¥{(opt.textInsertion.price||0).toLocaleString()})</p>
+                            <p className="text-[12px] text-pink-900 flex items-center gap-1"><Pen size={11}/> 文字入れ「{opt.textInsertion.text}」({opt.textInsertion.position}) (+¥{(opt.textInsertion.price||0).toLocaleString()})</p>
                           )}
                         </div>
                       )}
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center bg-[#FBFAF9] rounded-lg border border-[#EAEAEA]">
-                          <button onClick={() => handleQtyChange(key, item.qty - 1)} className="w-8 h-8 text-[#555555] hover:bg-white"><Minus size={12} className="mx-auto"/></button>
-                          <span className="w-8 text-center text-[12px] font-bold">{item.qty}</span>
-                          <button onClick={() => handleQtyChange(key, item.qty + 1)} className="w-8 h-8 text-[#555555] hover:bg-white"><Plus size={12} className="mx-auto"/></button>
+                        <div className="flex items-center bg-[#FAFAF7] rounded-lg border border-[#E6E2DA]">
+                          <button onClick={() => handleQtyChange(key, item.qty - 1)} className="w-8 h-8 text-[#3B4640] hover:bg-white"><Minus size={12} className="mx-auto"/></button>
+                          <span className="w-8 text-center text-[14px] font-bold">{item.qty}</span>
+                          <button onClick={() => handleQtyChange(key, item.qty + 1)} className="w-8 h-8 text-[#3B4640] hover:bg-white"><Plus size={12} className="mx-auto"/></button>
                         </div>
                         <button onClick={() => handleRemove(key)} className="text-red-400 hover:text-red-600"><Trash2 size={14}/></button>
                       </div>
@@ -268,46 +268,46 @@ export default function CartPage() {
             </div>
 
             {/* お見積もり内訳 */}
-            <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-2">
-              <p className="text-[11px] font-bold text-[#2D4B3E] mb-2">お見積もり内訳</p>
-              <div className="flex justify-between text-[13px] text-[#555555]"><span>商品代{optionsSubTotal > 0 ? '＋オプション' : ''}（税抜）</span><span>¥{subTotal.toLocaleString()}</span></div>
+            <div className="bg-white p-6 rounded-2xl border border-[#E6E2DA] space-y-2">
+              <p className="text-[13px] font-bold text-[#2D4B3E] mb-2">お見積もり内訳</p>
+              <div className="flex justify-between text-[15px] text-[#3B4640]"><span>商品代{optionsSubTotal > 0 ? '＋オプション' : ''}（税抜）</span><span>¥{subTotal.toLocaleString()}</span></div>
               {boxFee > 0 && (
-                <div className="flex justify-between text-[12px] text-[#555555]">
+                <div className="flex justify-between text-[14px] text-[#3B4640]">
                   <span>梱包代 {maxSize ? `(${maxSize}サイズ)` : ''}</span>
                   <span>¥{boxFee.toLocaleString()}</span>
                 </div>
               )}
               {shippingFee > 0 ? (
-                <div className="flex justify-between text-[12px] text-[#555555]">
+                <div className="flex justify-between text-[14px] text-[#3B4640]">
                   <span>配送料 {maxSize ? `(${maxSize}サイズ)` : ''}</span>
                   <span>¥{shippingFee.toLocaleString()}</span>
                 </div>
               ) : (
-                <div className="flex justify-between text-[11px] text-[#999]">
+                <div className="flex justify-between text-[13px] text-[#5C6660]">
                   <span>配送料</span>
-                  <span className="text-[10px]">{deliveryAddr ? '※住所からサイズ別に算出' : 'お届け先住所入力後に表示'}</span>
+                  <span className="text-[12px]">{deliveryAddr ? '※住所からサイズ別に算出' : 'お届け先住所入力後に表示'}</span>
                 </div>
               )}
-              <div className="flex justify-between text-[12px] text-[#999999] pt-2 border-t border-[#F0F0F0]"><span>消費税（10%）</span><span>¥{tax.toLocaleString()}</span></div>
-              <div className="flex justify-between items-baseline pt-3 border-t border-[#EAEAEA]">
-                <span className="text-[13px] font-bold text-[#111111]">合計（税込）</span>
+              <div className="flex justify-between text-[14px] text-[#5C6660] pt-2 border-t border-[#F0F0F0]"><span>消費税（10%）</span><span>¥{tax.toLocaleString()}</span></div>
+              <div className="flex justify-between items-baseline pt-3 border-t border-[#E6E2DA]">
+                <span className="text-[15px] font-bold text-[#1F2A24]">合計（税込）</span>
                 <span className="text-[20px] font-bold text-[#2D4B3E]">¥{totalAmount.toLocaleString()}</span>
               </div>
             </div>
 
             {/* ご依頼主情報 */}
-            <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-3">
-              <p className="text-[12px] font-bold text-[#555555] mb-3">ご依頼主様情報</p>
-              <input type="text" placeholder="お名前" value={customerInfo.name} onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"/>
-              <input type="tel" placeholder="電話番号" value={customerInfo.phone} onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"/>
-              <input type="email" placeholder="メールアドレス" value={customerInfo.email} onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"/>
-              <input type="text" placeholder="郵便番号（7桁・ハイフンなし）" value={customerInfo.zip} onChange={(e) => { setCustomerInfo({...customerInfo, zip: e.target.value}); if (e.target.value.length === 7) fetchAddress(e.target.value); }} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"/>
-              <input type="text" placeholder="住所（自動入力）" value={customerInfo.address1} readOnly className="w-full h-12 px-4 bg-[#EAEAEA]/30 rounded-xl text-[13px] text-[#999999] outline-none"/>
-              <input type="text" placeholder="番地・建物名" value={customerInfo.address2} onChange={(e) => setCustomerInfo({...customerInfo, address2: e.target.value})} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"/>
+            <div className="bg-white p-6 rounded-2xl border border-[#E6E2DA] space-y-3">
+              <p className="text-[14px] font-bold text-[#3B4640] mb-3">ご依頼主様情報</p>
+              <input type="text" placeholder="お名前" value={customerInfo.name} onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})} className="w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] outline-none focus:border-[#2D4B3E]"/>
+              <input type="tel" placeholder="電話番号" value={customerInfo.phone} onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})} className="w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] outline-none focus:border-[#2D4B3E]"/>
+              <input type="email" placeholder="メールアドレス" value={customerInfo.email} onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})} className="w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] outline-none focus:border-[#2D4B3E]"/>
+              <input type="text" placeholder="郵便番号（7桁・ハイフンなし）" value={customerInfo.zip} onChange={(e) => { setCustomerInfo({...customerInfo, zip: e.target.value}); if (e.target.value.length === 7) fetchAddress(e.target.value); }} className="w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] outline-none focus:border-[#2D4B3E]"/>
+              <input type="text" placeholder="住所（自動入力）" value={customerInfo.address1} readOnly className="w-full h-12 px-4 bg-[#E6E2DA]/30 rounded-xl text-[15px] text-[#5C6660] outline-none"/>
+              <input type="text" placeholder="番地・建物名" value={customerInfo.address2} onChange={(e) => setCustomerInfo({...customerInfo, address2: e.target.value})} className="w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] outline-none focus:border-[#2D4B3E]"/>
             </div>
 
             {/* ★ お届け先別住所トグル（プレゼント・贈り物用） */}
-            <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-3">
+            <div className="bg-white p-6 rounded-2xl border border-[#E6E2DA] space-y-3">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
@@ -316,20 +316,20 @@ export default function CartPage() {
                   className="mt-1 w-4 h-4 accent-[#2D4B3E]"
                 />
                 <div>
-                  <p className="text-[13px] font-bold text-[#111111]">プレゼント・贈り物として別の住所にお届け</p>
-                  <p className="text-[11px] text-[#555555] mt-1">ご依頼主様と異なる場所に届ける場合はチェックを入れてください</p>
+                  <p className="text-[15px] font-bold text-[#1F2A24]">プレゼント・贈り物として別の住所にお届け</p>
+                  <p className="text-[13px] text-[#3B4640] mt-1">ご依頼主様と異なる場所に届ける場合はチェックを入れてください</p>
                 </div>
               </label>
 
               {isRecipientDifferent && (
-                <div className="space-y-3 pt-3 mt-2 border-t border-[#EAEAEA]">
-                  <p className="text-[12px] font-bold text-[#555555]">お届け先様情報</p>
-                  <input type="text" placeholder="お名前" value={recipientInfo.name} onChange={(e) => setRecipientInfo({...recipientInfo, name: e.target.value})} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"/>
-                  <input type="tel" placeholder="電話番号" value={recipientInfo.phone} onChange={(e) => setRecipientInfo({...recipientInfo, phone: e.target.value})} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"/>
-                  <input type="text" placeholder="郵便番号（7桁・ハイフンなし）" value={recipientInfo.zip} onChange={(e) => { setRecipientInfo({...recipientInfo, zip: e.target.value}); if (e.target.value.length === 7) fetchRecipientAddress(e.target.value); }} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"/>
-                  <input type="text" placeholder="住所（自動入力）" value={recipientInfo.address1} readOnly className="w-full h-12 px-4 bg-[#EAEAEA]/30 rounded-xl text-[13px] text-[#999999] outline-none"/>
-                  <input type="text" placeholder="番地・建物名" value={recipientInfo.address2} onChange={(e) => setRecipientInfo({...recipientInfo, address2: e.target.value})} className="w-full h-12 px-4 bg-[#FBFAF9] border border-[#EAEAEA] rounded-xl text-[13px] outline-none focus:border-[#2D4B3E]"/>
-                  <div className="text-[11px] text-[#117768] bg-[#117768]/5 border border-[#117768]/20 rounded-lg p-3 leading-relaxed">
+                <div className="space-y-3 pt-3 mt-2 border-t border-[#E6E2DA]">
+                  <p className="text-[14px] font-bold text-[#3B4640]">お届け先様情報</p>
+                  <input type="text" placeholder="お名前" value={recipientInfo.name} onChange={(e) => setRecipientInfo({...recipientInfo, name: e.target.value})} className="w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] outline-none focus:border-[#2D4B3E]"/>
+                  <input type="tel" placeholder="電話番号" value={recipientInfo.phone} onChange={(e) => setRecipientInfo({...recipientInfo, phone: e.target.value})} className="w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] outline-none focus:border-[#2D4B3E]"/>
+                  <input type="text" placeholder="郵便番号（7桁・ハイフンなし）" value={recipientInfo.zip} onChange={(e) => { setRecipientInfo({...recipientInfo, zip: e.target.value}); if (e.target.value.length === 7) fetchRecipientAddress(e.target.value); }} className="w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] outline-none focus:border-[#2D4B3E]"/>
+                  <input type="text" placeholder="住所（自動入力）" value={recipientInfo.address1} readOnly className="w-full h-12 px-4 bg-[#E6E2DA]/30 rounded-xl text-[15px] text-[#5C6660] outline-none"/>
+                  <input type="text" placeholder="番地・建物名" value={recipientInfo.address2} onChange={(e) => setRecipientInfo({...recipientInfo, address2: e.target.value})} className="w-full h-12 px-4 bg-[#FAFAF7] border border-[#E6E2DA] rounded-xl text-[15px] outline-none focus:border-[#2D4B3E]"/>
+                  <div className="text-[13px] text-[#117768] bg-[#117768]/5 border border-[#117768]/20 rounded-lg p-3 leading-relaxed">
                     プレゼント設定の場合、お届け物には金額が記載された納品書は同梱されません。<br/>
                     お買い上げ明細はご依頼主様のメールアドレスにお送りします。
                   </div>
@@ -338,20 +338,20 @@ export default function CartPage() {
             </div>
 
             {/* お支払い方法 */}
-            <div className="bg-white p-6 rounded-2xl border border-[#EAEAEA] space-y-3">
-              <p className="text-[12px] font-bold text-[#555555] mb-3">お支払い方法</p>
+            <div className="bg-white p-6 rounded-2xl border border-[#E6E2DA] space-y-3">
+              <p className="text-[14px] font-bold text-[#3B4640] mb-3">お支払い方法</p>
               {stripeEnabled && (
-                <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer ${paymentMethod === 'card' ? 'border-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#EAEAEA]'}`}>
+                <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer ${paymentMethod === 'card' ? 'border-[#2D4B3E] bg-[#2D4B3E]/5' : 'border-[#E6E2DA]'}`}>
                   <input type="radio" name="pm" value="card" checked={paymentMethod === 'card'} onChange={(e) => setPaymentMethod(e.target.value)} className="mt-1 accent-[#2D4B3E]"/>
                   <div>
-                    <p className="text-[13px] font-bold text-[#111111]">クレジットカード決済</p>
-                    <p className="text-[11px] text-[#555555] mt-1">Stripeの安全な決済画面で決済</p>
+                    <p className="text-[15px] font-bold text-[#1F2A24]">クレジットカード決済</p>
+                    <p className="text-[13px] text-[#3B4640] mt-1">Stripeの安全な決済画面で決済</p>
                   </div>
                 </label>
               )}
               {/* [2026-10 C3] 銀行振込は終了。ネットショップはカード払いのみ */}
               {!stripeEnabled && (
-                <p className="text-[12px] text-[#B45309] bg-amber-50 border border-amber-200 rounded-xl p-3">
+                <p className="text-[14px] text-[#B45309] bg-amber-50 border border-amber-200 rounded-xl p-3">
                   ただいまネットでのカード決済を準備中です。お手数ですが、お電話でご注文ください。
                 </p>
               )}
@@ -360,14 +360,14 @@ export default function CartPage() {
             {error && (
               <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700">
                 <AlertCircle size={16}/>
-                <p className="text-[12px] font-bold">{error}</p>
+                <p className="text-[14px] font-bold">{error}</p>
               </div>
             )}
 
             <button
               onClick={handleCheckout}
               disabled={isSubmitting || !stripeEnabled}
-              className="w-full h-14 bg-[#2D4B3E] text-white rounded-xl font-bold text-[14px] hover:bg-[#1f352b] disabled:opacity-50 transition-all"
+              className="w-full h-14 bg-[#2D4B3E] text-white rounded-xl font-bold text-[15px] hover:bg-[#1f352b] disabled:opacity-50 transition-all"
             >
               {isSubmitting ? '送信中...' : `合計 ¥${totalAmount.toLocaleString()} を注文確定する`}
             </button>

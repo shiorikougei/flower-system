@@ -86,25 +86,25 @@ export default function DatePicker({ value, onChange, minDate, isBlocked }) {
   const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
 
   return (
-    <div className="bg-white rounded-xl border border-[#EAEAEA] p-3 md:p-4">
+    <div className="bg-white rounded-xl border border-[#E6E2DA] p-3 md:p-4">
       {/* 月ナビゲーション */}
       <div className="flex items-center justify-between mb-3">
         <button
           type="button"
           onClick={goPrev}
           aria-label="前の月"
-          className="w-10 h-10 rounded-lg hover:bg-[#FBFAF9] flex items-center justify-center text-[#555]"
+          className="w-10 h-10 rounded-lg hover:bg-[#FAFAF7] flex items-center justify-center text-[#3B4640]"
         >
           <ChevronLeft size={18} />
         </button>
-        <p className="text-[14px] font-bold text-[#111111]">
+        <p className="text-[15px] font-bold text-[#1F2A24]">
           {displayMonth.getFullYear()}年 {displayMonth.getMonth() + 1}月
         </p>
         <button
           type="button"
           onClick={goNext}
           aria-label="次の月"
-          className="w-10 h-10 rounded-lg hover:bg-[#FBFAF9] flex items-center justify-center text-[#555]"
+          className="w-10 h-10 rounded-lg hover:bg-[#FAFAF7] flex items-center justify-center text-[#3B4640]"
         >
           <ChevronRight size={18} />
         </button>
@@ -115,8 +115,8 @@ export default function DatePicker({ value, onChange, minDate, isBlocked }) {
         {weekdays.map((w, i) => (
           <div
             key={w}
-            className={`text-center text-[11px] font-bold py-1 ${
-              i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-[#999]'
+            className={`text-center text-[13px] font-bold py-1 ${
+              i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-[#5C6660]'
             }`}
           >
             {w}
@@ -142,9 +142,9 @@ export default function DatePicker({ value, onChange, minDate, isBlocked }) {
           } else if (blocked) {
             cls = 'text-[#CCC] cursor-not-allowed line-through';
           } else if (todayFlag) {
-            cls = 'bg-[#FBFAF9] text-[#2D4B3E] font-bold border border-[#2D4B3E]/30';
+            cls = 'bg-[#FAFAF7] text-[#2D4B3E] font-bold border border-[#2D4B3E]/30';
           } else {
-            cls = 'text-[#333] hover:bg-[#FBFAF9] cursor-pointer';
+            cls = 'text-[#1F2A24] hover:bg-[#FAFAF7] cursor-pointer';
           }
 
           return (
@@ -153,7 +153,7 @@ export default function DatePicker({ value, onChange, minDate, isBlocked }) {
               type="button"
               onClick={() => handleClick(date)}
               disabled={disabled || blocked}
-              className={`h-11 rounded-lg text-[13px] flex items-center justify-center transition-colors ${cls}`}
+              className={`h-11 rounded-lg text-[15px] flex items-center justify-center transition-colors ${cls}`}
             >
               {date.getDate()}
             </button>
@@ -162,7 +162,7 @@ export default function DatePicker({ value, onChange, minDate, isBlocked }) {
       </div>
 
       {/* 凡例 */}
-      <div className="mt-3 pt-3 border-t border-[#F0F0F0] flex flex-wrap gap-3 text-[10px] text-[#999]">
+      <div className="mt-3 pt-3 border-t border-[#F0F0F0] flex flex-wrap gap-3 text-[12px] text-[#5C6660]">
         <span className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded bg-[#2D4B3E]" />選択中
         </span>
