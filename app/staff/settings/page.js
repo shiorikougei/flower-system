@@ -1510,7 +1510,7 @@ export default function SettingsPage() {
       ? `${window.location.origin}/api/line/webhook/${currentTenantId || 'default'}`
       : `https://noodleflorix.com/api/line/webhook/${currentTenantId || 'default'}`;
     return (
-      <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-6 animate-in fade-in text-left max-w-[800px]">
+      <div className="bg-white rounded-2xl border p-8 shadow-sm space-y-6 animate-in fade-in text-left">
         <h2 className="text-[18px] font-bold text-[#2D4B3E] flex items-center gap-2">LINE公式アカウント連携 <HelpTooltip articleId="line_setup"/></h2>
         <p className="text-[14px] text-[#3B4640] leading-relaxed">
           LINE Messaging API と連携すると、注文確認・完成写真・入金確認等の通知を
@@ -1616,7 +1616,7 @@ export default function SettingsPage() {
       setShiftConfig({ ...shiftConfig, patterns: next });
     };
     return (
-      <div className="space-y-6 animate-in fade-in max-w-[900px]">
+      <div className="space-y-6 animate-in fade-in">
         <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-4">
           <h2 className="text-[16px] font-bold text-[#2D4B3E] flex items-center gap-2"><CalendarDays size={18}/> シフトパターン <HelpTooltip articleId="shift_setup"/></h2>
           <p className="text-[13px] text-[#5C6660]">早番・遅番など、店舗で使うシフトパターンを自由に登録できます。</p>
@@ -2220,7 +2220,7 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      <main className={`flex-1 max-w-[1100px] w-full py-8 px-4 md:px-10 transition-all ${!isAdmin ? 'opacity-40 pointer-events-none grayscale' : ''}`}>
+      <main className={`flex-1 w-full py-8 px-4 md:px-10 transition-all ${!isAdmin ? 'opacity-40 pointer-events-none grayscale' : ''}`}>
         {activeTab === 'general' && renderGeneralTab()}
         {activeTab === 'status' && renderStatusTab()}
         {activeTab === 'design' && renderDesignTab()} 
