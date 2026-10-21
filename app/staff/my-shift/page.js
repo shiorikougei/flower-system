@@ -154,44 +154,44 @@ function MyShiftPageInner() {
   if (!currentStaff?.name) {
     return (
       <main className="p-12 text-center">
-        <p className="text-[14px] font-bold text-[#999]">左サイドバーから自分のスタッフ名を選択してください</p>
+        <p className="text-[15px] font-bold text-[#5C6660]">左サイドバーから自分のスタッフ名を選択してください</p>
       </main>
     );
   }
 
   return (
     <main className="pb-32 font-sans text-left">
-      <header className="bg-white/90 backdrop-blur-md border-b border-[#EAEAEA] px-6 md:px-8 py-4 sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3">
+      <header className="bg-[#F6F4EF]/95 backdrop-blur border-b border-[#E6E2DA] px-6 md:px-8 py-4 sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-[18px] md:text-[20px] font-bold text-[#2D4B3E] tracking-tight flex items-center gap-2">休み希望登録 <HelpTooltip articleId="staff_holiday_request"/></h1>
-          <p className="text-[11px] font-bold text-[#999] mt-1">{currentStaff.name} ・ 終日 or 時間指定で登録できます</p>
+          <h1 className="text-[24px] md:text-[28px] font-bold tracking-[0.02em] text-[#1F2A24] flex items-center gap-2">休み希望登録 <HelpTooltip articleId="staff_holiday_request"/></h1>
+          <p className="text-[13px] font-bold text-[#5C6660] mt-1">{currentStaff.name} ・ 終日 or 時間指定で登録できます</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => changeMonth(-1)} className="w-9 h-9 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg flex items-center justify-center"><ChevronLeft size={16}/></button>
+          <button onClick={() => changeMonth(-1)} className="w-9 h-9 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg flex items-center justify-center"><ChevronLeft size={16}/></button>
           <span className="text-[15px] font-bold text-[#2D4B3E] min-w-[100px] text-center">{year}年{month}月</span>
-          <button onClick={() => changeMonth(1)} className="w-9 h-9 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg flex items-center justify-center"><ChevronRight size={16}/></button>
-          <button onClick={loadData} className="ml-2 p-2 hover:bg-[#FBFAF9] rounded-full text-[#999]"><RefreshCw size={16} className={isLoading ? 'animate-spin' : ''}/></button>
+          <button onClick={() => changeMonth(1)} className="w-9 h-9 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg flex items-center justify-center"><ChevronRight size={16}/></button>
+          <button onClick={loadData} className="ml-2 p-2 hover:bg-[#FAFAF7] rounded-full text-[#5C6660]"><RefreshCw size={16} className={isLoading ? 'animate-spin' : ''}/></button>
         </div>
       </header>
 
-      <div className="max-w-[800px] mx-auto p-6 space-y-6">
+      <div className="w-full p-4 md:px-10 md:py-8 space-y-6">
         {/* 案内 */}
-        <div className={`p-4 rounded-2xl border ${deadlinePassed ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'} text-[12px] leading-relaxed`}>
+        <div className={`p-4 rounded-2xl border ${deadlinePassed ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'} text-[14px] leading-relaxed`}>
           <p className="font-bold mb-1">
             {deadlinePassed
               ? '提出〆切を過ぎているため、優先度が下がる可能性があります'
               : `${month}月分の希望休を提出してください（毎月${deadlineDay}日まで）`}
           </p>
-          <p className="text-[11px] opacity-80">
+          <p className="text-[13px] opacity-80">
             日付をクリックで休み希望を登録/解除できます。確定シフトが表示されている日は変更できません。
           </p>
         </div>
 
         {/* 月カレンダー */}
-        <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm p-4">
+        <div className="bg-white rounded-2xl border border-[#E6E2DA] shadow-sm p-4">
           <div className="grid grid-cols-7 gap-1 mb-2">
             {['日','月','火','水','木','金','土'].map((d, i) => (
-              <div key={i} className={`text-center text-[11px] font-bold py-1 ${i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-[#555]'}`}>{d}</div>
+              <div key={i} className={`text-center text-[13px] font-bold py-1 ${i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-[#3B4640]'}`}>{d}</div>
             ))}
           </div>
           <div className="grid grid-cols-7 gap-1">
@@ -210,30 +210,30 @@ function MyShiftPageInner() {
                   onClick={() => !sh && openHolidayModal(d.dateStr)}
                   disabled={!!sh}
                   className={`aspect-square rounded-lg border-2 transition-all p-1 text-left flex flex-col ${
-                    sh?.is_off ? 'bg-[#D97D54]/10 border-[#D97D54]/30 cursor-not-allowed' :
+                    sh?.is_off ? 'bg-[#B9562F]/10 border-[#B9562F]/30 cursor-not-allowed' :
                     sh ? 'border-[#2D4B3E]/30 cursor-not-allowed' :
                     hr ? 'bg-amber-100 border-amber-400 hover:border-amber-600' :
-                    isFixedOff ? 'bg-[#D97D54]/5 border-[#D97D54]/20 cursor-not-allowed' :
-                    'bg-white border-[#EAEAEA] hover:border-[#2D4B3E]/40'
+                    isFixedOff ? 'bg-[#B9562F]/5 border-[#B9562F]/20 cursor-not-allowed' :
+                    'bg-white border-[#E6E2DA] hover:border-[#2D4B3E]/40'
                   }`}
                   style={sh && !sh.is_off ? { background: shiftConfig?.patterns?.find(p => p.id === sh.pattern_id)?.color + '40' } : {}}
                 >
-                  <span className={`text-[12px] font-bold ${
-                    d.dayKey === 'sun' ? 'text-red-500' : d.dayKey === 'sat' ? 'text-blue-500' : 'text-[#555]'
+                  <span className={`text-[14px] font-bold ${
+                    d.dayKey === 'sun' ? 'text-red-500' : d.dayKey === 'sat' ? 'text-blue-500' : 'text-[#3B4640]'
                   }`}>{d.day}</span>
                   {sh?.is_off ? (
-                    <span className="text-[8px] font-bold text-[#D97D54] mt-auto">確定休</span>
+                    <span className="text-[11px] font-bold text-[#B9562F] mt-auto">確定休</span>
                   ) : sh ? (
-                    <div className="text-[8px] mt-auto">
+                    <div className="text-[11px] mt-auto">
                       <div className="font-bold">{sh.pattern_name}</div>
                       {sh.start_time && <div className="opacity-80">{sh.start_time}-{sh.end_time}</div>}
                     </div>
                   ) : hr ? (
-                    <span className="text-[8px] font-bold text-amber-700 mt-auto">
+                    <span className="text-[11px] font-bold text-amber-700 mt-auto">
                       {hr.start_time ? `${hr.start_time}-${hr.end_time}` : '終日休'}
                     </span>
                   ) : isFixedOff ? (
-                    <span className="text-[8px] text-[#D97D54]/60 mt-auto">固休</span>
+                    <span className="text-[11px] text-[#B9562F]/60 mt-auto">固休</span>
                   ) : null}
                 </button>
               );
@@ -243,13 +243,13 @@ function MyShiftPageInner() {
 
         {/* 提出済みリスト */}
         {holidayRequests.length > 0 && (
-          <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-sm p-5">
-            <h3 className="text-[14px] font-bold text-[#2D4B3E] mb-3 flex items-center gap-2">
+          <div className="bg-white rounded-2xl border border-[#E6E2DA] shadow-sm p-5">
+            <h3 className="text-[15px] font-bold text-[#2D4B3E] mb-3 flex items-center gap-2">
               <Heart size={14} className="text-amber-500"/> 提出済みの希望休 ({holidayRequests.length}日)
             </h3>
             <div className="flex flex-wrap gap-2">
               {holidayRequests.map(h => (
-                <div key={h.id} className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 text-[11px] font-bold text-amber-900">
+                <div key={h.id} className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 text-[13px] font-bold text-amber-900">
                   {new Date(h.date).getDate()}日 ({DAY_LABELS[DAY_KEYS[new Date(h.date).getDay()]]})
                 </div>
               ))}
@@ -262,35 +262,35 @@ function MyShiftPageInner() {
       {holidayModal && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setHolidayModal(null)}>
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
-            <h3 className="text-[15px] font-bold text-[#111]">休み希望の登録</h3>
-            <p className="text-[12px] text-[#555]">{holidayModal.date} ({DAY_LABELS[DAY_KEYS[new Date(holidayModal.date).getDay()]]})</p>
+            <h3 className="text-[15px] font-bold text-[#1F2A24]">休み希望の登録</h3>
+            <p className="text-[14px] text-[#3B4640]">{holidayModal.date} ({DAY_LABELS[DAY_KEYS[new Date(holidayModal.date).getDay()]]})</p>
 
             <div className="space-y-2">
-              <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer ${holidayForm.allDay ? 'bg-[#D97D54]/10 border-[#D97D54]/40' : 'bg-[#FBFAF9] border-[#EAEAEA]'}`}>
-                <input type="radio" checked={holidayForm.allDay} onChange={() => setHolidayForm({...holidayForm, allDay: true})} className="w-4 h-4 accent-[#D97D54]"/>
-                <span className="text-[13px] font-bold">終日休み</span>
+              <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer ${holidayForm.allDay ? 'bg-[#B9562F]/10 border-[#B9562F]/40' : 'bg-[#FAFAF7] border-[#E6E2DA]'}`}>
+                <input type="radio" checked={holidayForm.allDay} onChange={() => setHolidayForm({...holidayForm, allDay: true})} className="w-4 h-4 accent-[#B9562F]"/>
+                <span className="text-[15px] font-bold">終日休み</span>
               </label>
-              <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer ${!holidayForm.allDay ? 'bg-amber-50 border-amber-300' : 'bg-[#FBFAF9] border-[#EAEAEA]'}`}>
+              <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer ${!holidayForm.allDay ? 'bg-amber-50 border-amber-300' : 'bg-[#FAFAF7] border-[#E6E2DA]'}`}>
                 <input type="radio" checked={!holidayForm.allDay} onChange={() => setHolidayForm({...holidayForm, allDay: false})} className="w-4 h-4 accent-amber-500"/>
-                <span className="text-[13px] font-bold">時間指定</span>
+                <span className="text-[15px] font-bold">時間指定</span>
               </label>
               {!holidayForm.allDay && (
                 <div className="flex items-center gap-2 mt-2 ml-6">
                   <input type="time" value={holidayForm.startTime} onChange={e => setHolidayForm({...holidayForm, startTime: e.target.value})}
-                    className="flex-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none"/>
-                  <span className="text-[#999]">〜</span>
+                    className="flex-1 h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none"/>
+                  <span className="text-[#5C6660]">〜</span>
                   <input type="time" value={holidayForm.endTime} onChange={e => setHolidayForm({...holidayForm, endTime: e.target.value})}
-                    className="flex-1 h-11 px-3 bg-[#FBFAF9] border border-[#EAEAEA] rounded-lg text-[13px] outline-none"/>
+                    className="flex-1 h-11 px-3 bg-[#FAFAF7] border border-[#E6E2DA] rounded-lg text-[15px] outline-none"/>
                 </div>
               )}
             </div>
 
             <div className="flex gap-2 pt-2">
               {holidayModal.existing && (
-                <button onClick={deleteHoliday} className="flex-1 h-11 bg-red-50 border border-red-200 text-red-600 text-[12px] font-bold rounded-lg hover:bg-red-100">削除</button>
+                <button onClick={deleteHoliday} className="flex-1 h-11 bg-red-50 border border-red-200 text-red-600 text-[14px] font-bold rounded-lg hover:bg-red-100">削除</button>
               )}
-              <button onClick={() => setHolidayModal(null)} className="flex-1 h-11 bg-[#EAEAEA] text-[#555] text-[12px] font-bold rounded-lg">キャンセル</button>
-              <button onClick={saveHoliday} className="flex-1 h-11 bg-[#2D4B3E] text-white text-[12px] font-bold rounded-lg hover:bg-[#1f352b]">{holidayModal.existing ? '更新' : '登録'}</button>
+              <button onClick={() => setHolidayModal(null)} className="flex-1 h-11 bg-[#E6E2DA] text-[#3B4640] text-[14px] font-bold rounded-lg">キャンセル</button>
+              <button onClick={saveHoliday} className="flex-1 h-11 bg-[#2D4B3E] text-white text-[14px] font-bold rounded-lg hover:bg-[#1f352b]">{holidayModal.existing ? '更新' : '登録'}</button>
             </div>
           </div>
         </div>
